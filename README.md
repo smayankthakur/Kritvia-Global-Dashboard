@@ -323,6 +323,8 @@ Recommended stack:
 - API: Render/Railway/Fly.io/container platform (`apps/api`)
 - Database: managed PostgreSQL (Neon/Supabase/RDS/etc.)
 
+If you deploy API on Vercel, configure it as a separate Vercel project with Root Directory `apps/api`.
+
 Required env vars:
 
 API:
@@ -340,6 +342,38 @@ API:
 WEB:
 
 - `NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com`
+
+### API on Vercel (separate project)
+
+Project setup:
+
+- Root Directory: `apps/api`
+- Framework Preset: `Other`
+- Build Command: `npm run build --workspace @kritviya/api`
+- Install Command: `npm install`
+- Output Directory: leave empty
+
+Required env vars in API Vercel project:
+
+- `DATABASE_URL=postgresql://...`
+- `JWT_SECRET=...`
+- `NODE_ENV=production`
+- `CORS_ORIGINS=https://your-web.vercel.app,https://your-custom-domain.com`
+- `COOKIE_SECURE=true`
+- `COOKIE_DOMAIN=` (optional)
+- `ACCESS_TOKEN_TTL=15m`
+- `REFRESH_TOKEN_TTL=7d`
+
+Required env vars in Web Vercel project:
+
+- `NEXT_PUBLIC_API_BASE_URL=https://<your-api-vercel-domain>`
+
+Notes:
+
+- Do not use `http://localhost:4000` in Vercel env.
+- API routes are served by `apps/api/api/index.ts` via `apps/api/vercel.json`.
+- Run Prisma migrations against production DB before first traffic:
+  - `npm run migrate:deploy`
 
 Deploy sequence:
 

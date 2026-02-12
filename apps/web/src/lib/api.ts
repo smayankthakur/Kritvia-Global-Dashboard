@@ -10,7 +10,7 @@ import { clearAccessToken, getAccessToken, setAccessToken } from "./auth";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:4000";
+  (process.env.NODE_ENV === "development" ? "http://localhost:4000" : "");
 const REQUEST_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 10000);
 
 export class ApiError extends Error {
@@ -67,6 +67,13 @@ async function fetchWithTimeout(input: string, init?: RequestInit): Promise<Resp
 }
 
 async function request(input: string, init?: RequestInit): Promise<Response> {
+  if (!API_BASE_URL) {
+    throw new ApiError(
+      "API base URL is not configured. Set NEXT_PUBLIC_API_BASE_URL in your deployment.",
+      0
+    );
+  }
+
   try {
     const response = await fetchWithTimeout(input, {
       ...init,
@@ -95,7 +102,7 @@ async function request(input: string, init?: RequestInit): Promise<Response> {
   } catch (error) {
     const message =
       error instanceof Error
-        ? `Cannot reach API at ${API_BASE_URL}. Ensure API is running on port 4000.`
+        ? `Cannot reach API at ${API_BASE_URL}. Ensure the deployed API URL is correct and reachable.`
         : "Network request failed";
     throw new ApiError(message, 0);
   }
@@ -126,6 +133,13 @@ export async function loginRequest(
 }
 
 export async function refreshAccessToken(): Promise<string> {
+  if (!API_BASE_URL) {
+    throw new ApiError(
+      "API base URL is not configured. Set NEXT_PUBLIC_API_BASE_URL in your deployment.",
+      0
+    );
+  }
+
   if (!refreshPromise) {
     refreshPromise = (async () => {
       const response = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh`, {
