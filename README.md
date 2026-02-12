@@ -332,7 +332,7 @@ Render service:
 - Type: `Web Service`
 - Repo: this repo
 - Root Directory: `.` (repo root)
-- Build Command: `npm ci --include=dev && npm run build:api`
+- Build Command: `npm ci && npm run build:api`
 - Start Command: `npm run migrate:deploy && npm run start:api`
 - Health Check Path: `/health`
 - Readiness Check Path: `/ready` (optional separate monitor)
