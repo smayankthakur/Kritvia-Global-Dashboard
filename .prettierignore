@@ -1,0 +1,5 @@
+**/node_modules
+**/.next
+**/.next-kritviya
+**/dist
+package-lock.json

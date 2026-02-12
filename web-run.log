@@ -1,0 +1,14 @@
+
+> kritviya@0.1.0 start:web
+> node scripts/start-web.mjs
+
+
+> @kritviya/web@0.1.0 start
+> node .next/standalone/apps/web/server.js
+
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3000
+   - Network:      http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 6.6s

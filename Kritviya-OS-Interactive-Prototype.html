@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KRITVIYA - Execution OS Prototype</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --surface: #f7f8fa;
+        --card: #ffffff;
+        --border: #e6e8ec;
+        --text-primary: #0b1220;
+        --text-secondary: #526070;
+        --accent: #3b48d9;
+        --accent-hover: #2f3bc0;
+        --success: #16a34a;
+        --warning: #d97706;
+        --danger: #dc2626;
+      }
+
+      [data-theme="dark"] {
+        --bg: #0b0f17;
+        --surface: #111827;
+        --card: #0f172a;
+        --border: #223046;
+        --text-primary: #eaf0ff;
+        --text-secondary: #a8b3c7;
+        --accent: #5f73ff;
+        --accent-hover: #7788ff;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --danger: #f87171;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .app-shell {
+        width: 100%;
+        max-width: 1440px;
+        min-height: 100vh;
+        margin: 0 auto;
+        display: grid;
+        grid-template-rows: 68px 1fr;
+      }
+
+      .topbar {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .brand {
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        font-size: 18px;
+      }
+
+      .select {
+        width: 180px;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--text-primary);
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .topbar-left,
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        min-height: 0;
+      }
+
+      .sidebar {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        padding: 18px 14px;
+      }
+
+      .sidebar h3 {
+        margin: 0 0 12px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .side-link {
+        display: block;
+        margin: 0 0 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      .side-link:hover,
+      .side-link.active {
+        border-color: var(--border);
+        color: var(--text-primary);
+        background: var(--card);
+      }
+
+      .content {
+        padding: 24px;
+        background: var(--bg);
+      }
+
+      .page-title {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 800;
+      }
+
+      .page-subtitle {
+        margin: 6px 0 18px;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      .grid-4 {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .grid-2 {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 2fr 1fr;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+      }
+
+      .card h3 {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+        font-weight: 600;
+      }
+
+      .kpi-value {
+        margin: 10px 0 0;
+        font-size: 28px;
+        font-weight: 800;
+      }
+
+      .badge {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--border);
+      }
+
+      .badge-success {
+        color: var(--success);
+      }
+
+      .badge-warning {
+        color: var(--warning);
+      }
+
+      .badge-danger {
+        color: var(--danger);
+      }
+
+      .btn {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 600;
+        font-size: 14px;
+        background: var(--surface);
+        color: var(--text-primary);
+        cursor: pointer;
+      }
+
+      .btn:hover {
+        filter: brightness(1.04);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+      }
+
+      .btn-danger {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: #fff;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .field,
+      .select,
+      .textarea {
+        width: 100%;
+        background: var(--card);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font: inherit;
+      }
+
+      .textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+
+      .table-wrap {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: auto;
+        background: var(--card);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+
+      th {
+        color: var(--text-secondary);
+        font-weight: 700;
+        background: var(--surface);
+      }
+
+      tr:hover td {
+        background: color-mix(in srgb, var(--surface) 70%, transparent);
+      }
+
+      .danger-row td {
+        color: var(--danger);
+      }
+
+      .kanban {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .kanban-col {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+      }
+
+      .kanban-col h4 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+      }
+
+      .mini-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+
+      .mini-card h5 {
+        margin: 0 0 6px;
+        font-size: 13px;
+      }
+
+      .mini {
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .bar {
+        height: 10px;
+        border-radius: 999px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      .bar > span {
+        height: 100%;
+        display: block;
+        background: var(--accent);
+      }
+
+      .line-chart {
+        width: 100%;
+        height: 220px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 15%, transparent), transparent);
+      }
+
+      .login-wrap {
+        min-height: calc(100vh - 68px);
+        display: grid;
+        place-items: center;
+      }
+
+      .login-card {
+        width: 420px;
+        max-width: 95%;
+      }
+
+      .muted {
+        color: var(--text-secondary);
+      }
+
+      .avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: inline-grid;
+        place-items: center;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-weight: 700;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 1120px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .kanban,
+        .grid-4 {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body data-theme="light">
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="brand">KRITVIYA</div>
+          <select id="modeSwitcher" class="select" title="Select operating mode">
+            <option value="ceo">CEO</option>
+            <option value="ops">Ops</option>
+            <option value="sales">Sales</option>
+            <option value="finance">Finance</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="topbar-right">
+          <button id="themeToggle" class="btn" type="button">🌙 Dark</button>
+          <div class="avatar">KG</div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside id="sidebar" class="sidebar"></aside>
+        <main id="content" class="content"></main>
+      </div>
+    </div>
+
+    <script>
+      const modeDefaults = {
+        ceo: "ceo",
+        ops: "ops",
+        sales: "sales",
+        finance: "finance",
+        admin: "admin"
+      };
+
+      const sideNav = {
+        ceo: [
+          ["ceo", "CEO Dashboard"],
+          ["ops", "Execution Board"],
+          ["finance", "Finance Pulse"],
+          ["sales", "Sales Pipeline"],
+          ["admin", "Admin Control"]
+        ],
+        ops: [
+          ["ops", "Execution Board"],
+          ["task-detail", "Task Detail"],
+          ["ceo", "Escalations to CEO"]
+        ],
+        sales: [
+          ["sales", "CRM Pipeline"],
+          ["deal-detail", "Deal Detail"],
+          ["finance", "Won Deal to Invoice"]
+        ],
+        finance: [
+          ["finance", "Finance Dashboard"],
+          ["invoice-detail", "Invoice Detail"],
+          ["ceo", "Cash Runway View"]
+        ],
+        admin: [
+          ["admin", "Admin Panel"],
+          ["rule-builder", "Automation Rule Builder"],
+          ["ceo", "Global Oversight"]
+        ]
+      };
+
+      function parseRoute() {
+        const raw = (location.hash || "#login-light").replace("#", "");
+        const parts = raw.split("-");
+        const theme = parts[parts.length - 1] === "dark" ? "dark" : "light";
+        const page = raw.endsWith("-dark") || raw.endsWith("-light")
+          ? raw.replace(/-(dark|light)$/, "")
+          : "login";
+        return { page, theme };
+      }
+
+      function go(page, theme) {
+        location.hash = `${page}-${theme}`;
+      }
+
+      function title(page) {
+        const map = {
+          login: "Login",
+          ceo: "CEO Dashboard",
+          ops: "Ops Mode - Execution Board",
+          sales: "Sales Mode - CRM Pipeline",
+          finance: "Finance Mode",
+          admin: "Admin Mode",
+          "task-detail": "Task Detail",
+          "deal-detail": "Deal Detail",
+          "invoice-detail": "Invoice Detail",
+          "rule-builder": "Automation Rule Builder"
+        };
+        return map[page] || "KRITVIYA";
+      }
+
+      function kpiCard(label, value, note, href, theme, extra = "") {
+        return `
+          <a class="card" href="#${href}-${theme}">
+            <h3>${label}</h3>
+            <p class="kpi-value">${value}</p>
+            <p class="muted">${note}</p>
+            ${extra}
+          </a>
+        `;
+      }
+
+      function renderSidebar(page, theme) {
+        const mode = ["ceo", "ops", "sales", "finance", "admin"].includes(page) ? page : "ceo";
+        const items = sideNav[mode] || [];
+        return `
+          <h3>${mode.toUpperCase()} MODE</h3>
+          ${items
+            .map(
+              ([id, label]) =>
+                `<a href="#${id}-${theme}" class="side-link ${page === id ? "active" : ""}">${label}</a>`
+            )
+            .join("")}
+        `;
+      }
+
+      function renderPage(page, theme) {
+        const pair = theme === "light" ? "dark" : "light";
+        const isDark = theme === "dark";
+        const themeTag = isDark ? "Dark" : "Light";
+        const commonHead = `
+          <h1 class="page-title">${title(page)} - ${themeTag}</h1>
+          <p class="page-subtitle">KRITVIYA Execution OS | People + Work + Money</p>
+        `;
+
+        if (page === "login") {
+          return `
+            <div class="login-wrap">
+              <section class="card login-card">
+                <h1 class="page-title" style="font-size:36px">KRITVIYA</h1>
+                <p class="page-subtitle">Execution Operating System</p>
+                <div style="display:grid;gap:12px">
+                  <input class="field" placeholder="Email" value="ceo@kritviya.com" />
+                  <input class="field" placeholder="Password" type="password" value="********" />
+                  <a href="#ceo-${theme}" class="btn btn-primary">Login</a>
+                  <a href="#ceo-${theme}" class="btn">Login as Demo CEO</a>
+                </div>
+              </section>
+            </div>
+          `;
+        }
+
+        if (page === "ceo") {
+          return `
+            ${commonHead}
+            <section class="grid-4">
+              ${kpiCard("Cash Runway", "42 Days", "Projected from current burn rate", "finance", theme)}
+              ${kpiCard("Revenue Blocked", "₹18.6L", "Stuck due to pending execution", "ops", theme)}
+              ${kpiCard("Tasks Delayed", "7", "Cross-functional blockers", "ops", theme)}
+              ${kpiCard("Risk Level", "HIGH", "Critical execution risk", "ceo", theme, '<span class="badge badge-danger">HIGH</span>')}
+            </section>
+            <div class="grid-2" style="margin-top:16px">
+              <section class="card">
+                <h3 style="margin-bottom:10px">Top Execution Blockers</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Blocker</th><th>Owner</th><th>Impact</th><th>Action</th></tr></thead>
+                    <tbody>
+                      <tr><td>Pending tech handoff for Acme rollout</td><td>Ops</td><td>₹4.2L</td><td><a href="#task-detail-${theme}" class="btn">Nudge Owner</a></td></tr>
+                      <tr><td>Invoice hold due to missing compliance doc</td><td>Finance</td><td>₹3.6L</td><td><a href="#invoice-detail-${theme}" class="btn">View Details</a></td></tr>
+                      <tr><td>Deal close waiting implementation timeline</td><td>Sales</td><td>₹2.8L</td><td><a href="#deal-detail-${theme}" class="btn">Take Action</a></td></tr>
+                      <tr><td>SLA miss on enterprise onboarding task</td><td>Ops</td><td>₹4.1L</td><td><a href="#ops-${theme}" class="btn">View Details</a></td></tr>
+                      <tr><td>Escalated dependency not resolved</td><td>Admin</td><td>₹3.9L</td><td><a href="#admin-${theme}" class="btn">Take Action</a></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <section class="card">
+                <h3 style="margin-bottom:12px">Team Load</h3>
+                <p class="mini">Ops 95%</p><div class="bar"><span style="width:95%"></span></div>
+                <p class="mini" style="margin-top:12px">Dev 130% <span class="badge badge-danger">danger</span></p><div class="bar"><span style="width:100%;background:var(--danger)"></span></div>
+                <p class="mini" style="margin-top:12px">Sales 70%</p><div class="bar"><span style="width:70%;background:var(--success)"></span></div>
+                <div class="toolbar" style="margin-top:16px">
+                  <a class="btn btn-primary" href="#ops-${theme}">Take Action</a>
+                  <a class="btn" href="#ops-${theme}">View Details</a>
+                  <a class="btn" href="#task-detail-${theme}">Nudge Owner</a>
+                </div>
+              </section>
+            </div>
+          `;
+        }
+
+        if (page === "ops") {
+          return `
+            ${commonHead}
+            <section class="card">
+              <h3 style="margin-bottom:12px">Execution Chain</h3>
+              <div class="toolbar" style="margin-bottom:10px">
+                <a class="side-link active" href="#ops-${theme}">Tasks</a>
+                <a class="side-link" href="#ops-${theme}">Delayed</a>
+                <a class="side-link" href="#ops-${theme}">Dependencies</a>
+                <a class="side-link" href="#ops-${theme}">SLAs</a>
+              </div>
+              <div style="display:grid;gap:10px">
+                <div class="mini-card">
+                  <h5><a href="#task-detail-${theme}">Task: Client Data Migration</a></h5>
+                  <p class="mini">Owner: Rohan | Due: 18 Feb | Status: In Progress | Revenue Impact: ₹2.1L</p>
+                  <div class="toolbar">
+                    <button class="btn">Reassign</button>
+                    <button class="btn btn-danger">Escalate</button>
+                    <button class="btn btn-primary">Mark Complete</button>
+                  </div>
+                </div>
+                <div style="font-size:20px;color:var(--text-secondary)">↓</div>
+                <div class="mini-card">
+                  <h5><a href="#task-detail-${theme}">Task: QA + Signoff</a></h5>
+                  <p class="mini">Owner: Priya | Due: 20 Feb | Status: Blocked | Revenue Impact: ₹2.1L</p>
+                </div>
+                <div style="font-size:20px;color:var(--text-secondary)">↓</div>
+                <div class="mini-card">
+                  <h5><a href="#invoice-detail-${theme}">Invoice Release</a></h5>
+                  <p class="mini">Owner: Finance | Due: 22 Feb | Status: Pending</p>
+                </div>
+              </div>
+            </section>
+          `;
+        }
+
+        if (page === "sales") {
+          return `
+            ${commonHead}
+            <div class="grid-2">
+              <section class="card">
+                <h3 style="margin-bottom:12px">CRM Pipeline</h3>
+                <div class="kanban">
+                  ${["Lead", "Qualified", "Proposal", "Won"]
+                    .map(
+                      (s, i) => `
+                    <div class="kanban-col">
+                      <h4>${s}</h4>
+                      <a href="#deal-detail-${theme}" class="mini-card">
+                        <h5>${["Nimbus Foods", "Atlas Retail", "Hexa Pharma", "Orbit Tech"][i]}</h5>
+                        <p class="mini">Deal: ₹${[2.8, 4.2, 3.5, 6.1][i]}L</p>
+                        <p class="mini">Next: ${["Discovery Call", "Solution Demo", "Pricing Review", "Contract Signed"][i]}</p>
+                        <span class="badge ${i === 2 ? "badge-warning" : "badge-success"}">${i === 2 ? "Idle 6 days" : "Active"}</span>
+                      </a>
+                    </div>`
+                    )
+                    .join("")}
+                </div>
+              </section>
+              <aside class="card">
+                <h3>Lead Details</h3>
+                <p class="mini">Account: Atlas Retail</p>
+                <p class="mini">Owner: Sales - Neha</p>
+                <p class="mini">Decision Date: 28 Feb</p>
+                <p class="mini">Notes: Need revised onboarding timeline and integration scope.</p>
+                <a class="btn btn-primary" href="#deal-detail-${theme}">Follow-up CTA</a>
+              </aside>
+            </div>
+          `;
+        }
+
+        if (page === "finance") {
+          return `
+            ${commonHead}
+            <section class="grid-4">
+              ${kpiCard("Cash In", "₹28.4L", "This month collection", "invoice-detail", theme)}
+              ${kpiCard("Cash Out", "₹17.1L", "This month spending", "finance", theme)}
+              ${kpiCard("Net Balance", "₹11.3L", "Current position", "finance", theme)}
+              ${kpiCard("Runway Days", "42", "Projected runway", "ceo", theme)}
+            </section>
+            <div class="grid-2" style="margin-top:16px">
+              <section class="card">
+                <h3 style="margin-bottom:10px">Cash Flow Trend</h3>
+                <svg class="line-chart" viewBox="0 0 600 220" preserveAspectRatio="none">
+                  <polyline fill="none" stroke="var(--accent)" stroke-width="3" points="10,170 90,145 170,160 250,125 330,110 410,95 490,80 590,60"></polyline>
+                </svg>
+              </section>
+              <section class="card">
+                <h3 style="margin-bottom:10px">Invoices</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Client</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead>
+                    <tbody>
+                      <tr><td><a href="#invoice-detail-${theme}">Acme Corp</a></td><td>₹3.2L</td><td><span class="badge badge-success">PAID</span></td><td>12 Feb</td></tr>
+                      <tr class="danger-row"><td><a href="#invoice-detail-${theme}">Nimbus Foods</a></td><td>₹2.6L</td><td><span class="badge badge-danger">OVERDUE</span></td><td>04 Feb</td></tr>
+                      <tr><td><a href="#invoice-detail-${theme}">Hexa Pharma</a></td><td>₹1.9L</td><td><span class="badge badge-warning">SENT</span></td><td>18 Feb</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          `;
+        }
+
+        if (page === "admin") {
+          return `
+            ${commonHead}
+            <div class="grid-2">
+              <section class="card">
+                <h3 style="margin-bottom:10px">Users</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+                    <tbody>
+                      <tr><td>Mayank</td><td>ceo@kritviya.com</td><td><select class="select"><option>CEO</option></select></td><td><button class="btn">Update</button></td></tr>
+                      <tr><td>Rohan</td><td>ops@kritviya.com</td><td><select class="select"><option>Ops</option></select></td><td><button class="btn">Update</button></td></tr>
+                      <tr><td>Neha</td><td>sales@kritviya.com</td><td><select class="select"><option>Sales</option></select></td><td><button class="btn">Update</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="toolbar" style="margin-top:12px">
+                  <button class="btn btn-primary">Add User</button>
+                  <a class="btn" href="#rule-builder-${theme}">Create Rule</a>
+                  <button class="btn">View Logs</button>
+                </div>
+              </section>
+              <section class="card">
+                <h3>Audit Log Timeline</h3>
+                <p class="mini">10:12 - Role changed for ops@kritviya.com</p>
+                <p class="mini">09:48 - New automation created for overdue invoice nudges</p>
+                <p class="mini">09:30 - User invited: finance2@kritviya.com</p>
+                <h3 style="margin-top:20px">Automation Rules</h3>
+                <p class="mini">IF invoice overdue &gt; 5 days THEN nudge finance owner</p>
+                <p class="mini">IF task blocked &gt; 3 days THEN escalate to ops manager</p>
+              </section>
+            </div>
+          `;
+        }
+
+        if (page === "task-detail") {
+          return `
+            ${commonHead}
+            <div class="grid-2">
+              <section class="card">
+                <h3>Task: Client Data Migration</h3>
+                <p class="mini">Owner: Rohan | Due: 18 Feb | Revenue Impact: ₹2.1L</p>
+                <textarea class="textarea">Pending API credentials from client team. Need fallback import validation.</textarea>
+                <div class="toolbar" style="margin-top:10px">
+                  <button class="btn btn-primary">Save</button>
+                  <button class="btn">Reassign</button>
+                  <button class="btn btn-danger">Escalate</button>
+                </div>
+              </section>
+              <aside class="card">
+                <h3>Activity</h3>
+                <p class="mini">Updated by Ops 20 min ago</p>
+                <p class="mini">Escalation raised yesterday</p>
+              </aside>
+            </div>
+          `;
+        }
+
+        if (page === "deal-detail") {
+          return `
+            ${commonHead}
+            <div class="grid-2">
+              <section class="card">
+                <h3>Deal: Atlas Retail - Proposal</h3>
+                <p class="mini">Value: ₹4.2L | Owner: Neha | Idle: 6 days</p>
+                <textarea class="textarea">Customer requested revised timeline and onboarding scope.</textarea>
+                <div class="toolbar" style="margin-top:10px">
+                  <button class="btn btn-primary">Update Deal</button>
+                  <a class="btn" href="#finance-${theme}">Create Invoice (on Won)</a>
+                </div>
+              </section>
+              <aside class="card">
+                <h3>Next Actions</h3>
+                <p class="mini">1. Share revised SOW</p>
+                <p class="mini">2. Confirm implementation owner</p>
+              </aside>
+            </div>
+          `;
+        }
+
+        if (page === "invoice-detail") {
+          return `
+            ${commonHead}
+            <div class="grid-2">
+              <section class="card">
+                <h3>Invoice #INV-2026-118</h3>
+                <p class="mini">Client: Nimbus Foods | Amount: ₹2.6L</p>
+                <div class="toolbar">
+                  <span class="badge badge-danger">OVERDUE</span>
+                  <span class="badge badge-warning">LOCKED</span>
+                </div>
+                <div class="toolbar" style="margin-top:12px">
+                  <button class="btn btn-primary">Mark Paid</button>
+                  <button class="btn">Unlock</button>
+                  <button class="btn btn-danger">Send Reminder</button>
+                </div>
+              </section>
+              <aside class="card">
+                <h3>Audit Trail</h3>
+                <p class="mini">Sent by Finance at 04 Feb</p>
+                <p class="mini">Reminder triggered at 08 Feb</p>
+              </aside>
+            </div>
+          `;
+        }
+
+        if (page === "rule-builder") {
+          return `
+            ${commonHead}
+            <section class="card">
+              <h3>Create Automation Rule</h3>
+              <div class="grid-2" style="grid-template-columns:1fr 1fr;margin-top:10px">
+                <div>
+                  <label class="mini">IF</label>
+                  <select class="select">
+                    <option>Invoice overdue &gt; 5 days</option>
+                    <option>Task blocked &gt; 3 days</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mini">THEN</label>
+                  <select class="select">
+                    <option>Nudge Finance Owner</option>
+                    <option>Escalate to CEO</option>
+                  </select>
+                </div>
+              </div>
+              <div class="toolbar" style="margin-top:12px">
+                <button class="btn btn-primary">Create Rule</button>
+                <a class="btn" href="#admin-${theme}">Back to Admin</a>
+              </div>
+            </section>
+          `;
+        }
+
+        return `${commonHead}<section class="card"><p>Page not found.</p></section>`;
+      }
+
+      function syncUI() {
+        const { page, theme } = parseRoute();
+        const content = document.getElementById("content");
+        const sidebar = document.getElementById("sidebar");
+        const modeSwitcher = document.getElementById("modeSwitcher");
+        const themeToggle = document.getElementById("themeToggle");
+        const other = theme === "light" ? "dark" : "light";
+
+        document.body.setAttribute("data-theme", theme);
+        content.innerHTML = renderPage(page, theme);
+
+        const showShell = page !== "login";
+        sidebar.classList.toggle("hidden", !showShell);
+        if (showShell) {
+          sidebar.innerHTML = renderSidebar(page, theme);
+        }
+
+        const mode = ["ceo", "ops", "sales", "finance", "admin"].includes(page) ? page : "ceo";
+        modeSwitcher.value = mode;
+        modeSwitcher.onchange = (event) => {
+          go(modeDefaults[event.target.value], theme);
+        };
+
+        themeToggle.textContent = theme === "light" ? "🌙 Dark" : "☀️ Light";
+        themeToggle.onclick = () => go(page, other);
+      }
+
+      window.addEventListener("hashchange", syncUI);
+      syncUI();
+    </script>
+  </body>
+</html>

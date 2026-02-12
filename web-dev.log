@@ -1,0 +1,17 @@
+
+> kritviya@0.1.0 dev:web
+> npm run dev --workspace @kritviya/web
+
+
+> @kritviya/web@0.1.0 dev
+> next dev -p 3000
+
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.56.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 23.8s
+[?25h
+
+C:\Users\hp\OneDrive - Mayank Thakur\Desktop\Kritvia Global Dashboard-OS>

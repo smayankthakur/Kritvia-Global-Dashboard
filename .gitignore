@@ -1,0 +1,6 @@
+node_modules
+.env
+apps/*/node_modules
+apps/*/.next
+apps/*/.next-kritviya
+apps/*/dist

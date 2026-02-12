@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kritviya
+          POSTGRES_PASSWORD: kritviya
+          POSTGRES_DB: kritviya_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U kritviya -d kritviya_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL_TEST: postgresql://kritviya:kritviya@localhost:5432/kritviya_test
+      JWT_SECRET: kritviya_ci_secret
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run API integration tests
+        run: npm run test:ci
