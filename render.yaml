@@ -3,8 +3,8 @@ services:
     name: kritviya-api
     runtime: node
     rootDir: .
-    buildCommand: npm ci --include=dev && npm --workspace apps/api run build
-    startCommand: npm --workspace apps/api run migrate:deploy && npm --workspace apps/api run start:prod
+    buildCommand: npm ci --include=dev && npm run build:api
+    startCommand: npm run migrate:deploy && npm run start:api
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

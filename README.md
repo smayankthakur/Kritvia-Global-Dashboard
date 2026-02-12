@@ -332,8 +332,8 @@ Render service:
 - Type: `Web Service`
 - Repo: this repo
 - Root Directory: `.` (repo root)
-- Build Command: `npm ci --include=dev && npm --workspace apps/api run build`
-- Start Command: `npm --workspace apps/api run migrate:deploy && npm --workspace apps/api run start:prod`
+- Build Command: `npm ci --include=dev && npm run build:api`
+- Start Command: `npm run migrate:deploy && npm run start:api`
 - Health Check Path: `/health`
 - Readiness Check Path: `/ready` (optional separate monitor)
 
@@ -374,7 +374,7 @@ Do not set `localhost` in Vercel env.
 2. Create Render Web Service for API with the commands above.
 3. Set all API env vars in Render.
 4. Run migrations on production DB:
-   - `npm --workspace apps/api run migrate:deploy`
+   - `npm run migrate:deploy`
 5. Open and confirm:
    - `https://<render-api-domain>/health`
    - `https://<render-api-domain>/ready`
@@ -389,9 +389,9 @@ Do not set `localhost` in Vercel env.
 Use these exact commands to mirror Render behavior:
 
 1. `npm ci`
-2. `npm --workspace apps/api run build`
-3. `npm --workspace apps/api run migrate:deploy`
-4. `npm --workspace apps/api run start:prod`
+2. `npm run build:api`
+3. `npm run migrate:deploy`
+4. `npm run start:api`
 5. Verify:
    - `http://localhost:4000/health`
    - `http://localhost:4000/ready`
