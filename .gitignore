@@ -4,3 +4,5 @@ apps/*/node_modules
 apps/*/.next
 apps/*/.next-kritviya
 apps/*/dist
+*.log
+*.tsbuildinfo
