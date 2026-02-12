@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: kritviya-api
+    runtime: node
+    rootDir: .
+    buildCommand: npm ci --include=dev && npm --workspace apps/api run build
+    startCommand: npm --workspace apps/api run migrate:deploy && npm --workspace apps/api run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: 10000
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: none

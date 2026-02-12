@@ -5,6 +5,7 @@ import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { AuthUserContext } from "./auth.types";
+import type { CookieOptions } from "express";
 
 const REFRESH_COOKIE_NAME = "kritviya_refresh_token";
 
@@ -59,26 +60,36 @@ export class AuthController {
   }
 
   private setRefreshCookie(response: Response, refreshToken: string): void {
-    const cookieDomain = process.env.COOKIE_DOMAIN;
     response.cookie(REFRESH_COOKIE_NAME, refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.COOKIE_SECURE === "true",
-      path: "/auth",
-      domain: cookieDomain || undefined,
+      ...this.baseCookieOptions(),
       maxAge: this.getRefreshCookieMaxAgeMs()
     });
   }
 
   private clearRefreshCookie(response: Response): void {
-    const cookieDomain = process.env.COOKIE_DOMAIN;
     response.clearCookie(REFRESH_COOKIE_NAME, {
+      ...this.baseCookieOptions()
+    });
+  }
+
+  private baseCookieOptions(): CookieOptions {
+    const cookieDomain = process.env.COOKIE_DOMAIN;
+    const secure = process.env.COOKIE_SECURE === "true";
+    const sameSiteRaw = (process.env.COOKIE_SAMESITE ?? "").toLowerCase();
+    const sameSite: CookieOptions["sameSite"] =
+      sameSiteRaw === "none" || sameSiteRaw === "strict" || sameSiteRaw === "lax"
+        ? sameSiteRaw
+        : process.env.NODE_ENV === "production"
+          ? "none"
+          : "lax";
+
+    return {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.COOKIE_SECURE === "true",
+      sameSite,
+      secure: sameSite === "none" ? true : secure,
       path: "/auth",
       domain: cookieDomain || undefined
-    });
+    };
   }
 
   private getRefreshCookieMaxAgeMs(): number {

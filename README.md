@@ -315,81 +315,86 @@ Invoices:
 
 ## Deployment
 
-### Option A: Vercel (Web) + Managed API + Managed Postgres
+### Option A (Recommended): Vercel (Web) + Render (API) + Managed Postgres
 
-Recommended stack:
+Use this stack for reliability with NestJS + Prisma:
 
 - Web: Vercel (`apps/web`)
-- API: Render/Railway/Fly.io/container platform (`apps/api`)
-- Database: managed PostgreSQL (Neon/Supabase/RDS/etc.)
+- API: Render Web Service (`apps/api`)
+- Database: Render Postgres (or other managed Postgres)
 
-If you deploy API on Vercel, configure it as a separate Vercel project with Root Directory `apps/api`.
+Note: backend deployment on Vercel serverless is intentionally not used here.
 
-Required env vars:
+### Render API Configuration (Copy/Paste)
 
-API:
+Render service:
+
+- Type: `Web Service`
+- Repo: this repo
+- Root Directory: `.` (repo root)
+- Build Command: `npm ci --include=dev && npm --workspace apps/api run build`
+- Start Command: `npm --workspace apps/api run migrate:deploy && npm --workspace apps/api run start:prod`
+- Health Check Path: `/health`
+- Readiness Check Path: `/ready` (optional separate monitor)
+
+Render backend env vars:
 
 - `NODE_ENV=production`
-- `API_PORT=4000`
-- `DATABASE_URL=postgresql://...`
-- `JWT_SECRET=...`
-- `ACCESS_TOKEN_TTL=15m`
+- `DATABASE_URL=<render-postgres-url>`
+- `JWT_SECRET=<strong-random-secret>`
+- `ACCESS_TOKEN_TTL=900s`
 - `REFRESH_TOKEN_TTL=7d`
-- `CORS_ORIGINS=https://your-web-domain.com`
 - `COOKIE_SECURE=true`
-- `COOKIE_DOMAIN=.your-domain.com` (optional)
+- `COOKIE_SAMESITE=none`
+- `COOKIE_DOMAIN=` (leave empty unless you need a custom cookie domain)
+- `CORS_ORIGINS=https://executiv-dashboard.vercel.app`
 
-WEB:
+### Vercel Web Configuration (Copy/Paste)
 
-- `NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com`
+Vercel web project:
 
-### API on Vercel (separate project)
+- Root Directory: `apps/web`
+- Framework: `Next.js`
+- Build Command: default
+- Output Directory: default
 
-Project setup:
+Vercel frontend env vars:
 
-- Root Directory: `apps/api`
-- Framework Preset: `Other`
-- Build Command: `npm run build --workspace @kritviya/api`
-- Install Command: `npm install`
-- Output Directory: leave empty
+- `NEXT_PUBLIC_API_BASE_URL=https://<your-render-api-domain>`
 
-Required env vars in API Vercel project:
+Example:
 
-- `DATABASE_URL=postgresql://...`
-- `JWT_SECRET=...`
-- `NODE_ENV=production`
-- `CORS_ORIGINS=https://your-web.vercel.app,https://your-custom-domain.com`
-- `COOKIE_SECURE=true`
-- `COOKIE_DOMAIN=` (optional)
-- `ACCESS_TOKEN_TTL=15m`
-- `REFRESH_TOKEN_TTL=7d`
+- `NEXT_PUBLIC_API_BASE_URL=https://execution-os-api.onrender.com`
 
-Required env vars in Web Vercel project:
+Do not set `localhost` in Vercel env.
 
-- `NEXT_PUBLIC_API_BASE_URL=https://<your-api-vercel-domain>`
+### Do This Now (Step-by-Step)
 
-Notes:
+1. Create Render Postgres database and copy `DATABASE_URL`.
+2. Create Render Web Service for API with the commands above.
+3. Set all API env vars in Render.
+4. Run migrations on production DB:
+   - `npm --workspace apps/api run migrate:deploy`
+5. Open and confirm:
+   - `https://<render-api-domain>/health`
+   - `https://<render-api-domain>/ready`
+6. In Vercel (web project), set:
+   - `NEXT_PUBLIC_API_BASE_URL=https://<render-api-domain>`
+7. Redeploy frontend on Vercel.
+8. Test login at:
+   - `https://executiv-dashboard.vercel.app`
 
-- Do not use `http://localhost:4000` in Vercel env.
-- API routes are served by `apps/api/api/index.ts` via `apps/api/vercel.json`.
-- Run Prisma migrations against production DB before first traffic:
-  - `npm run migrate:deploy`
+### Render Build Simulation (Local From Repo Root)
 
-Deploy sequence:
+Use these exact commands to mirror Render behavior:
 
-1. Build API image or deploy API source.
-2. Run migrations before traffic cutover:
-   - `npm run migrate:deploy`
-3. Deploy API and confirm:
-   - `GET /health` returns 200
-   - `GET /ready` returns 200
-4. Deploy web on Vercel with `NEXT_PUBLIC_API_BASE_URL` set.
-
-Rollback:
-
-1. Re-deploy previous API release/image tag.
-2. Re-deploy previous Vercel deployment.
-3. Keep DB backups/snapshots; roll DB only if a migration explicitly requires rollback.
+1. `npm ci`
+2. `npm --workspace apps/api run build`
+3. `npm --workspace apps/api run migrate:deploy`
+4. `npm --workspace apps/api run start:prod`
+5. Verify:
+   - `http://localhost:4000/health`
+   - `http://localhost:4000/ready`
 
 ### Option B: VPS Docker Compose (Self-Hosted)
 
@@ -411,6 +416,7 @@ Required env vars in `.env`:
 - `REFRESH_TOKEN_TTL`
 - `CORS_ORIGINS`
 - `COOKIE_SECURE=true`
+- `COOKIE_SAMESITE=none`
 - `COOKIE_DOMAIN` (optional)
 - `NEXT_PUBLIC_API_BASE_URL`
 
@@ -447,3 +453,15 @@ Rollback:
   - Web `3000`, API `4000`, DB `5432` must be free.
 - Production CORS issues:
   - Ensure `CORS_ORIGINS` includes exact web origins (scheme + domain).
+- Login fails on production:
+  - Ensure web env has `NEXT_PUBLIC_API_BASE_URL` set to your Render API URL.
+  - Ensure API has `CORS_ORIGINS=https://executiv-dashboard.vercel.app`.
+  - Ensure API cookie settings are:
+    - `COOKIE_SECURE=true`
+    - `COOKIE_SAMESITE=none`
+- `GET /ready` fails:
+  - Check `DATABASE_URL`.
+  - Check migrations were run: `npm run migrate:deploy`.
+- Repeated `401` / refresh loop:
+  - Refresh cookie is blocked by browser when SameSite/Secure is wrong.
+  - Set `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true` on API.
