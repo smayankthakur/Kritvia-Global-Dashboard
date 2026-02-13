@@ -39,6 +39,17 @@ Not allowed (DO NOT IMPLEMENT):
 
 Stop immediately if a requested change exceeds Phase 7 scope.
 
+## 1.1) Phase Override (Owner Directive)
+
+If the repository owner explicitly approves work from a different phase in their prompt, that directive overrides the current phase gate for that task.
+
+When override is used:
+- You may implement schema changes, endpoints, and UI required by the approved phase.
+- You must keep Sudarshan Shield baseline intact.
+- You must keep server-side RBAC and org scoping on every relevant query/mutation.
+- You must include tests for new logic and avoid breaking existing flows.
+- You must preserve backward compatibility unless the owner explicitly requests breaking changes.
+
 ## 2) Security Doctrine: Sudarshan Shield (Phase 2 baseline)
 
 Implement and keep enforced:
