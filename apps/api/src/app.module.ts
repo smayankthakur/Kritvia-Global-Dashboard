@@ -6,6 +6,7 @@ import { AuthModule } from "./auth/auth.module";
 import { CompaniesModule } from "./companies/companies.module";
 import { ContactsModule } from "./contacts/contacts.module";
 import { DealsModule } from "./deals/deals.module";
+import { DebugController } from "./debug.controller";
 import { HealthController } from "./health.controller";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HygieneModule } from "./hygiene/hygiene.module";
@@ -38,7 +39,7 @@ import { WorkItemsModule } from "./work-items/work-items.module";
       }
     ])
   ],
-  controllers: [HealthController, ReadyController, SecureController],
+  controllers: [HealthController, ReadyController, SecureController, DebugController],
   providers: [
     {
       provide: APP_GUARD,
