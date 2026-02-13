@@ -17,6 +17,7 @@ import { NudgesModule } from "./nudges/nudges.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ReadyController } from "./ready.controller";
 import { SecureController } from "./secure/secure.controller";
+import { TimelineModule } from "./timeline/timeline.module";
 import { UsersModule } from "./users/users.module";
 import { WorkItemsModule } from "./work-items/work-items.module";
 
@@ -30,6 +31,7 @@ import { WorkItemsModule } from "./work-items/work-items.module";
     DirectoryModule,
     LeadsModule,
     DealsModule,
+    TimelineModule,
     InvoicesModule,
     WorkItemsModule,
     DashboardModule,
