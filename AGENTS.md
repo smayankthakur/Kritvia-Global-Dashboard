@@ -74,3 +74,9 @@ After changes:
 2. Provide exact commands to run
 3. Confirm ports/endpoints
 4. List Sudarshan Shield items implemented
+
+## Phase Override (Owner Directive)
+If the user explicitly approves a new phase (e.g., “Proceed with Phase 2”), the agent is authorized to implement new schema, endpoints, and UI required for that phase, while still:
+- preserving security (RBAC/org scoping/audit logs)
+- keeping tests/build passing
+- avoiding breaking changes to existing routes unless unavoidable (then document + migrate)
