@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { StringValue } from "ms";
 import { ActivityEntityType } from "@prisma/client";
@@ -30,8 +30,11 @@ export class AuthService {
       where: { email: dto.email }
     });
 
-    if (!user || !user.isActive) {
+    if (!user) {
       throw new UnauthorizedException("Invalid credentials");
+    }
+    if (!user.isActive) {
+      throw new ForbiddenException("Account deactivated");
     }
 
     const isPasswordValid = await compare(dto.password, user.passwordHash);

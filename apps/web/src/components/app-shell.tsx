@@ -25,6 +25,7 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
     { label: "Finance Invoices", href: "/finance/invoices" },
     { label: "Work Board", href: "/ops/work/board" },
     { label: "Work List", href: "/ops/work/list" },
+    { label: "User Management", href: "/admin/users" },
     { label: "Companies", href: "/sales/companies" },
     { label: "Leads", href: "/sales/leads" },
     { label: "Deals", href: "/sales/deals" }
@@ -56,6 +57,7 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
     { label: "Finance Invoices", href: "/finance/invoices" },
     { label: "Work Board", href: "/ops/work/board" },
     { label: "Work List", href: "/ops/work/list" },
+    { label: "User Management", href: "/admin/users" },
     { label: "Companies", href: "/sales/companies" },
     { label: "Leads", href: "/sales/leads" },
     { label: "Deals", href: "/sales/deals" }

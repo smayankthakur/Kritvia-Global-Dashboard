@@ -16,6 +16,7 @@ import { NudgesModule } from "./nudges/nudges.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ReadyController } from "./ready.controller";
 import { SecureController } from "./secure/secure.controller";
+import { UsersModule } from "./users/users.module";
 import { WorkItemsModule } from "./work-items/work-items.module";
 
 @Module({
@@ -32,6 +33,7 @@ import { WorkItemsModule } from "./work-items/work-items.module";
     DashboardModule,
     HygieneModule,
     NudgesModule,
+    UsersModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

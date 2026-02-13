@@ -307,6 +307,11 @@ export interface UserSummary {
   role: "CEO" | "OPS" | "SALES" | "FINANCE" | "ADMIN";
 }
 
+export interface ManagedUser extends UserSummary {
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface CeoDashboardPayload {
   kpis: {
     openDealsValue: number;
@@ -907,9 +912,81 @@ export async function listFeed(token: string): Promise<FeedItem[]> {
 }
 
 export async function listUsers(token: string): Promise<UserSummary[]> {
-  const response = await request(`${API_BASE_URL}/users`, {
+  const response = await request(`${API_BASE_URL}/nudges/users`, {
     headers: authHeaders(token),
     cache: "no-store"
   });
   return parseResponse(response, "Failed to fetch users");
+}
+
+export async function listManagedUsers(
+  token: string,
+  options?: {
+    active?: "active" | "inactive" | "all";
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  }
+): Promise<PaginatedResponse<ManagedUser>> {
+  const params = new URLSearchParams();
+  if (options?.active) {
+    params.set("active", options.active);
+  }
+  addPaginationParams(params, options);
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/users${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch managed users");
+}
+
+export async function createManagedUser(
+  token: string,
+  payload: {
+    name: string;
+    email: string;
+    role: UserSummary["role"];
+    password?: string;
+  }
+): Promise<{ user: ManagedUser; tempPassword?: string }> {
+  const response = await request(`${API_BASE_URL}/users`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create user");
+}
+
+export async function updateManagedUser(
+  token: string,
+  id: string,
+  payload: {
+    name?: string;
+    role?: UserSummary["role"];
+  }
+): Promise<ManagedUser> {
+  const response = await request(`${API_BASE_URL}/users/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update user");
+}
+
+export async function deactivateManagedUser(token: string, id: string): Promise<ManagedUser> {
+  const response = await request(`${API_BASE_URL}/users/${id}/deactivate`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to deactivate user");
+}
+
+export async function reactivateManagedUser(token: string, id: string): Promise<ManagedUser> {
+  const response = await request(`${API_BASE_URL}/users/${id}/reactivate`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to reactivate user");
 }

@@ -401,6 +401,26 @@ tbody tr:hover {
   font-size: 13px;
 }
 
+.kv-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.kv-modal {
+  width: 100%;
+  max-width: 540px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+}
+
 @media (max-width: 980px) {
   .kv-content {
     grid-template-columns: 1fr;
