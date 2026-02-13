@@ -4,7 +4,7 @@ services:
     runtime: node
     rootDir: .
     buildCommand: npm ci --include=dev && npm run build:api
-    startCommand: npm run migrate:deploy && npm run start:api
+    startCommand: npm run migrate:deploy && npm run seed:api && npm run start:api
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

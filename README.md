@@ -58,6 +58,7 @@ From repo root:
 - `npm run build:web`
 - `npm run build` (api + web)
 - `npm run migrate:deploy` (Prisma `migrate deploy`)
+- `npm run seed:api` (Prisma seed via `apps/api/prisma/seed.ts`)
 - `npm run seed:prod` (optional; idempotent demo seed)
 - `npm run start:api` (runs built API)
 - `npm run start:web` (runs built web)
@@ -333,7 +334,7 @@ Render service:
 - Repo: this repo
 - Root Directory: `.` (repo root)
 - Build Command: `npm ci --include=dev && npm run build:api`
-- Start Command: `npm run migrate:deploy && npm run start:api`
+- Start Command: `npm run migrate:deploy && npm run seed:api && npm run start:api`
 - Health Check Path: `/health`
 - Readiness Check Path: `/ready` (optional separate monitor)
 
@@ -373,8 +374,9 @@ Do not set `localhost` in Vercel env.
 1. Create Render Postgres database and copy `DATABASE_URL`.
 2. Create Render Web Service for API with the commands above.
 3. Set all API env vars in Render.
-4. Run migrations on production DB:
+4. Run migrations and seed demo users on production DB:
    - `npm run migrate:deploy`
+   - `npm run seed:api`
 5. Open and confirm:
    - `https://<render-api-domain>/health`
    - `https://<render-api-domain>/ready`
@@ -391,8 +393,9 @@ Use these exact commands to mirror Render behavior:
 1. `npm ci`
 2. `npm run build:api`
 3. `npm run migrate:deploy`
-4. `npm run start:api`
-5. Verify:
+4. `npm run seed:api`
+5. `npm run start:api`
+6. Verify:
    - `http://localhost:4000/health`
    - `http://localhost:4000/ready`
 

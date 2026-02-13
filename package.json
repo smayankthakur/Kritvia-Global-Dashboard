@@ -20,6 +20,7 @@
     "seed": "dotenv -e .env -- npm --workspace apps/api run db:seed",
     "build:web": "npm --workspace apps/web run build",
     "build:api": "npm --workspace apps/api run build",
+    "seed:api": "npm --workspace apps/api run seed",
     "build": "npm run build:api && npm run build:web",
     "start:api": "npm --workspace apps/api run start:prod",
     "start:web": "node scripts/start-web.mjs",
