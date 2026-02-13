@@ -224,6 +224,27 @@ export interface Deal {
   owner?: { id: string; name: string } | null;
 }
 
+export type DealTimelineMilestoneType =
+  | "LEAD_CREATED"
+  | "DEAL_CREATED"
+  | "WORK_ROOT_CREATED"
+  | "INVOICE_SENT"
+  | "INVOICE_PAID";
+
+export interface DealTimelineMilestone {
+  type: DealTimelineMilestoneType;
+  timestamp: string;
+  durationFromPreviousHours: number | null;
+  isBottleneck: boolean;
+}
+
+export interface DealTimelineResponse {
+  dealId: string;
+  policyThresholdHours: number;
+  totalCycleHours: number | null;
+  milestones: DealTimelineMilestone[];
+}
+
 export interface WorkItem {
   id: string;
   title: string;
@@ -582,6 +603,15 @@ export async function markDealLost(token: string, id: string): Promise<Deal> {
   });
 
   return parseResponse(response, "Failed to mark deal lost");
+}
+
+export async function getDealTimeline(token: string, id: string): Promise<DealTimelineResponse> {
+  const response = await request(`${API_BASE_URL}/deals/${id}/timeline`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+
+  return parseResponse(response, "Failed to fetch deal execution timeline");
 }
 
 export async function listWorkItems(

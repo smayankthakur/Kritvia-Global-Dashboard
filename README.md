@@ -269,6 +269,32 @@ Jobs:
 
 - `POST /jobs/compute-health-score` (ADMIN)
 
+## Org Execution Score (Phase 2.1)
+
+Endpoint usage:
+
+- `GET /ceo/health-score` (CEO, ADMIN): returns today's score snapshot for the org.
+- If today's snapshot does not exist, API computes and upserts it first.
+- `POST /jobs/compute-health-score` (ADMIN): forces compute/upsert for today (idempotent by `orgId + dateKey`).
+
+Scoring formula:
+
+- Start at `100`
+- `overdueWorkPenalty = min(40, round(overdueWorkPct * 40))`
+- `overdueInvoicePenalty = min(30, round(overdueInvoicePct * 30))`
+- `staleDealsPenalty = min(20, round(staleDealsPct * 20))`
+- `hygienePenalty = min(10, round(min(hygieneCount, 50) / 50 * 10))`
+- `score = max(0, 100 - sum(penalties))`
+
+Render notes:
+
+- No extra env vars are required beyond existing API env (`DATABASE_URL`, `JWT_SECRET`, etc.).
+- Ensure migrations run on deploy (`npm run migrate:deploy`) so `org_health_snapshots` exists.
+- Verify in production:
+  - `GET https://<render-api>/health`
+  - `GET https://<render-api>/ready`
+  - Authenticated `GET https://<render-api>/ceo/health-score`
+
 Work Items:
 
 - `GET /work-items?status=&assignedTo=&due=overdue|today|week|all`

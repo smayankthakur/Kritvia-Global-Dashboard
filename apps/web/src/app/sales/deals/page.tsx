@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "../../../components/app-shell";
 import {
   ApiError,
@@ -216,7 +217,9 @@ export default function SalesDealsPage() {
         <tbody>
           {deals.map((deal) => (
             <tr key={deal.id}>
-              <td>{deal.title}</td>
+              <td>
+                <Link href={`/deals/${deal.id}`}>{deal.title}</Link>
+              </td>
               <td>{deal.company?.name ?? "-"}</td>
               <td>
                 {deal.currency} {deal.valueAmount}

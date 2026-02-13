@@ -345,6 +345,66 @@ tbody tr:hover {
   color: var(--accent-color);
 }
 
+.kv-badge-danger {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--danger-color) 18%, transparent);
+  color: var(--danger-color);
+}
+
+.kv-timeline {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.kv-timeline-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+}
+
+.kv-timeline-dot {
+  width: 11px;
+  height: 11px;
+  margin-top: 6px;
+  border-radius: 999px;
+  border: 2px solid var(--accent-color);
+  background: var(--bg-card);
+}
+
+.kv-timeline-content {
+  position: relative;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+}
+
+.kv-timeline-skeleton {
+  height: 68px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--bg-secondary), var(--bg-card), var(--bg-secondary));
+  background-size: 200% 100%;
+  animation: kv-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes kv-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .kv-login-wrap {
   min-height: calc(100vh - 66px);
   display: grid;
