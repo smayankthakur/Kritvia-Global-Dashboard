@@ -259,6 +259,15 @@ Deals:
 - `PATCH /deals/:id`
 - `POST /deals/:id/mark-won`
 - `POST /deals/:id/mark-lost`
+- `GET /deals/:id/timeline`
+
+CEO Health Score:
+
+- `GET /ceo/health-score` (CEO, ADMIN)
+
+Jobs:
+
+- `POST /jobs/compute-health-score` (ADMIN)
 
 Work Items:
 

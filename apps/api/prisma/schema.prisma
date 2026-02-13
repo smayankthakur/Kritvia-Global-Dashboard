@@ -74,8 +74,24 @@ model Org {
   invoices     Invoice[]
   nudges       Nudge[]
   refreshTokens RefreshToken[]
+  healthSnapshots OrgHealthSnapshot[]
 
   @@map("orgs")
+}
+
+model OrgHealthSnapshot {
+  id         String   @id @default(uuid()) @db.Uuid
+  orgId      String   @map("org_id") @db.Uuid
+  score      Int
+  breakdown  Json
+  computedAt DateTime @default(now()) @map("computed_at")
+  dateKey    String   @map("date_key")
+
+  org        Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, dateKey])
+  @@index([orgId, computedAt])
+  @@map("org_health_snapshots")
 }
 
 model User {

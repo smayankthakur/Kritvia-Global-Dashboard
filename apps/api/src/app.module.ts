@@ -9,6 +9,7 @@ import { DealsModule } from "./deals/deals.module";
 import { DebugController } from "./debug.controller";
 import { DirectoryModule } from "./directory/directory.module";
 import { HealthController } from "./health.controller";
+import { HealthScoreModule } from "./health-score/health-score.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HygieneModule } from "./hygiene/hygiene.module";
 import { InvoicesModule } from "./invoices/invoices.module";
@@ -35,6 +36,7 @@ import { WorkItemsModule } from "./work-items/work-items.module";
     InvoicesModule,
     WorkItemsModule,
     DashboardModule,
+    HealthScoreModule,
     HygieneModule,
     NudgesModule,
     UsersModule,
