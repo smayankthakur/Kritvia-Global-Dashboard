@@ -1,12 +1,11 @@
 import { Logger } from "@nestjs/common";
-import { NextFunction, Request, Response } from "express";
 
 const logger = new Logger("RequestLogger");
 
 export function requestLoggingMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
+  req: any,
+  res: any,
+  next: () => void
 ): void {
   const start = Date.now();
 
@@ -31,4 +30,3 @@ export function requestLoggingMiddleware(
 
   next();
 }
-

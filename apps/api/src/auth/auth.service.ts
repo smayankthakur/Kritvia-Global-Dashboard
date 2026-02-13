@@ -2,12 +2,15 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { StringValue } from "ms";
 import { ActivityEntityType } from "@prisma/client";
-import { compare } from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
 import { ActivityLogService } from "../activity-log/activity-log.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { LoginDto } from "./dto/login.dto";
 import { AuthTokenPayload, AuthUserContext } from "./auth.types";
+
+const { compare } = require("bcryptjs") as {
+  compare: (plainText: string, hash: string) => Promise<boolean>;
+};
 
 export interface AuthTokensResponse {
   accessToken: string;

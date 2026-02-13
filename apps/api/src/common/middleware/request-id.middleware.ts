@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { NextFunction, Request, Response } from "express";
 
 const REQUEST_ID_HEADER = "X-Request-Id";
 const UUID_V4_REGEX =
@@ -9,7 +8,7 @@ function isValidUuidV4(value: string): boolean {
   return UUID_V4_REGEX.test(value);
 }
 
-export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
+export function requestIdMiddleware(req: any, res: any, next: () => void): void {
   const incomingRequestId = req.header(REQUEST_ID_HEADER);
   const requestId =
     incomingRequestId && isValidUuidV4(incomingRequestId) ? incomingRequestId : randomUUID();
@@ -18,4 +17,3 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
   res.setHeader(REQUEST_ID_HEADER, requestId);
   next();
 }
-
