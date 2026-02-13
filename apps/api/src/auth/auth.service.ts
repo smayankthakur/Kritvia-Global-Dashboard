@@ -26,8 +26,9 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto): Promise<AuthTokensResponse> {
+    const normalizedEmail = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email }
+      where: { email: normalizedEmail }
     });
 
     if (!user) {

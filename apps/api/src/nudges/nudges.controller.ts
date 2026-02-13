@@ -32,11 +32,6 @@ export class NudgesController {
     return this.nudgesService.list(query, req.user);
   }
 
-  @Get("users")
-  async listUsers(@Req() req: { user: AuthUserContext }) {
-    return this.nudgesService.listUsers(req.user);
-  }
-
   @Post(":id/resolve")
   async resolve(@Param("id", ParseUUIDPipe) id: string, @Req() req: { user: AuthUserContext }) {
     return this.nudgesService.resolve(id, req.user);

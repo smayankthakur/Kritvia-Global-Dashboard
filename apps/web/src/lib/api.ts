@@ -303,8 +303,9 @@ export type FeedItem = Nudge;
 export interface UserSummary {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   role: "CEO" | "OPS" | "SALES" | "FINANCE" | "ADMIN";
+  isActive?: boolean;
 }
 
 export interface ManagedUser extends UserSummary {
@@ -912,7 +913,7 @@ export async function listFeed(token: string): Promise<FeedItem[]> {
 }
 
 export async function listUsers(token: string): Promise<UserSummary[]> {
-  const response = await request(`${API_BASE_URL}/nudges/users`, {
+  const response = await request(`${API_BASE_URL}/directory/users`, {
     headers: authHeaders(token),
     cache: "no-store"
   });

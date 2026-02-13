@@ -144,14 +144,6 @@ export class NudgesService {
     });
   }
 
-  async listUsers(authUser: AuthUserContext) {
-    return this.prisma.user.findMany({
-      where: { orgId: authUser.orgId, isActive: true },
-      select: { id: true, name: true, email: true, role: true },
-      orderBy: { name: "asc" }
-    });
-  }
-
   private assertCreatePermission(authUser: AuthUserContext, entityType: ActivityEntityType): void {
     if (
       authUser.role === Role.CEO ||

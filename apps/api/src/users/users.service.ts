@@ -63,6 +63,7 @@ export class UsersService {
 
   async create(dto: CreateUserDto, authUser: AuthUserContext) {
     this.assertCanSetRole(authUser, dto.role);
+    const normalizedEmail = dto.email.trim().toLowerCase();
 
     const password = dto.password?.trim() || this.generateTempPassword();
     const passwordHash = await hash(password, 10);
@@ -72,7 +73,7 @@ export class UsersService {
         data: {
           orgId: authUser.orgId,
           name: dto.name,
-          email: dto.email,
+          email: normalizedEmail,
           role: dto.role,
           isActive: true,
           passwordHash
@@ -106,7 +107,7 @@ export class UsersService {
     this.assertCanSetRole(authUser, dto.role);
 
     if (dto.role && existing.id === authUser.userId && dto.role !== existing.role) {
-      throw new BadRequestException("You cannot change your own role");
+      throw new ConflictException("Cannot change your own role");
     }
 
     const updated = await this.prisma.user.update({
@@ -261,4 +262,3 @@ export class UsersService {
     return password;
   }
 }
-

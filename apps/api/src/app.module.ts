@@ -7,6 +7,7 @@ import { CompaniesModule } from "./companies/companies.module";
 import { ContactsModule } from "./contacts/contacts.module";
 import { DealsModule } from "./deals/deals.module";
 import { DebugController } from "./debug.controller";
+import { DirectoryModule } from "./directory/directory.module";
 import { HealthController } from "./health.controller";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HygieneModule } from "./hygiene/hygiene.module";
@@ -26,6 +27,7 @@ import { WorkItemsModule } from "./work-items/work-items.module";
     AuthModule,
     CompaniesModule,
     ContactsModule,
+    DirectoryModule,
     LeadsModule,
     DealsModule,
     InvoicesModule,
