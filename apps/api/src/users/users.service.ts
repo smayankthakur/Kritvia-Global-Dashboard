@@ -11,6 +11,7 @@ import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
+import { ShieldService } from "../shield/shield.service";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { ListUsersDto } from "./dto/list-users.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
@@ -32,7 +33,8 @@ interface SafeUserRecord {
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activityLogService: ActivityLogService
+    private readonly activityLogService: ActivityLogService,
+    private readonly shieldService: ShieldService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListUsersDto) {
@@ -129,6 +131,22 @@ export class UsersService {
       after: updated
     });
 
+    if (existing.role !== Role.ADMIN && updated.role === Role.ADMIN) {
+      await this.shieldService.createEvent({
+        orgId: authUser.orgId,
+        type: "ADMIN_ROLE_GRANTED",
+        severity: "CRITICAL",
+        description: "User was promoted to ADMIN role.",
+        entityType: "USER",
+        entityId: updated.id,
+        userId: authUser.userId,
+        meta: {
+          previousRole: existing.role,
+          nextRole: updated.role
+        }
+      });
+    }
+
     return updated;
   }
 
@@ -156,6 +174,7 @@ export class UsersService {
       before: this.toSafeUserRecord(existing),
       after: updated
     });
+    await this.shieldService.detectBulkUserDeactivation(authUser.orgId, authUser.userId);
 
     return updated;
   }

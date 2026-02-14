@@ -9,7 +9,9 @@ import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
 import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
+import { PolicyResolverService } from "../policy/policy-resolver.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { ShieldService } from "../shield/shield.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { ListInvoicesDto } from "./dto/list-invoices.dto";
 import { UpdateInvoiceDto } from "./dto/update-invoice.dto";
@@ -32,7 +34,9 @@ function startOfUtcDay(date: Date): Date {
 export class InvoicesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activityLogService: ActivityLogService
+    private readonly activityLogService: ActivityLogService,
+    private readonly policyResolverService: PolicyResolverService,
+    private readonly shieldService: ShieldService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListInvoicesDto) {
@@ -166,15 +170,24 @@ export class InvoicesService {
   }
 
   async send(id: string, authUser: AuthUserContext) {
+    const policy = await this.policyResolverService.getPolicyForOrg(authUser.orgId);
     const existing = await this.findInvoiceOr404(id, authUser.orgId);
     if (existing.status !== InvoiceStatus.DRAFT) {
       throw new BadRequestException("Invoice send is allowed only from DRAFT");
     }
 
+    const sentAt = existing.sentAt ?? new Date();
+    const lockAt =
+      policy.autoLockInvoiceAfterDays >= 0
+        ? this.addDays(sentAt, policy.autoLockInvoiceAfterDays)
+        : null;
+
     const updated = await this.prisma.invoice.update({
       where: { id: existing.id },
       data: {
         status: InvoiceStatus.SENT,
+        sentAt,
+        lockAt,
         lockedAt: new Date(),
         lockedByUserId: authUser.userId
       }
@@ -189,6 +202,17 @@ export class InvoicesService {
       before: existing,
       after: updated
     });
+
+    if (lockAt) {
+      await this.activityLogService.log({
+        orgId: authUser.orgId,
+        actorUserId: authUser.userId,
+        entityType: ActivityEntityType.INVOICE,
+        entityId: updated.id,
+        action: "AUTO_LOCK_SCHEDULED",
+        after: { sentAt, lockAt }
+      });
+    }
 
     return this.getById(updated.id, authUser);
   }
@@ -242,6 +266,19 @@ export class InvoicesService {
       action: "UNLOCK",
       before: existing,
       after: updated
+    });
+
+    await this.shieldService.createEvent({
+      orgId: authUser.orgId,
+      type: "INVOICE_UNLOCK",
+      severity: "HIGH",
+      description: "Invoice unlocked after being locked",
+      entityType: "INVOICE",
+      entityId: updated.id,
+      userId: authUser.userId,
+      meta: {
+        invoiceId: updated.id
+      }
     });
 
     return this.getById(updated.id, authUser);
@@ -359,5 +396,11 @@ export class InvoicesService {
       return sortBy;
     }
     throw new BadRequestException("Invalid sortBy for activity");
+  }
+
+  private addDays(value: Date, days: number): Date {
+    const next = new Date(value);
+    next.setUTCDate(next.getUTCDate() + days);
+    return next;
   }
 }

@@ -59,6 +59,19 @@ enum NudgeStatus {
   RESOLVED
 }
 
+enum NudgeType {
+  MANUAL
+  OVERDUE_INVOICE
+  OVERDUE_WORK
+  STALE_DEAL
+}
+
+enum NudgeSeverity {
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 model Org {
   id           String        @id @default(uuid()) @db.Uuid
   name         String
@@ -75,6 +88,7 @@ model Org {
   nudges       Nudge[]
   refreshTokens RefreshToken[]
   healthSnapshots OrgHealthSnapshot[]
+  securityEvents SecurityEvent[]
 
   @@map("orgs")
 }
@@ -116,19 +130,52 @@ model User {
   createdNudges     Nudge[]     @relation("NudgeCreator")
   targetNudges      Nudge[]     @relation("NudgeTarget")
   refreshTokens     RefreshToken[]
+  securityEvents    SecurityEvent[]
 
   @@index([orgId])
   @@map("users")
 }
 
+model SecurityEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  orgId       String    @map("org_id") @db.Uuid
+  type        String
+  severity    String
+  description String
+  entityType  String?   @map("entity_type")
+  entityId    String?   @map("entity_id")
+  userId      String?   @map("user_id") @db.Uuid
+  meta        Json?
+  resolvedAt  DateTime? @map("resolved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  org         Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, severity, createdAt])
+  @@map("security_events")
+}
+
 model Policy {
-  id                String   @id @default(uuid()) @db.Uuid
-  orgId             String   @map("org_id") @db.Uuid
-  lockInvoiceOnSent Boolean  @default(true) @map("lock_invoice_on_sent")
-  overdueAfterDays  Int      @default(0) @map("overdue_after_days")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id                                    String   @id @default(uuid()) @db.Uuid
+  orgId                                 String   @map("org_id") @db.Uuid
+  lockInvoiceOnSent                     Boolean  @default(true) @map("lock_invoice_on_sent")
+  overdueAfterDays                      Int      @default(0) @map("overdue_after_days")
+  defaultWorkDueDays                    Int      @default(3) @map("default_work_due_days")
+  staleDealAfterDays                    Int      @default(7) @map("stale_deal_after_days")
+  leadStaleAfterHours                   Int      @default(72) @map("lead_stale_after_hours")
+  requireDealOwner                      Boolean  @default(true) @map("require_deal_owner")
+  requireWorkOwner                      Boolean  @default(true) @map("require_work_owner")
+  requireWorkDueDate                    Boolean  @default(true) @map("require_work_due_date")
+  autoLockInvoiceAfterDays              Int      @default(2) @map("auto_lock_invoice_after_days")
+  preventInvoiceUnlockAfterPartialPayment Boolean @default(true) @map("prevent_invoice_unlock_after_partial_payment")
+  autopilotEnabled                      Boolean  @default(false) @map("autopilot_enabled")
+  autopilotCreateWorkOnDealStageChange  Boolean  @default(true) @map("autopilot_create_work_on_deal_stage_change")
+  autopilotNudgeOnOverdue               Boolean  @default(true) @map("autopilot_nudge_on_overdue")
+  autopilotAutoStaleDeals               Boolean  @default(true) @map("autopilot_auto_stale_deals")
+  createdAt                             DateTime @default(now()) @map("created_at")
+  updatedAt                             DateTime @updatedAt @map("updated_at")
+  org                                   Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([orgId])
   @@map("policies")
@@ -219,6 +266,7 @@ model Deal {
   orgId             String    @map("org_id") @db.Uuid
   title             String
   stage             DealStage @default(OPEN)
+  isStale           Boolean   @default(false) @map("is_stale")
   valueAmount       Int       @default(0) @map("value_amount")
   currency          String    @default("INR")
   expectedCloseDate DateTime? @map("expected_close_date")
@@ -226,6 +274,7 @@ model Deal {
   companyId         String    @map("company_id") @db.Uuid
   ownerUserId       String?   @map("owner_user_id") @db.Uuid
   createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
   org               Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
   company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   owner             User?     @relation("DealOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
@@ -277,6 +326,8 @@ model Invoice {
   currency        String       @default("INR")
   issueDate       DateTime     @default(now()) @map("issue_date") @db.Date
   dueDate         DateTime     @map("due_date") @db.Date
+  sentAt          DateTime?    @map("sent_at")
+  lockAt          DateTime?    @map("lock_at")
   lockedAt        DateTime?    @map("locked_at")
   lockedByUserId  String?      @map("locked_by_user_id") @db.Uuid
   createdByUserId String       @map("created_by_user_id") @db.Uuid
@@ -300,10 +351,19 @@ model Nudge {
   orgId           String             @map("org_id") @db.Uuid
   createdByUserId String             @map("created_by_user_id") @db.Uuid
   targetUserId    String             @map("target_user_id") @db.Uuid
+  type            NudgeType          @default(MANUAL)
   entityType      ActivityEntityType @map("entity_type")
   entityId        String             @map("entity_id")
   message         String
   status          NudgeStatus        @default(OPEN)
+  severity        NudgeSeverity      @default(MEDIUM)
+  priorityScore   Int                @default(0) @map("priority_score")
+  meta            Json?
+  actionType      String?            @map("action_type")
+  actionPayload   Json?              @map("action_payload")
+  executedAt      DateTime?          @map("executed_at")
+  undoExpiresAt   DateTime?          @map("undo_expires_at")
+  undoData        Json?              @map("undo_data")
   createdAt       DateTime           @default(now()) @map("created_at")
   resolvedAt      DateTime?          @map("resolved_at")
 
@@ -312,7 +372,8 @@ model Nudge {
   targetUser      User               @relation("NudgeTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
 
   @@index([orgId, targetUserId, status])
-  @@index([orgId, entityType, entityId])
+  @@index([orgId, status, priorityScore])
+  @@index([orgId, type, entityType, entityId, status])
   @@map("nudges")
 }
 

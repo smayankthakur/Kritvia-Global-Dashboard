@@ -309,10 +309,22 @@ export interface Nudge {
   id: string;
   targetUserId: string;
   createdByUserId: string;
+  type: "MANUAL" | "OVERDUE_INVOICE" | "OVERDUE_WORK" | "STALE_DEAL";
   entityType: "COMPANY" | "CONTACT" | "LEAD" | "DEAL" | "WORK_ITEM" | "INVOICE";
   entityId: string;
   message: string;
   status: "OPEN" | "RESOLVED";
+  severity: "CRITICAL" | "HIGH" | "MEDIUM";
+  priorityScore: number;
+  meta?: {
+    daysOverdue?: number;
+    amount?: number;
+    dealValue?: number;
+    idleDays?: number;
+  } | null;
+  actionType?: string | null;
+  executedAt?: string | null;
+  undoExpiresAt?: string | null;
   createdAt: string;
   resolvedAt: string | null;
   targetUser?: { id: string; name: string; email: string } | null;
@@ -352,6 +364,48 @@ export interface HygieneItem {
   workItem?: WorkItem;
   invoice?: Invoice;
   suggestedActions: string[];
+}
+
+export interface PolicySettings {
+  id: string;
+  orgId: string;
+  lockInvoiceOnSent: boolean;
+  overdueAfterDays: number;
+  defaultWorkDueDays: number;
+  staleDealAfterDays: number;
+  leadStaleAfterHours: number;
+  requireDealOwner: boolean;
+  requireWorkOwner: boolean;
+  requireWorkDueDate: boolean;
+  autoLockInvoiceAfterDays: number;
+  preventInvoiceUnlockAfterPartialPayment: boolean;
+  autopilotEnabled: boolean;
+  autopilotCreateWorkOnDealStageChange: boolean;
+  autopilotNudgeOnOverdue: boolean;
+  autopilotAutoStaleDeals: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JobsRunSummary {
+  processedOrgs: number;
+  invoicesLocked: number;
+  dealsStaled: number;
+  nudgesCreated: number;
+}
+
+export interface SecurityEvent {
+  id: string;
+  orgId: string;
+  type: string;
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  description: string;
+  entityType: string | null;
+  entityId: string | null;
+  userId: string | null;
+  meta: Record<string, unknown> | null;
+  resolvedAt: string | null;
+  createdAt: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -934,6 +988,25 @@ export async function resolveNudge(token: string, id: string): Promise<Nudge> {
   return parseResponse(response, "Failed to resolve nudge");
 }
 
+export async function executeNudge(
+  token: string,
+  id: string
+): Promise<{ success: true; undoExpiresAt: string }> {
+  const response = await request(`${API_BASE_URL}/nudges/${id}/execute`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to execute nudge");
+}
+
+export async function undoNudge(token: string, id: string): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/nudges/${id}/undo`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to undo nudge");
+}
+
 export async function listFeed(token: string): Promise<FeedItem[]> {
   const response = await request(`${API_BASE_URL}/feed`, {
     headers: authHeaders(token),
@@ -1020,4 +1093,67 @@ export async function reactivateManagedUser(token: string, id: string): Promise<
     headers: authHeaders(token)
   });
   return parseResponse(response, "Failed to reactivate user");
+}
+
+export async function getPolicySettings(token: string): Promise<PolicySettings> {
+  const response = await request(`${API_BASE_URL}/settings/policies`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch policy settings");
+}
+
+export async function updatePolicySettings(
+  token: string,
+  payload: Omit<PolicySettings, "id" | "orgId" | "createdAt" | "updatedAt">
+): Promise<PolicySettings> {
+  const response = await request(`${API_BASE_URL}/settings/policies`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update policy settings");
+}
+
+export async function runAutopilotNow(token: string): Promise<JobsRunSummary> {
+  const response = await request(`${API_BASE_URL}/jobs/run`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to run autopilot job");
+}
+
+export async function listShieldEvents(
+  token: string,
+  options?: {
+    severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    resolved?: boolean;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  }
+): Promise<PaginatedResponse<SecurityEvent>> {
+  const params = new URLSearchParams();
+  if (options?.severity) {
+    params.set("severity", options.severity);
+  }
+  if (options?.resolved !== undefined) {
+    params.set("resolved", String(options.resolved));
+  }
+  addPaginationParams(params, options);
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/shield/events${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch shield events");
+}
+
+export async function resolveShieldEvent(token: string, id: string): Promise<SecurityEvent> {
+  const response = await request(`${API_BASE_URL}/shield/events/${id}/resolve`, {
+    method: "PATCH",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to resolve security event");
 }

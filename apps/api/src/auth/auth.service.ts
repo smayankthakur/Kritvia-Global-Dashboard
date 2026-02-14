@@ -5,6 +5,7 @@ import { ActivityEntityType } from "@prisma/client";
 import { createHash, randomBytes } from "node:crypto";
 import { ActivityLogService } from "../activity-log/activity-log.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { ShieldService } from "../shield/shield.service";
 import { LoginDto } from "./dto/login.dto";
 import { AuthTokenPayload, AuthUserContext } from "./auth.types";
 
@@ -22,7 +23,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly activityLogService: ActivityLogService
+    private readonly activityLogService: ActivityLogService,
+    private readonly shieldService: ShieldService
   ) {}
 
   async login(dto: LoginDto): Promise<AuthTokensResponse> {
@@ -40,8 +42,14 @@ export class AuthService {
 
     const isPasswordValid = await compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
+      await this.shieldService.registerFailedLoginAttempt({
+        orgId: user.orgId,
+        userId: user.id,
+        email: normalizedEmail
+      });
       throw new UnauthorizedException("Invalid credentials");
     }
+    this.shieldService.clearFailedLoginAttempts(user.orgId, normalizedEmail);
 
     const accessToken = await this.issueAccessToken({
       sub: user.id,

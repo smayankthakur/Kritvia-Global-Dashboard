@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { ModeSwitcher } from "./mode-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { AuthMeResponse, Role } from "../types/auth";
-import { FeedItem, listFeed, logoutRequest } from "../lib/api";
+import { FeedItem, listFeed, listShieldEvents, logoutRequest } from "../lib/api";
 import { clearAccessToken, getAccessToken } from "../lib/auth";
 
 interface AppShellProps {
@@ -20,6 +20,8 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   CEO: [
     { label: "Home", href: "/" },
     { label: "CEO Dashboard", href: "/ceo/dashboard" },
+    { label: "Action Mode", href: "/ceo/action-mode" },
+    { label: "Sudarshan Shield", href: "/shield" },
     { label: "Hygiene Inbox", href: "/ops/hygiene" },
     { label: "Nudges", href: "/nudges" },
     { label: "Finance Invoices", href: "/finance/invoices" },
@@ -52,6 +54,8 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   ADMIN: [
     { label: "Home", href: "/" },
     { label: "CEO Dashboard", href: "/ceo/dashboard" },
+    { label: "Action Mode", href: "/ceo/action-mode" },
+    { label: "Sudarshan Shield", href: "/shield" },
     { label: "Hygiene Inbox", href: "/ops/hygiene" },
     { label: "Nudges", href: "/nudges" },
     { label: "Finance Invoices", href: "/finance/invoices" },
@@ -64,12 +68,19 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   ]
 };
 
+const settingsNavByRole: Partial<Record<Role, Array<{ label: string; href: string }>>> = {
+  CEO: [{ label: "Policies", href: "/settings/policies" }],
+  ADMIN: [{ label: "Policies", href: "/settings/policies" }]
+};
+
 export function AppShell({ user, title, children }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const nav = navByRole[user.role];
+  const settingsNav = settingsNavByRole[user.role] ?? [];
   const [feedOpen, setFeedOpen] = useState(false);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [criticalThreatCount, setCriticalThreatCount] = useState(0);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -79,7 +90,18 @@ export function AppShell({ user, title, children }: AppShellProps) {
     listFeed(token)
       .then((items) => setFeedItems(items))
       .catch(() => setFeedItems([]));
-  }, []);
+
+    if (user.role === "CEO" || user.role === "ADMIN") {
+      listShieldEvents(token, {
+        severity: "CRITICAL",
+        resolved: false,
+        page: 1,
+        pageSize: 1
+      })
+        .then((payload) => setCriticalThreatCount(payload.total))
+        .catch(() => setCriticalThreatCount(0));
+    }
+  }, [user.role]);
 
   async function onLogout(): Promise<void> {
     await logoutRequest().catch(() => undefined);
@@ -116,6 +138,17 @@ export function AppShell({ user, title, children }: AppShellProps) {
               </div>
             ) : null}
           </div>
+          {user.role === "CEO" || user.role === "ADMIN" ? (
+            <Link
+              href="/shield"
+              className={`kv-shield-btn${criticalThreatCount > 0 ? " kv-shield-btn-alert" : ""}`}
+              aria-label="Open Sudarshan Shield dashboard"
+              title={criticalThreatCount > 0 ? "Critical threats detected" : "Sudarshan Shield"}
+            >
+              Shield
+              {criticalThreatCount > 0 ? <span className="kv-shield-dot" /> : null}
+            </Link>
+          ) : null}
           <ModeSwitcher role={user.role} />
           <ThemeToggle />
           <div className="kv-avatar" title={user.name}>
@@ -146,6 +179,29 @@ export function AppShell({ user, title, children }: AppShellProps) {
               </Link>
             ))}
           </nav>
+          {settingsNav.length > 0 ? (
+            <>
+              <p className="kv-sidebar-title" style={{ marginTop: "16px" }}>
+                Settings
+              </p>
+              <nav className="kv-nav">
+                {settingsNav.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="kv-nav-link"
+                    style={
+                      pathname === item.href
+                        ? { borderColor: "var(--border-color)", background: "var(--bg-secondary)" }
+                        : undefined
+                    }
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </>
+          ) : null}
         </aside>
 
         <main className="kv-main">

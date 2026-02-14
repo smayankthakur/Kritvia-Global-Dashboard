@@ -1,9 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException
+} from "@nestjs/common";
 import { ActivityEntityType, DealStage, WorkItemStatus } from "@prisma/client";
 import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
+import { PolicyResolverService } from "../policy/policy-resolver.service";
 import { CreateDealDto } from "./dto/create-deal.dto";
 import { ListDealsDto } from "./dto/list-deals.dto";
 import { UpdateDealDto } from "./dto/update-deal.dto";
@@ -12,7 +18,8 @@ import { UpdateDealDto } from "./dto/update-deal.dto";
 export class DealsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly activityLogService: ActivityLogService
+    private readonly activityLogService: ActivityLogService,
+    private readonly policyResolverService: PolicyResolverService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListDealsDto) {
@@ -52,6 +59,11 @@ export class DealsService {
   }
 
   async create(dto: CreateDealDto, authUser: AuthUserContext) {
+    const policy = await this.policyResolverService.getPolicyForOrg(authUser.orgId);
+    if (policy.requireDealOwner && !dto.ownerUserId) {
+      throw new ConflictException("Deal owner is required by org policy");
+    }
+
     await this.ensureCompanyInOrg(dto.companyId, authUser.orgId);
     await this.ensureOwnerInOrg(dto.ownerUserId, authUser.orgId);
 
@@ -81,6 +93,7 @@ export class DealsService {
   }
 
   async update(id: string, dto: UpdateDealDto, authUser: AuthUserContext) {
+    const policy = await this.policyResolverService.getPolicyForOrg(authUser.orgId);
     const existing = await this.prisma.deal.findFirst({
       where: { id, orgId: authUser.orgId }
     });
@@ -92,6 +105,16 @@ export class DealsService {
     if (dto.companyId) {
       await this.ensureCompanyInOrg(dto.companyId, authUser.orgId);
     }
+
+    if (policy.requireDealOwner) {
+      if (dto.ownerUserId === null) {
+        throw new ConflictException("Deal owner cannot be unset while policy requires owner");
+      }
+      if (!existing.ownerUserId && dto.ownerUserId === undefined) {
+        throw new ConflictException("Deal owner is required by org policy");
+      }
+    }
+
     await this.ensureOwnerInOrg(dto.ownerUserId, authUser.orgId);
 
     const updated = await this.prisma.deal.update({
@@ -220,7 +243,7 @@ export class DealsService {
     }
   }
 
-  private async ensureOwnerInOrg(ownerUserId: string | undefined, orgId: string): Promise<void> {
+  private async ensureOwnerInOrg(ownerUserId: string | null | undefined, orgId: string): Promise<void> {
     if (!ownerUserId) {
       return;
     }

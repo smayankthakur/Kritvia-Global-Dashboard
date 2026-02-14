@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from "../src/common/filters/all-exceptions.filter
 import { requestIdMiddleware } from "../src/common/middleware/request-id.middleware";
 import { requestLoggingMiddleware } from "../src/common/middleware/request-logging.middleware";
 import { PrismaService } from "../src/prisma/prisma.service";
+import { Prisma } from "@prisma/client";
 
 jest.setTimeout(60000);
 
@@ -110,5 +111,90 @@ describe("Health Score Integration", () => {
       where: { orgId: IDS.orgA, dateKey }
     });
     expect(count).toBe(1);
+  });
+
+  it("returns explain drivers with deep links for penalty increases", async () => {
+    const todayDate = new Date();
+    const todayDateKey = todayDate.toISOString().slice(0, 10);
+    const yesterdayDate = new Date(todayDate);
+    yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
+    const yesterdayDateKey = yesterdayDate.toISOString().slice(0, 10);
+
+    const yesterdayBreakdown = {
+      overdueWorkPct: 0.1,
+      overdueInvoicePct: 0.1,
+      staleDealsPct: 0.1,
+      hygieneCount: 2,
+      penalties: {
+        overdueWorkPenalty: 4,
+        overdueInvoicePenalty: 3,
+        staleDealsPenalty: 2,
+        hygienePenalty: 0
+      },
+      thresholds: { staleDays: 7 }
+    };
+    const todayBreakdown = {
+      overdueWorkPct: 0.3,
+      overdueInvoicePct: 0.1,
+      staleDealsPct: 0.2,
+      hygieneCount: 8,
+      penalties: {
+        overdueWorkPenalty: 12,
+        overdueInvoicePenalty: 3,
+        staleDealsPenalty: 4,
+        hygienePenalty: 2
+      },
+      thresholds: { staleDays: 7 }
+    };
+
+    await prisma.orgHealthSnapshot.upsert({
+      where: {
+        orgId_dateKey: { orgId: IDS.orgA, dateKey: yesterdayDateKey }
+      },
+      create: {
+        orgId: IDS.orgA,
+        dateKey: yesterdayDateKey,
+        score: 91,
+        breakdown: yesterdayBreakdown as unknown as Prisma.InputJsonValue,
+        computedAt: yesterdayDate
+      },
+      update: {
+        score: 91,
+        breakdown: yesterdayBreakdown as unknown as Prisma.InputJsonValue,
+        computedAt: yesterdayDate
+      }
+    });
+
+    await prisma.orgHealthSnapshot.upsert({
+      where: {
+        orgId_dateKey: { orgId: IDS.orgA, dateKey: todayDateKey }
+      },
+      create: {
+        orgId: IDS.orgA,
+        dateKey: todayDateKey,
+        score: 79,
+        breakdown: todayBreakdown as unknown as Prisma.InputJsonValue,
+        computedAt: todayDate
+      },
+      update: {
+        score: 79,
+        breakdown: todayBreakdown as unknown as Prisma.InputJsonValue,
+        computedAt: todayDate
+      }
+    });
+
+    const response = await request(app.getHttpServer())
+      .get(`/ceo/health-score/explain?date=${todayDateKey}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.dateKey).toBe(todayDateKey);
+    expect(response.body.todayScore).toBe(79);
+    expect(response.body.yesterdayScore).toBe(91);
+    expect(response.body.delta).toBe(-12);
+    expect(Array.isArray(response.body.drivers)).toBe(true);
+    expect(response.body.drivers.length).toBeGreaterThan(0);
+    expect(response.body.drivers[0].impactPoints).toBeGreaterThan(0);
+    expect(typeof response.body.drivers[0].deepLink).toBe("string");
   });
 });

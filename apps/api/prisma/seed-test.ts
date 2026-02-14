@@ -72,14 +72,76 @@ async function main(): Promise<void> {
 
   await prisma.policy.upsert({
     where: { orgId: IDS.orgA },
-    update: { lockInvoiceOnSent: true, overdueAfterDays: 0 },
-    create: { orgId: IDS.orgA, lockInvoiceOnSent: true, overdueAfterDays: 0 }
+    update: {
+      lockInvoiceOnSent: true,
+      overdueAfterDays: 0,
+      defaultWorkDueDays: 3,
+      staleDealAfterDays: 7,
+      leadStaleAfterHours: 72,
+      requireDealOwner: true,
+      requireWorkOwner: true,
+      requireWorkDueDate: true,
+      autoLockInvoiceAfterDays: 2,
+      preventInvoiceUnlockAfterPartialPayment: true,
+      autopilotEnabled: false,
+      autopilotCreateWorkOnDealStageChange: true,
+      autopilotNudgeOnOverdue: true,
+      autopilotAutoStaleDeals: true
+    },
+    create: {
+      orgId: IDS.orgA,
+      lockInvoiceOnSent: true,
+      overdueAfterDays: 0,
+      defaultWorkDueDays: 3,
+      staleDealAfterDays: 7,
+      leadStaleAfterHours: 72,
+      requireDealOwner: true,
+      requireWorkOwner: true,
+      requireWorkDueDate: true,
+      autoLockInvoiceAfterDays: 2,
+      preventInvoiceUnlockAfterPartialPayment: true,
+      autopilotEnabled: false,
+      autopilotCreateWorkOnDealStageChange: true,
+      autopilotNudgeOnOverdue: true,
+      autopilotAutoStaleDeals: true
+    }
   });
 
   await prisma.policy.upsert({
     where: { orgId: IDS.orgB },
-    update: { lockInvoiceOnSent: true, overdueAfterDays: 0 },
-    create: { orgId: IDS.orgB, lockInvoiceOnSent: true, overdueAfterDays: 0 }
+    update: {
+      lockInvoiceOnSent: true,
+      overdueAfterDays: 0,
+      defaultWorkDueDays: 3,
+      staleDealAfterDays: 7,
+      leadStaleAfterHours: 72,
+      requireDealOwner: true,
+      requireWorkOwner: true,
+      requireWorkDueDate: true,
+      autoLockInvoiceAfterDays: 2,
+      preventInvoiceUnlockAfterPartialPayment: true,
+      autopilotEnabled: false,
+      autopilotCreateWorkOnDealStageChange: true,
+      autopilotNudgeOnOverdue: true,
+      autopilotAutoStaleDeals: true
+    },
+    create: {
+      orgId: IDS.orgB,
+      lockInvoiceOnSent: true,
+      overdueAfterDays: 0,
+      defaultWorkDueDays: 3,
+      staleDealAfterDays: 7,
+      leadStaleAfterHours: 72,
+      requireDealOwner: true,
+      requireWorkOwner: true,
+      requireWorkDueDate: true,
+      autoLockInvoiceAfterDays: 2,
+      preventInvoiceUnlockAfterPartialPayment: true,
+      autopilotEnabled: false,
+      autopilotCreateWorkOnDealStageChange: true,
+      autopilotNudgeOnOverdue: true,
+      autopilotAutoStaleDeals: true
+    }
   });
 
   await upsertUser({

@@ -1,6 +1,6 @@
 import { BadRequestException, INestApplication, ValidationError, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { ActivityEntityType, DealStage, InvoiceStatus } from "@prisma/client";
+import { ActivityEntityType, DealStage, InvoiceStatus, Role } from "@prisma/client";
 import cookieParser from "cookie-parser";
 import { json, urlencoded } from "express";
 import helmet from "helmet";
@@ -10,6 +10,8 @@ import { AllExceptionsFilter } from "../src/common/filters/all-exceptions.filter
 import { requestIdMiddleware } from "../src/common/middleware/request-id.middleware";
 import { requestLoggingMiddleware } from "../src/common/middleware/request-logging.middleware";
 import { PrismaService } from "../src/prisma/prisma.service";
+
+jest.setTimeout(60000);
 
 const IDS = {
   orgA: "10000000-0000-0000-0000-000000000001",
@@ -51,7 +53,10 @@ describe("Guardrail Integration Tests", () => {
   let salesAToken = "";
   let opsAToken = "";
   let financeAToken = "";
+  let ceoAToken = "";
   let adminBToken = "";
+  let validCompanyId = "";
+  let validAssigneeUserId = "";
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -88,7 +93,27 @@ describe("Guardrail Integration Tests", () => {
     salesAToken = await login(app, "salesa@test.kritviya.local");
     opsAToken = await login(app, "opsa@test.kritviya.local");
     financeAToken = await login(app, "financea@test.kritviya.local");
+    ceoAToken = await login(app, "ceoa@test.kritviya.local");
     adminBToken = await login(app, "adminb@test.kritviya.local");
+    const company = await prisma.company.create({
+      data: {
+        orgId: IDS.orgA,
+        name: `Test Company ${Date.now()}`
+      }
+    });
+    validCompanyId = company.id;
+
+    const assignee = await prisma.user.create({
+      data: {
+        orgId: IDS.orgA,
+        name: "Assigned User",
+        email: `assigned-${Date.now()}@test.kritviya.local`,
+        role: Role.OPS,
+        isActive: true,
+        passwordHash: "not-used-for-login"
+      }
+    });
+    validAssigneeUserId = assignee.id;
   });
 
   afterAll(async () => {
@@ -238,5 +263,152 @@ describe("Guardrail Integration Tests", () => {
     expect(logs.some((log) => log.action === "SEND")).toBe(true);
     expect(logs.some((log) => log.action === "UNLOCK")).toBe(true);
     expect(logs.some((log) => log.action === "MARK_PAID")).toBe(true);
+  });
+
+  it("policy update validates numeric ranges", async () => {
+    const response = await request(app.getHttpServer())
+      .put("/settings/policies")
+      .set("Authorization", `Bearer ${ceoAToken}`)
+      .send({
+        lockInvoiceOnSent: true,
+        overdueAfterDays: 0,
+        defaultWorkDueDays: 31,
+        staleDealAfterDays: 0,
+        leadStaleAfterHours: 24,
+        requireDealOwner: true,
+        requireWorkOwner: true,
+        requireWorkDueDate: true,
+        autoLockInvoiceAfterDays: 31,
+        preventInvoiceUnlockAfterPartialPayment: true,
+        autopilotEnabled: false,
+        autopilotCreateWorkOnDealStageChange: true,
+        autopilotNudgeOnOverdue: true,
+        autopilotAutoStaleDeals: true
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("ceo can update policies with valid payload", async () => {
+    const response = await request(app.getHttpServer())
+      .put("/settings/policies")
+      .set("Authorization", `Bearer ${ceoAToken}`)
+      .send({
+        lockInvoiceOnSent: true,
+        overdueAfterDays: 3,
+        defaultWorkDueDays: 5,
+        staleDealAfterDays: 10,
+        leadStaleAfterHours: 72,
+        requireDealOwner: true,
+        requireWorkOwner: true,
+        requireWorkDueDate: true,
+        autoLockInvoiceAfterDays: 2,
+        preventInvoiceUnlockAfterPartialPayment: true,
+        autopilotEnabled: false,
+        autopilotCreateWorkOnDealStageChange: true,
+        autopilotNudgeOnOverdue: true,
+        autopilotAutoStaleDeals: true
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.defaultWorkDueDays).toBe(5);
+    expect(response.body.staleDealAfterDays).toBe(10);
+  });
+
+  it("ops cannot access settings policies endpoints", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/settings/policies")
+      .set("Authorization", `Bearer ${opsAToken}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  it("settings policies endpoint is org scoped", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/settings/policies")
+      .set("Authorization", `Bearer ${adminBToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.orgId).toBe("20000000-0000-0000-0000-000000000001");
+    expect(response.body.defaultWorkDueDays).toBe(3);
+  });
+
+  it("deal create without owner is blocked when policy requires owner", async () => {
+    await prisma.policy.update({
+      where: { orgId: IDS.orgA },
+      data: { requireDealOwner: true }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/deals")
+      .set("Authorization", `Bearer ${salesAToken}`)
+      .send({
+        title: "Ownerless Deal",
+        companyId: validCompanyId,
+        valueAmount: 1000
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.message).toContain("owner is required");
+  });
+
+  it("work create without dueDate auto-sets dueDate and logs AUTO_DUE_DATE_SET", async () => {
+    await prisma.policy.update({
+      where: { orgId: IDS.orgA },
+      data: { requireWorkDueDate: true, defaultWorkDueDays: 3, requireWorkOwner: true }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/work-items")
+      .set("Authorization", `Bearer ${opsAToken}`)
+      .send({
+        title: "Policy Auto Due Work",
+        assignedToUserId: validAssigneeUserId,
+        priority: 2
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.dueDate).toBeTruthy();
+
+    const logs = await prisma.activityLog.findMany({
+      where: {
+        orgId: IDS.orgA,
+        entityType: ActivityEntityType.WORK_ITEM,
+        entityId: response.body.id,
+        action: "AUTO_DUE_DATE_SET"
+      }
+    });
+    expect(logs.length).toBeGreaterThan(0);
+  });
+
+  it("invoice send sets lockAt using policy autoLockInvoiceAfterDays", async () => {
+    await prisma.policy.update({
+      where: { orgId: IDS.orgA },
+      data: { autoLockInvoiceAfterDays: 2 }
+    });
+    await prisma.invoice.update({
+      where: { id: IDS.invoiceA },
+      data: {
+        status: InvoiceStatus.DRAFT,
+        sentAt: null,
+        lockAt: null,
+        lockedAt: null,
+        lockedByUserId: null
+      }
+    });
+
+    const response = await request(app.getHttpServer())
+      .post(`/invoices/${IDS.invoiceA}/send`)
+      .set("Authorization", `Bearer ${financeAToken}`);
+
+    expect(response.status).toBe(201);
+    expect(response.body.sentAt).toBeTruthy();
+    expect(response.body.lockAt).toBeTruthy();
+
+    const sentAt = new Date(response.body.sentAt);
+    const lockAt = new Date(response.body.lockAt);
+    const diffDays = Math.round((lockAt.getTime() - sentAt.getTime()) / (24 * 60 * 60 * 1000));
+    expect(diffDays).toBe(2);
   });
 });

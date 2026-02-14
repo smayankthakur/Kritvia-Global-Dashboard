@@ -1,5 +1,6 @@
 import { Type } from "class-transformer";
 import {
+  ValidateIf,
   IsDateString,
   IsEnum,
   IsInt,
@@ -22,8 +23,9 @@ export class UpdateDealDto {
   companyId?: string;
 
   @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsUUID()
-  ownerUserId?: string;
+  ownerUserId?: string | null;
 
   @IsOptional()
   @Type(() => Number)

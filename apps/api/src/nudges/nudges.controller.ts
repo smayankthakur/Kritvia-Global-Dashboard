@@ -32,6 +32,21 @@ export class NudgesController {
     return this.nudgesService.list(query, req.user);
   }
 
+  @Post("recompute")
+  async recompute(@Req() req: { user: AuthUserContext }) {
+    return this.nudgesService.recomputeOpenScores(req.user);
+  }
+
+  @Post(":id/execute")
+  async execute(@Param("id", ParseUUIDPipe) id: string, @Req() req: { user: AuthUserContext }) {
+    return this.nudgesService.execute(id, req.user);
+  }
+
+  @Post(":id/undo")
+  async undo(@Param("id", ParseUUIDPipe) id: string, @Req() req: { user: AuthUserContext }) {
+    return this.nudgesService.undo(id, req.user);
+  }
+
   @Post(":id/resolve")
   async resolve(@Param("id", ParseUUIDPipe) id: string, @Req() req: { user: AuthUserContext }) {
     return this.nudgesService.resolve(id, req.user);

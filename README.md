@@ -264,10 +264,17 @@ Deals:
 CEO Health Score:
 
 - `GET /ceo/health-score` (CEO, ADMIN)
+- `GET /ceo/health-score/explain?date=YYYY-MM-DD` (CEO, ADMIN)
 
 Jobs:
 
 - `POST /jobs/compute-health-score` (ADMIN)
+- `POST /jobs/run` (ADMIN or `X-JOBS-SECRET` when `JOBS_SECRET` is configured)
+
+Settings:
+
+- `GET /settings/policies` (CEO, ADMIN)
+- `PUT /settings/policies` (CEO, ADMIN)
 
 ## Org Execution Score (Phase 2.1)
 
@@ -275,6 +282,7 @@ Endpoint usage:
 
 - `GET /ceo/health-score` (CEO, ADMIN): returns today's score snapshot for the org.
 - If today's snapshot does not exist, API computes and upserts it first.
+- `GET /ceo/health-score/explain?date=YYYY-MM-DD`: compares target date snapshot vs previous day and returns negative drivers + deep links.
 - `POST /jobs/compute-health-score` (ADMIN): forces compute/upsert for today (idempotent by `orgId + dateKey`).
 
 Scoring formula:

@@ -18,11 +18,38 @@ async function main() {
 
   await prisma.policy.upsert({
     where: { orgId: org.id },
-    update: {},
+    update: {
+      lockInvoiceOnSent: true,
+      overdueAfterDays: 0,
+      defaultWorkDueDays: 3,
+      staleDealAfterDays: 7,
+      leadStaleAfterHours: 72,
+      requireDealOwner: true,
+      requireWorkOwner: true,
+      requireWorkDueDate: true,
+      autoLockInvoiceAfterDays: 2,
+      preventInvoiceUnlockAfterPartialPayment: true,
+      autopilotEnabled: false,
+      autopilotCreateWorkOnDealStageChange: true,
+      autopilotNudgeOnOverdue: true,
+      autopilotAutoStaleDeals: true
+    },
     create: {
       orgId: org.id,
       lockInvoiceOnSent: true,
-      overdueAfterDays: 0
+      overdueAfterDays: 0,
+      defaultWorkDueDays: 3,
+      staleDealAfterDays: 7,
+      leadStaleAfterHours: 72,
+      requireDealOwner: true,
+      requireWorkOwner: true,
+      requireWorkDueDate: true,
+      autoLockInvoiceAfterDays: 2,
+      preventInvoiceUnlockAfterPartialPayment: true,
+      autopilotEnabled: false,
+      autopilotCreateWorkOnDealStageChange: true,
+      autopilotNudgeOnOverdue: true,
+      autopilotAutoStaleDeals: true
     }
   });
 
@@ -66,4 +93,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

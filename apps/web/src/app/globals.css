@@ -233,6 +233,45 @@ tbody tr:hover {
   min-width: 92px;
 }
 
+.kv-shield-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--bg-secondary);
+}
+
+.kv-shield-btn-alert {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger-color) 24%, transparent);
+  animation: kv-shield-pulse 1.6s ease-in-out infinite;
+}
+
+.kv-shield-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--danger-color);
+}
+
+@keyframes kv-shield-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger-color) 35%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--danger-color) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger-color) 0%, transparent);
+  }
+}
+
 .kv-avatar {
   height: 34px;
   width: 34px;
@@ -354,6 +393,17 @@ tbody tr:hover {
   font-weight: 600;
   background: color-mix(in srgb, var(--danger-color) 18%, transparent);
   color: var(--danger-color);
+}
+
+.kv-badge-warning {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--warning-color) 20%, transparent);
+  color: var(--warning-color);
 }
 
 .kv-timeline {
@@ -481,6 +531,53 @@ tbody tr:hover {
   padding: 16px;
 }
 
+.kv-action-item {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--bg-secondary);
+}
+
+.kv-link-btn {
+  display: inline-block;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.kv-score {
+  margin: 10px 0 0;
+  font-size: 48px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.kv-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kv-policy-card {
+  border-top: 2px solid #d4a017;
+}
+
+.kv-policy-card .kv-section-title {
+  margin-top: 0;
+}
+
+.kv-policy-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.kv-policy-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
 @media (max-width: 980px) {
   .kv-content {
     grid-template-columns: 1fr;
@@ -493,6 +590,10 @@ tbody tr:hover {
 
   .kv-grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kv-policy-grid {
+    grid-template-columns: 1fr;
   }
 }
 

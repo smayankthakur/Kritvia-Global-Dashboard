@@ -13,11 +13,14 @@ import { HealthScoreModule } from "./health-score/health-score.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HygieneModule } from "./hygiene/hygiene.module";
 import { InvoicesModule } from "./invoices/invoices.module";
+import { JobsModule } from "./jobs/jobs.module";
 import { LeadsModule } from "./leads/leads.module";
 import { NudgesModule } from "./nudges/nudges.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ReadyController } from "./ready.controller";
 import { SecureController } from "./secure/secure.controller";
+import { ShieldModule } from "./shield/shield.module";
+import { SettingsModule } from "./settings/settings.module";
 import { TimelineModule } from "./timeline/timeline.module";
 import { UsersModule } from "./users/users.module";
 import { WorkItemsModule } from "./work-items/work-items.module";
@@ -33,13 +36,16 @@ import { WorkItemsModule } from "./work-items/work-items.module";
     LeadsModule,
     DealsModule,
     TimelineModule,
+    ShieldModule,
     InvoicesModule,
     WorkItemsModule,
+    JobsModule,
     DashboardModule,
     HealthScoreModule,
     HygieneModule,
     NudgesModule,
     UsersModule,
+    SettingsModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
