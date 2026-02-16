@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuthUserContext } from "../auth/auth.types";
+import { BillingService } from "../billing/billing.service";
+import { getActiveOrgId } from "../common/auth-org";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { ListSecurityEventsDto } from "./dto/list-security-events.dto";
@@ -25,7 +27,10 @@ interface FailedLoginBucket {
 export class ShieldService {
   private readonly failedLoginBuckets = new Map<string, FailedLoginBucket>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billingService: BillingService
+  ) {}
 
   async createEvent(input: SecurityEventInput) {
     return this.securityEventModel().create({
@@ -43,9 +48,11 @@ export class ShieldService {
   }
 
   async listEvents(authUser: AuthUserContext, query: ListSecurityEventsDto) {
+    const activeOrgId = getActiveOrgId({ user: authUser });
+    await this.billingService.assertFeature(activeOrgId, "shieldEnabled");
     const skip = (query.page - 1) * query.pageSize;
     const where = {
-      orgId: authUser.orgId,
+      orgId: activeOrgId,
       ...(query.severity ? { severity: query.severity.toUpperCase() } : {}),
       ...(query.resolved === undefined
         ? {}
@@ -66,10 +73,12 @@ export class ShieldService {
   }
 
   async resolveEvent(authUser: AuthUserContext, id: string) {
+    const activeOrgId = getActiveOrgId({ user: authUser });
+    await this.billingService.assertFeature(activeOrgId, "shieldEnabled");
     const existing = await this.securityEventModel().findFirst({
       where: {
         id,
-        orgId: authUser.orgId
+        orgId: activeOrgId
       }
     });
     if (!existing) {

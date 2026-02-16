@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common
 import { Throttle } from "@nestjs/throttler";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
+import { SwitchOrgDto } from "./dto/switch-org.dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { AuthUserContext } from "./auth.types";
 
@@ -47,14 +48,17 @@ export class AuthController {
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
-  async me(@Req() req: { user: AuthUserContext }): Promise<{
-    id: string;
-    name: string;
-    email: string;
-    role: AuthUserContext["role"];
-    orgId: string;
-  }> {
+  async me(@Req() req: { user: AuthUserContext }) {
     return this.authService.getMe(req.user);
+  }
+
+  @Post("switch-org")
+  @UseGuards(JwtAuthGuard)
+  async switchOrg(
+    @Req() req: { user: AuthUserContext },
+    @Body() dto: SwitchOrgDto
+  ): Promise<{ accessToken: string }> {
+    return this.authService.switchOrg(req.user, dto.orgId);
   }
 
   private setRefreshCookie(response: any, refreshToken: string): void {

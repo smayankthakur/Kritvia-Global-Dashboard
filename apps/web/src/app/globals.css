@@ -329,6 +329,12 @@ tbody tr:hover {
   gap: 12px;
 }
 
+.kv-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .kv-form-compact {
   display: grid;
   gap: 8px;
@@ -511,6 +517,121 @@ tbody tr:hover {
   font-size: 13px;
 }
 
+.kv-org-switcher-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.kv-org-switcher {
+  position: relative;
+}
+
+.kv-org-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #222222;
+  background: #111111;
+  color: #f0f0f0;
+  padding: 9px 12px;
+}
+
+.kv-org-dropdown {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  width: 320px;
+  border: 1px solid #222222;
+  border-radius: 10px;
+  background: #111111;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  padding: 6px;
+  z-index: 120;
+}
+
+.kv-org-option {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #111111;
+  color: #f1f1f1;
+  padding: 10px;
+  margin-bottom: 4px;
+}
+
+.kv-org-option:last-child {
+  margin-bottom: 0;
+}
+
+.kv-org-option:hover:enabled {
+  background: #161616;
+  border-color: #2a2a2a;
+}
+
+.kv-org-option-active {
+  border-color: #d4a017;
+  box-shadow: inset 0 0 0 1px rgba(212, 160, 23, 0.22);
+}
+
+.kv-org-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kv-org-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #333333;
+  padding: 2px 8px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.kv-org-status-active {
+  border-color: color-mix(in srgb, var(--success-color) 50%, #333333);
+  color: var(--success-color);
+}
+
+.kv-org-status-invited {
+  border-color: color-mix(in srgb, var(--warning-color) 50%, #333333);
+  color: var(--warning-color);
+}
+
+.kv-org-status-removed {
+  border-color: color-mix(in srgb, var(--danger-color) 50%, #333333);
+  color: var(--danger-color);
+}
+
+.kv-org-static {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #222222;
+  background: #111111;
+  color: #f2f2f2;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.kv-org-toast {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  border: 1px solid color-mix(in srgb, var(--success-color) 45%, #2a2a2a);
+  border-radius: 8px;
+  background: #111111;
+  color: #f3f3f3;
+  padding: 7px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 130;
+}
+
 .kv-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -578,6 +699,132 @@ tbody tr:hover {
   height: 18px;
 }
 
+.kv-revenue-card {
+  background: #111111;
+  border-color: #222222;
+  box-shadow: inset 0 0 0 1px rgba(212, 160, 23, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kv-revenue-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 160, 23, 0.22),
+    0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.kv-revenue-title {
+  color: #f5cf69;
+}
+
+.kv-revenue-label {
+  margin: 0;
+  color: #b5b5b5;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.kv-revenue-value {
+  margin: 8px 0 6px;
+  color: #f6f1de;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.kv-revenue-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kv-revenue-bar-row {
+  display: grid;
+  gap: 6px;
+}
+
+.kv-revenue-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #dadada;
+  font-size: 13px;
+}
+
+.kv-revenue-bar-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.kv-revenue-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d4a017, #f4cc62);
+}
+
+.kv-revenue-skeleton {
+  min-height: 132px;
+  border: 1px solid #222222;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #101010, #1a1a1a, #101010);
+  background-size: 200% 100%;
+  animation: kv-shimmer 1.4s ease-in-out infinite;
+}
+
+.kv-revenue-skeleton-small {
+  height: 42px;
+  border: 1px solid #222222;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #101010, #1a1a1a, #101010);
+  background-size: 200% 100%;
+  animation: kv-shimmer 1.4s ease-in-out infinite;
+}
+
+.kv-portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kv-portfolio-card {
+  background: #111111;
+  border-color: #222222;
+}
+
+.kv-portfolio-glow:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 160, 23, 0.25),
+    0 12px 26px rgba(0, 0, 0, 0.38);
+}
+
+.kv-portfolio-kpis p {
+  margin: 0 0 6px;
+  color: #e8e8e8;
+  font-size: 14px;
+}
+
+.kv-progress-track {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.kv-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d4a017, #f4cc62);
+}
+
+.kv-progress-warning {
+  background: linear-gradient(90deg, var(--warning-color), color-mix(in srgb, var(--warning-color) 70%, #fff));
+}
+
 @media (max-width: 980px) {
   .kv-content {
     grid-template-columns: 1fr;
@@ -592,7 +839,19 @@ tbody tr:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .kv-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
   .kv-policy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kv-revenue-split {
+    grid-template-columns: 1fr;
+  }
+
+  .kv-portfolio-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -618,6 +877,10 @@ tbody tr:hover {
   }
 
   .kv-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .kv-grid-3 {
     grid-template-columns: 1fr;
   }
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ModeSwitcher } from "./mode-switcher";
+import { OrgSwitcher } from "./org-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { AuthMeResponse, Role } from "../types/auth";
 import { FeedItem, listFeed, listShieldEvents, logoutRequest } from "../lib/api";
@@ -20,6 +21,8 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   CEO: [
     { label: "Home", href: "/" },
     { label: "CEO Dashboard", href: "/ceo/dashboard" },
+    { label: "Revenue", href: "/ceo/revenue" },
+    { label: "Portfolio", href: "/portfolio" },
     { label: "Action Mode", href: "/ceo/action-mode" },
     { label: "Sudarshan Shield", href: "/shield" },
     { label: "Hygiene Inbox", href: "/ops/hygiene" },
@@ -54,6 +57,8 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   ADMIN: [
     { label: "Home", href: "/" },
     { label: "CEO Dashboard", href: "/ceo/dashboard" },
+    { label: "Revenue", href: "/ceo/revenue" },
+    { label: "Portfolio", href: "/portfolio" },
     { label: "Action Mode", href: "/ceo/action-mode" },
     { label: "Sudarshan Shield", href: "/shield" },
     { label: "Hygiene Inbox", href: "/ops/hygiene" },
@@ -69,8 +74,16 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
 };
 
 const settingsNavByRole: Partial<Record<Role, Array<{ label: string; href: string }>>> = {
-  CEO: [{ label: "Policies", href: "/settings/policies" }],
-  ADMIN: [{ label: "Policies", href: "/settings/policies" }]
+  CEO: [
+    { label: "Billing", href: "/billing" },
+    { label: "Policies", href: "/settings/policies" },
+    { label: "Org Members", href: "/settings/org/members" }
+  ],
+  ADMIN: [
+    { label: "Billing", href: "/billing" },
+    { label: "Policies", href: "/settings/policies" },
+    { label: "Org Members", href: "/settings/org/members" }
+  ]
 };
 
 export function AppShell({ user, title, children }: AppShellProps) {
@@ -121,6 +134,7 @@ export function AppShell({ user, title, children }: AppShellProps) {
           <p className="kv-role">Role: {user.role}</p>
         </div>
         <div className="kv-toolbar">
+          <OrgSwitcher user={user} />
           <div style={{ position: "relative" }}>
             <button type="button" onClick={() => setFeedOpen((prev) => !prev)} className="kv-btn-primary">
               Bell ({myOpenNudges.length})

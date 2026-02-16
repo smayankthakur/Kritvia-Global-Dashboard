@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../../components/app-shell";
 import {
@@ -129,6 +130,11 @@ export default function CeoDashboardPage() {
           <p>{data.kpis.invoicesOverdueTotal}</p>
         </article>
       </section>
+      <div className="kv-row" style={{ justifyContent: "flex-end", marginTop: "10px" }}>
+        <Link href="/ceo/revenue" className="kv-btn-primary kv-link-btn">
+          View Revenue Intelligence
+        </Link>
+      </div>
 
       <h2 className="kv-section-title">Overdue Work Items</h2>
       <div className="kv-table-wrap">

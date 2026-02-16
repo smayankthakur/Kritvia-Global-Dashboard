@@ -20,6 +20,7 @@ enum ActivityEntityType {
   AUTH
   USER
   POLICY
+  PORTFOLIO
   COMPANY
   CONTACT
   LEAD
@@ -89,8 +90,49 @@ model Org {
   refreshTokens RefreshToken[]
   healthSnapshots OrgHealthSnapshot[]
   securityEvents SecurityEvent[]
+  portfolioGroups OrgGroupOrg[]
+  members      OrgMember[]
+  inviteTokens OrgInviteToken[]
+  subscription Subscription?
 
   @@map("orgs")
+}
+
+model Plan {
+  id                          String   @id @default(uuid()) @db.Uuid
+  key                         String   @unique
+  name                        String
+  priceMonthly                Int      @default(0) @map("price_monthly")
+  seatLimit                   Int?     @map("seat_limit")
+  orgLimit                    Int?     @map("org_limit")
+  autopilotEnabled            Boolean  @default(false) @map("autopilot_enabled")
+  shieldEnabled               Boolean  @default(false) @map("shield_enabled")
+  portfolioEnabled            Boolean  @default(false) @map("portfolio_enabled")
+  revenueIntelligenceEnabled  Boolean  @default(false) @map("revenue_intelligence_enabled")
+  maxWorkItems                Int?     @map("max_work_items")
+  maxInvoices                 Int?     @map("max_invoices")
+  createdAt                   DateTime @default(now()) @map("created_at")
+  subscriptions               Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                    String   @id @default(uuid()) @db.Uuid
+  orgId                 String   @unique @map("org_id") @db.Uuid
+  planId                String   @map("plan_id") @db.Uuid
+  status                String   @default("TRIAL")
+  stripeCustomerId      String?  @map("stripe_customer_id")
+  stripeSubscriptionId  String?  @map("stripe_subscription_id")
+  trialEndsAt           DateTime? @map("trial_ends_at")
+  currentPeriodEnd      DateTime? @map("current_period_end")
+  createdAt             DateTime @default(now()) @map("created_at")
+  org                   Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  plan                  Plan     @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([planId])
+  @@index([status])
+  @@map("subscriptions")
 }
 
 model OrgHealthSnapshot {
@@ -131,6 +173,10 @@ model User {
   targetNudges      Nudge[]     @relation("NudgeTarget")
   refreshTokens     RefreshToken[]
   securityEvents    SecurityEvent[]
+  ownedOrgGroups    OrgGroup[]       @relation("OrgGroupOwner")
+  orgGroupMembers   OrgGroupMember[]
+  orgMemberships    OrgMember[]      @relation("OrgMemberUser")
+  sentOrgInvites    OrgInviteToken[] @relation("OrgInviteInviter")
 
   @@index([orgId])
   @@map("users")
@@ -153,7 +199,93 @@ model SecurityEvent {
   user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([orgId, severity, createdAt])
+  @@index([orgId, resolvedAt])
   @@map("security_events")
+}
+
+model OrgMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  email     String
+  role      Role
+  status    String   @default("ACTIVE")
+  joinedAt  DateTime? @map("joined_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user      User?    @relation("OrgMemberUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([orgId, email])
+  @@index([orgId, status])
+  @@index([userId])
+  @@index([userId, status])
+  @@map("org_members")
+}
+
+model OrgInviteToken {
+  id              String   @id @default(uuid()) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  email           String
+  role            Role
+  tokenHash       String   @map("token_hash")
+  invitedByUserId String   @map("invited_by_user_id") @db.Uuid
+  expiresAt       DateTime @map("expires_at")
+  usedAt          DateTime? @map("used_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invitedByUser   User     @relation("OrgInviteInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([orgId, email])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("org_invite_tokens")
+}
+
+model OrgGroup {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String
+  ownerUserId String           @map("owner_user_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  owner       User             @relation("OrgGroupOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members     OrgGroupMember[]
+  orgs        OrgGroupOrg[]
+
+  @@index([ownerUserId])
+  @@map("org_groups")
+}
+
+model OrgGroupMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      String   @default("OWNER")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group     OrgGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@index([groupId])
+  @@map("org_group_members")
+}
+
+model OrgGroupOrg {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group     OrgGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, orgId])
+  @@index([groupId])
+  @@index([orgId])
+  @@map("org_group_orgs")
 }
 
 model Policy {
@@ -195,6 +327,8 @@ model ActivityLog {
   actorUser   User?            @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([orgId])
+  @@index([orgId, createdAt])
+  @@index([orgId, entityType, entityId, createdAt])
   @@index([actorUserId])
   @@map("activity_logs")
 }
@@ -257,6 +391,7 @@ model Lead {
   owner       User?     @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
 
   @@index([orgId])
+  @@index([orgId, createdAt])
   @@index([orgId, stage])
   @@map("leads")
 }
@@ -283,6 +418,9 @@ model Deal {
 
   @@index([orgId])
   @@index([orgId, stage])
+  @@index([orgId, createdAt])
+  @@index([orgId, updatedAt])
+  @@index([orgId, isStale])
   @@index([companyId])
   @@map("deals")
 }
@@ -312,6 +450,7 @@ model WorkItem {
   @@index([orgId, status])
   @@index([orgId, assignedToUserId])
   @@index([orgId, dueDate])
+  @@index([orgId, createdAt])
   @@map("work_items")
 }
 
@@ -342,6 +481,8 @@ model Invoice {
 
   @@index([orgId, status])
   @@index([orgId, dueDate])
+  @@index([orgId, lockAt])
+  @@index([orgId, createdAt])
   @@index([orgId, companyId])
   @@map("invoices")
 }

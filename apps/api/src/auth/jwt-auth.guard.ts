@@ -30,10 +30,14 @@ export class JwtAuthGuard implements CanActivate {
       const payload = this.jwtService.verify<AuthTokenPayload>(token, {
         secret: process.env.JWT_SECRET
       });
+      // Temporary backward compatibility fallback for older tokens.
+      // Remove payload.orgId fallback once all clients issue activeOrgId.
+      const resolvedOrgId = payload.activeOrgId ?? payload.orgId;
 
       request.user = {
         userId: payload.sub,
-        orgId: payload.orgId,
+        orgId: resolvedOrgId,
+        activeOrgId: resolvedOrgId,
         role: payload.role,
         email: payload.email,
         name: payload.name

@@ -1,10 +1,31 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, meRequest, refreshAccessToken } from "./api";
 import { clearAccessToken, getAccessToken, setAccessToken } from "./auth";
-import { AuthMeResponse } from "../types/auth";
+import { AuthMeResponse, OrgMembership, Role } from "../types/auth";
+
+function normalizeUser(me: AuthMeResponse): AuthMeResponse {
+  const activeOrgId = me.activeOrgId ?? me.orgId;
+  const memberships: OrgMembership[] =
+    me.memberships && me.memberships.length > 0
+      ? me.memberships
+      : [
+          {
+            orgId: me.orgId,
+            orgName: "Current Org",
+            role: me.role,
+            status: "ACTIVE"
+          }
+        ];
+
+  return {
+    ...me,
+    activeOrgId,
+    memberships
+  };
+}
 
 export function useAuthUser() {
   const router = useRouter();
@@ -12,6 +33,18 @@ export function useAuthUser() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const refreshMe = useCallback(async (): Promise<AuthMeResponse | null> => {
+    const activeToken = getAccessToken();
+    if (!activeToken) {
+      return null;
+    }
+    const me = await meRequest(activeToken);
+    const normalized = normalizeUser(me);
+    setUser(normalized);
+    setToken(activeToken);
+    return normalized;
+  }, []);
 
   useEffect(() => {
     let settled = false;
@@ -41,7 +74,7 @@ export function useAuthUser() {
 
       try {
         const me = await meRequest(activeToken);
-        setUser(me);
+        setUser(normalizeUser(me));
       } catch (requestError) {
         if (requestError instanceof ApiError && requestError.status === 401) {
           clearAccessToken();
@@ -65,5 +98,24 @@ export function useAuthUser() {
     };
   }, [router]);
 
-  return { user, token, loading, error };
+  const memberships = useMemo(() => user?.memberships ?? [], [user]);
+  const activeOrgId = user?.activeOrgId ?? user?.orgId ?? null;
+  const activeMembership = useMemo(
+    () => memberships.find((membership) => membership.orgId === activeOrgId) ?? null,
+    [activeOrgId, memberships]
+  );
+  const activeOrgName = activeMembership?.orgName ?? "Current Org";
+  const roleForActiveOrg = (activeMembership?.role ?? user?.role ?? null) as Role | null;
+
+  return {
+    user,
+    token,
+    loading,
+    error,
+    memberships,
+    activeOrgId,
+    activeOrgName,
+    roleForActiveOrg,
+    refreshMe
+  };
 }

@@ -7,6 +7,8 @@ import {
 import { ActivityEntityType, InvoiceStatus, Prisma } from "@prisma/client";
 import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
+import { BillingService } from "../billing/billing.service";
+import { getActiveOrgId } from "../common/auth-org";
 import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
@@ -36,7 +38,8 @@ export class InvoicesService {
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
     private readonly policyResolverService: PolicyResolverService,
-    private readonly shieldService: ShieldService
+    private readonly shieldService: ShieldService,
+    private readonly billingService: BillingService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListInvoicesDto) {
@@ -104,12 +107,14 @@ export class InvoicesService {
   }
 
   async create(dto: CreateInvoiceDto, authUser: AuthUserContext) {
-    await this.ensureCompanyInOrg(dto.companyId, authUser.orgId);
-    await this.ensureDealInOrg(dto.dealId, authUser.orgId);
+    const activeOrgId = getActiveOrgId({ user: authUser });
+    await this.billingService.assertInvoiceAvailable(activeOrgId);
+    await this.ensureCompanyInOrg(dto.companyId, activeOrgId);
+    await this.ensureDealInOrg(dto.dealId, activeOrgId);
 
     const created = await this.prisma.invoice.create({
       data: {
-        orgId: authUser.orgId,
+        orgId: activeOrgId,
         invoiceNumber: dto.invoiceNumber,
         companyId: dto.companyId,
         dealId: dto.dealId,
@@ -122,7 +127,7 @@ export class InvoicesService {
     });
 
     await this.activityLogService.log({
-      orgId: authUser.orgId,
+      orgId: activeOrgId,
       actorUserId: authUser.userId,
       entityType: ActivityEntityType.INVOICE,
       entityId: created.id,

@@ -40,6 +40,23 @@ export class AuthService {
       throw new ForbiddenException("Account deactivated");
     }
 
+    const membership = await this.prisma.orgMember.findUnique({
+      where: {
+        orgId_email: {
+          orgId: user.orgId,
+          email: normalizedEmail
+        }
+      },
+      select: {
+        status: true,
+        role: true
+      }
+    });
+
+    if (membership && membership.status !== "ACTIVE") {
+      throw new ForbiddenException("Account deactivated");
+    }
+
     const isPasswordValid = await compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
       await this.shieldService.registerFailedLoginAttempt({
@@ -54,7 +71,8 @@ export class AuthService {
     const accessToken = await this.issueAccessToken({
       sub: user.id,
       orgId: user.orgId,
-      role: user.role,
+      activeOrgId: user.orgId,
+      role: membership?.role ?? user.role,
       email: user.email,
       name: user.name
     });
@@ -124,6 +142,7 @@ export class AuthService {
     const accessToken = await this.issueAccessToken({
       sub: existing.user.id,
       orgId: existing.user.orgId,
+      activeOrgId: existing.user.orgId,
       role: existing.user.role,
       email: existing.user.email,
       name: existing.user.name
@@ -182,11 +201,19 @@ export class AuthService {
     email: string;
     role: AuthUserContext["role"];
     orgId: string;
+    activeOrgId: string;
+    memberships: Array<{
+      orgId: string;
+      orgName: string;
+      role: AuthUserContext["role"];
+      status: string;
+    }>;
   }> {
+    const activeOrgId = authUser.activeOrgId ?? authUser.orgId;
     const user = await this.prisma.user.findFirst({
       where: {
         id: authUser.userId,
-        orgId: authUser.orgId,
+        orgId: activeOrgId,
         isActive: true
       },
       select: {
@@ -202,7 +229,146 @@ export class AuthService {
       throw new UnauthorizedException("User not found");
     }
 
-    return user;
+    const memberships = await this.prisma.orgMember.findMany({
+      where: {
+        email: user.email
+      },
+      select: {
+        orgId: true,
+        role: true,
+        status: true,
+        org: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: [{ createdAt: "asc" }]
+    });
+
+    return {
+      ...user,
+      orgId: activeOrgId,
+      activeOrgId,
+      memberships:
+        memberships.length > 0
+          ? memberships.map((membership) => ({
+              orgId: membership.orgId,
+              orgName: membership.org.name,
+              role: membership.role,
+              status: membership.status
+            }))
+          : [
+              {
+                orgId: activeOrgId,
+                orgName: "Current Org",
+                role: user.role,
+                status: "ACTIVE"
+              }
+            ]
+    };
+  }
+
+  async switchOrg(authUser: AuthUserContext, targetOrgId: string): Promise<{ accessToken: string }> {
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: authUser.userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        name: true,
+        orgId: true,
+        isActive: true
+      }
+    });
+
+    if (!currentUser || !currentUser.isActive) {
+      throw new UnauthorizedException("User not found");
+    }
+
+    let targetMembership = await this.prisma.orgMember.findUnique({
+      where: {
+        orgId_email: {
+          orgId: targetOrgId,
+          email: currentUser.email
+        }
+      },
+      select: {
+        orgId: true,
+        role: true,
+        status: true
+      }
+    });
+
+    if (targetMembership?.status !== "ACTIVE") {
+      targetMembership = null;
+    }
+
+    let targetUser = await this.prisma.user.findFirst({
+      where: {
+        orgId: targetOrgId,
+        email: currentUser.email,
+        isActive: true
+      },
+      select: {
+        id: true,
+        orgId: true,
+        email: true,
+        role: true,
+        name: true
+      }
+    });
+
+    if (!targetUser && currentUser.role === "ADMIN") {
+      targetUser = await this.prisma.user.findFirst({
+        where: {
+          orgId: targetOrgId,
+          role: currentUser.role,
+          isActive: true
+        },
+        orderBy: [{ createdAt: "asc" }],
+        select: {
+          id: true,
+          orgId: true,
+          email: true,
+          role: true,
+          name: true
+        }
+      });
+    }
+
+    if (!targetMembership) {
+      throw new ForbiddenException("Org access denied");
+    }
+
+    if (!targetUser) {
+      throw new ForbiddenException("Org access denied");
+    }
+
+    const accessToken = await this.issueAccessToken({
+      sub: targetUser.id,
+      orgId: targetUser.orgId,
+      activeOrgId: targetUser.orgId,
+      role: targetMembership.role,
+      email: targetUser.email,
+      name: targetUser.name
+    });
+
+    await this.activityLogService.log({
+      orgId: targetUser.orgId,
+      actorUserId: targetUser.id,
+      entityType: ActivityEntityType.AUTH,
+      entityId: targetUser.id,
+      action: "SWITCH_ORG",
+      before: {
+        fromOrgId: authUser.activeOrgId ?? authUser.orgId
+      },
+      after: {
+        toOrgId: targetOrgId
+      }
+    });
+
+    return { accessToken };
   }
 
   private async issueAccessToken(payload: AuthTokenPayload): Promise<string> {

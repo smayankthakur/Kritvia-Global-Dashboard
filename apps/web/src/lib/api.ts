@@ -14,16 +14,23 @@ const REQUEST_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 1000
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
+  upgradeUrl?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
+    if (code === "UPGRADE_REQUIRED") {
+      this.upgradeUrl = "/billing";
+    }
   }
 }
 
 async function parseResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
   if (!response.ok) {
     let message = fallbackMessage;
+    let code: string | undefined;
     try {
       const json = (await response.json()) as {
         message?: string | string[];
@@ -36,11 +43,18 @@ async function parseResponse<T>(response: Response, fallbackMessage: string): Pr
       } else if (json.error?.message) {
         message = json.error.message;
       }
+      code = json.error?.code;
     } catch {
       // ignore JSON parse error
     }
 
-    throw new ApiError(message, response.status);
+    if (code === "UPGRADE_REQUIRED" && typeof window !== "undefined") {
+      const upgradeMessage = `${message} Open /billing to upgrade.`;
+      window.alert(upgradeMessage);
+      message = upgradeMessage;
+    }
+
+    throw new ApiError(message, response.status, code);
   }
 
   return response.json() as Promise<T>;
@@ -172,6 +186,19 @@ export async function meRequest(token?: string): Promise<AuthMeResponse> {
   });
 
   return parseResponse(response, "Unauthorized");
+}
+
+export async function switchOrgRequest(
+  token: string,
+  orgId: string
+): Promise<{ accessToken: string }> {
+  const response = await request(`${API_BASE_URL}/auth/switch-org`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ orgId })
+  });
+
+  return parseResponse(response, "Failed to switch organization");
 }
 
 export interface Company {
@@ -359,6 +386,89 @@ export interface CeoDashboardPayload {
   };
 }
 
+export interface RevenueVelocityPayload {
+  avgCloseDays: number;
+  stageConversion: {
+    leadToDealPct: number;
+    dealToWonPct: number;
+  };
+  pipelineAging: {
+    "0_7": number;
+    "8_14": number;
+    "15_30": number;
+    "30_plus": number;
+  };
+  dropOffPct: number;
+  counts: {
+    leads: number;
+    deals: number;
+    won: number;
+    lost: number;
+    open: number;
+  };
+}
+
+export interface RevenueCashflowPayload {
+  outstandingReceivables: number;
+  avgPaymentDelayDays: number;
+  next30DaysForecast: number;
+  next60DaysForecast: number;
+  breakdown: {
+    invoices: {
+      dueIn30: number;
+      dueIn60: number;
+      overdue: number;
+    };
+    pipelineWeighted30: number;
+    pipelineWeighted60: number;
+  };
+}
+
+export interface PortfolioGroup {
+  id: string;
+  name: string;
+  role: "OWNER" | "MANAGER" | "VIEWER";
+  orgCount: number;
+}
+
+export interface PortfolioSummaryRow {
+  org: {
+    id: string;
+    name: string;
+  };
+  kpis: {
+    healthScore: number | null;
+    openNudgesCount: number;
+    outstandingReceivables: number;
+    overdueWorkCount: number;
+    criticalShieldCount: number;
+  };
+  deepLinks: {
+    switchOrg: string;
+    viewOpsOverdue: string;
+    viewInvoicesOverdue: string;
+    viewShield: string;
+  };
+}
+
+export interface PortfolioSummaryPayload {
+  group: {
+    id: string;
+    name: string;
+    role: "OWNER" | "MANAGER" | "VIEWER";
+  };
+  rows: PortfolioSummaryRow[];
+}
+
+export interface OrgMemberRow {
+  userId: string | null;
+  name: string | null;
+  email: string;
+  role: "CEO" | "OPS" | "SALES" | "FINANCE" | "ADMIN";
+  status: "INVITED" | "ACTIVE" | "REMOVED";
+  joinedAt: string | null;
+}
+
 export interface HygieneItem {
   type: "WORK_OVERDUE" | "WORK_UNASSIGNED" | "INVOICE_OVERDUE";
   workItem?: WorkItem;
@@ -392,6 +502,14 @@ export interface JobsRunSummary {
   invoicesLocked: number;
   dealsStaled: number;
   nudgesCreated: number;
+  durationMs?: number;
+  perOrg?: Array<{
+    orgId: string;
+    invoicesLocked: number;
+    dealsStaled: number;
+    nudgesCreated: number;
+    durationMs: number;
+  }>;
 }
 
 export interface SecurityEvent {
@@ -408,10 +526,42 @@ export interface SecurityEvent {
   createdAt: string;
 }
 
+export interface BillingPlanPayload {
+  subscription: {
+    status: string;
+    trialEndsAt: string | null;
+    currentPeriodEnd: string | null;
+  };
+  plan: {
+    key: string;
+    name: string;
+    priceMonthly: number;
+    seatLimit: number | null;
+    orgLimit: number | null;
+    autopilotEnabled: boolean;
+    shieldEnabled: boolean;
+    portfolioEnabled: boolean;
+    revenueIntelligenceEnabled: boolean;
+    maxWorkItems: number | null;
+    maxInvoices: number | null;
+  };
+}
+
+export interface OrgUsagePayload {
+  seatsUsed: number;
+  seatLimit: number | null;
+  workItemsUsed: number;
+  maxWorkItems: number | null;
+  invoicesUsed: number;
+  maxInvoices: number | null;
+  updatedAt: string;
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   page: number;
   pageSize: number;
+  totalCount: number;
   total: number;
 }
 
@@ -487,11 +637,21 @@ export async function updateCompany(
   return parseResponse(response, "Failed to update company");
 }
 
-export async function listCompanyContacts(token: string, companyId: string): Promise<Contact[]> {
-  const response = await request(`${API_BASE_URL}/companies/${companyId}/contacts`, {
+export async function listCompanyContacts(
+  token: string,
+  companyId: string,
+  pagination?: { page?: number; pageSize?: number; sortBy?: string; sortDir?: "asc" | "desc" }
+): Promise<PaginatedResponse<Contact>> {
+  const params = new URLSearchParams();
+  addPaginationParams(params, pagination);
+  const query = params.toString();
+  const response = await request(
+    `${API_BASE_URL}/companies/${companyId}/contacts${query ? `?${query}` : ""}`,
+    {
     headers: authHeaders(token),
     cache: "no-store"
-  });
+    }
+  );
 
   return parseResponse(response, "Failed to fetch contacts");
 }
@@ -928,6 +1088,22 @@ export async function getCeoDashboard(token: string): Promise<CeoDashboardPayloa
   return parseResponse(response, "Failed to fetch CEO dashboard");
 }
 
+export async function getRevenueVelocity(token: string): Promise<RevenueVelocityPayload> {
+  const response = await request(`${API_BASE_URL}/ceo/revenue/velocity`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch revenue velocity");
+}
+
+export async function getRevenueCashflow(token: string): Promise<RevenueCashflowPayload> {
+  const response = await request(`${API_BASE_URL}/ceo/revenue/cashflow`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch cashflow forecast");
+}
+
 export async function getHygieneInbox(token: string): Promise<HygieneItem[]> {
   const response = await request(`${API_BASE_URL}/hygiene/inbox`, {
     headers: authHeaders(token),
@@ -1103,6 +1279,22 @@ export async function getPolicySettings(token: string): Promise<PolicySettings> 
   return parseResponse(response, "Failed to fetch policy settings");
 }
 
+export async function getBillingPlan(token: string): Promise<BillingPlanPayload> {
+  const response = await request(`${API_BASE_URL}/billing/plan`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch billing plan");
+}
+
+export async function getOrgUsage(token: string): Promise<OrgUsagePayload> {
+  const response = await request(`${API_BASE_URL}/org/usage`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch org usage");
+}
+
 export async function updatePolicySettings(
   token: string,
   payload: Omit<PolicySettings, "id" | "orgId" | "createdAt" | "updatedAt">
@@ -1156,4 +1348,101 @@ export async function resolveShieldEvent(token: string, id: string): Promise<Sec
     headers: authHeaders(token)
   });
   return parseResponse(response, "Failed to resolve security event");
+}
+
+export async function createPortfolio(
+  token: string,
+  payload: { name: string }
+): Promise<{ id: string; name: string; ownerUserId: string; createdAt: string }> {
+  const response = await request(`${API_BASE_URL}/portfolio`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create portfolio");
+}
+
+export async function listPortfolioGroups(
+  token: string,
+  pagination?: { page?: number; pageSize?: number; sortBy?: string; sortDir?: "asc" | "desc" }
+): Promise<PaginatedResponse<PortfolioGroup>> {
+  const params = new URLSearchParams();
+  addPaginationParams(params, pagination);
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/portfolio${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch portfolios");
+}
+
+export async function attachPortfolioOrg(
+  token: string,
+  groupId: string,
+  orgId: string
+): Promise<{ id: string; groupId: string; orgId: string }> {
+  const response = await request(`${API_BASE_URL}/portfolio/${groupId}/orgs`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ orgId })
+  });
+  return parseResponse(response, "Failed to attach organization");
+}
+
+export async function detachPortfolioOrg(
+  token: string,
+  groupId: string,
+  orgId: string
+): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/portfolio/${groupId}/orgs/${orgId}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to detach organization");
+}
+
+export async function getPortfolioSummary(token: string, groupId: string): Promise<PortfolioSummaryPayload> {
+  const response = await request(`${API_BASE_URL}/portfolio/${groupId}/summary`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch portfolio summary");
+}
+
+export async function listOrgMembers(token: string): Promise<OrgMemberRow[]> {
+  const response = await request(`${API_BASE_URL}/org/members`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch org members");
+}
+
+export async function inviteOrgMember(
+  token: string,
+  payload: { email: string; role: "CEO" | "OPS" | "SALES" | "FINANCE" | "ADMIN" }
+): Promise<{ inviteLink: string; expiresAt: string }> {
+  const response = await request(`${API_BASE_URL}/org/invite`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create invite");
+}
+
+export async function acceptOrgInvite(payload: {
+  token: string;
+  orgId: string;
+  name?: string;
+  password?: string;
+}): Promise<{
+  success: true;
+  accessToken?: string;
+  user: { id: string; email: string; role: string; orgId: string };
+}> {
+  const response = await request(`${API_BASE_URL}/org/accept-invite`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to accept invite");
 }

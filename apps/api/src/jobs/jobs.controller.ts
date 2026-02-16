@@ -9,13 +9,15 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { Role } from "@prisma/client";
 import { AuthTokenPayload } from "../auth/auth.types";
+import { BillingService } from "../billing/billing.service";
 import { JobsRunService } from "./jobs-run.service";
 
 @Controller("jobs")
 export class JobsController {
   constructor(
     private readonly jobsRunService: JobsRunService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly billingService: BillingService
   ) {}
 
   @Post("run")
@@ -54,6 +56,8 @@ export class JobsController {
     if (payload.role !== Role.ADMIN) {
       throw new ForbiddenException("Insufficient role permissions");
     }
+    const activeOrgId = payload.activeOrgId ?? payload.orgId;
+    await this.billingService.assertFeature(activeOrgId, "autopilotEnabled");
 
     return this.jobsRunService.run();
   }

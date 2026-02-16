@@ -14,9 +14,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { computeNudgeScore } from "../nudges/nudge-scoring.util";
 
 interface OrgRunSummary {
+  orgId: string;
   invoicesLocked: number;
   dealsStaled: number;
   nudgesCreated: number;
+  durationMs: number;
 }
 
 export interface JobsRunSummary {
@@ -24,6 +26,8 @@ export interface JobsRunSummary {
   invoicesLocked: number;
   dealsStaled: number;
   nudgesCreated: number;
+  durationMs: number;
+  perOrg: OrgRunSummary[];
 }
 
 @Injectable()
@@ -35,6 +39,7 @@ export class JobsRunService {
   ) {}
 
   async run(now: Date = new Date()): Promise<JobsRunSummary> {
+    const startedAt = Date.now();
     const orgs = await this.prisma.org.findMany({
       select: { id: true }
     });
@@ -43,6 +48,7 @@ export class JobsRunService {
     let invoicesLocked = 0;
     let dealsStaled = 0;
     let nudgesCreated = 0;
+    const perOrg: OrgRunSummary[] = [];
 
     for (const org of orgs) {
       const policy = await this.policyResolverService.getPolicyForOrg(org.id);
@@ -55,17 +61,21 @@ export class JobsRunService {
       invoicesLocked += result.invoicesLocked;
       dealsStaled += result.dealsStaled;
       nudgesCreated += result.nudgesCreated;
+      perOrg.push(result);
     }
 
     return {
       processedOrgs,
       invoicesLocked,
       dealsStaled,
-      nudgesCreated
+      nudgesCreated,
+      durationMs: Date.now() - startedAt,
+      perOrg
     };
   }
 
   async runForOrg(orgId: string, now: Date): Promise<OrgRunSummary> {
+    const startedAt = Date.now();
     const policy = await this.policyResolverService.getPolicyForOrg(orgId);
     const invoicesLocked = await this.runAutoLockInvoices(orgId, now);
     const dealsStaled = await this.runAutoStaleDeals(orgId, now, policy.staleDealAfterDays);
@@ -74,9 +84,11 @@ export class JobsRunService {
       : 0;
 
     return {
+      orgId,
       invoicesLocked,
       dealsStaled,
-      nudgesCreated
+      nudgesCreated,
+      durationMs: Date.now() - startedAt
     };
   }
 

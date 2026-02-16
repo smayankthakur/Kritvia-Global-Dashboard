@@ -2,8 +2,10 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { ActivityEntityType } from "@prisma/client";
 import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
+import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateContactDto } from "./dto/create-contact.dto";
+import { ListCompanyContactsDto } from "./dto/list-company-contacts.dto";
 import { UpdateContactDto } from "./dto/update-contact.dto";
 
 @Injectable()
@@ -13,7 +15,11 @@ export class ContactsService {
     private readonly activityLogService: ActivityLogService
   ) {}
 
-  async findByCompany(companyId: string, authUser: AuthUserContext) {
+  async findByCompany(
+    companyId: string,
+    query: ListCompanyContactsDto,
+    authUser: AuthUserContext
+  ) {
     const company = await this.prisma.company.findFirst({
       where: {
         id: companyId,
@@ -25,13 +31,24 @@ export class ContactsService {
       throw new NotFoundException("Company not found");
     }
 
-    return this.prisma.contact.findMany({
-      where: {
-        orgId: authUser.orgId,
-        companyId
-      },
-      orderBy: { createdAt: "desc" }
-    });
+    const skip = (query.page - 1) * query.pageSize;
+    const where = {
+      orgId: authUser.orgId,
+      companyId
+    };
+    const sortBy = query.sortBy ?? "createdAt";
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.contact.findMany({
+        where,
+        orderBy: [{ [sortBy]: query.sortDir }, { id: "asc" }],
+        skip,
+        take: query.pageSize
+      }),
+      this.prisma.contact.count({ where })
+    ]);
+
+    return toPaginatedResponse(items, query.page, query.pageSize, total);
   }
 
   async create(dto: CreateContactDto, authUser: AuthUserContext) {

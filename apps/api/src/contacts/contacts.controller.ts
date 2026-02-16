@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards
 } from "@nestjs/common";
@@ -15,6 +16,7 @@ import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { SALES_READ_ROLES, SALES_WRITE_ROLES } from "../sales/common/sales-roles";
 import { CreateContactDto } from "./dto/create-contact.dto";
+import { ListCompanyContactsDto } from "./dto/list-company-contacts.dto";
 import { UpdateContactDto } from "./dto/update-contact.dto";
 import { ContactsService } from "./contacts.service";
 
@@ -27,9 +29,10 @@ export class ContactsController {
   @Roles(...SALES_READ_ROLES)
   async findByCompany(
     @Param("companyId", ParseUUIDPipe) companyId: string,
+    @Query() query: ListCompanyContactsDto,
     @Req() req: { user: AuthUserContext }
   ) {
-    return this.contactsService.findByCompany(companyId, req.user);
+    return this.contactsService.findByCompany(companyId, query, req.user);
   }
 
   @Post("contacts")

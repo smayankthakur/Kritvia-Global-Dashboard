@@ -7,6 +7,8 @@ import {
 import { ActivityEntityType, Prisma, WorkItemStatus } from "@prisma/client";
 import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
+import { BillingService } from "../billing/billing.service";
+import { getActiveOrgId } from "../common/auth-org";
 import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
@@ -29,7 +31,8 @@ export class WorkItemsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
-    private readonly policyResolverService: PolicyResolverService
+    private readonly policyResolverService: PolicyResolverService,
+    private readonly billingService: BillingService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListWorkItemsDto) {
@@ -113,20 +116,22 @@ export class WorkItemsService {
   }
 
   async create(dto: CreateWorkItemDto, authUser: AuthUserContext) {
-    const policy = await this.policyResolverService.getPolicyForOrg(authUser.orgId);
+    const activeOrgId = getActiveOrgId({ user: authUser });
+    await this.billingService.assertWorkItemAvailable(activeOrgId);
+    const policy = await this.policyResolverService.getPolicyForOrg(activeOrgId);
     if (policy.requireWorkOwner && !dto.assignedToUserId) {
       throw new ConflictException("Work item owner is required by org policy");
     }
 
-    await this.ensureUserInOrg(dto.assignedToUserId, authUser.orgId);
-    await this.ensureCompanyInOrg(dto.companyId, authUser.orgId);
-    await this.ensureDealInOrg(dto.dealId, authUser.orgId);
+    await this.ensureUserInOrg(dto.assignedToUserId, activeOrgId);
+    await this.ensureCompanyInOrg(dto.companyId, activeOrgId);
+    await this.ensureDealInOrg(dto.dealId, activeOrgId);
 
     const status = dto.status ?? WorkItemStatus.TODO;
     const dueDate = this.resolveDueDateForCreate(dto.dueDate, policy.defaultWorkDueDays, policy.requireWorkDueDate);
     const created = await this.prisma.workItem.create({
       data: {
-        orgId: authUser.orgId,
+        orgId: activeOrgId,
         title: dto.title,
         description: dto.description,
         status,
@@ -141,7 +146,7 @@ export class WorkItemsService {
     });
 
     await this.activityLogService.log({
-      orgId: authUser.orgId,
+      orgId: activeOrgId,
       actorUserId: authUser.userId,
       entityType: ActivityEntityType.WORK_ITEM,
       entityId: created.id,
@@ -151,7 +156,7 @@ export class WorkItemsService {
 
     if (!dto.dueDate && dueDate) {
       await this.activityLogService.log({
-        orgId: authUser.orgId,
+        orgId: activeOrgId,
         actorUserId: authUser.userId,
         entityType: ActivityEntityType.WORK_ITEM,
         entityId: created.id,

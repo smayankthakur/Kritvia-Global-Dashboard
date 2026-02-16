@@ -20,8 +20,11 @@ export class PaginationQueryDto {
   sortBy?: string;
 
   @IsOptional()
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
   @Transform(({ value }) => (typeof value === "string" ? value.toLowerCase() : value))
   @IsIn(["asc", "desc"])
   sortDir: "asc" | "desc" = "desc";
 }
-

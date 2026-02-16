@@ -20,16 +20,30 @@ describe("JobsRunService", () => {
     const service = new JobsRunService(prisma, policyResolver, activityLog);
     jest
       .spyOn(service, "runForOrg")
-      .mockResolvedValue({ invoicesLocked: 2, dealsStaled: 1, nudgesCreated: 3 });
+      .mockResolvedValue({
+        orgId: "org-a",
+        invoicesLocked: 2,
+        dealsStaled: 1,
+        nudgesCreated: 3,
+        durationMs: 10
+      });
 
     const result = await service.run(new Date());
 
-    expect(result).toEqual({
-      processedOrgs: 1,
-      invoicesLocked: 2,
-      dealsStaled: 1,
-      nudgesCreated: 3
-    });
+    expect(result.processedOrgs).toBe(1);
+    expect(result.invoicesLocked).toBe(2);
+    expect(result.dealsStaled).toBe(1);
+    expect(result.nudgesCreated).toBe(3);
+    expect(result.durationMs).toBeGreaterThanOrEqual(0);
+    expect(result.perOrg).toEqual([
+      {
+        orgId: "org-a",
+        invoicesLocked: 2,
+        dealsStaled: 1,
+        nudgesCreated: 3,
+        durationMs: 10
+      }
+    ]);
   });
 
   it("runForOrg is idempotent when nothing qualifies", async () => {
@@ -55,8 +69,20 @@ describe("JobsRunService", () => {
     const first = await service.runForOrg("org-a", new Date("2026-02-14T00:00:00.000Z"));
     const second = await service.runForOrg("org-a", new Date("2026-02-14T00:00:00.000Z"));
 
-    expect(first).toEqual({ invoicesLocked: 0, dealsStaled: 0, nudgesCreated: 0 });
-    expect(second).toEqual({ invoicesLocked: 0, dealsStaled: 0, nudgesCreated: 0 });
+    expect(first).toEqual({
+      orgId: "org-a",
+      invoicesLocked: 0,
+      dealsStaled: 0,
+      nudgesCreated: 0,
+      durationMs: expect.any(Number)
+    });
+    expect(second).toEqual({
+      orgId: "org-a",
+      invoicesLocked: 0,
+      dealsStaled: 0,
+      nudgesCreated: 0,
+      durationMs: expect.any(Number)
+    });
     expect(activityLog.log).not.toHaveBeenCalled();
   });
 });

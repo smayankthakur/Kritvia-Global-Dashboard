@@ -12,11 +12,12 @@ export class ReadyController {
       return {
         status: "ok",
         service: "api",
-        db: "ok"
+        db: "ok",
+        time: new Date().toISOString(),
+        version: process.env.APP_VERSION ?? process.env.RENDER_GIT_COMMIT ?? "dev"
       };
     } catch {
       throw new ServiceUnavailableException("Service not ready.");
     }
   }
 }
-

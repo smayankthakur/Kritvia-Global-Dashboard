@@ -2,6 +2,7 @@ export interface PaginatedResponseDto<T> {
   items: T[];
   page: number;
   pageSize: number;
+  totalCount: number;
   total: number;
 }
 
@@ -15,7 +16,7 @@ export function toPaginatedResponse<T>(
     items,
     page,
     pageSize,
+    totalCount: total,
     total
   };
 }
-

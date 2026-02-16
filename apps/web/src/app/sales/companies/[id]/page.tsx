@@ -38,7 +38,12 @@ export default function SalesCompanyDetailPage() {
       setRequestError(null);
       const [companyRes, contactsRes, dealsRes] = await Promise.all([
         getCompany(currentToken, companyId),
-        listCompanyContacts(currentToken, companyId),
+        listCompanyContacts(currentToken, companyId, {
+          page: 1,
+          pageSize: 100,
+          sortBy: "createdAt",
+          sortDir: "desc"
+        }),
         listDeals(currentToken, {
           companyId,
           page: 1,
@@ -50,7 +55,7 @@ export default function SalesCompanyDetailPage() {
       setCompany(companyRes);
       setIndustry(companyRes.industry ?? "");
       setWebsite(companyRes.website ?? "");
-      setContacts(contactsRes);
+      setContacts(contactsRes.items);
       setDeals(dealsRes.items);
       setForbidden(false);
     } catch (requestFailure) {

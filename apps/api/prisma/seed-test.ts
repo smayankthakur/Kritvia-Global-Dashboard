@@ -33,7 +33,7 @@ async function upsertUser(input: {
   role: Role;
   passwordHash: string;
 }): Promise<void> {
-  await prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { email: input.email },
     update: {
       id: input.id,
@@ -53,10 +53,88 @@ async function upsertUser(input: {
       passwordHash: input.passwordHash
     }
   });
+
+  await prisma.orgMember.upsert({
+    where: {
+      orgId_email: {
+        orgId: input.orgId,
+        email: input.email.toLowerCase()
+      }
+    },
+    update: {
+      userId: user.id,
+      role: input.role,
+      status: "ACTIVE",
+      joinedAt: user.createdAt
+    },
+    create: {
+      orgId: input.orgId,
+      userId: user.id,
+      email: input.email.toLowerCase(),
+      role: input.role,
+      status: "ACTIVE",
+      joinedAt: user.createdAt
+    }
+  });
 }
 
 async function main(): Promise<void> {
   const passwordHash = await hash(TEST_PASSWORD, 10);
+
+  const plans = {
+    starter: await prisma.plan.upsert({
+      where: { key: "starter" },
+      update: {
+        name: "Starter",
+        priceMonthly: 1999,
+        seatLimit: 5,
+        orgLimit: 1,
+        autopilotEnabled: false,
+        shieldEnabled: false,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: false,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "starter",
+        name: "Starter",
+        priceMonthly: 1999,
+        seatLimit: 5,
+        orgLimit: 1,
+        autopilotEnabled: false,
+        shieldEnabled: false,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: false
+      }
+    }),
+    pro: await prisma.plan.upsert({
+      where: { key: "pro" },
+      update: {
+        name: "Pro",
+        priceMonthly: 9999,
+        seatLimit: 50,
+        orgLimit: 3,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "pro",
+        name: "Pro",
+        priceMonthly: 9999,
+        seatLimit: 50,
+        orgLimit: 3,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true
+      }
+    })
+  };
 
   await prisma.org.upsert({
     where: { id: IDS.orgA },
@@ -105,6 +183,18 @@ async function main(): Promise<void> {
       autopilotNudgeOnOverdue: true,
       autopilotAutoStaleDeals: true
     }
+  });
+
+  await prisma.subscription.upsert({
+    where: { orgId: IDS.orgA },
+    update: { planId: plans.pro.id, status: "ACTIVE" },
+    create: { orgId: IDS.orgA, planId: plans.pro.id, status: "ACTIVE" }
+  });
+
+  await prisma.subscription.upsert({
+    where: { orgId: IDS.orgB },
+    update: { planId: plans.pro.id, status: "ACTIVE" },
+    create: { orgId: IDS.orgB, planId: plans.pro.id, status: "ACTIVE" }
   });
 
   await prisma.policy.upsert({

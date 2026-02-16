@@ -7,6 +7,113 @@ const DEMO_PASSWORD = "kritviya123";
 async function main(): Promise<void> {
   const passwordHash = await hash(DEMO_PASSWORD, 10);
 
+  const plans = {
+    starter: await prisma.plan.upsert({
+      where: { key: "starter" },
+      update: {
+        name: "Starter",
+        priceMonthly: 1999,
+        seatLimit: 5,
+        orgLimit: 1,
+        autopilotEnabled: false,
+        shieldEnabled: false,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: false,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "starter",
+        name: "Starter",
+        priceMonthly: 1999,
+        seatLimit: 5,
+        orgLimit: 1,
+        autopilotEnabled: false,
+        shieldEnabled: false,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: false
+      }
+    }),
+    growth: await prisma.plan.upsert({
+      where: { key: "growth" },
+      update: {
+        name: "Growth",
+        priceMonthly: 4999,
+        seatLimit: 15,
+        orgLimit: 1,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: true,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "growth",
+        name: "Growth",
+        priceMonthly: 4999,
+        seatLimit: 15,
+        orgLimit: 1,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: true
+      }
+    }),
+    pro: await prisma.plan.upsert({
+      where: { key: "pro" },
+      update: {
+        name: "Pro",
+        priceMonthly: 9999,
+        seatLimit: 50,
+        orgLimit: 3,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "pro",
+        name: "Pro",
+        priceMonthly: 9999,
+        seatLimit: 50,
+        orgLimit: 3,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true
+      }
+    }),
+    enterprise: await prisma.plan.upsert({
+      where: { key: "enterprise" },
+      update: {
+        name: "Enterprise",
+        priceMonthly: 0,
+        seatLimit: null,
+        orgLimit: null,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "enterprise",
+        name: "Enterprise",
+        priceMonthly: 0,
+        seatLimit: null,
+        orgLimit: null,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true
+      }
+    })
+  };
+
   const org = await prisma.org.upsert({
     where: { id: "00000000-0000-0000-0000-000000000001" },
     update: { name: "Demo Org" },
@@ -53,6 +160,19 @@ async function main(): Promise<void> {
     }
   });
 
+  await prisma.subscription.upsert({
+    where: { orgId: org.id },
+    update: {
+      planId: plans.pro.id,
+      status: "ACTIVE"
+    },
+    create: {
+      orgId: org.id,
+      planId: plans.pro.id,
+      status: "ACTIVE"
+    }
+  });
+
   const demoUsers: Array<{ name: string; email: string; role: Role }> = [
     { name: "Demo CEO", email: "ceo@demo.kritviya.local", role: Role.CEO },
     { name: "Demo Ops", email: "ops@demo.kritviya.local", role: Role.OPS },
@@ -62,7 +182,7 @@ async function main(): Promise<void> {
   ];
 
   for (const demoUser of demoUsers) {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { email: demoUser.email },
       update: {
         orgId: org.id,
@@ -78,6 +198,29 @@ async function main(): Promise<void> {
         role: demoUser.role,
         isActive: true,
         passwordHash
+      }
+    });
+
+    await prisma.orgMember.upsert({
+      where: {
+        orgId_email: {
+          orgId: org.id,
+          email: demoUser.email
+        }
+      },
+      update: {
+        userId: user.id,
+        role: demoUser.role,
+        status: "ACTIVE",
+        joinedAt: user.createdAt
+      },
+      create: {
+        orgId: org.id,
+        userId: user.id,
+        email: demoUser.email,
+        role: demoUser.role,
+        status: "ACTIVE",
+        joinedAt: user.createdAt
       }
     });
   }
