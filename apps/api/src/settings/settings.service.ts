@@ -4,9 +4,11 @@ import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
 import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
+import { isValidIpAllowlistEntry } from "../common/ip-allowlist.util";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdatePolicyDto } from "./dto/update-policy.dto";
+import { BadRequestException } from "@nestjs/common";
 
 @Injectable()
 export class SettingsService {
@@ -18,7 +20,8 @@ export class SettingsService {
   ) {}
 
   async getPolicies(authUser: AuthUserContext) {
-    return this.policyResolverService.getPolicyForOrg(authUser.orgId);
+    const activeOrgId = getActiveOrgId({ user: authUser });
+    return this.policyResolverService.getPolicyForOrg(activeOrgId);
   }
 
   async updatePolicies(authUser: AuthUserContext, dto: UpdatePolicyDto) {
@@ -27,6 +30,29 @@ export class SettingsService {
     if (dto.autopilotEnabled && !current.autopilotEnabled) {
       await this.billingService.assertFeature(activeOrgId, "autopilotEnabled");
     }
+
+    const ipAllowlist = dto.ipAllowlist ?? (Array.isArray(current.ipAllowlist) ? current.ipAllowlist : []);
+    if (!Array.isArray(ipAllowlist)) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "Invalid request.",
+        details: [{ field: "ipAllowlist", issues: ["ipAllowlist must be an array of IP/CIDR values."] }]
+      });
+    }
+    const invalidEntries = ipAllowlist.filter((entry) => !isValidIpAllowlistEntry(String(entry)));
+    if (invalidEntries.length > 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "Invalid request.",
+        details: [
+          {
+            field: "ipAllowlist",
+            issues: [`Invalid IP/CIDR entries: ${invalidEntries.join(", ")}`]
+          }
+        ]
+      });
+    }
+
     const updated = await this.prisma.policy.update({
       where: { id: current.id },
       data: {
@@ -43,7 +69,11 @@ export class SettingsService {
         autopilotEnabled: dto.autopilotEnabled,
         autopilotCreateWorkOnDealStageChange: dto.autopilotCreateWorkOnDealStageChange,
         autopilotNudgeOnOverdue: dto.autopilotNudgeOnOverdue,
-        autopilotAutoStaleDeals: dto.autopilotAutoStaleDeals
+        autopilotAutoStaleDeals: dto.autopilotAutoStaleDeals,
+        auditRetentionDays: dto.auditRetentionDays,
+        securityEventRetentionDays: dto.securityEventRetentionDays,
+        ipRestrictionEnabled: dto.ipRestrictionEnabled,
+        ipAllowlist
       }
     });
 

@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import { BadRequestException, INestApplication, ValidationError, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import cookieParser from "cookie-parser";
+import express, { Request, Response } from "express";
 import { config } from "dotenv";
 import helmet from "helmet";
 import { existsSync } from "node:fs";
@@ -9,15 +11,6 @@ import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { requestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { requestLoggingMiddleware } from "./common/middleware/request-logging.middleware";
-
-const cookieParser = require("cookie-parser") as () => (req: any, res: any, next: () => void) => void;
-const expressRuntime = require("express") as {
-  json: (options: {
-    limit: string;
-    verify?: (req: any, res: any, buf: Buffer) => void;
-  }) => (req: any, res: any, next: () => void) => void;
-  urlencoded: (options: { extended: boolean; limit: string }) => (req: any, res: any, next: () => void) => void;
-};
 
 function loadEnv(): void {
   const candidates = [
@@ -109,14 +102,14 @@ export async function createConfiguredApp(): Promise<INestApplication> {
   app.use(requestIdMiddleware);
   app.use(requestLoggingMiddleware);
   app.use(
-    expressRuntime.json({
+    express.json({
       limit: "1mb",
-      verify: (req: any, _res: any, buf: Buffer) => {
-        req.rawBody = buf?.length ? Buffer.from(buf) : undefined;
+      verify: (req: Request & { rawBody?: Buffer }, _res: Response, buf: Buffer) => {
+        req.rawBody = buf.length ? Buffer.from(buf) : undefined;
       }
     })
   );
-  app.use(expressRuntime.urlencoded({ extended: true, limit: "1mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "1mb" }));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

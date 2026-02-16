@@ -283,7 +283,11 @@ describe("Guardrail Integration Tests", () => {
         autopilotEnabled: false,
         autopilotCreateWorkOnDealStageChange: true,
         autopilotNudgeOnOverdue: true,
-        autopilotAutoStaleDeals: true
+        autopilotAutoStaleDeals: true,
+        auditRetentionDays: 10,
+        securityEventRetentionDays: 180,
+        ipRestrictionEnabled: false,
+        ipAllowlist: []
       });
 
     expect(response.status).toBe(400);
@@ -308,7 +312,11 @@ describe("Guardrail Integration Tests", () => {
         autopilotEnabled: false,
         autopilotCreateWorkOnDealStageChange: true,
         autopilotNudgeOnOverdue: true,
-        autopilotAutoStaleDeals: true
+        autopilotAutoStaleDeals: true,
+        auditRetentionDays: 180,
+        securityEventRetentionDays: 180,
+        ipRestrictionEnabled: false,
+        ipAllowlist: []
       });
 
     expect(response.status).toBe(200);

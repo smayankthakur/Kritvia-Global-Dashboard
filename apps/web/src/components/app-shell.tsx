@@ -77,11 +77,13 @@ const settingsNavByRole: Partial<Record<Role, Array<{ label: string; href: strin
   CEO: [
     { label: "Billing", href: "/billing" },
     { label: "Policies", href: "/settings/policies" },
+    { label: "Audit Export", href: "/settings/audit" },
     { label: "Org Members", href: "/settings/org/members" }
   ],
   ADMIN: [
     { label: "Billing", href: "/billing" },
     { label: "Policies", href: "/settings/policies" },
+    { label: "Audit Export", href: "/settings/audit" },
     { label: "Org Members", href: "/settings/org/members" }
   ]
 };

@@ -15,6 +15,8 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthUserContext } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
+import { RequireTokenScope } from "../auth/token-scope.decorator";
+import { TokenScopeGuard } from "../auth/token-scope.guard";
 import { SALES_READ_ROLES, SALES_WRITE_ROLES } from "../sales/common/sales-roles";
 import { CreateDealDto } from "./dto/create-deal.dto";
 import { ListDealsDto } from "./dto/list-deals.dto";
@@ -22,12 +24,13 @@ import { UpdateDealDto } from "./dto/update-deal.dto";
 import { DealsService } from "./deals.service";
 
 @Controller("deals")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TokenScopeGuard)
 export class DealsController {
   constructor(private readonly dealsService: DealsService) {}
 
   @Get()
   @Roles(...SALES_READ_ROLES, Role.FINANCE)
+  @RequireTokenScope("read:deals")
   async findAll(@Req() req: { user: AuthUserContext }, @Query() query: ListDealsDto) {
     return this.dealsService.findAll(req.user, query);
   }

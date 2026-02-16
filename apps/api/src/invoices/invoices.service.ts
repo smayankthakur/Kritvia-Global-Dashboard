@@ -14,6 +14,8 @@ import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ShieldService } from "../shield/shield.service";
+import { WEBHOOK_EVENTS } from "../org-webhooks/webhook-events";
+import { WebhookService } from "../org-webhooks/webhook.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { ListInvoicesDto } from "./dto/list-invoices.dto";
 import { UpdateInvoiceDto } from "./dto/update-invoice.dto";
@@ -39,7 +41,8 @@ export class InvoicesService {
     private readonly activityLogService: ActivityLogService,
     private readonly policyResolverService: PolicyResolverService,
     private readonly shieldService: ShieldService,
-    private readonly billingService: BillingService
+    private readonly billingService: BillingService,
+    private readonly webhookService: WebhookService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListInvoicesDto) {
@@ -207,6 +210,15 @@ export class InvoicesService {
       before: existing,
       after: updated
     });
+    void this.webhookService.dispatch(authUser.orgId, WEBHOOK_EVENTS.INVOICE_STATUS_CHANGED, {
+      orgId: authUser.orgId,
+      invoiceId: updated.id,
+      fromStatus: existing.status,
+      toStatus: updated.status,
+      amount: Number(updated.amount),
+      dueDate: updated.dueDate.toISOString(),
+      occurredAt: new Date().toISOString()
+    });
 
     if (lockAt) {
       await this.activityLogService.log({
@@ -244,6 +256,15 @@ export class InvoicesService {
       action: "MARK_PAID",
       before: existing,
       after: updated
+    });
+    void this.webhookService.dispatch(authUser.orgId, WEBHOOK_EVENTS.INVOICE_STATUS_CHANGED, {
+      orgId: authUser.orgId,
+      invoiceId: updated.id,
+      fromStatus: existing.status,
+      toStatus: updated.status,
+      amount: Number(updated.amount),
+      dueDate: updated.dueDate.toISOString(),
+      occurredAt: new Date().toISOString()
     });
 
     return this.getById(updated.id, authUser);

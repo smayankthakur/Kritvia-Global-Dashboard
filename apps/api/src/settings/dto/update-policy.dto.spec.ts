@@ -17,7 +17,11 @@ function makeValidPayload() {
     autopilotEnabled: false,
     autopilotCreateWorkOnDealStageChange: true,
     autopilotNudgeOnOverdue: true,
-    autopilotAutoStaleDeals: true
+    autopilotAutoStaleDeals: true,
+    auditRetentionDays: 180,
+    securityEventRetentionDays: 180,
+    ipRestrictionEnabled: false,
+    ipAllowlist: []
   };
 }
 
@@ -28,7 +32,10 @@ describe("UpdatePolicyDto", () => {
       defaultWorkDueDays: 31,
       staleDealAfterDays: 0,
       leadStaleAfterHours: 721,
-      autoLockInvoiceAfterDays: -1
+      autoLockInvoiceAfterDays: -1,
+      auditRetentionDays: 10,
+      securityEventRetentionDays: 4000,
+      ipAllowlist: ["bad-ip"]
     });
 
     const errors = validateSync(dto);
@@ -38,5 +45,7 @@ describe("UpdatePolicyDto", () => {
     expect(fields).toContain("staleDealAfterDays");
     expect(fields).toContain("leadStaleAfterHours");
     expect(fields).toContain("autoLockInvoiceAfterDays");
+    expect(fields).toContain("auditRetentionDays");
+    expect(fields).toContain("securityEventRetentionDays");
   });
 });

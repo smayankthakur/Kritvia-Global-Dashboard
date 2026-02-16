@@ -358,6 +358,75 @@ export interface Nudge {
   createdByUser?: { id: string; name: string; email: string } | null;
 }
 
+export interface AIInsight {
+  id: string;
+  type: "DEAL_STALL" | "CASHFLOW_ALERT" | "OPS_RISK" | "SHIELD_RISK" | "HEALTH_DROP";
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  scoreImpact: number;
+  title: string;
+  explanation: string;
+  entityType: string | null;
+  entityId: string | null;
+  meta: Record<string, unknown> | null;
+  isResolved: boolean;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface ComputeInsightsSummary {
+  total: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export type AIActionType = "CREATE_NUDGE" | "CREATE_WORK_ITEM" | "LOCK_INVOICE" | "REASSIGN_WORK";
+export type AIActionStatus = "PROPOSED" | "APPROVED" | "EXECUTED" | "FAILED" | "CANCELED";
+
+export interface AIAction {
+  id: string;
+  orgId: string;
+  insightId: string | null;
+  type: AIActionType;
+  status: AIActionStatus;
+  title: string;
+  rationale: string;
+  payload: Record<string, unknown> | null;
+  approvedByUserId: string | null;
+  approvedAt: string | null;
+  executedByUserId: string | null;
+  executedAt: string | null;
+  undoData: Record<string, unknown> | null;
+  undoExpiresAt: string | null;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface ComputeActionsSummary {
+  created: number;
+  skipped: number;
+  totalProposed: number;
+}
+
+export interface BriefingLinkItem {
+  title: string;
+  summary?: string;
+  deepLink?: string;
+}
+
+export interface CeoBriefingPayload {
+  id?: string;
+  type?: string;
+  periodDays?: number;
+  executiveSummary: string;
+  topRisks: BriefingLinkItem[];
+  recommendedNextActions: BriefingLinkItem[];
+  contentText?: string;
+  cached?: boolean;
+  createdAt?: string;
+}
+
 export type FeedItem = Nudge;
 
 export interface UserSummary {
@@ -493,6 +562,10 @@ export interface PolicySettings {
   autopilotCreateWorkOnDealStageChange: boolean;
   autopilotNudgeOnOverdue: boolean;
   autopilotAutoStaleDeals: boolean;
+  auditRetentionDays: number;
+  securityEventRetentionDays: number;
+  ipRestrictionEnabled: boolean;
+  ipAllowlist: string[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -542,6 +615,7 @@ export interface BillingPlanPayload {
     shieldEnabled: boolean;
     portfolioEnabled: boolean;
     revenueIntelligenceEnabled: boolean;
+    enterpriseControlsEnabled: boolean;
     maxWorkItems: number | null;
     maxInvoices: number | null;
   };
@@ -1191,6 +1265,128 @@ export async function listFeed(token: string): Promise<FeedItem[]> {
   return parseResponse(response, "Failed to fetch feed");
 }
 
+export async function listCeoInsights(token: string): Promise<AIInsight[]> {
+  const response = await request(`${API_BASE_URL}/ceo/insights`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch AI insights");
+}
+
+export async function resolveCeoInsight(token: string, id: string): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/ceo/insights/${id}/resolve`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to resolve insight");
+}
+
+export async function computeAiInsights(token: string): Promise<ComputeInsightsSummary> {
+  const response = await request(`${API_BASE_URL}/ai/compute-insights`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to refresh insights");
+}
+
+export async function listAiActions(
+  token: string,
+  filters?: {
+    status?: AIActionStatus;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  }
+): Promise<PaginatedResponse<AIAction>> {
+  const params = new URLSearchParams();
+  if (filters?.status) {
+    params.set("status", filters.status);
+  }
+  addPaginationParams(params, filters);
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/ai/actions${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch AI actions");
+}
+
+export async function approveAiAction(token: string, id: string): Promise<AIAction> {
+  const response = await request(`${API_BASE_URL}/ai/actions/${id}/approve`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to approve AI action");
+}
+
+export async function executeAiAction(token: string, id: string): Promise<AIAction> {
+  const response = await request(`${API_BASE_URL}/ai/actions/${id}/execute`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to execute AI action");
+}
+
+export async function undoAiAction(token: string, id: string): Promise<AIAction> {
+  const response = await request(`${API_BASE_URL}/ai/actions/${id}/undo`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to undo AI action");
+}
+
+export async function computeAiActions(token: string): Promise<ComputeActionsSummary> {
+  const response = await request(`${API_BASE_URL}/ai/compute-actions`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to generate AI actions");
+}
+
+export async function generateCeoBriefing(
+  token: string,
+  periodDays = 7
+): Promise<CeoBriefingPayload> {
+  const response = await request(`${API_BASE_URL}/llm/reports/ceo-daily-brief`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ periodDays })
+  });
+  const payload = await parseResponse<
+    | CeoBriefingPayload
+    | {
+        id: string;
+        type: string;
+        cached?: boolean;
+        contentJson: CeoBriefingPayload;
+        contentText?: string;
+        createdAt?: string;
+      }
+  >(response, "Failed to generate CEO briefing");
+
+  if ("contentJson" in payload) {
+    return {
+      ...payload.contentJson,
+      id: payload.id,
+      type: payload.type,
+      cached: payload.cached,
+      createdAt: payload.createdAt,
+      contentText: payload.contentText ?? payload.contentJson.contentText
+    };
+  }
+
+  return payload;
+}
+
+export async function listCeoBriefingHistory(token: string): Promise<CeoBriefingPayload[]> {
+  const response = await request(`${API_BASE_URL}/llm/reports?type=CEO_DAILY_BRIEF`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch CEO briefing history");
+}
+
 export async function listUsers(token: string): Promise<UserSummary[]> {
   const response = await request(`${API_BASE_URL}/directory/users`, {
     headers: authHeaders(token),
@@ -1277,6 +1473,59 @@ export async function getPolicySettings(token: string): Promise<PolicySettings> 
     cache: "no-store"
   });
   return parseResponse(response, "Failed to fetch policy settings");
+}
+
+export async function exportOrgAuditCsv(
+  token: string,
+  options?: { from?: string; to?: string }
+): Promise<{ blob: Blob; filename: string }> {
+  const params = new URLSearchParams();
+  params.set("format", "csv");
+  if (options?.from) {
+    params.set("from", options.from);
+  }
+  if (options?.to) {
+    params.set("to", options.to);
+  }
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/org/audit/export?${query}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    let message = "Failed to export audit CSV";
+    let code: string | undefined;
+    try {
+      const json = (await response.json()) as {
+        message?: string | string[];
+        error?: { message?: string; code?: string };
+      };
+      if (Array.isArray(json.message)) {
+        message = json.message.join(", ");
+      } else if (json.message) {
+        message = json.message;
+      } else if (json.error?.message) {
+        message = json.error.message;
+      }
+      code = json.error?.code;
+    } catch {
+      // ignore
+    }
+    if (code === "UPGRADE_REQUIRED" && typeof window !== "undefined") {
+      const upgradeMessage = `${message} Open /billing to upgrade.`;
+      window.alert(upgradeMessage);
+      message = upgradeMessage;
+    }
+    throw new ApiError(message, response.status, code);
+  }
+
+  const contentDisposition = response.headers.get("content-disposition") ?? "";
+  const filenameMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+  const filename = filenameMatch?.[1] ?? "audit_export.csv";
+  const blob = await response.blob();
+
+  return { blob, filename };
 }
 
 export async function getBillingPlan(token: string): Promise<BillingPlanPayload> {

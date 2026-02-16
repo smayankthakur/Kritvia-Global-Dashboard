@@ -62,6 +62,16 @@ describe("Portfolio Module", () => {
   let adminAToken = "";
   let adminBToken = "";
   let createdPortfolioId = "";
+  type SummaryRow = {
+    org: { id: string };
+    kpis: {
+      healthScore: number | null;
+      openNudgesCount: number;
+      outstandingReceivables: number;
+      overdueWorkCount: number;
+      criticalShieldCount: number;
+    };
+  };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -342,8 +352,8 @@ describe("Portfolio Module", () => {
     expect(Array.isArray(summary.body.rows)).toBe(true);
     expect(summary.body.rows).toHaveLength(2);
 
-    const rowA = summary.body.rows.find((row: any) => row.org.id === IDS.orgA);
-    const rowB = summary.body.rows.find((row: any) => row.org.id === IDS.orgB);
+    const rowA = (summary.body.rows as SummaryRow[]).find((row) => row.org.id === IDS.orgA);
+    const rowB = (summary.body.rows as SummaryRow[]).find((row) => row.org.id === IDS.orgB);
 
     expect(rowA.kpis.healthScore).toBe(78);
     expect(rowA.kpis.openNudgesCount).toBe(1);

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger
 } from "@nestjs/common";
+import { Request, Response } from "express";
 
 interface DbErrorLike {
   code?: string;
@@ -26,8 +27,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<any>();
-    const request = ctx.getRequest<any>();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request & { requestId?: string }>();
     const requestId = request.requestId ?? "unknown";
 
     const status =
@@ -116,7 +117,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     return typeof label === "string" ? label : `HTTP_${status}`;
   }
 
-  private logUnexpectedError(exception: unknown, requestId: string, request: any): void {
+  private logUnexpectedError(exception: unknown, requestId: string, request: Request): void {
     const safePath = request.originalUrl ?? request.url;
     const baseMessage = `Unhandled error [requestId=${requestId}] ${request.method} ${safePath}`;
 

@@ -93,6 +93,7 @@ async function main(): Promise<void> {
         shieldEnabled: false,
         portfolioEnabled: false,
         revenueIntelligenceEnabled: false,
+        enterpriseControlsEnabled: false,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -105,7 +106,8 @@ async function main(): Promise<void> {
         autopilotEnabled: false,
         shieldEnabled: false,
         portfolioEnabled: false,
-        revenueIntelligenceEnabled: false
+        revenueIntelligenceEnabled: false,
+        enterpriseControlsEnabled: false
       }
     }),
     pro: await prisma.plan.upsert({
@@ -119,6 +121,7 @@ async function main(): Promise<void> {
         shieldEnabled: true,
         portfolioEnabled: true,
         revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: false,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -131,7 +134,36 @@ async function main(): Promise<void> {
         autopilotEnabled: true,
         shieldEnabled: true,
         portfolioEnabled: true,
-        revenueIntelligenceEnabled: true
+        revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: false
+      }
+    }),
+    enterprise: await prisma.plan.upsert({
+      where: { key: "enterprise" },
+      update: {
+        name: "Enterprise",
+        priceMonthly: 0,
+        seatLimit: null,
+        orgLimit: null,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: true,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "enterprise",
+        name: "Enterprise",
+        priceMonthly: 0,
+        seatLimit: null,
+        orgLimit: null,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: true,
+        revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: true
       }
     })
   };
@@ -164,7 +196,11 @@ async function main(): Promise<void> {
       autopilotEnabled: false,
       autopilotCreateWorkOnDealStageChange: true,
       autopilotNudgeOnOverdue: true,
-      autopilotAutoStaleDeals: true
+      autopilotAutoStaleDeals: true,
+      auditRetentionDays: 180,
+      securityEventRetentionDays: 180,
+      ipAllowlist: [],
+      ipRestrictionEnabled: false
     },
     create: {
       orgId: IDS.orgA,
@@ -181,7 +217,11 @@ async function main(): Promise<void> {
       autopilotEnabled: false,
       autopilotCreateWorkOnDealStageChange: true,
       autopilotNudgeOnOverdue: true,
-      autopilotAutoStaleDeals: true
+      autopilotAutoStaleDeals: true,
+      auditRetentionDays: 180,
+      securityEventRetentionDays: 180,
+      ipAllowlist: [],
+      ipRestrictionEnabled: false
     }
   });
 
@@ -213,7 +253,11 @@ async function main(): Promise<void> {
       autopilotEnabled: false,
       autopilotCreateWorkOnDealStageChange: true,
       autopilotNudgeOnOverdue: true,
-      autopilotAutoStaleDeals: true
+      autopilotAutoStaleDeals: true,
+      auditRetentionDays: 180,
+      securityEventRetentionDays: 180,
+      ipAllowlist: [],
+      ipRestrictionEnabled: false
     },
     create: {
       orgId: IDS.orgB,
@@ -230,7 +274,11 @@ async function main(): Promise<void> {
       autopilotEnabled: false,
       autopilotCreateWorkOnDealStageChange: true,
       autopilotNudgeOnOverdue: true,
-      autopilotAutoStaleDeals: true
+      autopilotAutoStaleDeals: true,
+      auditRetentionDays: 180,
+      securityEventRetentionDays: 180,
+      ipAllowlist: [],
+      ipRestrictionEnabled: false
     }
   });
 

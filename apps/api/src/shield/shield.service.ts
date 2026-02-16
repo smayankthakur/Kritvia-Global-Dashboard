@@ -33,7 +33,7 @@ export class ShieldService {
   ) {}
 
   async createEvent(input: SecurityEventInput) {
-    return this.securityEventModel().create({
+    return this.prisma.securityEvent.create({
       data: {
         orgId: input.orgId,
         type: input.type,
@@ -61,13 +61,13 @@ export class ShieldService {
           : { resolvedAt: null })
     };
 
-    const items = await this.securityEventModel().findMany({
+    const items = await this.prisma.securityEvent.findMany({
       where,
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       skip,
       take: query.pageSize
     });
-    const total = await this.securityEventModel().count({ where });
+    const total = await this.prisma.securityEvent.count({ where });
 
     return toPaginatedResponse(items, query.page, query.pageSize, total);
   }
@@ -75,7 +75,7 @@ export class ShieldService {
   async resolveEvent(authUser: AuthUserContext, id: string) {
     const activeOrgId = getActiveOrgId({ user: authUser });
     await this.billingService.assertFeature(activeOrgId, "shieldEnabled");
-    const existing = await this.securityEventModel().findFirst({
+    const existing = await this.prisma.securityEvent.findFirst({
       where: {
         id,
         orgId: activeOrgId
@@ -89,7 +89,7 @@ export class ShieldService {
       return existing;
     }
 
-    return this.securityEventModel().update({
+    return this.prisma.securityEvent.update({
       where: { id: existing.id },
       data: {
         resolvedAt: new Date()
@@ -108,7 +108,7 @@ export class ShieldService {
         createdAt: { gte: tenMinutesAgo }
       }
     });
-    const existingSpike = await this.securityEventModel().findFirst({
+    const existingSpike = await this.prisma.securityEvent.findFirst({
       where: {
         orgId,
         type: "BULK_USER_DEACTIVATION",
@@ -167,13 +167,4 @@ export class ShieldService {
     this.failedLoginBuckets.delete(key);
   }
 
-  private securityEventModel(): {
-    create: (...args: unknown[]) => Promise<unknown>;
-    findMany: (...args: unknown[]) => Promise<unknown[]>;
-    count: (...args: unknown[]) => Promise<number>;
-    findFirst: (...args: unknown[]) => Promise<{ id: string; resolvedAt?: Date | null } | null>;
-    update: (...args: unknown[]) => Promise<unknown>;
-  } {
-    return (this.prisma as unknown as { securityEvent: any }).securityEvent;
-  }
 }

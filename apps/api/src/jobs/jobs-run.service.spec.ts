@@ -1,23 +1,37 @@
 import { JobsRunService } from "./jobs-run.service";
 
+type PrismaMock = {
+  org: { findMany: jest.Mock };
+  invoice?: { findMany: jest.Mock; updateMany: jest.Mock };
+  deal?: { findMany: jest.Mock; updateMany: jest.Mock };
+  user?: { findFirst: jest.Mock };
+  workItem?: { findMany: jest.Mock };
+  nudge?: { findFirst: jest.Mock; create: jest.Mock };
+  $transaction?: jest.Mock;
+};
+
 describe("JobsRunService", () => {
   it("run processes only orgs with autopilot enabled", async () => {
     const prisma = {
       org: {
         findMany: jest.fn().mockResolvedValue([{ id: "org-a" }, { id: "org-b" }])
       }
-    } as any;
+    } as unknown as PrismaMock;
     const policyResolver = {
       getPolicyForOrg: jest
         .fn()
         .mockResolvedValueOnce({ autopilotEnabled: true })
         .mockResolvedValueOnce({ autopilotEnabled: false })
-    } as any;
+    } as unknown as { getPolicyForOrg: jest.Mock };
     const activityLog = {
       log: jest.fn()
-    } as any;
+    } as unknown as { log: jest.Mock };
 
-    const service = new JobsRunService(prisma, policyResolver, activityLog);
+    const service = new JobsRunService(
+      prisma as never,
+      policyResolver as never,
+      activityLog as never
+    );
     jest
       .spyOn(service, "runForOrg")
       .mockResolvedValue({
@@ -56,16 +70,20 @@ describe("JobsRunService", () => {
       $transaction: jest
         .fn()
         .mockImplementation(async (ops: Array<Promise<unknown>>) => Promise.all(ops))
-    } as any;
+    } as unknown as PrismaMock;
     const policyResolver = {
       getPolicyForOrg: jest.fn().mockResolvedValue({
         staleDealAfterDays: 7,
         autopilotNudgeOnOverdue: true
       })
-    } as any;
-    const activityLog = { log: jest.fn() } as any;
+    } as unknown as { getPolicyForOrg: jest.Mock };
+    const activityLog = { log: jest.fn() } as unknown as { log: jest.Mock };
 
-    const service = new JobsRunService(prisma, policyResolver, activityLog);
+    const service = new JobsRunService(
+      prisma as never,
+      policyResolver as never,
+      activityLog as never
+    );
     const first = await service.runForOrg("org-a", new Date("2026-02-14T00:00:00.000Z"));
     const second = await service.runForOrg("org-a", new Date("2026-02-14T00:00:00.000Z"));
 

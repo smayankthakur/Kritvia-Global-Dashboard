@@ -659,6 +659,38 @@ tbody tr:hover {
   background: var(--bg-secondary);
 }
 
+.kv-insights-header-alert {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #d4a017 40%, var(--border-color));
+  animation: kvInsightGlow 2.4s ease-in-out infinite;
+}
+
+.kv-insight-title {
+  margin: 8px 0 4px;
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+}
+
+.kv-insight-explanation {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes kvInsightGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.05), 0 0 0 0 rgba(212, 160, 23, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12), 0 0 20px rgba(212, 160, 23, 0.2);
+  }
+}
+
 .kv-link-btn {
   display: inline-block;
   border-radius: 8px;

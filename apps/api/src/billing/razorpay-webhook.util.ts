@@ -30,13 +30,35 @@ function parseUnixTimestamp(value: unknown): Date | null | undefined {
   return new Date(value * 1000);
 }
 
-function getSubscriptionEntity(payload: any): any {
-  return payload?.payload?.subscription?.entity ?? null;
+interface RazorpaySubscriptionEntity {
+  id?: unknown;
+  current_end?: unknown;
+  notes?: Record<string, unknown>;
 }
 
-export function mapRazorpayWebhookEvent(event: string, payload: any): RazorpayWebhookParsed {
-  const subscription = getSubscriptionEntity(payload);
-  const payment = payload?.payload?.payment?.entity ?? null;
+interface RazorpayPaymentEntity {
+  subscription_id?: unknown;
+}
+
+interface RazorpayWebhookPayload {
+  payload?: {
+    subscription?: {
+      entity?: RazorpaySubscriptionEntity;
+    };
+    payment?: {
+      entity?: RazorpayPaymentEntity;
+    };
+  };
+}
+
+function getSubscriptionEntity(payload: RazorpayWebhookPayload): RazorpaySubscriptionEntity | null {
+  return payload.payload?.subscription?.entity ?? null;
+}
+
+export function mapRazorpayWebhookEvent(event: string, payload: unknown): RazorpayWebhookParsed {
+  const typedPayload = (payload as RazorpayWebhookPayload | null) ?? {};
+  const subscription = getSubscriptionEntity(typedPayload);
+  const payment = typedPayload.payload?.payment?.entity ?? null;
   const subscriptionId =
     (typeof subscription?.id === "string" ? subscription.id : undefined) ??
     (typeof payment?.subscription_id === "string" ? payment.subscription_id : undefined);

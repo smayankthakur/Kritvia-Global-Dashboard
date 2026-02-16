@@ -102,7 +102,8 @@ export default function BillingPage() {
       { label: "Autopilot", enabled: planData.plan.autopilotEnabled },
       { label: "Shield", enabled: planData.plan.shieldEnabled },
       { label: "Portfolio", enabled: planData.plan.portfolioEnabled },
-      { label: "Revenue Intelligence", enabled: planData.plan.revenueIntelligenceEnabled }
+      { label: "Revenue Intelligence", enabled: planData.plan.revenueIntelligenceEnabled },
+      { label: "Enterprise Controls", enabled: planData.plan.enterpriseControlsEnabled }
     ];
   }, [planData]);
 

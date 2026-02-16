@@ -1,4 +1,13 @@
-import { IsBoolean, IsInt, Max, Min } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min
+} from "class-validator";
 
 export class UpdatePolicyDto {
   @IsBoolean()
@@ -52,4 +61,23 @@ export class UpdatePolicyDto {
 
   @IsBoolean()
   autopilotAutoStaleDeals!: boolean;
+
+  @IsInt()
+  @Min(30)
+  @Max(3650)
+  auditRetentionDays!: number;
+
+  @IsInt()
+  @Min(30)
+  @Max(3650)
+  securityEventRetentionDays!: number;
+
+  @IsBoolean()
+  ipRestrictionEnabled!: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsString({ each: true })
+  ipAllowlist?: string[];
 }

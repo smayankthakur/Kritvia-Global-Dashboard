@@ -19,6 +19,7 @@ async function main(): Promise<void> {
         shieldEnabled: false,
         portfolioEnabled: false,
         revenueIntelligenceEnabled: false,
+        enterpriseControlsEnabled: false,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -31,7 +32,8 @@ async function main(): Promise<void> {
         autopilotEnabled: false,
         shieldEnabled: false,
         portfolioEnabled: false,
-        revenueIntelligenceEnabled: false
+        revenueIntelligenceEnabled: false,
+        enterpriseControlsEnabled: false
       }
     }),
     growth: await prisma.plan.upsert({
@@ -45,6 +47,7 @@ async function main(): Promise<void> {
         shieldEnabled: true,
         portfolioEnabled: false,
         revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: false,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -57,7 +60,8 @@ async function main(): Promise<void> {
         autopilotEnabled: true,
         shieldEnabled: true,
         portfolioEnabled: false,
-        revenueIntelligenceEnabled: true
+        revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: false
       }
     }),
     pro: await prisma.plan.upsert({
@@ -71,6 +75,7 @@ async function main(): Promise<void> {
         shieldEnabled: true,
         portfolioEnabled: true,
         revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: false,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -83,7 +88,8 @@ async function main(): Promise<void> {
         autopilotEnabled: true,
         shieldEnabled: true,
         portfolioEnabled: true,
-        revenueIntelligenceEnabled: true
+        revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: false
       }
     }),
     enterprise: await prisma.plan.upsert({
@@ -97,6 +103,7 @@ async function main(): Promise<void> {
         shieldEnabled: true,
         portfolioEnabled: true,
         revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: true,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -109,7 +116,8 @@ async function main(): Promise<void> {
         autopilotEnabled: true,
         shieldEnabled: true,
         portfolioEnabled: true,
-        revenueIntelligenceEnabled: true
+        revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: true
       }
     })
   };
@@ -139,7 +147,11 @@ async function main(): Promise<void> {
       autopilotEnabled: false,
       autopilotCreateWorkOnDealStageChange: true,
       autopilotNudgeOnOverdue: true,
-      autopilotAutoStaleDeals: true
+      autopilotAutoStaleDeals: true,
+      auditRetentionDays: 180,
+      securityEventRetentionDays: 180,
+      ipAllowlist: [],
+      ipRestrictionEnabled: false
     },
     create: {
       orgId: org.id,
@@ -156,7 +168,11 @@ async function main(): Promise<void> {
       autopilotEnabled: false,
       autopilotCreateWorkOnDealStageChange: true,
       autopilotNudgeOnOverdue: true,
-      autopilotAutoStaleDeals: true
+      autopilotAutoStaleDeals: true,
+      auditRetentionDays: 180,
+      securityEventRetentionDays: 180,
+      ipAllowlist: [],
+      ipRestrictionEnabled: false
     }
   });
 

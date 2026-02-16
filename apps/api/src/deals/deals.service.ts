@@ -10,6 +10,8 @@ import { AuthUserContext } from "../auth/auth.types";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
+import { WEBHOOK_EVENTS } from "../org-webhooks/webhook-events";
+import { WebhookService } from "../org-webhooks/webhook.service";
 import { CreateDealDto } from "./dto/create-deal.dto";
 import { ListDealsDto } from "./dto/list-deals.dto";
 import { UpdateDealDto } from "./dto/update-deal.dto";
@@ -19,7 +21,8 @@ export class DealsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
-    private readonly policyResolverService: PolicyResolverService
+    private readonly policyResolverService: PolicyResolverService,
+    private readonly webhookService: WebhookService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListDealsDto) {
@@ -88,6 +91,17 @@ export class DealsService {
       action: "CREATE",
       after: created
     });
+    void this.webhookService.dispatch(authUser.orgId, WEBHOOK_EVENTS.DEAL_CREATED, {
+      orgId: authUser.orgId,
+      dealId: created.id,
+      title: created.title,
+      stage: created.stage,
+      valueAmount: created.valueAmount,
+      currency: created.currency,
+      companyId: created.companyId,
+      ownerUserId: created.ownerUserId,
+      occurredAt: new Date().toISOString()
+    });
 
     return created;
   }
@@ -138,6 +152,15 @@ export class DealsService {
       action: "UPDATE",
       before: existing,
       after: updated
+    });
+    void this.webhookService.dispatch(authUser.orgId, WEBHOOK_EVENTS.DEAL_UPDATED, {
+      orgId: authUser.orgId,
+      dealId: updated.id,
+      stage: updated.stage,
+      valueAmount: updated.valueAmount,
+      currency: updated.currency,
+      expectedCloseDate: updated.expectedCloseDate?.toISOString() ?? null,
+      occurredAt: new Date().toISOString()
     });
 
     return updated;

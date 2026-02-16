@@ -29,10 +29,35 @@ export class JobsController {
       cookies?: Record<string, string | undefined>;
     }
   ) {
-    if (this.isSecretAuthorized(jobsSecretHeader)) {
-      return this.jobsRunService.run();
+    if (!this.isSecretAuthorized(jobsSecretHeader)) {
+      const payload = this.assertAdmin(req);
+      const activeOrgId = payload.activeOrgId ?? payload.orgId;
+      await this.billingService.assertFeature(activeOrgId, "autopilotEnabled");
     }
 
+    return this.jobsRunService.run();
+  }
+
+  @Post("retention/run")
+  async runRetention(
+    @Headers("x-jobs-secret") jobsSecretHeader: string | undefined,
+    @Req()
+    req: {
+      headers: { authorization?: string };
+      cookies?: Record<string, string | undefined>;
+    }
+  ) {
+    if (!this.isSecretAuthorized(jobsSecretHeader)) {
+      this.assertAdmin(req);
+    }
+
+    return this.jobsRunService.runRetention();
+  }
+
+  private assertAdmin(req: {
+    headers: { authorization?: string };
+    cookies?: Record<string, string | undefined>;
+  }): AuthTokenPayload {
     const authHeader = req.headers.authorization;
     const bearerToken =
       authHeader && authHeader.startsWith("Bearer ")
@@ -56,10 +81,8 @@ export class JobsController {
     if (payload.role !== Role.ADMIN) {
       throw new ForbiddenException("Insufficient role permissions");
     }
-    const activeOrgId = payload.activeOrgId ?? payload.orgId;
-    await this.billingService.assertFeature(activeOrgId, "autopilotEnabled");
 
-    return this.jobsRunService.run();
+    return payload;
   }
 
   private isSecretAuthorized(headerValue: string | undefined): boolean {

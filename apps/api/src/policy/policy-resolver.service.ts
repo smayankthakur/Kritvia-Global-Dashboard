@@ -15,7 +15,11 @@ const POLICY_DEFAULTS = {
   autopilotEnabled: false,
   autopilotCreateWorkOnDealStageChange: true,
   autopilotNudgeOnOverdue: true,
-  autopilotAutoStaleDeals: true
+  autopilotAutoStaleDeals: true,
+  auditRetentionDays: 180,
+  securityEventRetentionDays: 180,
+  ipAllowlist: [],
+  ipRestrictionEnabled: false
 } as const;
 
 @Injectable()

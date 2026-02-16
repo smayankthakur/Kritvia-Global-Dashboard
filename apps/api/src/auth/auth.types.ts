@@ -16,4 +16,7 @@ export interface AuthUserContext {
   role: Role;
   email: string;
   name: string;
+  isServiceAccount?: boolean;
+  serviceAccountId?: string;
+  serviceAccountScopes?: string[] | null;
 }

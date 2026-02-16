@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import {
   ActivityEntityType,
   DealStage,
@@ -9,6 +9,7 @@ import {
   WorkItemStatus
 } from "@prisma/client";
 import { ActivityLogService } from "../activity-log/activity-log.service";
+import { BillingService } from "../billing/billing.service";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { computeNudgeScore } from "../nudges/nudge-scoring.util";
@@ -21,6 +22,14 @@ interface OrgRunSummary {
   durationMs: number;
 }
 
+interface OrgRetentionSummary {
+  orgId: string;
+  logsDeleted: number;
+  eventsDeleted: number;
+  auditRetentionDays: number;
+  securityEventRetentionDays: number;
+}
+
 export interface JobsRunSummary {
   processedOrgs: number;
   invoicesLocked: number;
@@ -30,12 +39,24 @@ export interface JobsRunSummary {
   perOrg: OrgRunSummary[];
 }
 
+export interface JobsRetentionSummary {
+  processedOrgs: number;
+  skippedOrgs: number;
+  logsDeleted: number;
+  eventsDeleted: number;
+  durationMs: number;
+  perOrg: OrgRetentionSummary[];
+}
+
 @Injectable()
 export class JobsRunService {
+  private readonly logger = new Logger(JobsRunService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly policyResolverService: PolicyResolverService,
-    private readonly activityLogService: ActivityLogService
+    private readonly activityLogService: ActivityLogService,
+    private readonly billingService: BillingService
   ) {}
 
   async run(now: Date = new Date()): Promise<JobsRunSummary> {
@@ -70,6 +91,82 @@ export class JobsRunService {
       dealsStaled,
       nudgesCreated,
       durationMs: Date.now() - startedAt,
+      perOrg
+    };
+  }
+
+  async runRetention(now: Date = new Date()): Promise<JobsRetentionSummary> {
+    const startedAt = Date.now();
+    const orgs = await this.prisma.org.findMany({
+      select: { id: true }
+    });
+
+    let processedOrgs = 0;
+    let skippedOrgs = 0;
+    let logsDeleted = 0;
+    let eventsDeleted = 0;
+    const perOrg: OrgRetentionSummary[] = [];
+
+    for (const org of orgs) {
+      const canProcess = await this.isEnterpriseControlsEnabled(org.id);
+      if (!canProcess) {
+        skippedOrgs += 1;
+        continue;
+      }
+
+      const policy = await this.policyResolverService.getPolicyForOrg(org.id);
+      const auditRetentionDays = Math.max(30, policy.auditRetentionDays);
+      const securityEventRetentionDays = Math.max(30, policy.securityEventRetentionDays);
+      const cutoffLogs = new Date(now.getTime() - auditRetentionDays * 24 * 60 * 60 * 1000);
+      const cutoffEvents = new Date(
+        now.getTime() - securityEventRetentionDays * 24 * 60 * 60 * 1000
+      );
+
+      const [deletedLogsResult, deletedEventsResult] = await this.prisma.$transaction([
+        this.prisma.activityLog.deleteMany({
+          where: {
+            orgId: org.id,
+            createdAt: { lt: cutoffLogs }
+          }
+        }),
+        this.prisma.securityEvent.deleteMany({
+          where: {
+            orgId: org.id,
+            createdAt: { lt: cutoffEvents }
+          }
+        })
+      ]);
+
+      processedOrgs += 1;
+      logsDeleted += deletedLogsResult.count;
+      eventsDeleted += deletedEventsResult.count;
+      perOrg.push({
+        orgId: org.id,
+        logsDeleted: deletedLogsResult.count,
+        eventsDeleted: deletedEventsResult.count,
+        auditRetentionDays,
+        securityEventRetentionDays
+      });
+    }
+
+    const durationMs = Date.now() - startedAt;
+    this.logger.log(
+      JSON.stringify({
+        event: "retention_run_complete",
+        processedOrgs,
+        skippedOrgs,
+        logsDeleted,
+        eventsDeleted,
+        durationMs
+      })
+    );
+
+    return {
+      processedOrgs,
+      skippedOrgs,
+      logsDeleted,
+      eventsDeleted,
+      durationMs,
       perOrg
     };
   }
@@ -328,5 +425,21 @@ export class JobsRunService {
       after: nudge
     });
     return true;
+  }
+
+  private async isEnterpriseControlsEnabled(orgId: string): Promise<boolean> {
+    try {
+      await this.billingService.assertFeature(orgId, "enterpriseControlsEnabled");
+      return true;
+    } catch (error) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.PAYMENT_REQUIRED &&
+        (error.getResponse() as { code?: string })?.code === "UPGRADE_REQUIRED"
+      ) {
+        return false;
+      }
+      throw error;
+    }
   }
 }

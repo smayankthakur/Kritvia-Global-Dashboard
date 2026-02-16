@@ -53,10 +53,7 @@ describe("Sudarshan Shield Security Events", () => {
   let dealId = "";
   let financeUserId = "";
   let authService: AuthService;
-  let securityEvents: {
-    deleteMany: (...args: unknown[]) => Promise<unknown>;
-    findFirst: (...args: unknown[]) => Promise<any>;
-  };
+  const securityEventModel = () => prisma.securityEvent;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -90,8 +87,7 @@ describe("Sudarshan Shield Security Events", () => {
 
     prisma = app.get(PrismaService);
     authService = app.get(AuthService);
-    securityEvents = (prisma as unknown as { securityEvent: any }).securityEvent;
-    await securityEvents.deleteMany({ where: { orgId: ORG_A } });
+    await securityEventModel().deleteMany({ where: { orgId: ORG_A } });
 
     adminToken = await login(app, "admina@test.kritviya.local");
     financeToken = await login(app, "financea@test.kritviya.local");
@@ -166,7 +162,7 @@ describe("Sudarshan Shield Security Events", () => {
       .set("Authorization", `Bearer ${financeToken}`);
     expect(unlock.status).toBe(201);
 
-    const event = await securityEvents.findFirst({
+    const event = await securityEventModel().findFirst({
       where: {
         orgId: ORG_A,
         type: "INVOICE_UNLOCK",
@@ -199,7 +195,7 @@ describe("Sudarshan Shield Security Events", () => {
       .send({ role: "ADMIN" });
     expect(response.status).toBe(200);
 
-    const event = await securityEvents.findFirst({
+    const event = await securityEventModel().findFirst({
       where: {
         orgId: ORG_A,
         type: "ADMIN_ROLE_GRANTED",
@@ -231,7 +227,7 @@ describe("Sudarshan Shield Security Events", () => {
       expect(response.status).toBe(201);
     }
 
-    const event = await securityEvents.findFirst({
+    const event = await securityEventModel().findFirst({
       where: {
         orgId: ORG_A,
         type: "BULK_USER_DEACTIVATION",
@@ -252,7 +248,7 @@ describe("Sudarshan Shield Security Events", () => {
         .catch(() => undefined);
     }
 
-    const event = await securityEvents.findFirst({
+    const event = await securityEventModel().findFirst({
       where: {
         orgId: ORG_A,
         type: "FAILED_LOGIN_SPIKE"

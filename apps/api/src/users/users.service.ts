@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { ActivityEntityType, Prisma, Role } from "@prisma/client";
 import { randomBytes } from "node:crypto";
+import { hash } from "bcryptjs";
 import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext } from "../auth/auth.types";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
@@ -15,10 +16,6 @@ import { ShieldService } from "../shield/shield.service";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { ListUsersDto } from "./dto/list-users.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
-
-const { hash } = require("bcryptjs") as {
-  hash: (plainText: string, rounds: number) => Promise<string>;
-};
 
 interface SafeUserRecord {
   id: string;

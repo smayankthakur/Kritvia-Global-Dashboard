@@ -142,10 +142,11 @@ export class BillingService {
   async handleRazorpayWebhook(input: {
     rawBody: Buffer | undefined;
     signature: string | undefined;
-    payload: any;
+    payload: unknown;
   }): Promise<void> {
     this.verifyWebhookSignature(input.rawBody, input.signature);
-    const event = typeof input.payload?.event === "string" ? input.payload.event : "";
+    const payload = input.payload as { event?: unknown } | null;
+    const event = typeof payload?.event === "string" ? payload.event : "";
     const mapped = mapRazorpayWebhookEvent(event, input.payload);
     if (!mapped.razorpaySubscriptionId) {
       return;
@@ -220,6 +221,7 @@ export class BillingService {
       shieldEnabled: boolean;
       portfolioEnabled: boolean;
       revenueIntelligenceEnabled: boolean;
+      enterpriseControlsEnabled: boolean;
       maxWorkItems: number | null;
       maxInvoices: number | null;
     };
@@ -241,6 +243,7 @@ export class BillingService {
         shieldEnabled: subscription.plan.shieldEnabled,
         portfolioEnabled: subscription.plan.portfolioEnabled,
         revenueIntelligenceEnabled: subscription.plan.revenueIntelligenceEnabled,
+        enterpriseControlsEnabled: subscription.plan.enterpriseControlsEnabled,
         maxWorkItems: subscription.plan.maxWorkItems,
         maxInvoices: subscription.plan.maxInvoices
       }
@@ -279,11 +282,15 @@ export class BillingService {
     if (plan[featureKey]) {
       return;
     }
+    const message =
+      featureKey === "enterpriseControlsEnabled"
+        ? "Upgrade required to export audit logs."
+        : `Upgrade required to use ${this.humanizeFeature(featureKey)}.`;
 
     throw new HttpException(
       {
         code: "UPGRADE_REQUIRED",
-        message: `Upgrade required to use ${this.humanizeFeature(featureKey)}.`
+        message
       },
       HttpStatus.PAYMENT_REQUIRED
     );
@@ -430,6 +437,8 @@ export class BillingService {
         return "Revenue Intelligence";
       case "autopilotEnabled":
         return "Autopilot";
+      case "enterpriseControlsEnabled":
+        return "enterprise controls";
       default:
         return "this feature";
     }

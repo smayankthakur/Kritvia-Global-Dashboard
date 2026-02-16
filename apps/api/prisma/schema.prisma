@@ -21,6 +21,9 @@ enum ActivityEntityType {
   USER
   POLICY
   PORTFOLIO
+  API_TOKEN
+  AI_INSIGHT
+  AI_ACTION
   COMPANY
   CONTACT
   LEAD
@@ -94,8 +97,30 @@ model Org {
   members      OrgMember[]
   inviteTokens OrgInviteToken[]
   subscription Subscription?
+  apiTokens    ApiToken[]
+  aiInsights   AIInsight[]
+  aiActions    AIAction[]
+  llmReports   LLMReport[]
+  webhookEndpoints WebhookEndpoint[]
 
   @@map("orgs")
+}
+
+model WebhookEndpoint {
+  id            String    @id @default(uuid()) @db.Uuid
+  orgId         String    @map("org_id") @db.Uuid
+  url           String
+  secret        String
+  events        Json
+  isActive      Boolean   @default(true) @map("is_active")
+  lastFailureAt DateTime? @map("last_failure_at")
+  failureCount  Int       @default(0) @map("failure_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@map("webhook_endpoints")
 }
 
 model Plan {
@@ -109,6 +134,7 @@ model Plan {
   shieldEnabled               Boolean  @default(false) @map("shield_enabled")
   portfolioEnabled            Boolean  @default(false) @map("portfolio_enabled")
   revenueIntelligenceEnabled  Boolean  @default(false) @map("revenue_intelligence_enabled")
+  enterpriseControlsEnabled   Boolean  @default(false) @map("enterprise_controls_enabled")
   maxWorkItems                Int?     @map("max_work_items")
   maxInvoices                 Int?     @map("max_invoices")
   createdAt                   DateTime @default(now()) @map("created_at")
@@ -305,6 +331,10 @@ model Policy {
   autopilotCreateWorkOnDealStageChange  Boolean  @default(true) @map("autopilot_create_work_on_deal_stage_change")
   autopilotNudgeOnOverdue               Boolean  @default(true) @map("autopilot_nudge_on_overdue")
   autopilotAutoStaleDeals               Boolean  @default(true) @map("autopilot_auto_stale_deals")
+  auditRetentionDays                    Int      @default(180) @map("audit_retention_days")
+  securityEventRetentionDays            Int      @default(180) @map("security_event_retention_days")
+  ipAllowlist                           Json?    @map("ip_allowlist")
+  ipRestrictionEnabled                  Boolean  @default(false) @map("ip_restriction_enabled")
   createdAt                             DateTime @default(now()) @map("created_at")
   updatedAt                             DateTime @updatedAt @map("updated_at")
   org                                   Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -535,4 +565,100 @@ model RefreshToken {
 
   @@index([userId, expiresAt])
   @@map("refresh_tokens")
+}
+
+model AIInsight {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  type        String
+  severity    String
+  scoreImpact Int      @default(0) @map("score_impact")
+  title       String
+  explanation String
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  meta        Json?
+  isResolved  Boolean  @default(false) @map("is_resolved")
+  createdAt   DateTime @default(now()) @map("created_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actions     AIAction[]
+
+  @@index([orgId, severity])
+  @@index([orgId, isResolved])
+  @@index([orgId, createdAt])
+  @@index([orgId, type, isResolved])
+  @@map("ai_insights")
+}
+
+model AIAction {
+  id               String    @id @default(uuid()) @db.Uuid
+  orgId            String    @map("org_id") @db.Uuid
+  insightId        String?   @map("insight_id") @db.Uuid
+  type             String
+  status           String    @default("PROPOSED")
+  title            String
+  rationale        String
+  payload          Json
+  approvedByUserId String?   @map("approved_by_user_id") @db.Uuid
+  approvedAt       DateTime? @map("approved_at")
+  executedByUserId String?   @map("executed_by_user_id") @db.Uuid
+  executedAt       DateTime? @map("executed_at")
+  undoData         Json?     @map("undo_data")
+  undoExpiresAt    DateTime? @map("undo_expires_at")
+  error            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  org              Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  insight          AIInsight? @relation(fields: [insightId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, status, createdAt])
+  @@index([orgId, type])
+  @@index([orgId, insightId])
+  @@map("ai_actions")
+}
+
+model ApiToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  orgId      String    @map("org_id") @db.Uuid
+  name       String
+  role       Role      @default(ADMIN)
+  tokenHash  String    @unique @map("token_hash")
+  scopes     Json?     @map("scopes")
+  rateLimitPerHour Int @default(1000) @map("rate_limit_per_hour")
+  requestsThisHour Int @default(0) @map("requests_this_hour")
+  hourWindowStart DateTime? @map("hour_window_start")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  org        Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([revokedAt])
+  @@map("api_tokens")
+}
+
+model LLMReport {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  type        String
+  periodStart DateTime? @map("period_start")
+  periodEnd   DateTime? @map("period_end")
+  inputHash   String   @map("input_hash")
+  model       String?
+  provider    String?
+  contentJson Json     @map("content_json")
+  contentText String?  @map("content_text")
+  tokensIn    Int?     @map("tokens_in")
+  tokensOut   Int?     @map("tokens_out")
+  latencyMs   Int?     @map("latency_ms")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, type, createdAt])
+  @@unique([orgId, type, inputHash])
+  @@map("llm_reports")
 }

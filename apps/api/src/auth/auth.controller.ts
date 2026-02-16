@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
+import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { SwitchOrgDto } from "./dto/switch-org.dto";
@@ -16,7 +17,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(
     @Body() dto: LoginDto,
-    @Res({ passthrough: true }) response: any
+    @Res({ passthrough: true }) response: Response
   ): Promise<{ accessToken: string }> {
     const tokens = await this.authService.login(dto);
     this.setRefreshCookie(response, tokens.refreshToken);
@@ -26,8 +27,8 @@ export class AuthController {
   @Post("refresh")
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async refresh(
-    @Req() request: any,
-    @Res({ passthrough: true }) response: any
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response
   ): Promise<{ accessToken: string }> {
     const refreshToken = request.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
     const tokens = await this.authService.refresh(refreshToken ?? "");
@@ -37,8 +38,8 @@ export class AuthController {
 
   @Post("logout")
   async logout(
-    @Req() request: any,
-    @Res({ passthrough: true }) response: any
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response
   ): Promise<{ success: true }> {
     const refreshToken = request.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
     await this.authService.logout(refreshToken);
@@ -61,14 +62,14 @@ export class AuthController {
     return this.authService.switchOrg(req.user, dto.orgId);
   }
 
-  private setRefreshCookie(response: any, refreshToken: string): void {
+  private setRefreshCookie(response: Response, refreshToken: string): void {
     response.cookie(REFRESH_COOKIE_NAME, refreshToken, {
       ...this.baseCookieOptions(),
       maxAge: this.getRefreshCookieMaxAgeMs()
     });
   }
 
-  private clearRefreshCookie(response: any): void {
+  private clearRefreshCookie(response: Response): void {
     response.clearCookie(REFRESH_COOKIE_NAME, {
       ...this.baseCookieOptions()
     });

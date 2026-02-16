@@ -11,6 +11,8 @@ import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
 import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
+import { WEBHOOK_EVENTS } from "../org-webhooks/webhook-events";
+import { WebhookService } from "../org-webhooks/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
 import { CreateWorkItemDto } from "./dto/create-work-item.dto";
@@ -32,7 +34,8 @@ export class WorkItemsService {
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
     private readonly policyResolverService: PolicyResolverService,
-    private readonly billingService: BillingService
+    private readonly billingService: BillingService,
+    private readonly webhookService: WebhookService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListWorkItemsDto) {
@@ -301,6 +304,16 @@ export class WorkItemsService {
       action: "COMPLETE",
       before: existing,
       after: updated
+    });
+    void this.webhookService.dispatch(authUser.orgId, WEBHOOK_EVENTS.WORK_ITEM_COMPLETED, {
+      orgId: authUser.orgId,
+      workItemId: updated.id,
+      title: updated.title,
+      status: updated.status,
+      dealId: updated.dealId,
+      companyId: updated.companyId,
+      completedAt: updated.completedAt?.toISOString() ?? null,
+      occurredAt: new Date().toISOString()
     });
 
     return updated;

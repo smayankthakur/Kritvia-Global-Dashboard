@@ -35,8 +35,19 @@ function pickPolicyForm(policy: PolicySettings): PolicyForm {
     autopilotEnabled: policy.autopilotEnabled,
     autopilotCreateWorkOnDealStageChange: policy.autopilotCreateWorkOnDealStageChange,
     autopilotNudgeOnOverdue: policy.autopilotNudgeOnOverdue,
-    autopilotAutoStaleDeals: policy.autopilotAutoStaleDeals
+    autopilotAutoStaleDeals: policy.autopilotAutoStaleDeals,
+    auditRetentionDays: policy.auditRetentionDays,
+    securityEventRetentionDays: policy.securityEventRetentionDays,
+    ipRestrictionEnabled: policy.ipRestrictionEnabled,
+    ipAllowlist: policy.ipAllowlist ?? []
   };
+}
+
+function isValidIpAllowlistEntry(entry: string): boolean {
+  const trimmed = entry.trim();
+  const exactIp = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(trimmed);
+  const cidr = /^(?:\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/.test(trimmed);
+  return exactIp || cidr;
 }
 
 function validatePolicyForm(policy: PolicyForm): RangeErrors {
@@ -53,6 +64,20 @@ function validatePolicyForm(policy: PolicyForm): RangeErrors {
   }
   if (policy.autoLockInvoiceAfterDays < 0 || policy.autoLockInvoiceAfterDays > 30) {
     errors.autoLockInvoiceAfterDays = "Auto lock invoice days must be between 0 and 30.";
+  }
+  if (policy.auditRetentionDays < 30 || policy.auditRetentionDays > 3650) {
+    errors.auditRetentionDays = "Audit retention days must be between 30 and 3650.";
+  }
+  if (policy.securityEventRetentionDays < 30 || policy.securityEventRetentionDays > 3650) {
+    errors.securityEventRetentionDays =
+      "Security event retention days must be between 30 and 3650.";
+  }
+
+  const invalidIpEntries = (policy.ipAllowlist ?? [])
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0 && !isValidIpAllowlistEntry(entry));
+  if (invalidIpEntries.length > 0) {
+    errors.ipAllowlist = "IP allowlist contains invalid IP/CIDR values.";
   }
 
   return errors;
@@ -124,6 +149,14 @@ export default function SettingsPoliciesPage() {
           }
         : current
     );
+  }
+
+  function updateIpAllowlist(value: string): void {
+    const entries = value
+      .split("\n")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+    setDraft((current) => (current ? { ...current, ipAllowlist: entries } : current));
   }
 
   async function onSave(): Promise<void> {
@@ -387,6 +420,62 @@ export default function SettingsPoliciesPage() {
                   aria-label="Auto stale deals"
                 />
               </div>
+            </section>
+
+            <section className="kv-card kv-policy-card">
+              <h2 className="kv-section-title">Retention</h2>
+              <label htmlFor="auditRetentionDays">Audit retention days (30-3650)</label>
+              <input
+                id="auditRetentionDays"
+                type="number"
+                min={30}
+                max={3650}
+                value={draft.auditRetentionDays}
+                onChange={(event) => updateIntField("auditRetentionDays", event.target.value)}
+              />
+              {validationErrors.auditRetentionDays ? (
+                <p className="kv-error">{validationErrors.auditRetentionDays}</p>
+              ) : null}
+
+              <label htmlFor="securityEventRetentionDays">
+                Security event retention days (30-3650)
+              </label>
+              <input
+                id="securityEventRetentionDays"
+                type="number"
+                min={30}
+                max={3650}
+                value={draft.securityEventRetentionDays}
+                onChange={(event) =>
+                  updateIntField("securityEventRetentionDays", event.target.value)
+                }
+              />
+              {validationErrors.securityEventRetentionDays ? (
+                <p className="kv-error">{validationErrors.securityEventRetentionDays}</p>
+              ) : null}
+
+              <div className="kv-policy-row" style={{ marginTop: "12px" }}>
+                <label htmlFor="ipRestrictionEnabled">Enable IP allowlist restrictions</label>
+                <input
+                  id="ipRestrictionEnabled"
+                  type="checkbox"
+                  checked={draft.ipRestrictionEnabled}
+                  onChange={(event) =>
+                    updateBooleanField("ipRestrictionEnabled", event.target.checked)
+                  }
+                />
+              </div>
+
+              <label htmlFor="ipAllowlist">IP allowlist (one IP/CIDR per line)</label>
+              <textarea
+                id="ipAllowlist"
+                rows={4}
+                value={(draft.ipAllowlist ?? []).join("\n")}
+                onChange={(event) => updateIpAllowlist(event.target.value)}
+              />
+              {validationErrors.ipAllowlist ? (
+                <p className="kv-error">{validationErrors.ipAllowlist}</p>
+              ) : null}
             </section>
           </div>
 

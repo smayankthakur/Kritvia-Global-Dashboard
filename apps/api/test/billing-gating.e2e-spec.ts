@@ -1,7 +1,7 @@
 import { BadRequestException, INestApplication, ValidationError, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import cookieParser from "cookie-parser";
-import { json, urlencoded } from "express";
+import { json, Request, Response, urlencoded } from "express";
 import helmet from "helmet";
 import request from "supertest";
 import { AppModule } from "../src/app.module";
@@ -66,7 +66,7 @@ describe("Billing feature gating", () => {
     app.use(
       json({
         limit: "1mb",
-        verify: (req: any, _res: any, buf: Buffer) => {
+        verify: (req: Request & { rawBody?: Buffer }, _res: Response, buf: Buffer) => {
           req.rawBody = buf?.length ? Buffer.from(buf) : undefined;
         }
       })

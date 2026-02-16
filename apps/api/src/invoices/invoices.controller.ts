@@ -14,6 +14,8 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthUserContext } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
+import { RequireTokenScope } from "../auth/token-scope.decorator";
+import { TokenScopeGuard } from "../auth/token-scope.guard";
 import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { ListInvoicesDto } from "./dto/list-invoices.dto";
@@ -22,7 +24,7 @@ import { INVOICE_READ_ROLES, INVOICE_WRITE_ROLES } from "./invoice-roles";
 import { InvoicesService } from "./invoices.service";
 
 @Controller("invoices")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TokenScopeGuard)
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
@@ -34,6 +36,7 @@ export class InvoicesController {
 
   @Post()
   @Roles(...INVOICE_WRITE_ROLES)
+  @RequireTokenScope("write:invoices")
   async create(@Body() dto: CreateInvoiceDto, @Req() req: { user: AuthUserContext }) {
     return this.invoicesService.create(dto, req.user);
   }

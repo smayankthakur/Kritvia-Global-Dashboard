@@ -1,12 +1,13 @@
 import { Logger } from "@nestjs/common";
+import { NextFunction, Request, Response } from "express";
 import { getActiveOrgId } from "../auth-org";
 
 const logger = new Logger("RequestLogger");
 
 export function requestLoggingMiddleware(
-  req: any,
-  res: any,
-  next: () => void
+  req: Request & { requestId?: string; user?: { userId?: string; orgId?: string; activeOrgId?: string } },
+  res: Response,
+  next: NextFunction
 ): void {
   const start = Date.now();
 

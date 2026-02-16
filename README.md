@@ -266,15 +266,50 @@ CEO Health Score:
 - `GET /ceo/health-score` (CEO, ADMIN)
 - `GET /ceo/health-score/explain?date=YYYY-MM-DD` (CEO, ADMIN)
 
+AI Insights:
+
+- `POST /ai/compute-insights` (ADMIN, or `X-JOBS-SECRET` + `X-ORG-ID`)
+- `GET /ceo/insights` (CEO, ADMIN)
+- `POST /ceo/insights/:id/resolve` (CEO, ADMIN)
+
+AI Actions:
+
+- `POST /ai/compute-actions` (ADMIN, or `X-JOBS-SECRET` + `X-ORG-ID`)
+- `GET /ai/actions` (CEO, ADMIN)
+- `POST /ai/actions/:id/approve` (CEO, ADMIN)
+- `POST /ai/actions/:id/execute` (CEO, ADMIN, OPS restrictions apply)
+- `POST /ai/actions/:id/undo` (CEO, ADMIN)
+
+Public API v1 (service account tokens only):
+
+- `GET /api/v1/users` (`read:users`)
+- `GET /api/v1/deals` (`read:deals`)
+- `GET /api/v1/invoices` (`read:invoices`)
+- `GET /api/v1/work-items` (`read:work-items`)
+- `GET /api/v1/insights` (`read:insights`)
+- `GET /api/v1/actions` (`read:actions`)
+- Response header: `X-Kritviya-Version: 1`
+
+LLM Reports:
+
+- `POST /llm/reports/ceo-daily-brief` (CEO, ADMIN, rate-limited)
+- `POST /llm/reports/score-drop-explain` (CEO, ADMIN, rate-limited)
+- `GET /llm/reports?type=&limit=` (CEO, ADMIN)
+
 Jobs:
 
 - `POST /jobs/compute-health-score` (ADMIN)
 - `POST /jobs/run` (ADMIN or `X-JOBS-SECRET` when `JOBS_SECRET` is configured)
+- `POST /jobs/retention/run` (ADMIN or `X-JOBS-SECRET` when `JOBS_SECRET` is configured)
 
 Settings:
 
 - `GET /settings/policies` (CEO, ADMIN)
 - `PUT /settings/policies` (CEO, ADMIN)
+- `GET /org/audit/export?from=YYYY-MM-DD&to=YYYY-MM-DD&format=csv` (CEO, ADMIN, enterpriseControlsEnabled required)
+- `POST /org/api-tokens` (CEO, ADMIN, enterpriseControlsEnabled required)
+- `GET /org/api-tokens` (CEO, ADMIN, enterpriseControlsEnabled required)
+- `DELETE /org/api-tokens/:id` (CEO, ADMIN, enterpriseControlsEnabled required)
 
 Billing:
 
@@ -371,6 +406,11 @@ Invoices:
 - `RAZORPAY_PLAN_GROWTH=`
 - `RAZORPAY_PLAN_PRO=`
 - `RAZORPAY_PLAN_ENTERPRISE=`
+- `LLM_ENABLED=false`
+- `LLM_PROVIDER=mock|generic-http`
+- `LLM_API_KEY=`
+- `LLM_MODEL=`
+- `LLM_ENDPOINT=`
 - `WEB_BASE_URL=`
 - `API_BASE_URL=`
 
