@@ -3,6 +3,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RequireTokenScope } from "../auth/token-scope.decorator";
 import { TokenScopeGuard } from "../auth/token-scope.guard";
 import { getActiveOrgId } from "../common/auth-org";
+import { buildPublicApiOpenApiDocument } from "./public-api-openapi";
 import { PublicListQueryDto } from "./dto/public-list-query.dto";
 import { PublicApiVersionInterceptor } from "./public-api-version.interceptor";
 import { PublicApiService } from "./public-api.service";
@@ -13,6 +14,12 @@ import { ServiceAccountOnlyGuard } from "./service-account-only.guard";
 @UseGuards(JwtAuthGuard, ServiceAccountOnlyGuard, TokenScopeGuard)
 export class PublicApiController {
   constructor(private readonly publicApiService: PublicApiService) {}
+
+  @Get("openapi.json")
+  @RequireTokenScope("read:docs")
+  async getOpenApiJson() {
+    return buildPublicApiOpenApiDocument(process.env.API_BASE_URL);
+  }
 
   @Get("users")
   @RequireTokenScope("read:users")

@@ -3,7 +3,8 @@ export type BillableFeatureKey =
   | "shieldEnabled"
   | "portfolioEnabled"
   | "revenueIntelligenceEnabled"
-  | "enterpriseControlsEnabled";
+  | "enterpriseControlsEnabled"
+  | "developerPlatformEnabled";
 
 export class UpgradeRequiredError extends Error {
   constructor(public readonly messageText: string) {

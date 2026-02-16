@@ -222,6 +222,7 @@ export class BillingService {
       portfolioEnabled: boolean;
       revenueIntelligenceEnabled: boolean;
       enterpriseControlsEnabled: boolean;
+      developerPlatformEnabled: boolean;
       maxWorkItems: number | null;
       maxInvoices: number | null;
     };
@@ -244,6 +245,7 @@ export class BillingService {
         portfolioEnabled: subscription.plan.portfolioEnabled,
         revenueIntelligenceEnabled: subscription.plan.revenueIntelligenceEnabled,
         enterpriseControlsEnabled: subscription.plan.enterpriseControlsEnabled,
+        developerPlatformEnabled: subscription.plan.developerPlatformEnabled,
         maxWorkItems: subscription.plan.maxWorkItems,
         maxInvoices: subscription.plan.maxInvoices
       }
@@ -439,6 +441,8 @@ export class BillingService {
         return "Autopilot";
       case "enterpriseControlsEnabled":
         return "enterprise controls";
+      case "developerPlatformEnabled":
+        return "Developer Platform";
       default:
         return "this feature";
     }

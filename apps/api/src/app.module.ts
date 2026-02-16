@@ -19,11 +19,13 @@ import { InvoicesModule } from "./invoices/invoices.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { LeadsModule } from "./leads/leads.module";
 import { LlmModule } from "./llm/llm.module";
+import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { NudgesModule } from "./nudges/nudges.module";
 import { OrgMembersModule } from "./org-members/org-members.module";
 import { OrgAuditModule } from "./org-audit/org-audit.module";
 import { OrgApiTokensModule } from "./org-api-tokens/org-api-tokens.module";
 import { OrgWebhooksModule } from "./org-webhooks/org-webhooks.module";
+import { OauthModule } from "./oauth/oauth.module";
 import { PortfolioModule } from "./portfolio/portfolio.module";
 import { PublicApiModule } from "./public-api/public-api.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -50,6 +52,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     DirectoryModule,
     LeadsModule,
     LlmModule,
+    MarketplaceModule,
     DealsModule,
     TimelineModule,
     ShieldModule,
@@ -63,6 +66,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     OrgAuditModule,
     OrgApiTokensModule,
     OrgWebhooksModule,
+    OauthModule,
     PortfolioModule,
     PublicApiModule,
     HygieneModule,

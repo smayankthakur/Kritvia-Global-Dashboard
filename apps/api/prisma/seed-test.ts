@@ -94,6 +94,7 @@ async function main(): Promise<void> {
         portfolioEnabled: false,
         revenueIntelligenceEnabled: false,
         enterpriseControlsEnabled: false,
+        developerPlatformEnabled: false,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -107,7 +108,8 @@ async function main(): Promise<void> {
         shieldEnabled: false,
         portfolioEnabled: false,
         revenueIntelligenceEnabled: false,
-        enterpriseControlsEnabled: false
+        enterpriseControlsEnabled: false,
+        developerPlatformEnabled: false
       }
     }),
     pro: await prisma.plan.upsert({
@@ -122,6 +124,7 @@ async function main(): Promise<void> {
         portfolioEnabled: true,
         revenueIntelligenceEnabled: true,
         enterpriseControlsEnabled: false,
+        developerPlatformEnabled: true,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -135,7 +138,8 @@ async function main(): Promise<void> {
         shieldEnabled: true,
         portfolioEnabled: true,
         revenueIntelligenceEnabled: true,
-        enterpriseControlsEnabled: false
+        enterpriseControlsEnabled: false,
+        developerPlatformEnabled: true
       }
     }),
     enterprise: await prisma.plan.upsert({
@@ -150,6 +154,7 @@ async function main(): Promise<void> {
         portfolioEnabled: true,
         revenueIntelligenceEnabled: true,
         enterpriseControlsEnabled: true,
+        developerPlatformEnabled: true,
         maxWorkItems: null,
         maxInvoices: null
       },
@@ -163,10 +168,73 @@ async function main(): Promise<void> {
         shieldEnabled: true,
         portfolioEnabled: true,
         revenueIntelligenceEnabled: true,
-        enterpriseControlsEnabled: true
+        enterpriseControlsEnabled: true,
+        developerPlatformEnabled: true
       }
     })
   };
+
+  const marketplaceApps = [
+    {
+      key: "slack",
+      name: "Slack Alerts",
+      description: "Send execution alerts into Slack channels.",
+      category: "Messaging",
+      oauthProvider: "slack",
+      scopes: ["read:insights", "read:actions"],
+      webhookEvents: ["ai.action.executed"]
+    },
+    {
+      key: "zapier",
+      name: "Zapier Connector",
+      description: "Trigger no-code automations from Kritviya events.",
+      category: "Ops",
+      scopes: ["read:deals", "read:invoices"],
+      webhookEvents: ["deal.updated", "invoice.paid"]
+    },
+    {
+      key: "google-sheets",
+      name: "Google Sheets Sync",
+      description: "Sync pipeline and collections data to Google Sheets.",
+      category: "Analytics",
+      oauthProvider: "google",
+      scopes: ["read:deals", "read:invoices"],
+      webhookEvents: ["invoice.paid"]
+    },
+    {
+      key: "kritviya-reporter",
+      name: "Kritviya Reporter",
+      description: "Generate and share daily execution digests.",
+      category: "Analytics",
+      scopes: ["read:audit"],
+      webhookEvents: ["daily.brief.generated"]
+    }
+  ];
+
+  for (const app of marketplaceApps) {
+    await prisma.marketplaceApp.upsert({
+      where: { key: app.key },
+      update: {
+        name: app.name,
+        description: app.description,
+        category: app.category,
+        oauthProvider: app.oauthProvider ?? null,
+        scopes: app.scopes,
+        webhookEvents: app.webhookEvents,
+        isPublished: true
+      },
+      create: {
+        key: app.key,
+        name: app.name,
+        description: app.description,
+        category: app.category,
+        oauthProvider: app.oauthProvider ?? null,
+        scopes: app.scopes,
+        webhookEvents: app.webhookEvents,
+        isPublished: true
+      }
+    });
+  }
 
   await prisma.org.upsert({
     where: { id: IDS.orgA },

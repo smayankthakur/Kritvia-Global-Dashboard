@@ -9,6 +9,7 @@ import { DealsService } from "./deals.service";
 @Module({
   imports: [ActivityLogModule, AuthModule, PolicyModule, OrgWebhooksModule],
   controllers: [DealsController],
-  providers: [DealsService]
+  providers: [DealsService],
+  exports: [DealsService]
 })
 export class DealsModule {}

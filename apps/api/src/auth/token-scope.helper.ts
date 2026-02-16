@@ -10,7 +10,11 @@ export function assertTokenScope(
     return;
   }
 
-  if (tokenScopes.includes("*") || tokenScopes.includes(requiredScope)) {
+  if (
+    tokenScopes.includes("*") ||
+    tokenScopes.includes("admin:*") ||
+    tokenScopes.includes(requiredScope)
+  ) {
     return;
   }
 

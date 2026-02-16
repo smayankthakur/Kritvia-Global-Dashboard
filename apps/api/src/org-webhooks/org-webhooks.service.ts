@@ -3,14 +3,19 @@ import { randomBytes } from "node:crypto";
 import { AuthUserContext } from "../auth/auth.types";
 import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
+import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateWebhookEndpointDto } from "./dto/create-webhook-endpoint.dto";
+import { ListWebhookDeliveriesDto } from "./dto/list-webhook-deliveries.dto";
+import { RetryWebhookDeliveryDto } from "./dto/retry-webhook-delivery.dto";
+import { WebhookService } from "./webhook.service";
 
 @Injectable()
 export class OrgWebhooksService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly billingService: BillingService
+    private readonly billingService: BillingService,
+    private readonly webhookService: WebhookService
   ) {}
 
   async create(authUser: AuthUserContext, dto: CreateWebhookEndpointDto) {
@@ -56,7 +61,14 @@ export class OrgWebhooksService {
     await this.billingService.assertFeature(orgId, "enterpriseControlsEnabled");
 
     const endpoints = await this.prisma.webhookEndpoint.findMany({
-      where: { orgId },
+      where: {
+        orgId,
+        url: {
+          not: {
+            startsWith: "app-install://"
+          }
+        }
+      },
       select: {
         id: true,
         url: true,
@@ -94,6 +106,124 @@ export class OrgWebhooksService {
     if (removed.count === 0) {
       throw new NotFoundException("Webhook endpoint not found");
     }
+
+    return { success: true };
+  }
+
+  async listDeliveries(
+    authUser: AuthUserContext,
+    endpointId: string,
+    query: ListWebhookDeliveriesDto
+  ) {
+    const orgId = getActiveOrgId({ user: authUser });
+    await this.billingService.assertFeature(orgId, "enterpriseControlsEnabled");
+
+    const endpoint = await this.prisma.webhookEndpoint.findFirst({
+      where: {
+        id: endpointId,
+        orgId,
+        url: {
+          not: {
+            startsWith: "app-install://"
+          }
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!endpoint) {
+      throw new NotFoundException("Webhook endpoint not found");
+    }
+
+    const skip = (query.page - 1) * query.pageSize;
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.webhookDelivery.findMany({
+        where: {
+          orgId,
+          endpointId
+        },
+        orderBy: [{ createdAt: "desc" }],
+        skip,
+        take: query.pageSize,
+        select: {
+          id: true,
+          orgId: true,
+          endpointId: true,
+          event: true,
+          statusCode: true,
+          success: true,
+          error: true,
+          durationMs: true,
+          requestBodyHash: true,
+          responseBodySnippet: true,
+          attempt: true,
+          createdAt: true
+        }
+      }),
+      this.prisma.webhookDelivery.count({
+        where: {
+          orgId,
+          endpointId
+        }
+      })
+    ]);
+
+    return toPaginatedResponse(items, query.page, query.pageSize, total);
+  }
+
+  async retryDelivery(
+    authUser: AuthUserContext,
+    endpointId: string,
+    dto: RetryWebhookDeliveryDto
+  ): Promise<{ success: true }> {
+    const orgId = getActiveOrgId({ user: authUser });
+    await this.billingService.assertFeature(orgId, "enterpriseControlsEnabled");
+
+    const endpoint = await this.prisma.webhookEndpoint.findFirst({
+      where: {
+        id: endpointId,
+        orgId,
+        url: {
+          not: {
+            startsWith: "app-install://"
+          }
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!endpoint) {
+      throw new NotFoundException("Webhook endpoint not found");
+    }
+
+    const delivery = await this.prisma.webhookDelivery.findFirst({
+      where: {
+        id: dto.deliveryId,
+        endpointId,
+        orgId
+      },
+      select: {
+        id: true,
+        event: true,
+        requestBodyHash: true
+      }
+    });
+
+    if (!delivery) {
+      throw new NotFoundException("Webhook delivery not found");
+    }
+
+    await this.webhookService.retryDelivery(
+      orgId,
+      endpointId,
+      delivery.event,
+      delivery.requestBodyHash,
+      delivery.id
+    );
 
     return { success: true };
   }

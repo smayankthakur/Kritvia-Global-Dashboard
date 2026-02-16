@@ -21,3 +21,21 @@
 - `npm run lint` -> passes
 - `npm run build:api` -> passes
 - `npm run build:web` -> passes
+
+## Re-Audit Timestamp
+- Date: 2026-02-16
+- Scope: Full monorepo sanity audit + developer portal/app runtime paths
+- Checks run: `npm run lint`, `npm run build:api`, `npm run build:web`, `npm run test:setup`
+
+## New Bugs Found and Fixed
+
+| ID | Area | Bug | Impact | Fix Applied | Status |
+|---|---|---|---|---|---|
+| BUG-008 | API webhook runtime | Prisma filter used unsupported `notStartsWith` in webhook queries | Build break risk on strict Prisma client typing | Replaced with supported filter shape: `url: { not: { startsWith: \"app-install://\" } }` in webhook services | Fixed |
+| BUG-009 | Test runner reliability | `apps/api/scripts/test-runner.mjs` could silently fallback to `DATABASE_URL` and failed with opaque Prisma schema engine errors when DB unavailable | Unclear failures, accidental non-test DB usage risk | Enforced `DATABASE_URL_TEST` by default, added optional explicit fallback flag, and added DB host/port preflight with clear actionable errors | Fixed |
+
+## Re-Audit Verification
+- `npm run lint` -> passes
+- `npm run build:api` -> passes
+- `npm run build:web` -> passes
+- `npm run test:setup` -> now fails fast with clear database connectivity error when test DB is not reachable (expected until Postgres is up)

@@ -857,6 +857,56 @@ tbody tr:hover {
   background: linear-gradient(90deg, var(--warning-color), color-mix(in srgb, var(--warning-color) 70%, #fff));
 }
 
+.kv-dev-tabs {
+  display: flex;
+  gap: 10px;
+  padding: 8px;
+  background: #111111;
+  border: 1px solid #222222;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.kv-dev-tab {
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.kv-dev-tab:hover {
+  color: var(--text-primary);
+  border-color: #3a2e17;
+}
+
+.kv-dev-tab.is-active {
+  color: #f4cf7e;
+  border-color: #8b6a2b;
+  box-shadow: inset 0 -2px 0 #b8872d;
+}
+
+.kv-dev-card {
+  min-height: 150px;
+  display: grid;
+  align-content: center;
+  border-top: 2px solid #d4a017;
+}
+
+.kv-dev-pre {
+  margin: 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 980px) {
   .kv-content {
     grid-template-columns: 1fr;

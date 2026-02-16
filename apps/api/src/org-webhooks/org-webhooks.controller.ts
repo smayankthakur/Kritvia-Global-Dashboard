@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards
 } from "@nestjs/common";
@@ -14,6 +15,8 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { CreateWebhookEndpointDto } from "./dto/create-webhook-endpoint.dto";
+import { ListWebhookDeliveriesDto } from "./dto/list-webhook-deliveries.dto";
+import { RetryWebhookDeliveryDto } from "./dto/retry-webhook-delivery.dto";
 import { OrgWebhooksService } from "./org-webhooks.service";
 
 @Controller("org/webhooks")
@@ -35,5 +38,23 @@ export class OrgWebhooksController {
   @Delete(":id")
   async remove(@Req() req: { user: AuthUserContext }, @Param("id") id: string) {
     return this.orgWebhooksService.remove(req.user, id);
+  }
+
+  @Get(":id/deliveries")
+  async listDeliveries(
+    @Req() req: { user: AuthUserContext },
+    @Param("id") id: string,
+    @Query() query: ListWebhookDeliveriesDto
+  ) {
+    return this.orgWebhooksService.listDeliveries(req.user, id, query);
+  }
+
+  @Post(":id/retry")
+  async retryDelivery(
+    @Req() req: { user: AuthUserContext },
+    @Param("id") id: string,
+    @Body() dto: RetryWebhookDeliveryDto
+  ) {
+    return this.orgWebhooksService.retryDelivery(req.user, id, dto);
   }
 }

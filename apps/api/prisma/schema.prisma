@@ -21,6 +21,7 @@ enum ActivityEntityType {
   USER
   POLICY
   PORTFOLIO
+  APP
   API_TOKEN
   AI_INSIGHT
   AI_ACTION
@@ -102,6 +103,9 @@ model Org {
   aiActions    AIAction[]
   llmReports   LLMReport[]
   webhookEndpoints WebhookEndpoint[]
+  webhookDeliveries WebhookDelivery[]
+  appInstalls  OrgAppInstall[]
+  appCommandLogs AppCommandLog[]
 
   @@map("orgs")
 }
@@ -118,9 +122,32 @@ model WebhookEndpoint {
   createdAt     DateTime  @default(now()) @map("created_at")
 
   org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deliveries    WebhookDelivery[]
 
   @@index([orgId])
   @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id                  String    @id @default(uuid()) @db.Uuid
+  orgId               String    @map("org_id") @db.Uuid
+  endpointId          String    @map("endpoint_id") @db.Uuid
+  event               String
+  statusCode          Int?      @map("status_code")
+  success             Boolean
+  error               String?
+  durationMs          Int       @map("duration_ms")
+  requestBodyHash     String    @map("request_body_hash")
+  responseBodySnippet String?   @map("response_body_snippet")
+  attempt             Int
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  org                 Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  endpoint            WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
 }
 
 model Plan {
@@ -135,6 +162,7 @@ model Plan {
   portfolioEnabled            Boolean  @default(false) @map("portfolio_enabled")
   revenueIntelligenceEnabled  Boolean  @default(false) @map("revenue_intelligence_enabled")
   enterpriseControlsEnabled   Boolean  @default(false) @map("enterprise_controls_enabled")
+  developerPlatformEnabled    Boolean  @default(false) @map("developer_platform_enabled")
   maxWorkItems                Int?     @map("max_work_items")
   maxInvoices                 Int?     @map("max_invoices")
   createdAt                   DateTime @default(now()) @map("created_at")
@@ -203,9 +231,87 @@ model User {
   orgGroupMembers   OrgGroupMember[]
   orgMemberships    OrgMember[]      @relation("OrgMemberUser")
   sentOrgInvites    OrgInviteToken[] @relation("OrgInviteInviter")
+  installedApps     OrgAppInstall[]  @relation("OrgAppInstalledBy")
 
   @@index([orgId])
   @@map("users")
+}
+
+model MarketplaceApp {
+  id            String   @id @default(uuid()) @db.Uuid
+  key           String   @unique
+  name          String
+  description   String
+  developerName String?  @map("developer_name")
+  websiteUrl    String?  @map("website_url")
+  iconUrl       String?  @map("icon_url")
+  category      String?
+  scopes        Json?
+  webhookEvents Json?    @map("webhook_events")
+  oauthProvider String?  @map("oauth_provider")
+  isPublished   Boolean  @default(false) @map("is_published")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  installs      OrgAppInstall[]
+
+  @@index([isPublished])
+  @@index([category])
+  @@map("marketplace_apps")
+}
+
+model OrgAppInstall {
+  id                String    @id @default(uuid()) @db.Uuid
+  orgId             String    @map("org_id") @db.Uuid
+  appId             String    @map("app_id") @db.Uuid
+  status            String    @default("INSTALLED")
+  installedByUserId String?   @map("installed_by_user_id") @db.Uuid
+  installedAt       DateTime  @default(now()) @map("installed_at")
+  disabledAt        DateTime? @map("disabled_at")
+  uninstalledAt     DateTime? @map("uninstalled_at")
+  configEncrypted   String?   @map("config_encrypted")
+  configVersion     Int       @default(1) @map("config_version")
+  secretHash        String?   @map("secret_hash")
+  secretEncrypted   String?   @map("secret_encrypted")
+  lastUsedAt        DateTime? @map("last_used_at")
+  oauthProvider     String?   @map("oauth_provider")
+  oauthAccessTokenEncrypted String? @map("oauth_access_token_encrypted")
+  oauthRefreshTokenEncrypted String? @map("oauth_refresh_token_encrypted")
+  oauthExpiresAt    DateTime? @map("oauth_expires_at")
+  oauthScope        String?   @map("oauth_scope")
+  oauthAccountId    String?   @map("oauth_account_id")
+
+  org               Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  app               MarketplaceApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+  installedByUser   User?     @relation("OrgAppInstalledBy", fields: [installedByUserId], references: [id], onDelete: SetNull)
+  commandLogs       AppCommandLog[]
+
+  @@unique([orgId, appId])
+  @@index([orgId, status])
+  @@index([appId])
+  @@map("org_app_installs")
+}
+
+model AppCommandLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  appInstallId    String   @map("app_install_id") @db.Uuid
+  command         String
+  idempotencyKey  String   @map("idempotency_key")
+  success         Boolean
+  statusCode      Int      @map("status_code")
+  error           String?
+  requestHash     String   @map("request_hash")
+  responseSnippet String?  @map("response_snippet")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  appInstall      OrgAppInstall @relation(fields: [appInstallId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, appInstallId, idempotencyKey])
+  @@index([orgId, createdAt])
+  @@index([appInstallId, createdAt])
+  @@map("app_command_logs")
 }
 
 model SecurityEvent {

@@ -3,6 +3,7 @@ import {
   DealStage,
   InvoiceStatus,
   LeadStage,
+  Role,
   WorkItemStatus
 } from "../types/auth";
 import { clearAccessToken, getAccessToken, setAccessToken } from "./auth";
@@ -538,6 +539,131 @@ export interface OrgMemberRow {
   joinedAt: string | null;
 }
 
+export type ApiTokenRole = Role | "READ_ONLY";
+
+export interface ApiTokenRecord {
+  id: string;
+  name: string;
+  role: ApiTokenRole | string;
+  scopes: string[] | null;
+  rateLimitPerHour: number;
+  requestsThisHour?: number;
+  hourWindowStart?: string | null;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface WebhookEndpointRecord {
+  id: string;
+  url: string;
+  events: string[];
+  isActive: boolean;
+  failureCount: number;
+  lastFailureAt: string | null;
+  createdAt: string;
+}
+
+export interface WebhookDeliveryRecord {
+  id: string;
+  orgId: string;
+  endpointId: string;
+  event: string;
+  statusCode: number | null;
+  success: boolean;
+  error: string | null;
+  durationMs: number;
+  requestBodyHash: string;
+  responseBodySnippet: string | null;
+  attempt: number;
+  createdAt: string;
+}
+
+export interface MarketplaceAppRecord {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  developerName?: string | null;
+  websiteUrl?: string | null;
+  iconUrl?: string | null;
+  category?: string | null;
+  scopes: string[];
+  webhookEvents: string[];
+  oauthProvider?: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketplaceAppDetail extends MarketplaceAppRecord {
+  installed: boolean;
+  install?: {
+    id: string;
+    status: "INSTALLED" | "DISABLED" | "UNINSTALLED";
+    installedAt: string;
+    disabledAt: string | null;
+    uninstalledAt: string | null;
+    configVersion: number;
+    lastUsedAt: string | null;
+    oauthProvider?: string | null;
+    oauthConnected?: boolean;
+    oauthAccountId?: string | null;
+    oauthExpiresAt?: string | null;
+  } | null;
+}
+
+export interface OrgAppInstallRecord {
+  id: string;
+  appId: string;
+  appKey: string;
+  appName: string;
+  appDescription: string;
+  appCategory: string | null;
+  appIconUrl: string | null;
+  scopes: string[];
+  webhookEvents: string[];
+  status: "INSTALLED" | "DISABLED" | "UNINSTALLED";
+  installedAt: string;
+  disabledAt: string | null;
+  uninstalledAt: string | null;
+  lastUsedAt: string | null;
+  configVersion: number;
+  oauthProvider?: string | null;
+  oauthConnected?: boolean;
+  webhookUrl?: string | null;
+}
+
+export interface OrgAppCommandLogRecord {
+  id: string;
+  orgId: string;
+  appInstallId: string;
+  command: string;
+  idempotencyKey: string;
+  success: boolean;
+  statusCode: number;
+  error: string | null;
+  requestHash: string;
+  responseSnippet: string | null;
+  createdAt: string;
+}
+
+export interface PublicOpenApiOperation {
+  summary?: string;
+  ["x-kritviya-required-scope"]?: string;
+}
+
+export interface PublicOpenApiDocument {
+  openapi: string;
+  info?: {
+    title?: string;
+    version?: string;
+    description?: string;
+  };
+  servers?: Array<{ url: string }>;
+  paths?: Record<string, { get?: PublicOpenApiOperation }>;
+}
+
 export interface HygieneItem {
   type: "WORK_OVERDUE" | "WORK_UNASSIGNED" | "INVOICE_OVERDUE";
   workItem?: WorkItem;
@@ -616,6 +742,7 @@ export interface BillingPlanPayload {
     portfolioEnabled: boolean;
     revenueIntelligenceEnabled: boolean;
     enterpriseControlsEnabled: boolean;
+    developerPlatformEnabled?: boolean;
     maxWorkItems: number | null;
     maxInvoices: number | null;
   };
@@ -1706,4 +1833,308 @@ export async function acceptOrgInvite(payload: {
     body: JSON.stringify(payload)
   });
   return parseResponse(response, "Failed to accept invite");
+}
+
+export async function listOrgApiTokens(token: string): Promise<ApiTokenRecord[]> {
+  const response = await request(`${API_BASE_URL}/org/api-tokens`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  const payload = await parseResponse<ApiTokenRecord[] | PaginatedResponse<ApiTokenRecord>>(
+    response,
+    "Failed to fetch API tokens"
+  );
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  return payload.items;
+}
+
+export async function createOrgApiToken(
+  token: string,
+  payload: {
+    name: string;
+    role?: ApiTokenRole | string;
+    scopes?: string[];
+    rateLimitPerHour?: number;
+  }
+): Promise<ApiTokenRecord & { token: string }> {
+  const response = await request(`${API_BASE_URL}/org/api-tokens`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create API token");
+}
+
+export async function revokeOrgApiToken(token: string, id: string): Promise<void> {
+  const response = await request(`${API_BASE_URL}/org/api-tokens/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  await parseResponse<unknown>(response, "Failed to revoke API token");
+}
+
+export async function listOrgWebhooks(token: string): Promise<WebhookEndpointRecord[]> {
+  const response = await request(`${API_BASE_URL}/org/webhooks`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  const payload = await parseResponse<
+    WebhookEndpointRecord[] | PaginatedResponse<WebhookEndpointRecord>
+  >(response, "Failed to fetch webhooks");
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  return payload.items;
+}
+
+export async function createOrgWebhook(
+  token: string,
+  payload: { url: string; events: string[] }
+): Promise<WebhookEndpointRecord & { secret?: string }> {
+  const response = await request(`${API_BASE_URL}/org/webhooks`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create webhook endpoint");
+}
+
+export async function deleteOrgWebhook(token: string, id: string): Promise<void> {
+  const response = await request(`${API_BASE_URL}/org/webhooks/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  await parseResponse<unknown>(response, "Failed to delete webhook endpoint");
+}
+
+export async function listWebhookDeliveries(
+  token: string,
+  webhookId: string,
+  options?: { page?: number; pageSize?: number; sortBy?: string; sortDir?: "asc" | "desc" }
+): Promise<PaginatedResponse<WebhookDeliveryRecord>> {
+  const params = new URLSearchParams();
+  addPaginationParams(params, options);
+  const query = params.toString();
+  const response = await request(
+    `${API_BASE_URL}/org/webhooks/${webhookId}/deliveries${query ? `?${query}` : ""}`,
+    {
+      headers: authHeaders(token),
+      cache: "no-store"
+    }
+  );
+  return parseResponse(response, "Failed to fetch webhook deliveries");
+}
+
+export async function retryWebhookDelivery(
+  token: string,
+  webhookId: string,
+  deliveryId: string
+): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/webhooks/${webhookId}/retry`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ deliveryId })
+  });
+  return parseResponse(response, "Failed to retry webhook delivery");
+}
+
+export async function getPublicOpenApi(token: string): Promise<PublicOpenApiDocument> {
+  const response = await request(`${API_BASE_URL}/api/v1/openapi.json`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch public OpenAPI document");
+}
+
+export async function listMarketplaceApps(
+  token: string,
+  options?: { q?: string; category?: string }
+): Promise<MarketplaceAppRecord[]> {
+  const params = new URLSearchParams();
+  if (options?.q?.trim()) {
+    params.set("q", options.q.trim());
+  }
+  if (options?.category?.trim()) {
+    params.set("category", options.category.trim());
+  }
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/marketplace/apps${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch marketplace apps");
+}
+
+export async function getMarketplaceApp(token: string, key: string): Promise<MarketplaceAppDetail> {
+  const response = await request(`${API_BASE_URL}/marketplace/apps/${key}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch marketplace app");
+}
+
+export async function listOrgAppInstalls(token: string): Promise<OrgAppInstallRecord[]> {
+  const response = await request(`${API_BASE_URL}/org/apps`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch installed apps");
+}
+
+export async function installOrgApp(
+  token: string,
+  appKey: string
+): Promise<{
+  id: string;
+  appKey: string;
+  status: "INSTALLED" | "DISABLED" | "UNINSTALLED";
+  installedAt: string;
+  configVersion: number;
+  appSecret: string | null;
+}> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/install`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to install app");
+}
+
+export async function updateOrgAppConfig(
+  token: string,
+  appKey: string,
+  config: Record<string, unknown>
+): Promise<{ id: string; appKey: string; status: string; configVersion: number }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/config`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ config })
+  });
+  return parseResponse(response, "Failed to update app config");
+}
+
+export async function rotateOrgAppSecret(
+  token: string,
+  appKey: string
+): Promise<{ id: string; appKey: string; appSecret: string }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/rotate-secret`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to rotate app secret");
+}
+
+export async function disableOrgApp(
+  token: string,
+  appKey: string
+): Promise<{ id: string; appKey: string; status: string; disabledAt: string | null }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/disable`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to disable app");
+}
+
+export async function enableOrgApp(
+  token: string,
+  appKey: string
+): Promise<{ id: string; appKey: string; status: string }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/enable`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to enable app");
+}
+
+export async function uninstallOrgApp(
+  token: string,
+  appKey: string
+): Promise<{ id: string; appKey: string; status: string; uninstalledAt: string | null }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/uninstall`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to uninstall app");
+}
+
+export async function startOrgAppOAuth(token: string, appKey: string): Promise<{ authUrl: string }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/oauth/start?mode=url`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to start OAuth connection");
+}
+
+export async function disconnectOrgAppOAuth(
+  token: string,
+  appKey: string
+): Promise<{ id: string; appKey: string; status: string }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/oauth/disconnect`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to disconnect OAuth connection");
+}
+
+export async function sendOrgAppTestTrigger(
+  token: string,
+  appKey: string,
+  eventName: string
+): Promise<{ success: true; appKey: string; eventName: string }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/test-trigger`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ eventName })
+  });
+  return parseResponse(response, "Failed to send test trigger");
+}
+
+export async function listOrgAppDeliveries(
+  token: string,
+  appKey: string,
+  options?: { page?: number; pageSize?: number; sortBy?: string; sortDir?: "asc" | "desc" }
+): Promise<PaginatedResponse<WebhookDeliveryRecord>> {
+  const params = new URLSearchParams();
+  addPaginationParams(params, options);
+  const query = params.toString();
+  const response = await request(
+    `${API_BASE_URL}/org/apps/${appKey}/deliveries${query ? `?${query}` : ""}`,
+    {
+      headers: authHeaders(token),
+      cache: "no-store"
+    }
+  );
+  return parseResponse(response, "Failed to fetch app deliveries");
+}
+
+export async function replayOrgAppDelivery(
+  token: string,
+  appKey: string,
+  deliveryId: string
+): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/apps/${appKey}/deliveries/${deliveryId}/replay`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to replay app delivery");
+}
+
+export async function listOrgAppCommandLogs(
+  token: string,
+  appKey: string,
+  options?: { page?: number; pageSize?: number; sortBy?: string; sortDir?: "asc" | "desc" }
+): Promise<PaginatedResponse<OrgAppCommandLogRecord>> {
+  const params = new URLSearchParams();
+  addPaginationParams(params, options);
+  const query = params.toString();
+  const response = await request(
+    `${API_BASE_URL}/org/apps/${appKey}/command-logs${query ? `?${query}` : ""}`,
+    {
+      headers: authHeaders(token),
+      cache: "no-store"
+    }
+  );
+  return parseResponse(response, "Failed to fetch app command logs");
 }

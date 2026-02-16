@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import net from "node:net";
 import { resolve } from "node:path";
 import dotenv from "dotenv";
 
@@ -29,9 +30,14 @@ function testEnv() {
     }
   }
 
-  const databaseUrl = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+  const allowFallback =
+    process.env.ALLOW_DATABASE_URL_FALLBACK_FOR_TESTS === "true" ||
+    process.env.ALLOW_DATABASE_URL_FALLBACK_FOR_TESTS === "1";
+  const databaseUrl = process.env.DATABASE_URL_TEST || (allowFallback ? process.env.DATABASE_URL : "");
   if (!databaseUrl) {
-    console.error("Missing DATABASE_URL_TEST (or DATABASE_URL fallback) for tests.");
+    console.error(
+      "Missing DATABASE_URL_TEST for tests. Add DATABASE_URL_TEST in your environment before running test scripts."
+    );
     process.exit(1);
   }
 
@@ -45,8 +51,56 @@ function testEnv() {
   };
 }
 
+function parseDbHostPort(databaseUrl) {
+  try {
+    const parsed = new URL(databaseUrl);
+    const host = parsed.hostname;
+    const port = Number(parsed.port || 5432);
+    return { host, port };
+  } catch {
+    return null;
+  }
+}
+
+async function ensureDbReachable(databaseUrl) {
+  const target = parseDbHostPort(databaseUrl);
+  if (!target || !target.host || Number.isNaN(target.port)) {
+    return;
+  }
+
+  await new Promise((resolve, reject) => {
+    const socket = new net.Socket();
+    socket.setTimeout(2500);
+
+    socket.once("error", () => {
+      socket.destroy();
+      reject(
+        new Error(
+          `Cannot reach test database at ${target.host}:${target.port}. Start Postgres and verify DATABASE_URL_TEST.`
+        )
+      );
+    });
+    socket.once("timeout", () => {
+      socket.destroy();
+      reject(
+        new Error(
+          `Timed out reaching test database at ${target.host}:${target.port}. Start Postgres and verify DATABASE_URL_TEST.`
+        )
+      );
+    });
+    socket.connect(target.port, target.host, () => {
+      socket.end();
+      resolve(undefined);
+    });
+  });
+}
+
 const mode = process.argv[2];
 const env = testEnv();
+await ensureDbReachable(env.DATABASE_URL).catch((error) => {
+  console.error(error instanceof Error ? error.message : "Failed test DB preflight check.");
+  process.exit(1);
+});
 
 if (mode === "setup") {
   run("npx prisma migrate deploy --schema prisma/schema.prisma", env);

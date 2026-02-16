@@ -10,6 +10,7 @@ import { WorkItemsService } from "./work-items.service";
 @Module({
   imports: [ActivityLogModule, AuthModule, PolicyModule, BillingModule, OrgWebhooksModule],
   controllers: [WorkItemsController],
-  providers: [WorkItemsService]
+  providers: [WorkItemsService],
+  exports: [WorkItemsService]
 })
 export class WorkItemsModule {}

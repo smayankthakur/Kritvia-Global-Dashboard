@@ -1,870 +1,1496 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KRITVIYA - Execution OS Prototype</title>
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    />
-    <style>
-      :root {
-        --bg: #ffffff;
-        --surface: #f7f8fa;
-        --card: #ffffff;
-        --border: #e6e8ec;
-        --text-primary: #0b1220;
-        --text-secondary: #526070;
-        --accent: #3b48d9;
-        --accent-hover: #2f3bc0;
-        --success: #16a34a;
-        --warning: #d97706;
-        --danger: #dc2626;
-      }
-
-      [data-theme="dark"] {
-        --bg: #0b0f17;
-        --surface: #111827;
-        --card: #0f172a;
-        --border: #223046;
-        --text-primary: #eaf0ff;
-        --text-secondary: #a8b3c7;
-        --accent: #5f73ff;
-        --accent-hover: #7788ff;
-        --success: #22c55e;
-        --warning: #f59e0b;
-        --danger: #f87171;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: var(--bg);
-        color: var(--text-primary);
-      }
-
-      a {
-        color: inherit;
-        text-decoration: none;
-      }
-
-      .app-shell {
-        width: 100%;
-        max-width: 1440px;
-        min-height: 100vh;
-        margin: 0 auto;
-        display: grid;
-        grid-template-rows: 68px 1fr;
-      }
-
-      .topbar {
-        background: var(--card);
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 20px;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-      }
-
-      .brand {
-        font-weight: 800;
-        letter-spacing: 0.04em;
-        font-size: 18px;
-      }
-
-      .select {
-        width: 180px;
-        padding: 8px 12px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--bg);
-        color: var(--text-primary);
-        font-size: 14px;
-        cursor: pointer;
-      }
-
-      .select:focus {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
-
-      .topbar-left,
-      .topbar-right {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .layout {
-        display: grid;
-        grid-template-columns: 250px 1fr;
-        min-height: 0;
-      }
-
-      .sidebar {
-        background: var(--surface);
-        border-right: 1px solid var(--border);
-        padding: 18px 14px;
-      }
-
-      .sidebar h3 {
-        margin: 0 0 12px;
-        font-size: 12px;
-        color: var(--text-secondary);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-
-      .side-link {
-        display: block;
-        margin: 0 0 8px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        border: 1px solid transparent;
-        color: var(--text-secondary);
-        font-size: 14px;
-      }
-
-      .side-link:hover,
-      .side-link.active {
-        border-color: var(--border);
-        color: var(--text-primary);
-        background: var(--card);
-      }
-
-      .content {
-        padding: 24px;
-        background: var(--bg);
-      }
-
-      .page-title {
-        margin: 0;
-        font-size: 30px;
-        font-weight: 800;
-      }
-
-      .page-subtitle {
-        margin: 6px 0 18px;
-        color: var(--text-secondary);
-        font-size: 14px;
-      }
-
-      .grid-4 {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
-
-      .grid-2 {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: 2fr 1fr;
-      }
-
-      .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 16px;
-      }
-
-      .card h3 {
-        margin: 0;
-        font-size: 14px;
-        color: var(--text-secondary);
-        font-weight: 600;
-      }
-
-      .kpi-value {
-        margin: 10px 0 0;
-        font-size: 28px;
-        font-weight: 800;
-      }
-
-      .badge {
-        display: inline-flex;
-        border-radius: 999px;
-        padding: 4px 10px;
-        font-size: 12px;
-        font-weight: 700;
-        border: 1px solid var(--border);
-      }
-
-      .badge-success {
-        color: var(--success);
-      }
-
-      .badge-warning {
-        color: var(--warning);
-      }
-
-      .badge-danger {
-        color: var(--danger);
-      }
-
-      .btn {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 10px 14px;
-        font-weight: 600;
-        font-size: 14px;
-        background: var(--surface);
-        color: var(--text-primary);
-        cursor: pointer;
-      }
-
-      .btn:hover {
-        filter: brightness(1.04);
-      }
-
-      .btn-primary {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-      }
-
-      .btn-primary:hover {
-        background: var(--accent-hover);
-      }
-
-      .btn-danger {
-        background: var(--danger);
-        border-color: var(--danger);
-        color: #fff;
-      }
-
-      .toolbar {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .field,
-      .select,
-      .textarea {
-        width: 100%;
-        background: var(--card);
-        color: var(--text-primary);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 10px 12px;
-        font: inherit;
-      }
-
-      .textarea {
-        min-height: 96px;
-        resize: vertical;
-      }
-
-      .table-wrap {
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        overflow: auto;
-        background: var(--card);
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      th,
-      td {
-        text-align: left;
-        padding: 12px;
-        border-bottom: 1px solid var(--border);
-        font-size: 13px;
-      }
-
-      th {
-        color: var(--text-secondary);
-        font-weight: 700;
-        background: var(--surface);
-      }
-
-      tr:hover td {
-        background: color-mix(in srgb, var(--surface) 70%, transparent);
-      }
-
-      .danger-row td {
-        color: var(--danger);
-      }
-
-      .kanban {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .kanban-col {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 10px;
-      }
-
-      .kanban-col h4 {
-        margin: 0 0 10px;
-        font-size: 13px;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-      }
-
-      .mini-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 10px;
-        margin-bottom: 10px;
-      }
-
-      .mini-card h5 {
-        margin: 0 0 6px;
-        font-size: 13px;
-      }
-
-      .mini {
-        color: var(--text-secondary);
-        font-size: 12px;
-      }
-
-      .bar {
-        height: 10px;
-        border-radius: 999px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        overflow: hidden;
-      }
-
-      .bar > span {
-        height: 100%;
-        display: block;
-        background: var(--accent);
-      }
-
-      .line-chart {
-        width: 100%;
-        height: 220px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 15%, transparent), transparent);
-      }
-
-      .login-wrap {
-        min-height: calc(100vh - 68px);
-        display: grid;
-        place-items: center;
-      }
-
-      .login-card {
-        width: 420px;
-        max-width: 95%;
-      }
-
-      .muted {
-        color: var(--text-secondary);
-      }
-
-      .avatar {
-        width: 34px;
-        height: 34px;
-        border-radius: 999px;
-        display: inline-grid;
-        place-items: center;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        font-weight: 700;
-      }
-
-      .hidden {
-        display: none;
-      }
-
-      @media (max-width: 1120px) {
-        .layout {
-          grid-template-columns: 1fr;
-        }
-        .sidebar {
-          border-right: none;
-          border-bottom: 1px solid var(--border);
-        }
-        .kanban,
-        .grid-4 {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .grid-2 {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
-  </head>
-  <body data-theme="light">
-    <div class="app-shell">
-      <header class="topbar">
-        <div class="topbar-left">
-          <div class="brand">KRITVIYA</div>
-          <select id="modeSwitcher" class="select" title="Select operating mode">
-            <option value="ceo">CEO</option>
-            <option value="ops">Ops</option>
-            <option value="sales">Sales</option>
-            <option value="finance">Finance</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <div class="topbar-right">
-          <button id="themeToggle" class="btn" type="button">🌙 Dark</button>
-          <div class="avatar">KG</div>
-        </div>
-      </header>
-
-      <div class="layout">
-        <aside id="sidebar" class="sidebar"></aside>
-        <main id="content" class="content"></main>
-      </div>
-    </div>
-
-    <script>
-      const modeDefaults = {
-        ceo: "ceo",
-        ops: "ops",
-        sales: "sales",
-        finance: "finance",
-        admin: "admin"
-      };
-
-      const sideNav = {
-        ceo: [
-          ["ceo", "CEO Dashboard"],
-          ["ops", "Execution Board"],
-          ["finance", "Finance Pulse"],
-          ["sales", "Sales Pipeline"],
-          ["admin", "Admin Control"]
-        ],
-        ops: [
-          ["ops", "Execution Board"],
-          ["task-detail", "Task Detail"],
-          ["ceo", "Escalations to CEO"]
-        ],
-        sales: [
-          ["sales", "CRM Pipeline"],
-          ["deal-detail", "Deal Detail"],
-          ["finance", "Won Deal to Invoice"]
-        ],
-        finance: [
-          ["finance", "Finance Dashboard"],
-          ["invoice-detail", "Invoice Detail"],
-          ["ceo", "Cash Runway View"]
-        ],
-        admin: [
-          ["admin", "Admin Panel"],
-          ["rule-builder", "Automation Rule Builder"],
-          ["ceo", "Global Oversight"]
-        ]
-      };
-
-      function parseRoute() {
-        const raw = (location.hash || "#login-light").replace("#", "");
-        const parts = raw.split("-");
-        const theme = parts[parts.length - 1] === "dark" ? "dark" : "light";
-        const page = raw.endsWith("-dark") || raw.endsWith("-light")
-          ? raw.replace(/-(dark|light)$/, "")
-          : "login";
-        return { page, theme };
-      }
-
-      function go(page, theme) {
-        location.hash = `${page}-${theme}`;
-      }
-
-      function title(page) {
-        const map = {
-          login: "Login",
-          ceo: "CEO Dashboard",
-          ops: "Ops Mode - Execution Board",
-          sales: "Sales Mode - CRM Pipeline",
-          finance: "Finance Mode",
-          admin: "Admin Mode",
-          "task-detail": "Task Detail",
-          "deal-detail": "Deal Detail",
-          "invoice-detail": "Invoice Detail",
-          "rule-builder": "Automation Rule Builder"
-        };
-        return map[page] || "KRITVIYA";
-      }
-
-      function kpiCard(label, value, note, href, theme, extra = "") {
-        return `
-          <a class="card" href="#${href}-${theme}">
-            <h3>${label}</h3>
-            <p class="kpi-value">${value}</p>
-            <p class="muted">${note}</p>
-            ${extra}
-          </a>
-        `;
-      }
-
-      function renderSidebar(page, theme) {
-        const mode = ["ceo", "ops", "sales", "finance", "admin"].includes(page) ? page : "ceo";
-        const items = sideNav[mode] || [];
-        return `
-          <h3>${mode.toUpperCase()} MODE</h3>
-          ${items
-            .map(
-              ([id, label]) =>
-                `<a href="#${id}-${theme}" class="side-link ${page === id ? "active" : ""}">${label}</a>`
-            )
-            .join("")}
-        `;
-      }
-
-      function renderPage(page, theme) {
-        const pair = theme === "light" ? "dark" : "light";
-        const isDark = theme === "dark";
-        const themeTag = isDark ? "Dark" : "Light";
-        const commonHead = `
-          <h1 class="page-title">${title(page)} - ${themeTag}</h1>
-          <p class="page-subtitle">KRITVIYA Execution OS | People + Work + Money</p>
-        `;
-
-        if (page === "login") {
-          return `
-            <div class="login-wrap">
-              <section class="card login-card">
-                <h1 class="page-title" style="font-size:36px">KRITVIYA</h1>
-                <p class="page-subtitle">Execution Operating System</p>
-                <div style="display:grid;gap:12px">
-                  <input class="field" placeholder="Email" value="ceo@kritviya.com" />
-                  <input class="field" placeholder="Password" type="password" value="********" />
-                  <a href="#ceo-${theme}" class="btn btn-primary">Login</a>
-                  <a href="#ceo-${theme}" class="btn">Login as Demo CEO</a>
-                </div>
-              </section>
-            </div>
-          `;
-        }
-
-        if (page === "ceo") {
-          return `
-            ${commonHead}
-            <section class="grid-4">
-              ${kpiCard("Cash Runway", "42 Days", "Projected from current burn rate", "finance", theme)}
-              ${kpiCard("Revenue Blocked", "₹18.6L", "Stuck due to pending execution", "ops", theme)}
-              ${kpiCard("Tasks Delayed", "7", "Cross-functional blockers", "ops", theme)}
-              ${kpiCard("Risk Level", "HIGH", "Critical execution risk", "ceo", theme, '<span class="badge badge-danger">HIGH</span>')}
-            </section>
-            <div class="grid-2" style="margin-top:16px">
-              <section class="card">
-                <h3 style="margin-bottom:10px">Top Execution Blockers</h3>
-                <div class="table-wrap">
-                  <table>
-                    <thead><tr><th>Blocker</th><th>Owner</th><th>Impact</th><th>Action</th></tr></thead>
-                    <tbody>
-                      <tr><td>Pending tech handoff for Acme rollout</td><td>Ops</td><td>₹4.2L</td><td><a href="#task-detail-${theme}" class="btn">Nudge Owner</a></td></tr>
-                      <tr><td>Invoice hold due to missing compliance doc</td><td>Finance</td><td>₹3.6L</td><td><a href="#invoice-detail-${theme}" class="btn">View Details</a></td></tr>
-                      <tr><td>Deal close waiting implementation timeline</td><td>Sales</td><td>₹2.8L</td><td><a href="#deal-detail-${theme}" class="btn">Take Action</a></td></tr>
-                      <tr><td>SLA miss on enterprise onboarding task</td><td>Ops</td><td>₹4.1L</td><td><a href="#ops-${theme}" class="btn">View Details</a></td></tr>
-                      <tr><td>Escalated dependency not resolved</td><td>Admin</td><td>₹3.9L</td><td><a href="#admin-${theme}" class="btn">Take Action</a></td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-              <section class="card">
-                <h3 style="margin-bottom:12px">Team Load</h3>
-                <p class="mini">Ops 95%</p><div class="bar"><span style="width:95%"></span></div>
-                <p class="mini" style="margin-top:12px">Dev 130% <span class="badge badge-danger">danger</span></p><div class="bar"><span style="width:100%;background:var(--danger)"></span></div>
-                <p class="mini" style="margin-top:12px">Sales 70%</p><div class="bar"><span style="width:70%;background:var(--success)"></span></div>
-                <div class="toolbar" style="margin-top:16px">
-                  <a class="btn btn-primary" href="#ops-${theme}">Take Action</a>
-                  <a class="btn" href="#ops-${theme}">View Details</a>
-                  <a class="btn" href="#task-detail-${theme}">Nudge Owner</a>
-                </div>
-              </section>
-            </div>
-          `;
-        }
-
-        if (page === "ops") {
-          return `
-            ${commonHead}
-            <section class="card">
-              <h3 style="margin-bottom:12px">Execution Chain</h3>
-              <div class="toolbar" style="margin-bottom:10px">
-                <a class="side-link active" href="#ops-${theme}">Tasks</a>
-                <a class="side-link" href="#ops-${theme}">Delayed</a>
-                <a class="side-link" href="#ops-${theme}">Dependencies</a>
-                <a class="side-link" href="#ops-${theme}">SLAs</a>
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kritvia Global – Founder-Level Management OS</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0A0A0A;
+      --card-bg: #111111;
+      --border-color: #222222;
+      --gold: #D4AF37;
+      --gold-light: #E8C547;
+      --blue: #00A3FF;
+      --text-primary: #FFFFFF;
+      --text-secondary: #888888;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+    }
+    
+    .font-display { font-family: 'Playfair Display', serif; }
+    
+    .gold-gradient {
+      background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #D4AF37 100%);
+    }
+    
+    .gold-text {
+      background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #D4AF37 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .glass-card {
+      background: rgba(17, 17, 17, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+    }
+    
+    .glow-gold {
+      box-shadow: 0 0 30px rgba(212, 175, 55, 0.15);
+    }
+    
+    .glow-gold-hover:hover {
+      box-shadow: 0 0 40px rgba(212, 175, 55, 0.25);
+      border-color: rgba(212, 175, 55, 0.3);
+    }
+    
+    .sidebar-item {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .sidebar-item:hover {
+      background: rgba(212, 175, 55, 0.05);
+    }
+    
+    .sidebar-item.active {
+      background: rgba(212, 175, 55, 0.1);
+      border-left: 3px solid var(--gold);
+    }
+    
+    .sidebar-item.active span {
+      color: var(--gold);
+    }
+    
+    .page-transition {
+      animation: fadeIn 0.4s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse-gold {
+      0%, 100% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); }
+      50% { box-shadow: 0 0 40px rgba(212, 175, 55, 0.4); }
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    
+    .shimmer-gold {
+      background: linear-gradient(90deg, #D4AF37 0%, #F4D03F 25%, #D4AF37 50%, #F4D03F 75%, #D4AF37 100%);
+      background-size: 200% auto;
+      animation: shimmer 3s linear infinite;
+    }
+    
+    .progress-ring {
+      transform: rotate(-90deg);
+    }
+    
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: var(--border-color);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .toggle-switch.active {
+      background: var(--gold);
+    }
+    
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.3s ease;
+    }
+    
+    .toggle-switch.active::after {
+      left: 24px;
+    }
+    
+    .blur-content {
+      filter: blur(8px);
+      user-select: none;
+    }
+    
+    input:focus, button:focus {
+      outline: none;
+    }
+    
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full overflow-hidden">
+  <div id="app" class="h-full"></div>
+  
+  <script>
+    const defaultConfig = {
+      founder_name: 'Lord Gopal Ji',
+      founder_title: 'Thakur | ठाकुर',
+      company_tagline: 'Founder-Level Management OS',
+      primary_color: '#D4AF37',
+      secondary_color: '#00A3FF',
+      text_color: '#FFFFFF',
+      background_color: '#0A0A0A',
+      card_color: '#111111'
+    };
+    
+    let config = { ...defaultConfig };
+    let currentPage = 'login';
+    let privacyMode = false;
+    let timerRunning = false;
+    let timerSeconds = 25 * 60;
+    let timerInterval = null;
+    
+    const menuItems = [
+      { id: 'command', icon: 'command', label: 'Command Center' },
+      { id: 'operations', icon: 'operations', label: 'Operations' },
+      { id: 'crm', icon: 'crm', label: 'CRM' },
+      { id: 'projects', icon: 'projects', label: 'Projects' },
+      { id: 'hrms', icon: 'hrms', label: 'HRMS' },
+      { id: 'finance', icon: 'finance', label: 'Finance' },
+      { id: 'chat', icon: 'chat', label: 'Chat' },
+      { id: 'work', icon: 'work', label: 'Work' },
+      { id: 'intelligence', icon: 'intelligence', label: 'Intelligence' },
+      { id: 'vedic', icon: 'vedic', label: 'Vedic Intelligence' },
+      { id: 'settings', icon: 'settings', label: 'Settings' }
+    ];
+    
+    const icons = {
+      command: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>`,
+      operations: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>`,
+      crm: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
+      projects: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>`,
+      hrms: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`,
+      finance: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+      chat: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`,
+      work: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`,
+      intelligence: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`,
+      vedic: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`,
+      settings: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`
+    };
+    
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    function getCurrentDate() {
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      return new Date().toLocaleDateString('en-US', options);
+    }
+    
+    function renderLogin() {
+      return `
+        <div class="h-full flex items-center justify-center p-8" style="background: radial-gradient(ellipse at center, #1a1a1a 0%, #0A0A0A 70%);">
+          <div class="glass-card glow-gold rounded-3xl p-12 w-full max-w-md page-transition">
+            <!-- Logo -->
+            <div class="flex justify-center mb-8">
+              <div class="w-20 h-20 rounded-full gold-gradient flex items-center justify-center" style="animation: pulse-gold 2s infinite;">
+                <span class="text-4xl font-display font-bold text-black">K</span>
               </div>
-              <div style="display:grid;gap:10px">
-                <div class="mini-card">
-                  <h5><a href="#task-detail-${theme}">Task: Client Data Migration</a></h5>
-                  <p class="mini">Owner: Rohan | Due: 18 Feb | Status: In Progress | Revenue Impact: ₹2.1L</p>
-                  <div class="toolbar">
-                    <button class="btn">Reassign</button>
-                    <button class="btn btn-danger">Escalate</button>
-                    <button class="btn btn-primary">Mark Complete</button>
+            </div>
+            
+            <!-- Title -->
+            <h1 class="font-display text-3xl font-bold text-center mb-2 gold-text">Kritvia Global</h1>
+            <p class="text-center text-gray-400 mb-8" id="tagline-text">${config.company_tagline || defaultConfig.company_tagline}</p>
+            
+            <!-- Om Symbol -->
+            <div class="flex justify-center mb-8 opacity-30">
+              <span class="text-2xl">ॐ</span>
+            </div>
+            
+            <!-- Form -->
+            <form id="login-form" class="space-y-5">
+              <div>
+                <label for="email" class="block text-sm text-gray-400 mb-2">Email Address</label>
+                <input type="email" id="email" placeholder="founder@kritvia.com" 
+                  class="w-full px-4 py-3 rounded-xl bg-black/50 border border-gray-700 text-white placeholder-gray-500 focus:border-yellow-600 transition-colors">
+              </div>
+              <div>
+                <label for="password" class="block text-sm text-gray-400 mb-2">Password</label>
+                <input type="password" id="password" placeholder="••••••••" 
+                  class="w-full px-4 py-3 rounded-xl bg-black/50 border border-gray-700 text-white placeholder-gray-500 focus:border-yellow-600 transition-colors">
+              </div>
+              
+              <button type="submit" class="w-full py-4 rounded-xl shimmer-gold text-black font-semibold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
+                Sign In
+              </button>
+            </form>
+            
+            <!-- Divider -->
+            <div class="flex items-center my-6">
+              <div class="flex-1 border-t border-gray-700"></div>
+              <span class="px-4 text-gray-500 text-sm">or continue with</span>
+              <div class="flex-1 border-t border-gray-700"></div>
+            </div>
+            
+            <!-- SSO Buttons -->
+            <div class="grid grid-cols-2 gap-4">
+              <button class="py-3 rounded-xl bg-black/50 border border-gray-700 text-white font-medium hover:border-gray-500 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#D4AF37" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#00A3FF" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#D4AF37" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Google
+              </button>
+              <button class="py-3 rounded-xl bg-black/50 border border-gray-700 text-white font-medium hover:border-gray-500 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
+                SSO
+              </button>
+            </div>
+            
+            <!-- Footer -->
+            <p class="text-center text-gray-500 text-sm mt-8">
+              Secure enterprise-grade authentication
+            </p>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderSidebar() {
+      return `
+        <aside class="w-64 h-full flex flex-col border-r border-gray-800" style="background: #0d0d0d;">
+          <!-- Logo -->
+          <div class="p-6 border-b border-gray-800">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full gold-gradient flex items-center justify-center">
+                <span class="text-lg font-display font-bold text-black">K</span>
+              </div>
+              <div>
+                <h1 class="font-display font-bold gold-text">Kritvia</h1>
+                <p class="text-xs text-gray-500">Global OS</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Navigation -->
+          <nav class="flex-1 py-4 overflow-y-auto scrollbar-hide">
+            ${menuItems.map(item => `
+              <button onclick="navigateTo('${item.id}')" 
+                class="sidebar-item w-full flex items-center gap-3 px-6 py-3 text-left ${currentPage === item.id ? 'active' : ''}">
+                <span class="${currentPage === item.id ? 'text-yellow-500' : 'text-gray-400'}">${icons[item.icon]}</span>
+                <span class="text-sm ${currentPage === item.id ? 'text-yellow-500 font-medium' : 'text-gray-300'}">${item.label}</span>
+              </button>
+            `).join('')}
+          </nav>
+          
+          <!-- User Profile -->
+          <div class="p-4 border-t border-gray-800">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 flex items-center justify-center">
+                <span class="text-sm font-bold">GJ</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate" id="sidebar-name">${config.founder_name || defaultConfig.founder_name}</p>
+                <p class="text-xs text-gray-500">CEO View</p>
+              </div>
+            </div>
+            <button onclick="logout()" class="w-full py-2 text-sm text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              Sign Out
+            </button>
+          </div>
+        </aside>
+      `;
+    }
+    
+    function renderHeader() {
+      return `
+        <header class="h-16 border-b border-gray-800 flex items-center justify-between px-6" style="background: #0d0d0d;">
+          <!-- Search -->
+          <div class="flex-1 max-w-xl">
+            <div class="relative">
+              <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" placeholder="Search anything..." 
+                class="w-full pl-10 pr-4 py-2 rounded-xl bg-black/50 border border-gray-700 text-white placeholder-gray-500 focus:border-yellow-600 transition-colors">
+            </div>
+          </div>
+          
+          <!-- Right Actions -->
+          <div class="flex items-center gap-4">
+            <!-- Privacy Shield -->
+            <button onclick="togglePrivacy()" class="flex items-center gap-2 px-4 py-2 rounded-xl border ${privacyMode ? 'border-yellow-500 bg-yellow-500/10' : 'border-gray-700'} transition-all hover:border-yellow-600">
+              <svg class="w-5 h-5 ${privacyMode ? 'text-yellow-500' : 'text-gray-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              <span class="text-sm ${privacyMode ? 'text-yellow-500' : 'text-gray-400'}">Shield</span>
+            </button>
+            
+            <!-- Notifications -->
+            <button class="relative p-2 rounded-xl border border-gray-700 hover:border-gray-600 transition-colors">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+              <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            
+            <!-- Role Switcher -->
+            <select class="px-4 py-2 rounded-xl bg-black/50 border border-gray-700 text-white text-sm focus:border-yellow-600 transition-colors cursor-pointer">
+              <option>CEO View</option>
+              <option>Manager View</option>
+              <option>Team View</option>
+            </select>
+          </div>
+        </header>
+      `;
+    }
+    
+    function renderCommandCenter() {
+      const timerProgress = ((25 * 60 - timerSeconds) / (25 * 60)) * 100;
+      const timerCircumference = 2 * Math.PI * 45;
+      const timerOffset = timerCircumference - (timerProgress / 100) * timerCircumference;
+      
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <!-- Founder Nameplate -->
+          <div class="glass-card glow-gold-hover rounded-2xl p-6 mb-6 transition-all">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-400 text-sm mb-1">Welcome back</p>
+                <h1 class="font-display text-3xl font-bold gold-text" id="founder-name-display">${config.founder_name || defaultConfig.founder_name}</h1>
+                <p class="text-gray-400 mt-1" id="founder-title-display">${config.founder_title || defaultConfig.founder_title}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-gray-400 text-sm">${getCurrentDate()}</p>
+                <p class="text-2xl mt-2 opacity-40">ॐ</p>
+              </div>
+            </div>
+          </div>
+          
+          ${privacyMode ? '<div class="mb-4 px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-sm flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>Client Safe Mode Enabled</div>' : ''}
+          
+          <div class="grid grid-cols-12 gap-6">
+            <!-- Artha Layer - Project Roadmap -->
+            <div class="col-span-5 glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <h2 class="font-display text-xl font-semibold mb-4 flex items-center gap-2">
+                <span class="gold-text">अर्थ</span>
+                <span class="text-white">Project Roadmap</span>
+              </h2>
+              
+              <div class="flex items-center gap-6">
+                <!-- Main Progress Ring -->
+                <div class="relative">
+                  <svg class="w-40 h-40">
+                    <!-- Outer ring -->
+                    <circle cx="80" cy="80" r="70" fill="none" stroke="#222" stroke-width="8"/>
+                    <circle class="progress-ring" cx="80" cy="80" r="70" fill="none" stroke="#D4AF37" stroke-width="8" 
+                      stroke-linecap="round" stroke-dasharray="${2 * Math.PI * 70}" stroke-dashoffset="${2 * Math.PI * 70 * 0.32}"/>
+                    <!-- Middle ring -->
+                    <circle cx="80" cy="80" r="55" fill="none" stroke="#222" stroke-width="6"/>
+                    <circle class="progress-ring" cx="80" cy="80" r="55" fill="none" stroke="#00A3FF" stroke-width="6" 
+                      stroke-linecap="round" stroke-dasharray="${2 * Math.PI * 55}" stroke-dashoffset="${2 * Math.PI * 55 * 0.45}"/>
+                    <!-- Inner ring -->
+                    <circle cx="80" cy="80" r="40" fill="none" stroke="#222" stroke-width="4"/>
+                    <circle class="progress-ring" cx="80" cy="80" r="40" fill="none" stroke="#4ADE80" stroke-width="4" 
+                      stroke-linecap="round" stroke-dasharray="${2 * Math.PI * 40}" stroke-dashoffset="${2 * Math.PI * 40 * 0.2}"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-3xl font-bold gold-text">68%</span>
                   </div>
                 </div>
-                <div style="font-size:20px;color:var(--text-secondary)">↓</div>
-                <div class="mini-card">
-                  <h5><a href="#task-detail-${theme}">Task: QA + Signoff</a></h5>
-                  <p class="mini">Owner: Priya | Due: 20 Feb | Status: Blocked | Revenue Impact: ₹2.1L</p>
-                </div>
-                <div style="font-size:20px;color:var(--text-secondary)">↓</div>
-                <div class="mini-card">
-                  <h5><a href="#invoice-detail-${theme}">Invoice Release</a></h5>
-                  <p class="mini">Owner: Finance | Due: 22 Feb | Status: Pending</p>
+                
+                <!-- Project List -->
+                <div class="flex-1 space-y-3">
+                  <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                    <div>
+                      <p class="font-medium text-sm">Kritvia Platform v2.0</p>
+                      <p class="text-xs text-gray-500">Due: Jan 15 • 5 members</p>
+                    </div>
+                    <span class="text-yellow-500 font-bold">68%</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                    <div>
+                      <p class="font-medium text-sm">Mobile App Launch</p>
+                      <p class="text-xs text-gray-500">Due: Feb 28 • 3 members</p>
+                    </div>
+                    <span class="text-blue-500 font-bold">55%</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                    <div>
+                      <p class="font-medium text-sm">Client Portal Redesign</p>
+                      <p class="text-xs text-gray-500">Due: Mar 10 • 4 members</p>
+                    </div>
+                    <span class="text-green-500 font-bold">80%</span>
+                  </div>
                 </div>
               </div>
-            </section>
-          `;
-        }
-
-        if (page === "sales") {
-          return `
-            ${commonHead}
-            <div class="grid-2">
-              <section class="card">
-                <h3 style="margin-bottom:12px">CRM Pipeline</h3>
-                <div class="kanban">
-                  ${["Lead", "Qualified", "Proposal", "Won"]
-                    .map(
-                      (s, i) => `
-                    <div class="kanban-col">
-                      <h4>${s}</h4>
-                      <a href="#deal-detail-${theme}" class="mini-card">
-                        <h5>${["Nimbus Foods", "Atlas Retail", "Hexa Pharma", "Orbit Tech"][i]}</h5>
-                        <p class="mini">Deal: ₹${[2.8, 4.2, 3.5, 6.1][i]}L</p>
-                        <p class="mini">Next: ${["Discovery Call", "Solution Demo", "Pricing Review", "Contract Signed"][i]}</p>
-                        <span class="badge ${i === 2 ? "badge-warning" : "badge-success"}">${i === 2 ? "Idle 6 days" : "Active"}</span>
-                      </a>
-                    </div>`
-                    )
-                    .join("")}
-                </div>
-              </section>
-              <aside class="card">
-                <h3>Lead Details</h3>
-                <p class="mini">Account: Atlas Retail</p>
-                <p class="mini">Owner: Sales - Neha</p>
-                <p class="mini">Decision Date: 28 Feb</p>
-                <p class="mini">Notes: Need revised onboarding timeline and integration scope.</p>
-                <a class="btn btn-primary" href="#deal-detail-${theme}">Follow-up CTA</a>
-              </aside>
             </div>
-          `;
-        }
-
-        if (page === "finance") {
-          return `
-            ${commonHead}
-            <section class="grid-4">
-              ${kpiCard("Cash In", "₹28.4L", "This month collection", "invoice-detail", theme)}
-              ${kpiCard("Cash Out", "₹17.1L", "This month spending", "finance", theme)}
-              ${kpiCard("Net Balance", "₹11.3L", "Current position", "finance", theme)}
-              ${kpiCard("Runway Days", "42", "Projected runway", "ceo", theme)}
-            </section>
-            <div class="grid-2" style="margin-top:16px">
-              <section class="card">
-                <h3 style="margin-bottom:10px">Cash Flow Trend</h3>
-                <svg class="line-chart" viewBox="0 0 600 220" preserveAspectRatio="none">
-                  <polyline fill="none" stroke="var(--accent)" stroke-width="3" points="10,170 90,145 170,160 250,125 330,110 410,95 490,80 590,60"></polyline>
+            
+            <!-- Dharma Focus Timer -->
+            <div class="col-span-3 glass-card glow-gold-hover rounded-2xl p-6 transition-all flex flex-col items-center">
+              <h2 class="font-display text-xl font-semibold mb-4 flex items-center gap-2">
+                <span class="gold-text">धर्म</span>
+                <span class="text-white">Focus</span>
+              </h2>
+              
+              <div class="relative mb-4">
+                <svg class="w-32 h-32">
+                  <circle cx="64" cy="64" r="56" fill="none" stroke="#222" stroke-width="6"/>
+                  <circle class="progress-ring" cx="64" cy="64" r="56" fill="none" stroke="#D4AF37" stroke-width="6" 
+                    stroke-linecap="round" stroke-dasharray="${timerCircumference}" stroke-dashoffset="${timerOffset}" 
+                    style="transition: stroke-dashoffset 0.5s ease;"/>
                 </svg>
-              </section>
-              <section class="card">
-                <h3 style="margin-bottom:10px">Invoices</h3>
-                <div class="table-wrap">
-                  <table>
-                    <thead><tr><th>Client</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead>
-                    <tbody>
-                      <tr><td><a href="#invoice-detail-${theme}">Acme Corp</a></td><td>₹3.2L</td><td><span class="badge badge-success">PAID</span></td><td>12 Feb</td></tr>
-                      <tr class="danger-row"><td><a href="#invoice-detail-${theme}">Nimbus Foods</a></td><td>₹2.6L</td><td><span class="badge badge-danger">OVERDUE</span></td><td>04 Feb</td></tr>
-                      <tr><td><a href="#invoice-detail-${theme}">Hexa Pharma</a></td><td>₹1.9L</td><td><span class="badge badge-warning">SENT</span></td><td>18 Feb</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          `;
-        }
-
-        if (page === "admin") {
-          return `
-            ${commonHead}
-            <div class="grid-2">
-              <section class="card">
-                <h3 style="margin-bottom:10px">Users</h3>
-                <div class="table-wrap">
-                  <table>
-                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
-                    <tbody>
-                      <tr><td>Mayank</td><td>ceo@kritviya.com</td><td><select class="select"><option>CEO</option></select></td><td><button class="btn">Update</button></td></tr>
-                      <tr><td>Rohan</td><td>ops@kritviya.com</td><td><select class="select"><option>Ops</option></select></td><td><button class="btn">Update</button></td></tr>
-                      <tr><td>Neha</td><td>sales@kritviya.com</td><td><select class="select"><option>Sales</option></select></td><td><button class="btn">Update</button></td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="toolbar" style="margin-top:12px">
-                  <button class="btn btn-primary">Add User</button>
-                  <a class="btn" href="#rule-builder-${theme}">Create Rule</a>
-                  <button class="btn">View Logs</button>
-                </div>
-              </section>
-              <section class="card">
-                <h3>Audit Log Timeline</h3>
-                <p class="mini">10:12 - Role changed for ops@kritviya.com</p>
-                <p class="mini">09:48 - New automation created for overdue invoice nudges</p>
-                <p class="mini">09:30 - User invited: finance2@kritviya.com</p>
-                <h3 style="margin-top:20px">Automation Rules</h3>
-                <p class="mini">IF invoice overdue &gt; 5 days THEN nudge finance owner</p>
-                <p class="mini">IF task blocked &gt; 3 days THEN escalate to ops manager</p>
-              </section>
-            </div>
-          `;
-        }
-
-        if (page === "task-detail") {
-          return `
-            ${commonHead}
-            <div class="grid-2">
-              <section class="card">
-                <h3>Task: Client Data Migration</h3>
-                <p class="mini">Owner: Rohan | Due: 18 Feb | Revenue Impact: ₹2.1L</p>
-                <textarea class="textarea">Pending API credentials from client team. Need fallback import validation.</textarea>
-                <div class="toolbar" style="margin-top:10px">
-                  <button class="btn btn-primary">Save</button>
-                  <button class="btn">Reassign</button>
-                  <button class="btn btn-danger">Escalate</button>
-                </div>
-              </section>
-              <aside class="card">
-                <h3>Activity</h3>
-                <p class="mini">Updated by Ops 20 min ago</p>
-                <p class="mini">Escalation raised yesterday</p>
-              </aside>
-            </div>
-          `;
-        }
-
-        if (page === "deal-detail") {
-          return `
-            ${commonHead}
-            <div class="grid-2">
-              <section class="card">
-                <h3>Deal: Atlas Retail - Proposal</h3>
-                <p class="mini">Value: ₹4.2L | Owner: Neha | Idle: 6 days</p>
-                <textarea class="textarea">Customer requested revised timeline and onboarding scope.</textarea>
-                <div class="toolbar" style="margin-top:10px">
-                  <button class="btn btn-primary">Update Deal</button>
-                  <a class="btn" href="#finance-${theme}">Create Invoice (on Won)</a>
-                </div>
-              </section>
-              <aside class="card">
-                <h3>Next Actions</h3>
-                <p class="mini">1. Share revised SOW</p>
-                <p class="mini">2. Confirm implementation owner</p>
-              </aside>
-            </div>
-          `;
-        }
-
-        if (page === "invoice-detail") {
-          return `
-            ${commonHead}
-            <div class="grid-2">
-              <section class="card">
-                <h3>Invoice #INV-2026-118</h3>
-                <p class="mini">Client: Nimbus Foods | Amount: ₹2.6L</p>
-                <div class="toolbar">
-                  <span class="badge badge-danger">OVERDUE</span>
-                  <span class="badge badge-warning">LOCKED</span>
-                </div>
-                <div class="toolbar" style="margin-top:12px">
-                  <button class="btn btn-primary">Mark Paid</button>
-                  <button class="btn">Unlock</button>
-                  <button class="btn btn-danger">Send Reminder</button>
-                </div>
-              </section>
-              <aside class="card">
-                <h3>Audit Trail</h3>
-                <p class="mini">Sent by Finance at 04 Feb</p>
-                <p class="mini">Reminder triggered at 08 Feb</p>
-              </aside>
-            </div>
-          `;
-        }
-
-        if (page === "rule-builder") {
-          return `
-            ${commonHead}
-            <section class="card">
-              <h3>Create Automation Rule</h3>
-              <div class="grid-2" style="grid-template-columns:1fr 1fr;margin-top:10px">
-                <div>
-                  <label class="mini">IF</label>
-                  <select class="select">
-                    <option>Invoice overdue &gt; 5 days</option>
-                    <option>Task blocked &gt; 3 days</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="mini">THEN</label>
-                  <select class="select">
-                    <option>Nudge Finance Owner</option>
-                    <option>Escalate to CEO</option>
-                  </select>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span class="text-2xl font-bold font-mono">${formatTime(timerSeconds)}</span>
                 </div>
               </div>
-              <div class="toolbar" style="margin-top:12px">
-                <button class="btn btn-primary">Create Rule</button>
-                <a class="btn" href="#admin-${theme}">Back to Admin</a>
+              
+              <div class="flex gap-2">
+                <button onclick="toggleTimer()" class="px-4 py-2 rounded-xl ${timerRunning ? 'bg-red-500/20 border-red-500 text-red-500' : 'gold-gradient text-black'} border font-medium text-sm transition-all hover:scale-105">
+                  ${timerRunning ? 'Pause' : 'Start'}
+                </button>
+                <button onclick="resetTimer()" class="px-4 py-2 rounded-xl bg-black/50 border border-gray-700 text-gray-300 font-medium text-sm hover:border-gray-500 transition-colors">
+                  Reset
+                </button>
               </div>
-            </section>
-          `;
-        }
-
-        return `${commonHead}<section class="card"><p>Page not found.</p></section>`;
+            </div>
+            
+            <!-- Sudarshana Shield -->
+            <div class="col-span-4 glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <h2 class="font-display text-xl font-semibold mb-4 flex items-center gap-2">
+                <span class="gold-text">सुदर्शन</span>
+                <span class="text-white">Privacy Shield</span>
+              </h2>
+              
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl ${privacyMode ? 'bg-yellow-500/20 border-yellow-500' : 'bg-gray-800 border-gray-700'} border flex items-center justify-center transition-colors">
+                  <svg class="w-8 h-8 ${privacyMode ? 'text-yellow-500' : 'text-gray-500'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </div>
+                <div class="flex-1">
+                  <p class="font-medium mb-1">Status: <span class="${privacyMode ? 'text-yellow-500' : 'text-gray-400'}">${privacyMode ? 'Active' : 'Inactive'}</span></p>
+                  <p class="text-sm text-gray-500">Blur sensitive financial data when in client meetings</p>
+                </div>
+                <div class="toggle-switch ${privacyMode ? 'active' : ''}" onclick="togglePrivacy()"></div>
+              </div>
+            </div>
+            
+            <!-- Astro-Task Alignment -->
+            <div class="col-span-4 glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <h2 class="font-display text-xl font-semibold mb-4 flex items-center gap-2">
+                <span class="gold-text">ज्योतिष</span>
+                <span class="text-white">Astro Alignment</span>
+              </h2>
+              
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Moon Phase</span>
+                  <span class="text-white flex items-center gap-2">🌓 First Quarter</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Nakshatra</span>
+                  <span class="text-white">Rohini ★</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-400 text-sm">Auspicious For</span>
+                  <span class="text-green-400">New Beginnings</span>
+                </div>
+                <div class="mt-4 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+                  <p class="text-yellow-500 text-sm font-medium">Daily Strategic Recommendation</p>
+                  <p class="text-gray-300 text-sm mt-1">Focus on client relationships and creative projects today.</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Today's Signals -->
+            <div class="col-span-8 glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <h2 class="font-display text-xl font-semibold mb-4">Today's Signals</h2>
+              
+              <div class="grid grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl bg-green-500/10 border border-green-500/30">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="text-green-400 font-medium">Success</span>
+                  </div>
+                  <p class="text-white font-medium">Q4 Revenue Target</p>
+                  <p class="text-gray-400 text-sm mt-1">Exceeded by 12% — $1.2M milestone reached</p>
+                </div>
+                
+                <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span class="text-red-400 font-medium">Risk Alert</span>
+                  </div>
+                  <p class="text-white font-medium">Server Capacity</p>
+                  <p class="text-gray-400 text-sm mt-1">85% utilization — scale decision needed by Friday</p>
+                </div>
+                
+                <div class="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <span class="text-yellow-400 font-medium">Pending</span>
+                  </div>
+                  <p class="text-white font-medium">Partnership Deal</p>
+                  <p class="text-gray-400 text-sm mt-1">Awaiting legal review — expected close next week</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderOperations() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <h1 class="font-display text-2xl font-bold mb-6">Operations</h1>
+          
+          <div class="grid grid-cols-3 gap-6 mb-6">
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Team Load</p>
+              <p class="text-3xl font-bold gold-text">78%</p>
+              <p class="text-green-400 text-sm mt-2">↑ Optimal capacity</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Active Tasks</p>
+              <p class="text-3xl font-bold text-blue-400">142</p>
+              <p class="text-gray-400 text-sm mt-2">Across 5 projects</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Pending Approvals</p>
+              <p class="text-3xl font-bold text-yellow-400">7</p>
+              <p class="text-red-400 text-sm mt-2">3 urgent</p>
+            </div>
+          </div>
+          
+          <div class="glass-card rounded-2xl p-6">
+            <h2 class="font-display text-lg font-semibold mb-4">Pending Approvals</h2>
+            <div class="space-y-3">
+              ${[
+                { title: 'Budget Request - Marketing Q1', by: 'Priya Sharma', urgent: true },
+                { title: 'New Hire Approval - Senior Dev', by: 'HR Team', urgent: true },
+                { title: 'Vendor Contract Renewal', by: 'Operations', urgent: false },
+                { title: 'Travel Request - Client Visit', by: 'Rahul Mehta', urgent: false },
+              ].map(item => `
+                <div class="flex items-center justify-between p-4 rounded-xl bg-black/30 border border-gray-800 hover:border-gray-700 transition-colors">
+                  <div class="flex items-center gap-3">
+                    ${item.urgent ? '<span class="w-2 h-2 rounded-full bg-red-500"></span>' : '<span class="w-2 h-2 rounded-full bg-gray-500"></span>'}
+                    <div>
+                      <p class="font-medium">${item.title}</p>
+                      <p class="text-sm text-gray-500">Requested by ${item.by}</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button class="px-4 py-2 rounded-lg bg-green-500/20 text-green-400 text-sm font-medium hover:bg-green-500/30 transition-colors">Approve</button>
+                    <button class="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors">Reject</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderCRM() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="font-display text-2xl font-bold">CRM</h1>
+            <button class="px-4 py-2 rounded-xl gold-gradient text-black font-medium text-sm hover:scale-105 transition-transform">+ Add Contact</button>
+          </div>
+          
+          <div class="flex gap-4 mb-6">
+            <button class="px-4 py-2 rounded-xl bg-yellow-500/20 text-yellow-500 font-medium text-sm border border-yellow-500/30">All Contacts</button>
+            <button class="px-4 py-2 rounded-xl bg-black/30 text-gray-400 font-medium text-sm border border-gray-700 hover:border-gray-600 transition-colors">Leads</button>
+            <button class="px-4 py-2 rounded-xl bg-black/30 text-gray-400 font-medium text-sm border border-gray-700 hover:border-gray-600 transition-colors">Clients</button>
+            <button class="px-4 py-2 rounded-xl bg-black/30 text-gray-400 font-medium text-sm border border-gray-700 hover:border-gray-600 transition-colors">Partners</button>
+          </div>
+          
+          <div class="glass-card rounded-2xl overflow-hidden">
+            <table class="w-full">
+              <thead class="border-b border-gray-800">
+                <tr>
+                  <th class="text-left p-4 text-gray-400 font-medium text-sm">Name</th>
+                  <th class="text-left p-4 text-gray-400 font-medium text-sm">Company</th>
+                  <th class="text-left p-4 text-gray-400 font-medium text-sm">Status</th>
+                  <th class="text-left p-4 text-gray-400 font-medium text-sm ${privacyMode ? 'blur-content' : ''}">Value</th>
+                  <th class="text-left p-4 text-gray-400 font-medium text-sm">Last Contact</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${[
+                  { name: 'Ankit Verma', company: 'TechCorp India', status: 'Client', value: '₹45L', date: '2 days ago', statusColor: 'green' },
+                  { name: 'Sarah Mitchell', company: 'Global Ventures', status: 'Lead', value: '₹1.2Cr', date: '1 week ago', statusColor: 'yellow' },
+                  { name: 'Raj Patel', company: 'InnovateTech', status: 'Partner', value: '₹80L', date: 'Today', statusColor: 'blue' },
+                  { name: 'Maria Garcia', company: 'LatAm Solutions', status: 'Lead', value: '₹60L', date: '3 days ago', statusColor: 'yellow' },
+                  { name: 'David Chen', company: 'Asia Pacific Ltd', status: 'Client', value: '₹2.5Cr', date: 'Yesterday', statusColor: 'green' },
+                ].map(item => `
+                  <tr class="border-b border-gray-800/50 hover:bg-white/5 transition-colors cursor-pointer">
+                    <td class="p-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 flex items-center justify-center text-sm font-bold">${item.name.split(' ').map(n => n[0]).join('')}</div>
+                        <span class="font-medium">${item.name}</span>
+                      </div>
+                    </td>
+                    <td class="p-4 text-gray-400">${item.company}</td>
+                    <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-${item.statusColor}-500/20 text-${item.statusColor}-400">${item.status}</span></td>
+                    <td class="p-4 font-medium ${privacyMode ? 'blur-content' : ''}">${item.value}</td>
+                    <td class="p-4 text-gray-400">${item.date}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderProjects() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="font-display text-2xl font-bold">Projects</h1>
+            <button class="px-4 py-2 rounded-xl gold-gradient text-black font-medium text-sm hover:scale-105 transition-transform">+ New Project</button>
+          </div>
+          
+          <div class="grid grid-cols-3 gap-6">
+            ${[
+              { name: 'Kritvia Platform v2.0', progress: 68, members: 5, due: 'Jan 15', color: 'yellow' },
+              { name: 'Mobile App Launch', progress: 55, members: 3, due: 'Feb 28', color: 'blue' },
+              { name: 'Client Portal Redesign', progress: 80, members: 4, due: 'Mar 10', color: 'green' },
+              { name: 'AI Integration', progress: 25, members: 2, due: 'Apr 5', color: 'purple' },
+              { name: 'Marketing Automation', progress: 90, members: 3, due: 'Jan 20', color: 'pink' },
+              { name: 'Data Pipeline', progress: 45, members: 4, due: 'Mar 1', color: 'cyan' },
+            ].map(project => `
+              <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all cursor-pointer hover:scale-[1.02]" onclick="navigateTo('project-detail')">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="w-12 h-12 rounded-xl bg-${project.color}-500/20 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-${project.color}-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                  </div>
+                  <span class="text-gray-400 text-sm">Due ${project.due}</span>
+                </div>
+                <h3 class="font-semibold text-lg mb-3">${project.name}</h3>
+                <div class="mb-3">
+                  <div class="flex justify-between text-sm mb-1">
+                    <span class="text-gray-400">Progress</span>
+                    <span class="text-${project.color}-400 font-medium">${project.progress}%</span>
+                  </div>
+                  <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-${project.color}-500 rounded-full transition-all" style="width: ${project.progress}%"></div>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="flex -space-x-2">
+                    ${Array(Math.min(project.members, 3)).fill(0).map((_, i) => `
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 border-2 border-gray-900 flex items-center justify-center text-xs">T${i+1}</div>
+                    `).join('')}
+                    ${project.members > 3 ? `<div class="w-8 h-8 rounded-full bg-gray-800 border-2 border-gray-900 flex items-center justify-center text-xs">+${project.members - 3}</div>` : ''}
+                  </div>
+                  <span class="text-gray-500 text-sm">${project.members} members</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderProjectDetail() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <div class="flex items-center gap-4 mb-6">
+            <button onclick="navigateTo('projects')" class="p-2 rounded-xl bg-black/30 border border-gray-700 hover:border-gray-600 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <h1 class="font-display text-2xl font-bold">Kritvia Platform v2.0</h1>
+          </div>
+          
+          <div class="flex gap-4 mb-6 border-b border-gray-800 pb-4">
+            <button class="px-4 py-2 text-yellow-500 border-b-2 border-yellow-500 font-medium">Overview</button>
+            <button class="px-4 py-2 text-gray-400 hover:text-white transition-colors">Board</button>
+            <button class="px-4 py-2 text-gray-400 hover:text-white transition-colors">Timeline</button>
+            <button class="px-4 py-2 text-gray-400 hover:text-white transition-colors">Files</button>
+          </div>
+          
+          <div class="grid grid-cols-3 gap-6">
+            <div class="col-span-2 space-y-6">
+              <div class="glass-card rounded-2xl p-6">
+                <h2 class="font-display text-lg font-semibold mb-4">Project Overview</h2>
+                <p class="text-gray-400 mb-4">Complete rebuild of the Kritvia platform with enhanced AI capabilities, improved UX, and enterprise-grade security features.</p>
+                <div class="grid grid-cols-3 gap-4">
+                  <div class="p-4 rounded-xl bg-black/30 border border-gray-800">
+                    <p class="text-gray-400 text-sm">Status</p>
+                    <p class="text-yellow-400 font-medium">In Progress</p>
+                  </div>
+                  <div class="p-4 rounded-xl bg-black/30 border border-gray-800">
+                    <p class="text-gray-400 text-sm">Priority</p>
+                    <p class="text-red-400 font-medium">High</p>
+                  </div>
+                  <div class="p-4 rounded-xl bg-black/30 border border-gray-800">
+                    <p class="text-gray-400 text-sm ${privacyMode ? 'blur-content' : ''}">Budget</p>
+                    <p class="font-medium ${privacyMode ? 'blur-content' : ''}">₹25L</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="glass-card rounded-2xl p-6">
+                <h2 class="font-display text-lg font-semibold mb-4">Recent Activity</h2>
+                <div class="space-y-4">
+                  ${[
+                    { user: 'Priya', action: 'completed task', item: 'API Documentation', time: '2h ago' },
+                    { user: 'Rahul', action: 'added comment on', item: 'UI Design Review', time: '4h ago' },
+                    { user: 'System', action: 'milestone reached', item: 'Beta Release', time: '1d ago' },
+                  ].map(activity => `
+                    <div class="flex items-center gap-4 p-3 rounded-xl bg-black/20">
+                      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 flex items-center justify-center text-sm font-bold">${activity.user[0]}</div>
+                      <div>
+                        <p class="text-sm"><span class="font-medium">${activity.user}</span> <span class="text-gray-400">${activity.action}</span> <span class="text-yellow-400">${activity.item}</span></p>
+                        <p class="text-xs text-gray-500">${activity.time}</p>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+            
+            <div class="space-y-6">
+              <div class="glass-card rounded-2xl p-6">
+                <h2 class="font-display text-lg font-semibold mb-4">Team</h2>
+                <div class="space-y-3">
+                  ${['Gopal Ji', 'Priya Sharma', 'Rahul Mehta', 'Amit Kumar', 'Neha Singh'].map(name => `
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center text-sm font-bold">${name.split(' ').map(n => n[0]).join('')}</div>
+                      <span class="text-sm">${name}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              
+              <div class="glass-card rounded-2xl p-6">
+                <h2 class="font-display text-lg font-semibold mb-4">Progress</h2>
+                <div class="relative pt-4">
+                  <svg class="w-full h-32">
+                    <circle cx="50%" cy="64" r="56" fill="none" stroke="#222" stroke-width="8"/>
+                    <circle class="progress-ring" cx="50%" cy="64" r="56" fill="none" stroke="#D4AF37" stroke-width="8" 
+                      stroke-linecap="round" stroke-dasharray="${2 * Math.PI * 56}" stroke-dashoffset="${2 * Math.PI * 56 * 0.32}"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-3xl font-bold gold-text">68%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderHRMS() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="font-display text-2xl font-bold">HRMS</h1>
+            <button class="px-4 py-2 rounded-xl gold-gradient text-black font-medium text-sm hover:scale-105 transition-transform">+ Add Employee</button>
+          </div>
+          
+          <div class="grid grid-cols-4 gap-6 mb-6">
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Total Employees</p>
+              <p class="text-3xl font-bold gold-text">47</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">On Leave Today</p>
+              <p class="text-3xl font-bold text-blue-400">3</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">New This Month</p>
+              <p class="text-3xl font-bold text-green-400">5</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Open Positions</p>
+              <p class="text-3xl font-bold text-yellow-400">8</p>
+            </div>
+          </div>
+          
+          <div class="glass-card rounded-2xl p-6">
+            <h2 class="font-display text-lg font-semibold mb-4">People Directory</h2>
+            <div class="grid grid-cols-4 gap-4">
+              ${[
+                { name: 'Gopal Ji', role: 'CEO & Founder', dept: 'Executive' },
+                { name: 'Priya Sharma', role: 'VP Engineering', dept: 'Engineering' },
+                { name: 'Rahul Mehta', role: 'Lead Designer', dept: 'Design' },
+                { name: 'Amit Kumar', role: 'Senior Developer', dept: 'Engineering' },
+                { name: 'Neha Singh', role: 'Product Manager', dept: 'Product' },
+                { name: 'Vikram Patel', role: 'DevOps Lead', dept: 'Engineering' },
+                { name: 'Ananya Gupta', role: 'HR Manager', dept: 'HR' },
+                { name: 'Karan Malhotra', role: 'Sales Director', dept: 'Sales' },
+              ].map(person => `
+                <div class="p-4 rounded-xl bg-black/30 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer">
+                  <div class="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 flex items-center justify-center text-lg font-bold mb-3">${person.name.split(' ').map(n => n[0]).join('')}</div>
+                  <p class="font-medium">${person.name}</p>
+                  <p class="text-sm text-gray-400">${person.role}</p>
+                  <p class="text-xs text-gray-500 mt-1">${person.dept}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderFinance() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <h1 class="font-display text-2xl font-bold mb-6">Finance</h1>
+          
+          <div class="grid grid-cols-4 gap-6 mb-6">
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Total Revenue</p>
+              <p class="text-3xl font-bold gold-text ${privacyMode ? 'blur-content' : ''}">₹4.2Cr</p>
+              <p class="text-green-400 text-sm mt-2 ${privacyMode ? 'blur-content' : ''}">↑ 23% vs last year</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Monthly Recurring</p>
+              <p class="text-3xl font-bold text-blue-400 ${privacyMode ? 'blur-content' : ''}">₹35L</p>
+              <p class="text-green-400 text-sm mt-2 ${privacyMode ? 'blur-content' : ''}">↑ 8% MoM</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Expenses</p>
+              <p class="text-3xl font-bold text-red-400 ${privacyMode ? 'blur-content' : ''}">₹18L</p>
+              <p class="text-yellow-400 text-sm mt-2 ${privacyMode ? 'blur-content' : ''}">↓ 5% vs budget</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Net Profit</p>
+              <p class="text-3xl font-bold text-green-400 ${privacyMode ? 'blur-content' : ''}">₹17L</p>
+              <p class="text-green-400 text-sm mt-2 ${privacyMode ? 'blur-content' : ''}">48% margin</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-6">
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4">Revenue Breakdown</h2>
+              <div class="space-y-4 ${privacyMode ? 'blur-content' : ''}">
+                ${[
+                  { label: 'Enterprise Clients', value: '₹2.1Cr', percent: 50 },
+                  { label: 'SMB Clients', value: '₹1.3Cr', percent: 31 },
+                  { label: 'Consulting', value: '₹80L', percent: 19 },
+                ].map(item => `
+                  <div>
+                    <div class="flex justify-between mb-1">
+                      <span class="text-sm">${item.label}</span>
+                      <span class="text-sm font-medium">${item.value}</span>
+                    </div>
+                    <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full" style="width: ${item.percent}%"></div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4">Recent Transactions</h2>
+              <div class="space-y-3 ${privacyMode ? 'blur-content' : ''}">
+                ${[
+                  { desc: 'TechCorp Invoice Payment', amount: '+₹45L', type: 'income' },
+                  { desc: 'AWS Monthly Bill', amount: '-₹2.5L', type: 'expense' },
+                  { desc: 'Global Ventures Retainer', amount: '+₹12L', type: 'income' },
+                  { desc: 'Salary Disbursement', amount: '-₹15L', type: 'expense' },
+                ].map(tx => `
+                  <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                    <span class="text-sm">${tx.desc}</span>
+                    <span class="font-medium ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}">${tx.amount}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderChat() {
+      return `
+        <div class="page-transition h-full flex">
+          <!-- Channels -->
+          <div class="w-64 border-r border-gray-800 p-4">
+            <h2 class="font-display text-lg font-semibold mb-4">Channels</h2>
+            <div class="space-y-2">
+              ${['#general', '#engineering', '#design', '#sales', '#random'].map((channel, i) => `
+                <button class="w-full text-left px-3 py-2 rounded-lg ${i === 0 ? 'bg-yellow-500/10 text-yellow-500' : 'text-gray-400 hover:bg-white/5'} transition-colors">
+                  ${channel}
+                </button>
+              `).join('')}
+            </div>
+            
+            <h2 class="font-display text-lg font-semibold mt-6 mb-4">Direct Messages</h2>
+            <div class="space-y-2">
+              ${['Priya Sharma', 'Rahul Mehta', 'Amit Kumar'].map((name, i) => `
+                <button class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-3 ${i === 0 ? 'bg-white/5' : ''} hover:bg-white/5 transition-colors">
+                  <div class="w-8 h-8 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center text-xs font-bold">${name.split(' ').map(n => n[0]).join('')}</div>
+                  <span class="text-sm">${name}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          
+          <!-- Chat Area -->
+          <div class="flex-1 flex flex-col">
+            <div class="p-4 border-b border-gray-800">
+              <h2 class="font-semibold">#general</h2>
+              <p class="text-sm text-gray-400">Company-wide announcements and discussions</p>
+            </div>
+            
+            <div class="flex-1 p-4 overflow-y-auto scrollbar-hide space-y-4">
+              ${[
+                { user: 'Gopal Ji', msg: 'Great work on the Q4 numbers team! 🎉', time: '10:30 AM' },
+                { user: 'Priya Sharma', msg: 'The new deployment is live. All systems green!', time: '10:45 AM' },
+                { user: 'Rahul Mehta', msg: 'Design review at 2 PM today. Please join if available.', time: '11:00 AM' },
+              ].map(chat => `
+                <div class="flex gap-3">
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 flex items-center justify-center text-sm font-bold flex-shrink-0">${chat.user.split(' ').map(n => n[0]).join('')}</div>
+                  <div>
+                    <div class="flex items-baseline gap-2">
+                      <span class="font-medium">${chat.user}</span>
+                      <span class="text-xs text-gray-500">${chat.time}</span>
+                    </div>
+                    <p class="text-gray-300 mt-1">${chat.msg}</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="p-4 border-t border-gray-800">
+              <input type="text" placeholder="Message #general" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-gray-700 text-white placeholder-gray-500 focus:border-yellow-600 transition-colors">
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderWork() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <h1 class="font-display text-2xl font-bold mb-6">Work</h1>
+          
+          <div class="glass-card rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-display text-lg font-semibold">Your Tasks</h2>
+              <button class="px-4 py-2 rounded-xl gold-gradient text-black font-medium text-sm hover:scale-105 transition-transform">+ Add Task</button>
+            </div>
+            
+            <div class="space-y-3">
+              ${[
+                { task: 'Review Q4 Financial Report', priority: 'High', due: 'Today', reason: 'Board meeting prep - investors expect updated numbers' },
+                { task: 'Approve Marketing Budget', priority: 'Medium', due: 'Tomorrow', reason: 'Q1 campaigns need to launch on schedule' },
+                { task: 'Interview Senior Developer', priority: 'High', due: 'Today 3PM', reason: 'Critical hire for platform v2.0 timeline' },
+                { task: 'Client Call - TechCorp', priority: 'Medium', due: 'Wed', reason: 'Renewal discussion - 45L annual contract' },
+                { task: 'Team 1:1 with Priya', priority: 'Low', due: 'Fri', reason: 'Monthly sync - performance review prep' },
+              ].map(item => `
+                <div class="p-4 rounded-xl bg-black/30 border border-gray-800 hover:border-gray-700 transition-colors">
+                  <div class="flex items-start justify-between">
+                    <div class="flex items-start gap-3">
+                      <input type="checkbox" class="w-5 h-5 rounded border-gray-600 bg-black/50 text-yellow-500 focus:ring-yellow-500 mt-0.5">
+                      <div>
+                        <p class="font-medium">${item.task}</p>
+                        <p class="text-sm text-gray-400 mt-1">
+                          <span class="text-yellow-400">Why this task?</span> ${item.reason}
+                        </p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <span class="px-2 py-1 rounded text-xs font-medium ${item.priority === 'High' ? 'bg-red-500/20 text-red-400' : item.priority === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-500/20 text-gray-400'}">${item.priority}</span>
+                      <p class="text-xs text-gray-500 mt-2">${item.due}</p>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderIntelligence() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <h1 class="font-display text-2xl font-bold mb-6">Intelligence</h1>
+          
+          <div class="grid grid-cols-3 gap-6 mb-6">
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Productivity Score</p>
+              <p class="text-3xl font-bold gold-text">87%</p>
+              <p class="text-green-400 text-sm mt-2">↑ 12% this week</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Focus Time</p>
+              <p class="text-3xl font-bold text-blue-400">6.2h</p>
+              <p class="text-gray-400 text-sm mt-2">Daily average</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all">
+              <p class="text-gray-400 text-sm mb-1">Tasks Completed</p>
+              <p class="text-3xl font-bold text-green-400">24</p>
+              <p class="text-green-400 text-sm mt-2">↑ 8 vs last week</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-6">
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4">Weekly Trends</h2>
+              <div class="flex items-end justify-between h-40 px-4">
+                ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
+                  const heights = [60, 75, 85, 70, 90, 40, 30];
+                  return `
+                    <div class="flex flex-col items-center gap-2">
+                      <div class="w-8 bg-gradient-to-t from-yellow-600 to-yellow-400 rounded-t" style="height: ${heights[i]}%"></div>
+                      <span class="text-xs text-gray-500">${day}</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4">AI Insights</h2>
+              <div class="space-y-3">
+                <div class="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+                  <p class="text-sm text-yellow-400 font-medium">Peak Performance Window</p>
+                  <p class="text-sm text-gray-300 mt-1">Your most productive hours are 9-11 AM. Schedule deep work accordingly.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                  <p class="text-sm text-blue-400 font-medium">Meeting Optimization</p>
+                  <p class="text-sm text-gray-300 mt-1">15% of meetings could be async. Consider batching Tuesdays.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-green-500/10 border border-green-500/30">
+                  <p class="text-sm text-green-400 font-medium">Team Efficiency</p>
+                  <p class="text-sm text-gray-300 mt-1">Engineering velocity up 23%. Maintain current sprint cadence.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderVedic() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <h1 class="font-display text-2xl font-bold mb-2 flex items-center gap-3">
+            <span class="gold-text">ज्योतिष</span>
+            <span>Vedic Intelligence</span>
+          </h1>
+          <p class="text-gray-400 mb-6">Ancient wisdom meets modern business strategy</p>
+          
+          <div class="grid grid-cols-3 gap-6 mb-6">
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all text-center">
+              <p class="text-4xl mb-2">🌓</p>
+              <p class="text-gray-400 text-sm">Moon Phase</p>
+              <p class="font-display text-xl font-semibold gold-text">Shukla Paksha</p>
+              <p class="text-sm text-gray-500">Waxing Phase - Growth Period</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all text-center">
+              <p class="text-4xl mb-2">⭐</p>
+              <p class="text-gray-400 text-sm">Nakshatra</p>
+              <p class="font-display text-xl font-semibold gold-text">Rohini</p>
+              <p class="text-sm text-gray-500">Auspicious for New Ventures</p>
+            </div>
+            <div class="glass-card glow-gold-hover rounded-2xl p-6 transition-all text-center">
+              <p class="text-4xl mb-2">🕉️</p>
+              <p class="text-gray-400 text-sm">Tithi</p>
+              <p class="font-display text-xl font-semibold gold-text">Panchami</p>
+              <p class="text-sm text-gray-500">5th Lunar Day</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-6">
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="gold-text">दैनिक</span>
+                <span>Daily Recommendations</span>
+              </h2>
+              <div class="space-y-3">
+                <div class="p-4 rounded-xl bg-green-500/10 border border-green-500/30">
+                  <p class="text-green-400 font-medium flex items-center gap-2">✓ Favorable Activities</p>
+                  <p class="text-sm text-gray-300 mt-2">Contract signing, client meetings, financial decisions, team building</p>
+                </div>
+                <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+                  <p class="text-red-400 font-medium flex items-center gap-2">✗ Activities to Avoid</p>
+                  <p class="text-sm text-gray-300 mt-2">Major launches, confrontational negotiations, travel initiation</p>
+                </div>
+                <div class="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+                  <p class="text-yellow-400 font-medium flex items-center gap-2">⚡ Peak Hours</p>
+                  <p class="text-sm text-gray-300 mt-2">Brahma Muhurta (4:30-6:00 AM), Abhijit Muhurta (11:45 AM-12:30 PM)</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="gold-text">रणनीति</span>
+                <span>Strategic Alignment</span>
+              </h2>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                  <span class="text-gray-400">Business Expansion</span>
+                  <div class="flex items-center gap-2">
+                    <div class="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-green-500 rounded-full" style="width: 85%"></div>
+                    </div>
+                    <span class="text-green-400 text-sm">85%</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                  <span class="text-gray-400">Team Hiring</span>
+                  <div class="flex items-center gap-2">
+                    <div class="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-yellow-500 rounded-full" style="width: 70%"></div>
+                    </div>
+                    <span class="text-yellow-400 text-sm">70%</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                  <span class="text-gray-400">Financial Decisions</span>
+                  <div class="flex items-center gap-2">
+                    <div class="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-green-500 rounded-full" style="width: 92%"></div>
+                    </div>
+                    <span class="text-green-400 text-sm">92%</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                  <span class="text-gray-400">New Partnerships</span>
+                  <div class="flex items-center gap-2">
+                    <div class="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-blue-500 rounded-full" style="width: 78%"></div>
+                    </div>
+                    <span class="text-blue-400 text-sm">78%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderSettings() {
+      return `
+        <div class="page-transition p-6 h-full overflow-y-auto scrollbar-hide">
+          <h1 class="font-display text-2xl font-bold mb-6">Settings</h1>
+          
+          <div class="max-w-2xl space-y-6">
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4">Profile Settings</h2>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Display Name</label>
+                  <input type="text" value="${config.founder_name || defaultConfig.founder_name}" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-gray-700 text-white focus:border-yellow-600 transition-colors">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Title</label>
+                  <input type="text" value="${config.founder_title || defaultConfig.founder_title}" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-gray-700 text-white focus:border-yellow-600 transition-colors">
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-400 mb-2">Email</label>
+                  <input type="email" value="gopal@kritvia.com" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-gray-700 text-white focus:border-yellow-600 transition-colors">
+                </div>
+              </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4">Preferences</h2>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-medium">Privacy Shield Default</p>
+                    <p class="text-sm text-gray-400">Enable shield on startup</p>
+                  </div>
+                  <div class="toggle-switch"></div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-medium">Vedic Intelligence</p>
+                    <p class="text-sm text-gray-400">Show daily astrological insights</p>
+                  </div>
+                  <div class="toggle-switch active"></div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-medium">Email Notifications</p>
+                    <p class="text-sm text-gray-400">Receive daily digest</p>
+                  </div>
+                  <div class="toggle-switch active"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6">
+              <h2 class="font-display text-lg font-semibold mb-4">Audit Logs</h2>
+              <div class="space-y-3">
+                ${[
+                  { action: 'Login from New Device', time: 'Today 9:15 AM', ip: '192.168.1.100' },
+                  { action: 'Privacy Shield Enabled', time: 'Yesterday 2:30 PM', ip: '192.168.1.100' },
+                  { action: 'Password Changed', time: 'Dec 15, 2024', ip: '192.168.1.100' },
+                ].map(log => `
+                  <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-gray-800">
+                    <div>
+                      <p class="font-medium text-sm">${log.action}</p>
+                      <p class="text-xs text-gray-500">${log.time}</p>
+                    </div>
+                    <span class="text-xs text-gray-500">${log.ip}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderVision() {
+      return `
+        <div class="page-transition h-full flex items-center justify-center p-8" style="background: radial-gradient(ellipse at center, #1a1a1a 0%, #0A0A0A 70%);">
+          <div class="max-w-4xl text-center">
+            <div class="flex justify-center mb-8">
+              <div class="w-24 h-24 rounded-full gold-gradient flex items-center justify-center" style="animation: pulse-gold 2s infinite;">
+                <span class="text-5xl font-display font-bold text-black">K</span>
+              </div>
+            </div>
+            
+            <h1 class="font-display text-5xl font-bold mb-4">
+              <span class="gold-text">"Everything in your business</span>
+              <br>
+              <span class="text-white">is connected."</span>
+            </h1>
+            
+            <p class="text-xl text-gray-400 mb-12">Kritvia is a unified execution graph connecting:</p>
+            
+            <div class="flex justify-center items-center gap-8 mb-12">
+              ${['People', 'Projects', 'Money', 'Intelligence', 'Decisions'].map((node, i) => `
+                <div class="relative">
+                  <div class="w-24 h-24 rounded-2xl bg-black/50 border border-yellow-500/30 flex flex-col items-center justify-center hover:border-yellow-500 transition-colors cursor-pointer group">
+                    <span class="text-2xl mb-1">${['👥', '📁', '💰', '🧠', '⚡'][i]}</span>
+                    <span class="text-sm font-medium">${node}</span>
+                  </div>
+                  ${i < 4 ? '<div class="absolute top-1/2 -right-6 w-4 h-0.5 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>' : ''}
+                </div>
+              `).join('')}
+            </div>
+            
+            <div class="glass-card glow-gold rounded-2xl p-8 max-w-2xl mx-auto">
+              <h2 class="font-display text-2xl font-semibold mb-4 gold-text">The Execution Graph</h2>
+              <p class="text-gray-400 mb-6">Every decision flows through a unified intelligence layer. People connect to projects, projects connect to money, money connects to decisions, and decisions flow back to people.</p>
+              
+              <div class="grid grid-cols-3 gap-4 text-left">
+                <div class="p-4 rounded-xl bg-black/30 border border-gray-800">
+                  <p class="text-yellow-400 font-medium mb-1">Horizontal CRM</p>
+                  <p class="text-sm text-gray-400">Unified relationship management</p>
+                </div>
+                <div class="p-4 rounded-xl bg-black/30 border border-gray-800">
+                  <p class="text-blue-400 font-medium mb-1">Operations OS</p>
+                  <p class="text-sm text-gray-400">End-to-end execution</p>
+                </div>
+                <div class="p-4 rounded-xl bg-black/30 border border-gray-800">
+                  <p class="text-green-400 font-medium mb-1">Intelligence Layer</p>
+                  <p class="text-sm text-gray-400">AI + Vedic insights</p>
+                </div>
+              </div>
+            </div>
+            
+            <button onclick="navigateTo('command')" class="mt-8 px-8 py-4 rounded-xl shimmer-gold text-black font-semibold text-lg hover:scale-105 transition-transform">
+              Enter Command Center →
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function navigateTo(page) {
+      currentPage = page;
+      render();
+    }
+    
+    function togglePrivacy() {
+      privacyMode = !privacyMode;
+      render();
+    }
+    
+    function toggleTimer() {
+      timerRunning = !timerRunning;
+      if (timerRunning) {
+        timerInterval = setInterval(() => {
+          if (timerSeconds > 0) {
+            timerSeconds--;
+            render();
+          } else {
+            timerRunning = false;
+            clearInterval(timerInterval);
+            render();
+          }
+        }, 1000);
+      } else {
+        clearInterval(timerInterval);
       }
-
-      function syncUI() {
-        const { page, theme } = parseRoute();
-        const content = document.getElementById("content");
-        const sidebar = document.getElementById("sidebar");
-        const modeSwitcher = document.getElementById("modeSwitcher");
-        const themeToggle = document.getElementById("themeToggle");
-        const other = theme === "light" ? "dark" : "light";
-
-        document.body.setAttribute("data-theme", theme);
-        content.innerHTML = renderPage(page, theme);
-
-        const showShell = page !== "login";
-        sidebar.classList.toggle("hidden", !showShell);
-        if (showShell) {
-          sidebar.innerHTML = renderSidebar(page, theme);
-        }
-
-        const mode = ["ceo", "ops", "sales", "finance", "admin"].includes(page) ? page : "ceo";
-        modeSwitcher.value = mode;
-        modeSwitcher.onchange = (event) => {
-          go(modeDefaults[event.target.value], theme);
-        };
-
-        themeToggle.textContent = theme === "light" ? "🌙 Dark" : "☀️ Light";
-        themeToggle.onclick = () => go(page, other);
+      render();
+    }
+    
+    function resetTimer() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      timerSeconds = 25 * 60;
+      render();
+    }
+    
+    function logout() {
+      currentPage = 'login';
+      render();
+    }
+    
+    function handleLogin(e) {
+      e.preventDefault();
+      currentPage = 'command';
+      render();
+    }
+    
+    function getPageContent() {
+      switch(currentPage) {
+        case 'login': return renderLogin();
+        case 'command': return renderCommandCenter();
+        case 'operations': return renderOperations();
+        case 'crm': return renderCRM();
+        case 'projects': return renderProjects();
+        case 'project-detail': return renderProjectDetail();
+        case 'hrms': return renderHRMS();
+        case 'finance': return renderFinance();
+        case 'chat': return renderChat();
+        case 'work': return renderWork();
+        case 'intelligence': return renderIntelligence();
+        case 'vedic': return renderVedic();
+        case 'settings': return renderSettings();
+        case 'vision': return renderVision();
+        default: return renderCommandCenter();
       }
-
-      window.addEventListener("hashchange", syncUI);
-      syncUI();
-    </script>
-  </body>
+    }
+    
+    function render() {
+      const app = document.getElementById('app');
+      
+      if (currentPage === 'login' || currentPage === 'vision') {
+        app.innerHTML = getPageContent();
+      } else {
+        app.innerHTML = `
+          <div class="h-full flex">
+            ${renderSidebar()}
+            <div class="flex-1 flex flex-col h-full overflow-hidden">
+              ${renderHeader()}
+              <main class="flex-1 overflow-hidden" style="background: #0A0A0A;">
+                ${getPageContent()}
+              </main>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Attach login form handler
+      const loginForm = document.getElementById('login-form');
+      if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+      }
+      
+      // Update editable elements
+      const founderNameDisplay = document.getElementById('founder-name-display');
+      if (founderNameDisplay) {
+        founderNameDisplay.textContent = config.founder_name || defaultConfig.founder_name;
+      }
+      
+      const founderTitleDisplay = document.getElementById('founder-title-display');
+      if (founderTitleDisplay) {
+        founderTitleDisplay.textContent = config.founder_title || defaultConfig.founder_title;
+      }
+      
+      const taglineText = document.getElementById('tagline-text');
+      if (taglineText) {
+        taglineText.textContent = config.company_tagline || defaultConfig.company_tagline;
+      }
+      
+      const sidebarName = document.getElementById('sidebar-name');
+      if (sidebarName) {
+        sidebarName.textContent = config.founder_name || defaultConfig.founder_name;
+      }
+    }
+    
+    // Initialize SDK
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (newConfig) => {
+          config = { ...newConfig };
+          render();
+        },
+        mapToCapabilities: (cfg) => ({
+          recolorables: [
+            {
+              get: () => cfg.primary_color || defaultConfig.primary_color,
+              set: (value) => { cfg.primary_color = value; window.elementSdk.setConfig({ primary_color: value }); }
+            },
+            {
+              get: () => cfg.secondary_color || defaultConfig.secondary_color,
+              set: (value) => { cfg.secondary_color = value; window.elementSdk.setConfig({ secondary_color: value }); }
+            },
+            {
+              get: () => cfg.background_color || defaultConfig.background_color,
+              set: (value) => { cfg.background_color = value; window.elementSdk.setConfig({ background_color: value }); }
+            },
+            {
+              get: () => cfg.card_color || defaultConfig.card_color,
+              set: (value) => { cfg.card_color = value; window.elementSdk.setConfig({ card_color: value }); }
+            },
+            {
+              get: () => cfg.text_color || defaultConfig.text_color,
+              set: (value) => { cfg.text_color = value; window.elementSdk.setConfig({ text_color: value }); }
+            }
+          ],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (cfg) => new Map([
+          ['founder_name', cfg.founder_name || defaultConfig.founder_name],
+          ['founder_title', cfg.founder_title || defaultConfig.founder_title],
+          ['company_tagline', cfg.company_tagline || defaultConfig.company_tagline]
+        ])
+      });
+    }
+    
+    // Make functions globally available
+    window.navigateTo = navigateTo;
+    window.togglePrivacy = togglePrivacy;
+    window.toggleTimer = toggleTimer;
+    window.resetTimer = resetTimer;
+    window.logout = logout;
+    
+    // Initial render
+    render();
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cef7fac306c794a',t:'MTc3MTI3MDYzNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

@@ -8,7 +8,7 @@ import { ModeSwitcher } from "./mode-switcher";
 import { OrgSwitcher } from "./org-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { AuthMeResponse, Role } from "../types/auth";
-import { FeedItem, listFeed, listShieldEvents, logoutRequest } from "../lib/api";
+import { FeedItem, getBillingPlan, listFeed, listShieldEvents, logoutRequest } from "../lib/api";
 import { clearAccessToken, getAccessToken } from "../lib/auth";
 
 interface AppShellProps {
@@ -20,6 +20,7 @@ interface AppShellProps {
 const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   CEO: [
     { label: "Home", href: "/" },
+    { label: "Marketplace", href: "/marketplace" },
     { label: "CEO Dashboard", href: "/ceo/dashboard" },
     { label: "Revenue", href: "/ceo/revenue" },
     { label: "Portfolio", href: "/portfolio" },
@@ -37,6 +38,7 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   ],
   OPS: [
     { label: "Home", href: "/" },
+    { label: "Marketplace", href: "/marketplace" },
     { label: "Hygiene Inbox", href: "/ops/hygiene" },
     { label: "Nudges", href: "/nudges" },
     { label: "Work Board", href: "/ops/work/board" },
@@ -44,6 +46,7 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   ],
   SALES: [
     { label: "Home", href: "/" },
+    { label: "Marketplace", href: "/marketplace" },
     { label: "Nudges", href: "/nudges" },
     { label: "Companies", href: "/sales/companies" },
     { label: "Leads", href: "/sales/leads" },
@@ -51,11 +54,13 @@ const navByRole: Record<Role, Array<{ label: string; href: string }>> = {
   ],
   FINANCE: [
     { label: "Home", href: "/" },
+    { label: "Marketplace", href: "/marketplace" },
     { label: "Nudges", href: "/nudges" },
     { label: "Finance Invoices", href: "/finance/invoices" }
   ],
   ADMIN: [
     { label: "Home", href: "/" },
+    { label: "Marketplace", href: "/marketplace" },
     { label: "CEO Dashboard", href: "/ceo/dashboard" },
     { label: "Revenue", href: "/ceo/revenue" },
     { label: "Portfolio", href: "/portfolio" },
@@ -96,6 +101,7 @@ export function AppShell({ user, title, children }: AppShellProps) {
   const [feedOpen, setFeedOpen] = useState(false);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [criticalThreatCount, setCriticalThreatCount] = useState(0);
+  const [developerNavVisible, setDeveloperNavVisible] = useState(false);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -115,8 +121,24 @@ export function AppShell({ user, title, children }: AppShellProps) {
       })
         .then((payload) => setCriticalThreatCount(payload.total))
         .catch(() => setCriticalThreatCount(0));
+
+      getBillingPlan(token)
+        .then((payload) => {
+          const allowed =
+            payload.plan.enterpriseControlsEnabled ||
+            payload.plan.developerPlatformEnabled === true;
+          setDeveloperNavVisible(allowed);
+        })
+        .catch(() => setDeveloperNavVisible(false));
+    } else {
+      setDeveloperNavVisible(false);
     }
   }, [user.role]);
+
+  const navWithDeveloper =
+    (user.role === "CEO" || user.role === "ADMIN") && developerNavVisible
+      ? [...nav, { label: "Developer", href: "/developer" }]
+      : nav;
 
   async function onLogout(): Promise<void> {
     await logoutRequest().catch(() => undefined);
@@ -180,7 +202,7 @@ export function AppShell({ user, title, children }: AppShellProps) {
         <aside className="kv-sidebar">
           <p className="kv-sidebar-title">Navigation</p>
           <nav className="kv-nav">
-            {nav.map((item) => (
+            {navWithDeveloper.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
