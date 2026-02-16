@@ -25,28 +25,21 @@ This file is the single source of truth for phase progress and task history.
 | Phase 6: CEO Visibility + Hygiene + Nudges | Completed | CEO dashboard KPIs + bottlenecks, hygiene inbox, nudges create/list/resolve, notification feed, top-bar nudges UI, nudge throttling and entity/org checks, CORS handling fix. |
 | Phase 7: Hardening/Polish | Completed | Hardening tracks delivered including secure session upgrade, request correlation/error standardization, pagination controls, and guardrail integration tests + CI. |
 | Phase 8: Production Packaging + Deployment | In Progress | Production scripts, Docker packaging, migration-on-deploy flow, and deployment runbooks added for Vercel+Managed API and VPS Compose modes. |
+| Phase 10: Developer Platform + Marketplace | In Progress | Public API v1 + webhooks, developer portal (tokens/webhooks/logs/docs/apps), marketplace app registry/install, OAuth app connect, runtime hooks, and app test console delivered. |
 
 ## Latest Update
-- Date: 2026-02-11
-- Phase: 8 (Production Packaging + Deployment Artifacts + Runtime Audit Fixes)
-- Result: In Progress
+- Date: 2026-02-16
+- Phase: 6.4 (Scale Hardening v2) + 10.3.3 UI completion
+- Result: Completed (step-level)
 - Implemented:
-  - Added production scripts at root (`build:*`, `start:*`, `migrate:deploy`, `seed:prod`).
-  - Added API and Web multi-stage Dockerfiles for reproducible builds.
-  - Added `docker-compose.prod.yml` with dedicated `migrate` one-off service before API startup.
-  - Added production env coverage in `.env.example` and compatibility for:
-    - `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL`
-    - `CORS_ORIGINS`
-    - `NEXT_PUBLIC_API_BASE_URL`
-  - Added deployment documentation for Option A (Vercel + managed API/DB) and Option B (VPS Compose).
-  - Runtime audit fixes:
-    - Fixed API production start entrypoint from `dist/main.js` to `dist/src/main.js`.
-    - Fixed API Docker runtime CMD to `apps/api/dist/src/main.js`.
-    - Split API TypeScript config for app vs tests (`types: ["node"]` in app tsconfig, dedicated `tsconfig.spec.json` for jest), preventing dev startup compile failures from test-only typings.
-    - Added web-local ESLint config cleanup for consistent Next.js lint/build behavior.
+  - Extended strict pagination enforcement and bounded key list queries.
+  - Added role/org request limiting safeguards and preserved app command per-install rate limits.
+  - Added simple async in-memory job queue for heavy compute/dispatch flows.
+  - Added 60s TTL caching for CEO summary, health score, and insights list.
+  - Normalized structured request logs (`requestId`, `orgId`, `userId`, `endpoint`, `durationMs`, `statusCode`).
+  - Added env feature flags: `FEATURE_AI_ENABLED`, `FEATURE_MARKETPLACE_ENABLED`, `FEATURE_AUTOPILOT_ENABLED`.
+  - Completed Developer Portal Apps tab for app test trigger, recent deliveries, command logs, and replay actions.
 - Verification:
-  - Root `npm run build` passed.
-  - Guardrail tests (`npm run test:ci`) passed.
-  - Runtime smoke:
-    - API `/health`, `/ready`, login, `/auth/me`, RBAC 403 path verified.
-    - Web `/` and `/login` verified after clean restart.
+  - `npm run lint` passed.
+  - `npm run build:api` passed.
+  - `npm run build:web` passed.

@@ -1,4 +1,4 @@
-# Kritviya Roadmap Status (update.md)
+ï»¿# Kritviya Roadmap Status (update.md)
 
 This file tracks implementation status for every requested phase/step.
 
@@ -9,7 +9,7 @@ This file tracks implementation status for every requested phase/step.
 
 ---
 
-## PHASE 1 — Core Foundation
+## PHASE 1 â€” Core Foundation
 
 | Step | Status |
 |---|---|
@@ -18,7 +18,7 @@ This file tracks implementation status for every requested phase/step.
 
 Details covered: Next.js web, NestJS API, Prisma/Postgres, shared package, Docker, env management, lint/format, JWT login, RBAC, org scoping, Helmet/CORS, activity logs.
 
-## PHASE 2 — Core Execution OS (MVP)
+## PHASE 2 â€” Core Execution OS (MVP)
 
 | Step | Status |
 |---|---|
@@ -29,7 +29,7 @@ Details covered: Next.js web, NestJS API, Prisma/Postgres, shared package, Docke
 
 Details covered: companies/contacts/leads/deals, lead->deal conversion, sales UI, work items, transitions, deal->work root, ops UI, invoice lifecycle with locking, finance UI, KPIs, bottlenecks, nudges, hygiene inbox.
 
-## PHASE 3 — Guardrails & Autopilot
+## PHASE 3 â€” Guardrails & Autopilot
 
 | Step | Status |
 |---|---|
@@ -39,7 +39,7 @@ Details covered: companies/contacts/leads/deals, lead->deal conversion, sales UI
 
 Details covered: policy model/settings APIs, lock behavior rules, autopilot jobs runner, security events, audit enforcement, locking discipline.
 
-## PHASE 4 — Execution Score Engine
+## PHASE 4 â€” Execution Score Engine
 
 | Step | Status |
 |---|---|
@@ -49,7 +49,7 @@ Details covered: policy model/settings APIs, lock behavior rules, autopilot jobs
 
 Details covered: score calc + snapshot storage + daily delta, `/ceo/health-score`, `/jobs/compute-health-score`, explain endpoint with root-cause drivers + deep links.
 
-## PHASE 5 — Revenue Intelligence
+## PHASE 5 â€” Revenue Intelligence
 
 | Step | Status |
 |---|---|
@@ -59,18 +59,18 @@ Details covered: score calc + snapshot storage + daily delta, `/ceo/health-score
 
 Details covered: velocity/forecast metrics, overdue/cashflow projections, CEO revenue UI.
 
-## PHASE 6 — Multi-Org Scalability
+## PHASE 6 â€” Multi-Org Scalability
 
 | Step | Status |
 |---|---|
 | 6.1 Org Switcher | Completed |
 | 6.2 Portfolio Mode | Completed |
 | 6.3 Invitations + Membership Lifecycle | Completed |
-| 6.4 Scale Hardening | In Progress |
+| 6.4 Scale Hardening | Completed |
 
-Notes: pagination/index/rate-limit hardening is implemented substantially, but this track remains open for additional scale tuning.
+Notes: strict pagination guards, bounded list queries, role/org rate limiting, async job queue primitives, short TTL caching, structured logging normalization, and env feature flags are implemented.
 
-## PHASE 7 — Billing + Packaging
+## PHASE 7 â€” Billing + Packaging
 
 | Step | Status |
 |---|---|
@@ -82,17 +82,17 @@ Notes: pagination/index/rate-limit hardening is implemented substantially, but t
 
 Details covered: feature-gated plans, org usage/caps, Razorpay checkout/webhooks, retention cleanup jobs, scoped API tokens with IP allowlist + rate limiting.
 
-## PHASE 8 — Enterprise Controls
+## PHASE 8 â€” Enterprise Controls
 
 | Step | Status |
 |---|---|
 | 8.1 Org Policies | Completed |
 | 8.2 Audit & Logs UI | Completed |
-| 8.3 Scale Hardening v2 | In Progress |
+| 8.3 Scale Hardening v2 | Completed |
 
-Notes: throttling/circuit-breaker patterns exist (including webhook failure circuit breaker), but v2 hardening remains an active track.
+Notes: v2 hardening delivered with throttling/circuit-breaker patterns and reliability-focused server safeguards.
 
-## PHASE 9 — AI Execution Intelligence Layer
+## PHASE 9 â€” AI Execution Intelligence Layer
 
 | Step | Status |
 |---|---|
@@ -102,7 +102,7 @@ Notes: throttling/circuit-breaker patterns exist (including webhook failure circ
 
 Details covered: AIInsight model/APIs/UI panel, AIAction model/APIs with approve/execute/undo + inbox UI, LLMReport model + CEO brief/report generation with grounding/caching.
 
-## PHASE 10 — Developer Platform & Marketplace
+## PHASE 10 â€” Developer Platform & Marketplace
 
 | Step | Status |
 |---|---|
@@ -114,7 +114,7 @@ Details covered: AIInsight model/APIs/UI panel, AIAction model/APIs with approve
 
 Details covered: `/api/v1` + token scope enforcement, webhook registry/retry/circuit-breaker, `/developer` tabs (tokens/webhooks/logs/docs/apps), app registry/install/config/rotate, OAuth connect flow, signed app commands, idempotency, AppCommandLog, app test console.
 
-## PHASE 11 — White-Label / Reseller SaaS Mode
+## PHASE 11 â€” White-Label / Reseller SaaS Mode
 
 | Step | Status |
 |---|---|
@@ -123,7 +123,7 @@ Details covered: `/api/v1` + token scope enforcement, webhook registry/retry/cir
 | 11.3 Brand Customization | Planned |
 | 11.4 Reseller Billing Layer | Planned |
 
-## PHASE 12 — Enterprise Scale & Competitive Moat
+## PHASE 12 â€” Enterprise Scale & Competitive Moat
 
 | Step | Status |
 |---|---|
@@ -132,3 +132,10 @@ Details covered: `/api/v1` + token scope enforcement, webhook registry/retry/cir
 | 12.3 SSO (SAML / OIDC) | Planned |
 | 12.4 Data export & backups | Planned |
 | 12.5 AI Copilot Mode (real-time suggestions) | Planned |
+
+## Latest Completed Step Update
+- Date: 2026-02-16
+- Completed:
+  - Phase 6.4 Scale Hardening v2 implementation pass
+  - Developer Portal App Test Console in `/developer?tab=apps`
+  - Marketplace app delivery visibility/replay and command-log visibility wiring
