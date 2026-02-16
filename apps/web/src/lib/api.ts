@@ -1295,6 +1295,18 @@ export async function getOrgUsage(token: string): Promise<OrgUsagePayload> {
   return parseResponse(response, "Failed to fetch org usage");
 }
 
+export async function createBillingSubscription(
+  token: string,
+  planKey: "starter" | "growth" | "pro" | "enterprise"
+): Promise<{ subscriptionId: string; razorpayKeyId: string }> {
+  const response = await request(`${API_BASE_URL}/billing/create-subscription`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ planKey })
+  });
+  return parseResponse(response, "Failed to create Razorpay subscription");
+}
+
 export async function updatePolicySettings(
   token: string,
   payload: Omit<PolicySettings, "id" | "orgId" | "createdAt" | "updatedAt">

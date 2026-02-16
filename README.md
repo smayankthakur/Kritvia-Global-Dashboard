@@ -276,6 +276,14 @@ Settings:
 - `GET /settings/policies` (CEO, ADMIN)
 - `PUT /settings/policies` (CEO, ADMIN)
 
+Billing:
+
+- `GET /billing/plan` (CEO, ADMIN)
+- `POST /billing/create-subscription` (CEO, ADMIN)
+- `POST /billing/webhook` (no auth, Razorpay signature required)
+- `GET /billing/portal` (CEO, ADMIN)
+- `GET /org/usage` (CEO, ADMIN)
+
 ## Org Execution Score (Phase 2.1)
 
 Endpoint usage:
@@ -356,6 +364,15 @@ Invoices:
 - `COOKIE_SECURE=true` in production with HTTPS
 - `COOKIE_DOMAIN=` (optional)
 - `TRUST_PROXY=false` (set `true` behind reverse proxy)
+- `RAZORPAY_KEY_ID=`
+- `RAZORPAY_KEY_SECRET=`
+- `RAZORPAY_WEBHOOK_SECRET=`
+- `RAZORPAY_PLAN_STARTER=`
+- `RAZORPAY_PLAN_GROWTH=`
+- `RAZORPAY_PLAN_PRO=`
+- `RAZORPAY_PLAN_ENTERPRISE=`
+- `WEB_BASE_URL=`
+- `API_BASE_URL=`
 
 ## Deployment
 
@@ -392,6 +409,15 @@ Render backend env vars:
 - `COOKIE_SAMESITE=none`
 - `COOKIE_DOMAIN=` (leave empty unless you need a custom cookie domain)
 - `CORS_ORIGINS=https://executiv-dashboard.vercel.app`
+- `RAZORPAY_KEY_ID=<rzp_live_or_test_key_id>`
+- `RAZORPAY_KEY_SECRET=<razorpay_key_secret>`
+- `RAZORPAY_WEBHOOK_SECRET=<razorpay_webhook_secret>`
+- `RAZORPAY_PLAN_STARTER=<plan_id_for_starter>`
+- `RAZORPAY_PLAN_GROWTH=<plan_id_for_growth>`
+- `RAZORPAY_PLAN_PRO=<plan_id_for_pro>`
+- `RAZORPAY_PLAN_ENTERPRISE=<plan_id_for_enterprise>`
+- `WEB_BASE_URL=https://executiv-dashboard.vercel.app`
+- `API_BASE_URL=https://<render-api-domain>`
 
 ### Vercel Web Configuration (Copy/Paste)
 
@@ -428,6 +454,14 @@ Do not set `localhost` in Vercel env.
 7. Redeploy frontend on Vercel.
 8. Test login at:
    - `https://executiv-dashboard.vercel.app`
+9. Configure Razorpay webhook:
+   - URL: `https://<render-api-domain>/billing/webhook`
+   - Secret: same as `RAZORPAY_WEBHOOK_SECRET`
+   - Events: `subscription.activated`, `subscription.charged`, `subscription.halted`, `subscription.paused`, `subscription.cancelled`, `payment.failed`
+10. Verify billing:
+   - Open `/billing` as CEO/ADMIN and click `Upgrade`
+   - Complete Razorpay checkout
+   - Re-open `/billing` and confirm status updates via webhook
 
 ### Render Build Simulation (Local From Repo Root)
 

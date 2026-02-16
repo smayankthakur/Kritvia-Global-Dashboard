@@ -122,8 +122,8 @@ model Subscription {
   orgId                 String   @unique @map("org_id") @db.Uuid
   planId                String   @map("plan_id") @db.Uuid
   status                String   @default("TRIAL")
-  stripeCustomerId      String?  @map("stripe_customer_id")
-  stripeSubscriptionId  String?  @map("stripe_subscription_id")
+  razorpayCustomerId    String?  @map("razorpay_customer_id")
+  razorpaySubscriptionId String? @map("razorpay_subscription_id")
   trialEndsAt           DateTime? @map("trial_ends_at")
   currentPeriodEnd      DateTime? @map("current_period_end")
   createdAt             DateTime @default(now()) @map("created_at")

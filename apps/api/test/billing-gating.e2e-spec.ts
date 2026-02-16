@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from "../src/common/filters/all-exceptions.filter
 import { requestIdMiddleware } from "../src/common/middleware/request-id.middleware";
 import { requestLoggingMiddleware } from "../src/common/middleware/request-logging.middleware";
 import { PrismaService } from "../src/prisma/prisma.service";
+import { createHmac } from "node:crypto";
 
 jest.setTimeout(60000);
 
@@ -45,6 +46,7 @@ describe("Billing feature gating", () => {
   let prisma: PrismaService;
   let adminAToken = "";
   let adminBToken = "";
+  let opsAToken = "";
   let starterPlanId = "";
   let proPlanId = "";
   let adminBUserId = "";
@@ -61,7 +63,14 @@ describe("Billing feature gating", () => {
     app.use(cookieParser());
     app.use(requestIdMiddleware);
     app.use(requestLoggingMiddleware);
-    app.use(json({ limit: "1mb" }));
+    app.use(
+      json({
+        limit: "1mb",
+        verify: (req: any, _res: any, buf: Buffer) => {
+          req.rawBody = buf?.length ? Buffer.from(buf) : undefined;
+        }
+      })
+    );
     app.use(urlencoded({ extended: true, limit: "1mb" }));
     app.useGlobalPipes(
       new ValidationPipe({
@@ -82,6 +91,7 @@ describe("Billing feature gating", () => {
     prisma = app.get(PrismaService);
     adminAToken = await login(app, "admina@test.kritviya.local");
     adminBToken = await login(app, ADMIN_B_EMAIL);
+    opsAToken = await login(app, "opsa@test.kritviya.local");
 
     const adminB = await prisma.user.findUnique({
       where: { email: ADMIN_B_EMAIL },
@@ -104,6 +114,8 @@ describe("Billing feature gating", () => {
   });
 
   beforeEach(async () => {
+    process.env.RAZORPAY_WEBHOOK_SECRET = "kritviya_webhook_test_secret";
+
     await prisma.subscription.upsert({
       where: { orgId: ORG_A },
       update: { planId: proPlanId, status: "ACTIVE" },
@@ -139,6 +151,15 @@ describe("Billing feature gating", () => {
 
     expect(response.status).toBe(402);
     expect(response.body.error.code).toBe("UPGRADE_REQUIRED");
+  });
+
+  it("create-subscription is blocked for non-CEO/Admin roles", async () => {
+    const response = await request(app.getHttpServer())
+      .post("/billing/create-subscription")
+      .set("Authorization", `Bearer ${opsAToken}`)
+      .send({ planKey: "pro" });
+
+    expect(response.status).toBe(403);
   });
 
   it("pro org can access portfolio endpoints", async () => {
@@ -230,5 +251,62 @@ describe("Billing feature gating", () => {
     expect(response.status).toBe(402);
     expect(response.body.error.code).toBe("UPGRADE_REQUIRED");
     expect(response.body.error.message).toContain("Invoices limit");
+  });
+
+  it("starter org remains blocked until Razorpay webhook activates Pro plan", async () => {
+    await prisma.subscription.update({
+      where: { orgId: ORG_B },
+      data: {
+        planId: starterPlanId,
+        status: "TRIAL",
+        razorpaySubscriptionId: "sub_test_org_b"
+      }
+    });
+
+    const blockedBefore = await request(app.getHttpServer())
+      .get("/portfolio")
+      .set("Authorization", `Bearer ${adminBToken}`);
+
+    expect(blockedBefore.status).toBe(402);
+
+    const payload = {
+      event: "subscription.activated",
+      payload: {
+        subscription: {
+          entity: {
+            id: "sub_test_org_b",
+            current_end: 1767225600,
+            notes: {
+              planKey: "pro"
+            }
+          }
+        }
+      }
+    };
+    const raw = JSON.stringify(payload);
+    const signature = createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET || "")
+      .update(raw)
+      .digest("hex");
+
+    const webhookResponse = await request(app.getHttpServer())
+      .post("/billing/webhook")
+      .set("x-razorpay-signature", signature)
+      .set("Content-Type", "application/json")
+      .send(raw);
+
+    expect(webhookResponse.status).toBe(201);
+
+    const allowedAfter = await request(app.getHttpServer())
+      .get("/portfolio")
+      .set("Authorization", `Bearer ${adminBToken}`);
+
+    expect(allowedAfter.status).toBe(200);
+
+    const updatedSubscription = await prisma.subscription.findUnique({
+      where: { orgId: ORG_B },
+      include: { plan: true }
+    });
+    expect(updatedSubscription?.status).toBe("ACTIVE");
+    expect(updatedSubscription?.plan.key).toBe("pro");
   });
 });

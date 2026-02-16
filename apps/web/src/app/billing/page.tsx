@@ -1,17 +1,63 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../components/app-shell";
-import { ApiError, BillingPlanPayload, OrgUsagePayload, getBillingPlan, getOrgUsage } from "../../lib/api";
+import {
+  ApiError,
+  BillingPlanPayload,
+  OrgUsagePayload,
+  createBillingSubscription,
+  getBillingPlan,
+  getOrgUsage
+} from "../../lib/api";
 import { useAuthUser } from "../../lib/use-auth-user";
 
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+function nextPlanKey(current: string): "growth" | "pro" | "enterprise" | null {
+  if (current === "starter") {
+    return "growth";
+  }
+  if (current === "growth") {
+    return "pro";
+  }
+  if (current === "pro") {
+    return "enterprise";
+  }
+  return null;
+}
+
+async function loadRazorpayScript(): Promise<boolean> {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (window.Razorpay) {
+    return true;
+  }
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function BillingPage() {
+  const router = useRouter();
   const { user, token, loading, error } = useAuthUser();
   const [planData, setPlanData] = useState<BillingPlanPayload | null>(null);
   const [usageData, setUsageData] = useState<OrgUsagePayload | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [submittingUpgrade, setSubmittingUpgrade] = useState(false);
 
   const forbidden = user && user.role !== "CEO" && user.role !== "ADMIN";
 
@@ -37,7 +83,9 @@ export default function BillingPage() {
           setRequestError("403: Forbidden");
           return;
         }
-        setRequestError(requestFailure instanceof Error ? requestFailure.message : "Failed to load billing data");
+        setRequestError(
+          requestFailure instanceof Error ? requestFailure.message : "Failed to load billing data"
+        );
       } finally {
         setLoadingData(false);
       }
@@ -58,6 +106,8 @@ export default function BillingPage() {
     ];
   }, [planData]);
 
+  const targetPlan = planData ? nextPlanKey(planData.plan.key) : null;
+
   function renderMeter(label: string, used: number, limit: number | null) {
     const ratio = limit ? Math.min(100, Math.round((used / Math.max(limit, 1)) * 100)) : null;
     const warning = ratio !== null && ratio >= 80;
@@ -69,7 +119,7 @@ export default function BillingPage() {
             {label}
           </p>
           <strong>
-            {used} / {limit ?? "∞"}
+            {used} / {limit ?? "infinite"}
           </strong>
         </div>
         {ratio !== null ? (
@@ -130,7 +180,7 @@ export default function BillingPage() {
                   {planData.plan.name} Plan
                 </h2>
                 <p className="kv-note" style={{ margin: 0 }}>
-                  ₹{planData.plan.priceMonthly} / month
+                  INR {planData.plan.priceMonthly} / month
                 </p>
               </div>
               <span className="kv-pill">{planData.subscription.status}</span>
@@ -159,9 +209,58 @@ export default function BillingPage() {
               <p className="kv-note" style={{ margin: 0 }}>
                 Updated {new Date(usageData.updatedAt).toLocaleString()}
               </p>
-              <Link href="/billing/upgrade" className="kv-btn-primary kv-link-btn">
-                Upgrade Plan
-              </Link>
+              <button
+                type="button"
+                className="kv-btn-primary"
+                disabled={!token || !targetPlan || submittingUpgrade}
+                onClick={async () => {
+                  if (!token || !targetPlan) {
+                    return;
+                  }
+                  try {
+                    setSubmittingUpgrade(true);
+                    setRequestError(null);
+                    const loaded = await loadRazorpayScript();
+                    if (!loaded || !window.Razorpay) {
+                      throw new Error("Failed to load Razorpay checkout.");
+                    }
+
+                    const checkout = await createBillingSubscription(token, targetPlan);
+                    const razorpay = new window.Razorpay({
+                      key: checkout.razorpayKeyId,
+                      subscription_id: checkout.subscriptionId,
+                      name: "Kritviya",
+                      description: `Upgrade to ${targetPlan.toUpperCase()} plan`,
+                      prefill: {
+                        name: user.name,
+                        email: user.email
+                      },
+                      notes: {
+                        orgId: user.activeOrgId ?? user.orgId,
+                        planKey: targetPlan
+                      },
+                      handler: () => {
+                        router.push("/billing/success");
+                      }
+                    });
+                    razorpay.open();
+                  } catch (upgradeError) {
+                    setRequestError(
+                      upgradeError instanceof Error
+                        ? upgradeError.message
+                        : "Failed to create billing subscription"
+                    );
+                  } finally {
+                    setSubmittingUpgrade(false);
+                  }
+                }}
+              >
+                {submittingUpgrade
+                  ? "Launching..."
+                  : targetPlan
+                    ? `Upgrade to ${targetPlan.toUpperCase()}`
+                    : "Already on highest plan"}
+              </button>
             </div>
           </section>
         </div>

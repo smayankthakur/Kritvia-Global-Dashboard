@@ -12,7 +12,10 @@ import { requestLoggingMiddleware } from "./common/middleware/request-logging.mi
 
 const cookieParser = require("cookie-parser") as () => (req: any, res: any, next: () => void) => void;
 const expressRuntime = require("express") as {
-  json: (options: { limit: string }) => (req: any, res: any, next: () => void) => void;
+  json: (options: {
+    limit: string;
+    verify?: (req: any, res: any, buf: Buffer) => void;
+  }) => (req: any, res: any, next: () => void) => void;
   urlencoded: (options: { extended: boolean; limit: string }) => (req: any, res: any, next: () => void) => void;
 };
 
@@ -105,7 +108,14 @@ export async function createConfiguredApp(): Promise<INestApplication> {
   app.use(cookieParser());
   app.use(requestIdMiddleware);
   app.use(requestLoggingMiddleware);
-  app.use(expressRuntime.json({ limit: "1mb" }));
+  app.use(
+    expressRuntime.json({
+      limit: "1mb",
+      verify: (req: any, _res: any, buf: Buffer) => {
+        req.rawBody = buf?.length ? Buffer.from(buf) : undefined;
+      }
+    })
+  );
   app.use(expressRuntime.urlencoded({ extended: true, limit: "1mb" }));
   app.useGlobalPipes(
     new ValidationPipe({

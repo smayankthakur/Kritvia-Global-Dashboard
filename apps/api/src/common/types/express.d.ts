@@ -5,9 +5,9 @@ declare global {
     interface Request {
       requestId?: string;
       user?: AuthUserContext;
+      rawBody?: Buffer;
     }
   }
 }
 
 export {};
-
