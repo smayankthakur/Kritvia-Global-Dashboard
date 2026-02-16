@@ -4,11 +4,19 @@ import { AuthModule } from "../auth/auth.module";
 import { BillingModule } from "../billing/billing.module";
 import { OrgWebhooksModule } from "../org-webhooks/org-webhooks.module";
 import { PrismaModule } from "../prisma/prisma.module";
+import { QueueModule } from "../queue/queue.module";
 import { AiActionsController } from "./ai-actions.controller";
 import { AiActionsService } from "./ai-actions.service";
 
 @Module({
-  imports: [PrismaModule, AuthModule, BillingModule, ActivityLogModule, OrgWebhooksModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    BillingModule,
+    ActivityLogModule,
+    OrgWebhooksModule,
+    QueueModule
+  ],
   controllers: [AiActionsController],
   providers: [AiActionsService],
   exports: [AiActionsService]

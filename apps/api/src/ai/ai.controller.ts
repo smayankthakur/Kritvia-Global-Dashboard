@@ -17,6 +17,8 @@ import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
+import { assertFeatureEnabled } from "../common/feature-flags";
+import { JobQueueService } from "../queue/job-queue.service";
 import { AiService } from "./ai.service";
 
 @Controller()
@@ -24,7 +26,8 @@ export class AiController {
   constructor(
     private readonly aiService: AiService,
     private readonly billingService: BillingService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly jobQueueService: JobQueueService
   ) {}
 
   @Post("ai/compute-insights")
@@ -37,16 +40,20 @@ export class AiController {
       user?: AuthUserContext;
     }
   ) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const auth = this.assertAdminOrSecret(req, jobsSecretHeader);
     const orgId = auth.orgId;
     await this.billingService.assertFeature(orgId, "revenueIntelligenceEnabled");
-    return this.aiService.computeInsights(orgId);
+    return this.jobQueueService.enqueueAndWait("compute-insights", () =>
+      this.aiService.computeInsights(orgId)
+    );
   }
 
   @Get("ceo/insights")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CEO, Role.ADMIN)
   async listInsights(@Req() req: { user: AuthUserContext }) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
     await this.billingService.assertFeature(orgId, "revenueIntelligenceEnabled");
     return this.aiService.listUnresolved(orgId);
@@ -59,6 +66,7 @@ export class AiController {
     @Param("id") insightId: string,
     @Req() req: { user: AuthUserContext }
   ) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
     await this.billingService.assertFeature(orgId, "revenueIntelligenceEnabled");
     return this.aiService.resolveInsight(orgId, insightId, req.user.userId);

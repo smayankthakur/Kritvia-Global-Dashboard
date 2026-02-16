@@ -163,7 +163,8 @@ export class OrgAppsService {
       include: {
         app: true
       },
-      orderBy: [{ installedAt: "desc" }]
+      orderBy: [{ installedAt: "desc" }],
+      take: 100
     });
 
     return installs.map((install) => ({

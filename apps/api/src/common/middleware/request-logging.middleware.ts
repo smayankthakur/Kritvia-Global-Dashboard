@@ -26,9 +26,9 @@ export function requestLoggingMiddleware(
     const payload = {
       requestId: req.requestId ?? null,
       method: req.method,
-      path: req.originalUrl ?? req.url,
+      endpoint: req.originalUrl ?? req.url,
       statusCode: res.statusCode,
-      duration_ms: durationMs,
+      durationMs,
       userId,
       orgId,
       ip: req.ip ?? null

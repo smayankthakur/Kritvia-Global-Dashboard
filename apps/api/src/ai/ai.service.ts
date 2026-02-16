@@ -7,6 +7,7 @@ import {
   WorkItemStatus
 } from "@prisma/client";
 import { ActivityLogService } from "../activity-log/activity-log.service";
+import { TtlCache } from "../common/cache/ttl-cache.util";
 import { WEBHOOK_EVENTS } from "../org-webhooks/webhook-events";
 import { WebhookService } from "../org-webhooks/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -63,6 +64,9 @@ const SEVERITY_ORDER: Record<Severity, number> = {
 
 @Injectable()
 export class AiService {
+  private static readonly cache = new TtlCache();
+  private static readonly CACHE_TTL_MS = 60_000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
@@ -70,6 +74,7 @@ export class AiService {
   ) {}
 
   async computeInsights(orgId: string): Promise<InsightSummaryResponse> {
+    AiService.cache.delete(`insights:${orgId}`);
     const metrics = await this.collectMetrics(orgId);
     const candidates = this.buildCandidates(metrics);
     const createdInsights: Array<{
@@ -143,6 +148,12 @@ export class AiService {
   }
 
   async listUnresolved(orgId: string): Promise<InsightListItem[]> {
+    const cacheKey = `insights:${orgId}`;
+    const cached = AiService.cache.get<InsightListItem[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const insights = await this.prisma.aIInsight.findMany({
       where: {
         orgId,
@@ -150,7 +161,7 @@ export class AiService {
       }
     });
 
-    return insights
+    const response = insights
       .sort((left, right) => {
         const severityDelta =
           this.severityRank(right.severity) - this.severityRank(left.severity);
@@ -177,6 +188,9 @@ export class AiService {
         createdAt: insight.createdAt.toISOString(),
         resolvedAt: insight.resolvedAt ? insight.resolvedAt.toISOString() : null
       }));
+
+    AiService.cache.set(cacheKey, response, AiService.CACHE_TTL_MS);
+    return response;
   }
 
   async resolveInsight(orgId: string, insightId: string, actorUserId: string): Promise<{ success: true }> {
@@ -209,6 +223,7 @@ export class AiService {
         }
       });
     }
+    AiService.cache.delete(`insights:${orgId}`);
     return { success: true };
   }
 

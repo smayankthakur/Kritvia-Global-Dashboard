@@ -14,9 +14,11 @@ import { ActivityLogService } from "../activity-log/activity-log.service";
 import { AuthUserContext, AuthTokenPayload } from "../auth/auth.types";
 import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
+import { PaginatedResponseDto, toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { AcceptOrgInviteDto, AcceptOrgInviteResponse } from "./dto/accept-org-invite.dto";
 import { InviteOrgMemberDto } from "./dto/invite-org-member.dto";
+import { ListOrgMembersDto } from "./dto/list-org-members.dto";
 import { UpdateOrgMemberDto } from "./dto/update-org-member.dto";
 
 const INVITE_WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -31,29 +33,51 @@ export class OrgMembersService {
     private readonly billingService: BillingService
   ) {}
 
-  async listMembers(authUser: AuthUserContext) {
+  async listMembers(
+    authUser: AuthUserContext,
+    query: ListOrgMembersDto
+  ): Promise<
+    PaginatedResponseDto<{
+      userId: string | null;
+      name: string | null;
+      email: string;
+      role: Role;
+      status: string;
+      joinedAt: Date | null;
+    }>
+  > {
     const activeOrgId = authUser.activeOrgId ?? authUser.orgId;
+    const skip = (query.page - 1) * query.pageSize;
 
-    const members = await this.prisma.orgMember.findMany({
-      where: {
-        orgId: activeOrgId
-      },
-      orderBy: [{ createdAt: "asc" }],
-      select: {
-        userId: true,
-        email: true,
-        role: true,
-        status: true,
-        joinedAt: true,
-        user: {
-          select: {
-            name: true
+    const [members, total] = await this.prisma.$transaction([
+      this.prisma.orgMember.findMany({
+        where: {
+          orgId: activeOrgId
+        },
+        orderBy: [{ createdAt: "asc" }],
+        skip,
+        take: query.pageSize,
+        select: {
+          userId: true,
+          email: true,
+          role: true,
+          status: true,
+          joinedAt: true,
+          user: {
+            select: {
+              name: true
+            }
           }
         }
-      }
-    });
+      }),
+      this.prisma.orgMember.count({
+        where: {
+          orgId: activeOrgId
+        }
+      })
+    ]);
 
-    return members.map((member) => ({
+    const items = members.map((member) => ({
       userId: member.userId,
       name: member.user?.name ?? null,
       email: member.email,
@@ -61,6 +85,8 @@ export class OrgMembersService {
       status: member.status,
       joinedAt: member.joinedAt
     }));
+
+    return toPaginatedResponse(items, query.page, query.pageSize, total);
   }
 
   async getUsage(authUser: AuthUserContext) {

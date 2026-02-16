@@ -3,6 +3,7 @@ import { createHash, createHmac } from "node:crypto";
 import { decryptAppConfig } from "../marketplace/app-config-crypto.util";
 import { decryptAppSecret } from "../marketplace/app-secret-crypto.util";
 import { PrismaService } from "../prisma/prisma.service";
+import { JobQueueService } from "../queue/job-queue.service";
 
 type DispatchEndpoint = {
   id: string;
@@ -29,39 +30,52 @@ type AppInstallCandidate = {
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobQueueService: JobQueueService
+  ) {}
 
   async dispatch(orgId: string, eventName: string, payload: Record<string, unknown>): Promise<void> {
-    const body = JSON.stringify(payload);
+    await this.jobQueueService
+      .enqueueAndWait(`webhook-dispatch:${eventName}`, async () => {
+        const body = JSON.stringify(payload);
 
-    const endpoints = await this.prisma.webhookEndpoint.findMany({
-      where: {
-        orgId,
-        isActive: true,
-        url: {
-          not: {
-            startsWith: "app-install://"
+        const endpoints = await this.prisma.webhookEndpoint.findMany({
+          where: {
+            orgId,
+            isActive: true,
+            url: {
+              not: {
+                startsWith: "app-install://"
+              }
+            }
+          },
+          select: {
+            id: true,
+            orgId: true,
+            url: true,
+            secret: true,
+            events: true,
+            failureCount: true
+          }
+        });
+
+        if (endpoints.length > 0) {
+          const matching = endpoints.filter((endpoint) => this.supportsEvent(endpoint.events, eventName));
+          if (matching.length > 0) {
+            await Promise.all(matching.map((endpoint) => this.dispatchToEndpoint(endpoint, eventName, body)));
           }
         }
-      },
-      select: {
-        id: true,
-        orgId: true,
-        url: true,
-        secret: true,
-        events: true,
-        failureCount: true
-      }
-    });
 
-    if (endpoints.length > 0) {
-      const matching = endpoints.filter((endpoint) => this.supportsEvent(endpoint.events, eventName));
-      if (matching.length > 0) {
-        await Promise.all(matching.map((endpoint) => this.dispatchToEndpoint(endpoint, eventName, body)));
-      }
-    }
-
-    await this.dispatchToInstalledApps(orgId, eventName, body);
+        await this.dispatchToInstalledApps(orgId, eventName, body);
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Webhook dispatch failed for org=${orgId} event=${eventName}: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+      });
   }
 
   async retryDelivery(

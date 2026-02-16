@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { AuthUserContext } from "../auth/auth.types";
 import { getActiveOrgId } from "../common/auth-org";
+import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { ListMarketplaceAppsDto } from "./dto/list-marketplace-apps.dto";
 
@@ -35,12 +36,18 @@ export class MarketplaceService {
       ];
     }
 
-    const apps = await this.prisma.marketplaceApp.findMany({
-      where,
-      orderBy: [{ name: "asc" }]
-    });
+    const skip = (dto.page - 1) * dto.pageSize;
+    const [apps, total] = await this.prisma.$transaction([
+      this.prisma.marketplaceApp.findMany({
+        where,
+        orderBy: [{ name: "asc" }],
+        skip,
+        take: dto.pageSize
+      }),
+      this.prisma.marketplaceApp.count({ where })
+    ]);
 
-    return apps.map((app) => ({
+    const items = apps.map((app) => ({
       id: app.id,
       key: app.key,
       name: app.name,
@@ -56,6 +63,8 @@ export class MarketplaceService {
       createdAt: app.createdAt,
       updatedAt: app.updatedAt
     }));
+
+    return toPaginatedResponse(items, dto.page, dto.pageSize, total);
   }
 
   async getByKey(key: string, authUser: AuthUserContext) {

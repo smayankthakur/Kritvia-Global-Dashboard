@@ -17,6 +17,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { CreateWebhookEndpointDto } from "./dto/create-webhook-endpoint.dto";
 import { ListWebhookDeliveriesDto } from "./dto/list-webhook-deliveries.dto";
 import { RetryWebhookDeliveryDto } from "./dto/retry-webhook-delivery.dto";
+import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { OrgWebhooksService } from "./org-webhooks.service";
 
 @Controller("org/webhooks")
@@ -31,8 +32,8 @@ export class OrgWebhooksController {
   }
 
   @Get()
-  async list(@Req() req: { user: AuthUserContext }) {
-    return this.orgWebhooksService.list(req.user);
+  async list(@Req() req: { user: AuthUserContext }, @Query() query: PaginationQueryDto) {
+    return this.orgWebhooksService.list(req.user, query);
   }
 
   @Delete(":id")

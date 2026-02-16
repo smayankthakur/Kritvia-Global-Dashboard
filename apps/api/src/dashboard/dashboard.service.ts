@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DealStage, InvoiceStatus, WorkItemStatus } from "@prisma/client";
 import { AuthUserContext } from "../auth/auth.types";
+import { TtlCache } from "../common/cache/ttl-cache.util";
 import { PrismaService } from "../prisma/prisma.service";
 
 function startOfUtcDay(date: Date): Date {
@@ -9,9 +10,30 @@ function startOfUtcDay(date: Date): Date {
 
 @Injectable()
 export class DashboardService {
+  private static readonly cache = new TtlCache();
+  private static readonly CACHE_TTL_MS = 60_000;
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getCeoDashboard(authUser: AuthUserContext) {
+    const orgId = authUser.activeOrgId ?? authUser.orgId;
+    const cacheKey = `ceo-dashboard:${orgId}`;
+    const cached = DashboardService.cache.get<{
+      kpis: {
+        openDealsValue: number;
+        overdueWorkCount: number;
+        invoicesDueTotal: number;
+        invoicesOverdueTotal: number;
+      };
+      bottlenecks: {
+        overdueWorkItems: unknown[];
+        overdueInvoices: unknown[];
+      };
+    }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const today = startOfUtcDay(new Date());
     const nextWeek = new Date(today);
     nextWeek.setUTCDate(today.getUTCDate() + 7);
@@ -19,19 +41,19 @@ export class DashboardService {
     const [openDealsAgg, overdueWorkCount, invoicesDueAgg, invoicesOverdueAgg, overdueWorkItems, overdueInvoices] =
       await Promise.all([
         this.prisma.deal.aggregate({
-          where: { orgId: authUser.orgId, stage: DealStage.OPEN },
+          where: { orgId, stage: DealStage.OPEN },
           _sum: { valueAmount: true }
         }),
         this.prisma.workItem.count({
           where: {
-            orgId: authUser.orgId,
+            orgId,
             status: { not: WorkItemStatus.DONE },
             dueDate: { lt: today }
           }
         }),
         this.prisma.invoice.aggregate({
           where: {
-            orgId: authUser.orgId,
+            orgId,
             status: { not: InvoiceStatus.PAID },
             dueDate: { gte: today, lte: nextWeek }
           },
@@ -39,7 +61,7 @@ export class DashboardService {
         }),
         this.prisma.invoice.aggregate({
           where: {
-            orgId: authUser.orgId,
+            orgId,
             status: { not: InvoiceStatus.PAID },
             dueDate: { lt: today }
           },
@@ -47,7 +69,7 @@ export class DashboardService {
         }),
         this.prisma.workItem.findMany({
           where: {
-            orgId: authUser.orgId,
+            orgId,
             status: { not: WorkItemStatus.DONE },
             dueDate: { lt: today }
           },
@@ -66,7 +88,7 @@ export class DashboardService {
         }),
         this.prisma.invoice.findMany({
           where: {
-            orgId: authUser.orgId,
+            orgId,
             status: { not: InvoiceStatus.PAID },
             dueDate: { lt: today }
           },
@@ -85,7 +107,7 @@ export class DashboardService {
         })
       ]);
 
-    return {
+    const response = {
       kpis: {
         openDealsValue: openDealsAgg._sum.valueAmount ?? 0,
         overdueWorkCount,
@@ -97,5 +119,8 @@ export class DashboardService {
         overdueInvoices
       }
     };
+
+    DashboardService.cache.set(cacheKey, response, DashboardService.CACHE_TTL_MS);
+    return response;
   }
 }

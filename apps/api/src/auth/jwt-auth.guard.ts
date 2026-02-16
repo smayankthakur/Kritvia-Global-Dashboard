@@ -14,6 +14,9 @@ import { AuthTokenPayload, AuthUserContext } from "./auth.types";
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
+  private readonly userRateState = new Map<string, { windowStartedAt: number; count: number }>();
+  private readonly orgRateState = new Map<string, { windowStartedAt: number; count: number }>();
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService
@@ -64,6 +67,7 @@ export class JwtAuthGuard implements CanActivate {
         email: payload.email,
         name: payload.name
       };
+      this.enforceUserAndOrgRateLimits(request.user);
 
       return true;
     } catch {
@@ -140,6 +144,7 @@ export class JwtAuthGuard implements CanActivate {
             serviceAccountId: matched.id,
             serviceAccountScopes: this.parseServiceAccountScopes(matched.scopes)
           };
+          this.enforceOrgFallbackRateLimit(matched.orgId);
           return true;
         }
 
@@ -218,5 +223,51 @@ export class JwtAuthGuard implements CanActivate {
           // Fire-and-forget: never block/alter response flow for logging failures.
         });
     });
+  }
+
+  private enforceUserAndOrgRateLimits(user: AuthUserContext): void {
+    const roleLimit = this.limitForRole(user.role);
+    this.enforceWindowRate(this.userRateState, `${user.userId}:${user.role}`, roleLimit, {
+      code: "TOO_MANY_REQUESTS",
+      message: "User rate limit exceeded"
+    });
+    this.enforceOrgFallbackRateLimit(user.activeOrgId ?? user.orgId);
+  }
+
+  private enforceOrgFallbackRateLimit(orgId: string): void {
+    this.enforceWindowRate(this.orgRateState, orgId, 500, {
+      code: "TOO_MANY_REQUESTS",
+      message: "Organization request rate limit exceeded"
+    });
+  }
+
+  private limitForRole(role: string): number {
+    if (role === "CEO" || role === "ADMIN") {
+      return 120;
+    }
+    if (role === "OPS") {
+      return 90;
+    }
+    return 100;
+  }
+
+  private enforceWindowRate(
+    store: Map<string, { windowStartedAt: number; count: number }>,
+    key: string,
+    maxPerMinute: number,
+    errorPayload: { code: string; message: string }
+  ): void {
+    const now = Date.now();
+    const state = store.get(key);
+    if (!state || now - state.windowStartedAt >= 60_000) {
+      store.set(key, { windowStartedAt: now, count: 1 });
+      return;
+    }
+
+    const nextCount = state.count + 1;
+    if (nextCount > maxPerMinute) {
+      throw new HttpException(errorPayload, HttpStatus.TOO_MANY_REQUESTS);
+    }
+    store.set(key, { ...state, count: nextCount });
   }
 }

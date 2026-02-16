@@ -76,7 +76,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 100
+        limit: 500
       }
     ])
   ],

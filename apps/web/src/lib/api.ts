@@ -1802,7 +1802,14 @@ export async function listOrgMembers(token: string): Promise<OrgMemberRow[]> {
     headers: authHeaders(token),
     cache: "no-store"
   });
-  return parseResponse(response, "Failed to fetch org members");
+  const payload = await parseResponse<OrgMemberRow[] | PaginatedResponse<OrgMemberRow>>(
+    response,
+    "Failed to fetch org members"
+  );
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  return payload.items;
 }
 
 export async function inviteOrgMember(
@@ -1951,7 +1958,14 @@ export async function getPublicOpenApi(token: string): Promise<PublicOpenApiDocu
 
 export async function listMarketplaceApps(
   token: string,
-  options?: { q?: string; category?: string }
+  options?: {
+    q?: string;
+    category?: string;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  }
 ): Promise<MarketplaceAppRecord[]> {
   const params = new URLSearchParams();
   if (options?.q?.trim()) {
@@ -1960,12 +1974,19 @@ export async function listMarketplaceApps(
   if (options?.category?.trim()) {
     params.set("category", options.category.trim());
   }
+  addPaginationParams(params, options);
   const query = params.toString();
   const response = await request(`${API_BASE_URL}/marketplace/apps${query ? `?${query}` : ""}`, {
     headers: authHeaders(token),
     cache: "no-store"
   });
-  return parseResponse(response, "Failed to fetch marketplace apps");
+  const payload = await parseResponse<
+    MarketplaceAppRecord[] | PaginatedResponse<MarketplaceAppRecord>
+  >(response, "Failed to fetch marketplace apps");
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  return payload.items;
 }
 
 export async function getMarketplaceApp(token: string, key: string): Promise<MarketplaceAppDetail> {

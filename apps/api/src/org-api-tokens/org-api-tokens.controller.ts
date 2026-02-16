@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { Role } from "@prisma/client";
 import { AuthUserContext } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
+import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { CreateApiTokenDto } from "./dto/create-api-token.dto";
 import { OrgApiTokensService } from "./org-api-tokens.service";
 
@@ -19,8 +20,8 @@ export class OrgApiTokensController {
   }
 
   @Get()
-  async list(@Req() req: { user: AuthUserContext }) {
-    return this.orgApiTokensService.list(req.user);
+  async list(@Req() req: { user: AuthUserContext }, @Query() query: PaginationQueryDto) {
+    return this.orgApiTokensService.list(req.user, query);
   }
 
   @Delete(":id")

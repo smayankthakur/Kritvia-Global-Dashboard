@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from "@nestjs/common";
 import { AuthUserContext } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { assertFeatureEnabled } from "../common/feature-flags";
 import { ListMarketplaceAppsDto } from "./dto/list-marketplace-apps.dto";
 import { MarketplaceService } from "./marketplace.service";
 
@@ -11,11 +12,13 @@ export class MarketplaceController {
 
   @Get()
   async list(@Query() query: ListMarketplaceAppsDto) {
+    assertFeatureEnabled("FEATURE_MARKETPLACE_ENABLED");
     return this.marketplaceService.listPublished(query);
   }
 
   @Get(":key")
   async getByKey(@Req() req: { user: AuthUserContext }, @Param("key") key: string) {
+    assertFeatureEnabled("FEATURE_MARKETPLACE_ENABLED");
     return this.marketplaceService.getByKey(key, req.user);
   }
 }

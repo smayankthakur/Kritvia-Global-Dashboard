@@ -10,6 +10,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Role } from "@prisma/client";
 import { AuthTokenPayload } from "../auth/auth.types";
 import { BillingService } from "../billing/billing.service";
+import { assertFeatureEnabled } from "../common/feature-flags";
 import { JobsRunService } from "./jobs-run.service";
 
 @Controller("jobs")
@@ -29,6 +30,7 @@ export class JobsController {
       cookies?: Record<string, string | undefined>;
     }
   ) {
+    assertFeatureEnabled("FEATURE_AUTOPILOT_ENABLED");
     if (!this.isSecretAuthorized(jobsSecretHeader)) {
       const payload = this.assertAdmin(req);
       const activeOrgId = payload.activeOrgId ?? payload.orgId;
@@ -47,6 +49,7 @@ export class JobsController {
       cookies?: Record<string, string | undefined>;
     }
   ) {
+    assertFeatureEnabled("FEATURE_AUTOPILOT_ENABLED");
     if (!this.isSecretAuthorized(jobsSecretHeader)) {
       this.assertAdmin(req);
     }

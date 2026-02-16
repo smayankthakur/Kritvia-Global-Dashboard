@@ -17,6 +17,8 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { getActiveOrgId } from "../common/auth-org";
+import { assertFeatureEnabled } from "../common/feature-flags";
+import { JobQueueService } from "../queue/job-queue.service";
 import { ListAiActionsDto } from "./dto/list-ai-actions.dto";
 import { AiActionsService } from "./ai-actions.service";
 
@@ -24,7 +26,8 @@ import { AiActionsService } from "./ai-actions.service";
 export class AiActionsController {
   constructor(
     private readonly aiActionsService: AiActionsService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly jobQueueService: JobQueueService
   ) {}
 
   @Post("ai/compute-actions")
@@ -36,14 +39,18 @@ export class AiActionsController {
       cookies?: Record<string, string | undefined>;
     }
   ) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = this.assertAdminOrSecret(req, jobsSecretHeader);
-    return this.aiActionsService.computeActions(orgId);
+    return this.jobQueueService.enqueueAndWait("compute-actions", () =>
+      this.aiActionsService.computeActions(orgId)
+    );
   }
 
   @Get("ai/actions")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CEO, Role.ADMIN)
   async listActions(@Req() req: { user: AuthUserContext }, @Query() query: ListAiActionsDto) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
     return this.aiActionsService.listActions(orgId, query);
   }
@@ -52,6 +59,7 @@ export class AiActionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CEO, Role.ADMIN)
   async approve(@Param("id") id: string, @Req() req: { user: AuthUserContext }) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
     return this.aiActionsService.approveAction(orgId, id, req.user.userId);
   }
@@ -60,6 +68,7 @@ export class AiActionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CEO, Role.ADMIN, Role.OPS)
   async execute(@Param("id") id: string, @Req() req: { user: AuthUserContext }) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
     return this.aiActionsService.executeAction(orgId, id, req.user);
   }
@@ -68,6 +77,7 @@ export class AiActionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CEO, Role.ADMIN)
   async undo(@Param("id") id: string, @Req() req: { user: AuthUserContext }) {
+    assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
     return this.aiActionsService.undoAction(orgId, id, req.user.userId);
   }

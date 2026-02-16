@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { Role } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthUserContext } from "../auth/auth.types";
@@ -6,6 +6,7 @@ import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { AcceptOrgInviteDto } from "./dto/accept-org-invite.dto";
 import { InviteOrgMemberDto } from "./dto/invite-org-member.dto";
+import { ListOrgMembersDto } from "./dto/list-org-members.dto";
 import { UpdateOrgMemberDto } from "./dto/update-org-member.dto";
 import { OrgMembersService } from "./org-members.service";
 
@@ -16,8 +17,8 @@ export class OrgMembersController {
   @Get("members")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CEO, Role.ADMIN)
-  async list(@Req() req: { user: AuthUserContext }) {
-    return this.orgMembersService.listMembers(req.user);
+  async list(@Req() req: { user: AuthUserContext }, @Query() query: ListOrgMembersDto) {
+    return this.orgMembersService.listMembers(req.user, query);
   }
 
   @Get("usage")

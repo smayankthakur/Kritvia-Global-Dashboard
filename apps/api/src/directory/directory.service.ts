@@ -7,9 +7,10 @@ export class DirectoryService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listUsers(authUser: AuthUserContext) {
+    const orgId = authUser.activeOrgId ?? authUser.orgId;
     return this.prisma.user.findMany({
       where: {
-        orgId: authUser.orgId
+        orgId
       },
       select: {
         id: true,
@@ -17,8 +18,8 @@ export class DirectoryService {
         role: true,
         isActive: true
       },
-      orderBy: [{ isActive: "desc" }, { name: "asc" }, { id: "asc" }]
+      orderBy: [{ isActive: "desc" }, { name: "asc" }, { id: "asc" }],
+      take: 100
     });
   }
 }
-

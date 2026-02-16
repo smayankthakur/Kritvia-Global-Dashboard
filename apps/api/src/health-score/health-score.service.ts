@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { DealStage, InvoiceStatus, Prisma, WorkItemStatus } from "@prisma/client";
 import { AuthUserContext } from "../auth/auth.types";
+import { TtlCache } from "../common/cache/ttl-cache.util";
 import { PrismaService } from "../prisma/prisma.service";
 import { HealthScoreExplainResponseDto } from "./dto/health-score-explain-response.dto";
 import { HealthScoreResponseDto } from "./dto/health-score-response.dto";
@@ -26,21 +27,30 @@ function parseDateKey(dateKey: string): Date {
 @Injectable()
 export class HealthScoreService {
   private readonly staleDays = 7;
+  private static readonly cache = new TtlCache();
+  private static readonly CACHE_TTL_MS = 60_000;
 
   constructor(private readonly prisma: PrismaService) {}
 
   async getOrComputeForUser(authUser: AuthUserContext): Promise<HealthScoreResponseDto> {
+    const orgId = authUser.activeOrgId ?? authUser.orgId;
+    const cacheKey = `health-score:${orgId}`;
+    const cached = HealthScoreService.cache.get<HealthScoreResponseDto>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const now = new Date();
     const targetDateKey = dateKeyOf(now);
-    const snapshot = await this.getOrComputeSnapshotForDate(authUser.orgId, targetDateKey);
+    const snapshot = await this.getOrComputeSnapshotForDate(orgId, targetDateKey);
     const yesterdaySnapshot = await this.getOrComputeSnapshotForDate(
-      authUser.orgId,
+      orgId,
       dateKeyOf(this.previousDayOf(parseDateKey(targetDateKey)))
     );
     const breakdown = snapshot.breakdown as unknown as HealthScoreResponseDto["breakdown"];
     const yesterdayScore = yesterdaySnapshot.score;
 
-    return {
+    const response = {
       score: snapshot.score,
       breakdown,
       computedAt: snapshot.computedAt.toISOString(),
@@ -50,11 +60,16 @@ export class HealthScoreService {
         delta: snapshot.score - yesterdayScore
       }
     };
+
+    HealthScoreService.cache.set(cacheKey, response, HealthScoreService.CACHE_TTL_MS);
+    return response;
   }
 
   async computeForUser(authUser: AuthUserContext): Promise<HealthScoreResponseDto> {
-    const snapshot = await this.computeAndUpsert(authUser.orgId, new Date());
+    const orgId = authUser.activeOrgId ?? authUser.orgId;
+    const snapshot = await this.computeAndUpsert(orgId, new Date());
     const breakdown = snapshot.breakdown as unknown as HealthScoreResponseDto["breakdown"];
+    HealthScoreService.cache.delete(`health-score:${orgId}`);
     return {
       score: snapshot.score,
       breakdown,
