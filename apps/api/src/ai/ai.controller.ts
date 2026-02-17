@@ -19,6 +19,7 @@ import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
 import { assertFeatureEnabled } from "../common/feature-flags";
 import { JobQueueService } from "../queue/job-queue.service";
+import { QUEUE_NAMES } from "../jobs/queues";
 import { AiService } from "./ai.service";
 
 @Controller()
@@ -44,9 +45,10 @@ export class AiController {
     const auth = this.assertAdminOrSecret(req, jobsSecretHeader);
     const orgId = auth.orgId;
     await this.billingService.assertFeature(orgId, "revenueIntelligenceEnabled");
-    return this.jobQueueService.enqueueAndWait("compute-insights", () =>
-      this.aiService.computeInsights(orgId)
-    );
+    if (!this.isJobsEnabled()) {
+      return this.aiService.computeInsights(orgId);
+    }
+    return this.jobQueueService.runNow(QUEUE_NAMES.ai, "compute-insights", { orgId });
   }
 
   @Get("ceo/insights")
@@ -129,5 +131,9 @@ export class AiController {
       return false;
     }
     return configuredSecret === headerValue;
+  }
+
+  private isJobsEnabled(): boolean {
+    return (process.env.JOBS_ENABLED ?? "true").toLowerCase() === "true";
   }
 }

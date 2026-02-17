@@ -1,7 +1,9 @@
 import {
   Controller,
   ForbiddenException,
+  Get,
   Headers,
+  Param,
   Post,
   Req,
   UnauthorizedException
@@ -11,12 +13,13 @@ import { Role } from "@prisma/client";
 import { AuthTokenPayload } from "../auth/auth.types";
 import { BillingService } from "../billing/billing.service";
 import { assertFeatureEnabled } from "../common/feature-flags";
-import { JobsRunService } from "./jobs-run.service";
+import { QueueName } from "./queues";
+import { JobService } from "./job.service";
 
 @Controller("jobs")
 export class JobsController {
   constructor(
-    private readonly jobsRunService: JobsRunService,
+    private readonly jobService: JobService,
     private readonly jwtService: JwtService,
     private readonly billingService: BillingService
   ) {}
@@ -31,13 +34,12 @@ export class JobsController {
     }
   ) {
     assertFeatureEnabled("FEATURE_AUTOPILOT_ENABLED");
-    if (!this.isSecretAuthorized(jobsSecretHeader)) {
-      const payload = this.assertAdmin(req);
-      const activeOrgId = payload.activeOrgId ?? payload.orgId;
-      await this.billingService.assertFeature(activeOrgId, "autopilotEnabled");
+    const auth = this.assertAdminOrSecret(req, jobsSecretHeader);
+    if (auth.type === "jwt") {
+      await this.billingService.assertFeature(auth.orgId, "autopilotEnabled");
     }
 
-    return this.jobsRunService.run();
+    return this.jobService.runNow("maintenance", "autopilot-run", { kind: "autopilot-run" });
   }
 
   @Post("retention/run")
@@ -50,12 +52,24 @@ export class JobsController {
     }
   ) {
     assertFeatureEnabled("FEATURE_AUTOPILOT_ENABLED");
-    if (!this.isSecretAuthorized(jobsSecretHeader)) {
-      this.assertAdmin(req);
-    }
-
-    return this.jobsRunService.runRetention();
+    this.assertAdminOrSecret(req, jobsSecretHeader);
+    return this.jobService.runNow("maintenance", "retention-run", { kind: "retention-run" });
   }
+
+  @Get("status/:queue/:jobId")
+  async getJobStatus(
+    @Param("queue") queue: QueueName,
+    @Param("jobId") jobId: string,
+    @Req()
+    req: {
+      headers: { authorization?: string };
+      cookies?: Record<string, string | undefined>;
+    }
+  ) {
+    this.assertAdmin(req);
+    return this.jobService.getStatus(queue, jobId);
+  }
+
 
   private assertAdmin(req: {
     headers: { authorization?: string };
@@ -98,4 +112,19 @@ export class JobsController {
     }
     return headerValue === configuredSecret;
   }
+
+  private assertAdminOrSecret(
+    req: {
+      headers: { authorization?: string };
+      cookies?: Record<string, string | undefined>;
+    },
+    jobsSecretHeader: string | undefined
+  ): { type: "secret" } | { type: "jwt"; orgId: string } {
+    if (this.isSecretAuthorized(jobsSecretHeader)) {
+      return { type: "secret" };
+    }
+    const payload = this.assertAdmin(req);
+    return { type: "jwt", orgId: payload.activeOrgId ?? payload.orgId };
+  }
+
 }

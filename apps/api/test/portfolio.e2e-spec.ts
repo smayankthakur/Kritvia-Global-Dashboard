@@ -354,6 +354,11 @@ describe("Portfolio Module", () => {
 
     const rowA = (summary.body.rows as SummaryRow[]).find((row) => row.org.id === IDS.orgA);
     const rowB = (summary.body.rows as SummaryRow[]).find((row) => row.org.id === IDS.orgB);
+    expect(rowA).toBeDefined();
+    expect(rowB).toBeDefined();
+    if (!rowA || !rowB) {
+      throw new Error(`Missing portfolio summary rows for orgs ${IDS.orgA} and/or ${IDS.orgB}`);
+    }
 
     expect(rowA.kpis.healthScore).toBe(78);
     expect(rowA.kpis.openNudgesCount).toBe(1);

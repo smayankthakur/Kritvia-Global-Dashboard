@@ -22,6 +22,8 @@ enum ActivityEntityType {
   POLICY
   PORTFOLIO
   APP
+  WEBHOOK
+  ALERT
   API_TOKEN
   AI_INSIGHT
   AI_ACTION
@@ -106,6 +108,19 @@ model Org {
   webhookDeliveries WebhookDelivery[]
   appInstalls  OrgAppInstall[]
   appCommandLogs AppCommandLog[]
+  alertRules   AlertRule[]
+  alertEvents  AlertEvent[]
+  incidents    Incident[]
+  incidentPostmortems IncidentPostmortem[]
+  escalationPolicies EscalationPolicy[]
+  alertEscalations AlertEscalation[]
+  onCallSchedules OnCallSchedule[]
+  onCallAssignmentLogs OnCallAssignmentLog[]
+  holidayCalendars HolidayCalendar[]
+  failedJobs   FailedJob[]
+  alertChannels AlertChannel[]
+  alertDeliveries AlertDelivery[]
+  statusComponents StatusComponent[]
 
   @@map("orgs")
 }
@@ -232,6 +247,14 @@ model User {
   orgMemberships    OrgMember[]      @relation("OrgMemberUser")
   sentOrgInvites    OrgInviteToken[] @relation("OrgInviteInviter")
   installedApps     OrgAppInstall[]  @relation("OrgAppInstalledBy")
+  acknowledgedAlerts AlertEvent[]    @relation("AlertAcknowledgedByUser")
+  ownedIncidents Incident[]          @relation("IncidentOwner")
+  incidentTimelineEntries IncidentTimeline[] @relation("IncidentTimelineActor")
+  incidentParticipants IncidentParticipant[]
+  onCallMembers     OnCallRotationMember[]
+  onCallOverrideFrom OnCallOverride[] @relation("OnCallOverrideFromUser")
+  onCallOverrideTo  OnCallOverride[] @relation("OnCallOverrideToUser")
+  onCallAssignmentLogs OnCallAssignmentLog[]
 
   @@index([orgId])
   @@map("users")
@@ -767,4 +790,392 @@ model LLMReport {
   @@index([orgId, type, createdAt])
   @@unique([orgId, type, inputHash])
   @@map("llm_reports")
+}
+
+model AlertRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  orgId          String   @map("org_id") @db.Uuid
+  type           String
+  isEnabled      Boolean  @default(true) @map("is_enabled")
+  thresholdCount Int      @default(5) @map("threshold_count")
+  windowMinutes  Int      @default(10) @map("window_minutes")
+  severity       String   @default("HIGH")
+  autoCreateIncident Boolean @default(false) @map("auto_create_incident")
+  autoMitigation Json?    @map("auto_mitigation")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  alertEvents    AlertEvent[]
+
+  @@index([orgId, type])
+  @@map("alert_rules")
+}
+
+model AlertEvent {
+  id                   String    @id @default(uuid()) @db.Uuid
+  orgId                String    @map("org_id") @db.Uuid
+  ruleId               String?   @map("rule_id") @db.Uuid
+  type                 String
+  severity             String
+  title                String
+  details              Json
+  isAcknowledged       Boolean   @default(false) @map("is_acknowledged")
+  acknowledgedByUserId String?   @map("acknowledged_by_user_id") @db.Uuid
+  acknowledgedAt       DateTime? @map("acknowledged_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  org                  Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  rule                 AlertRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  acknowledgedByUser   User?     @relation("AlertAcknowledgedByUser", fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
+  escalations          AlertEscalation[]
+  incidents            Incident[]
+
+  @@index([orgId, createdAt])
+  @@index([orgId, isAcknowledged])
+  @@map("alert_events")
+}
+
+model Incident {
+  id             String   @id @default(uuid()) @db.Uuid
+  orgId          String   @map("org_id") @db.Uuid
+  alertEventId   String?  @map("alert_event_id") @db.Uuid
+  title          String
+  severity       String
+  status         String   @default("OPEN")
+  ownerUserId    String?  @map("owner_user_id") @db.Uuid
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  resolvedAt     DateTime? @map("resolved_at")
+  isPublic       Boolean   @default(false) @map("is_public")
+  publicSummary  String?   @map("public_summary")
+  publicUpdates  Json?     @map("public_updates")
+  publicSlug     String?   @unique @map("public_slug")
+  publicComponentKeys Json? @map("public_component_keys")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  alertEvent     AlertEvent? @relation(fields: [alertEventId], references: [id], onDelete: SetNull)
+  owner          User?    @relation("IncidentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  timeline       IncidentTimeline[]
+  participants   IncidentParticipant[]
+  postmortem     IncidentPostmortem?
+
+  @@index([orgId, status])
+  @@index([orgId, createdAt])
+  @@index([alertEventId])
+  @@map("incidents")
+}
+
+model StatusComponent {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String?  @map("org_id") @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  status      String   @default("OPERATIONAL")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  org         Org?     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  checks      UptimeCheck[]
+
+  @@index([orgId])
+  @@map("status_components")
+}
+
+model UptimeCheck {
+  id           String   @id @default(uuid()) @db.Uuid
+  componentKey String   @map("component_key")
+  ok           Boolean
+  statusCode   Int?     @map("status_code")
+  latencyMs    Int?     @map("latency_ms")
+  checkedAt    DateTime @default(now()) @map("checked_at")
+
+  component    StatusComponent @relation(fields: [componentKey], references: [key], onDelete: Cascade)
+
+  @@index([componentKey, checkedAt])
+  @@map("uptime_checks")
+}
+
+model IncidentTimeline {
+  id          String   @id @default(uuid()) @db.Uuid
+  incidentId  String   @map("incident_id") @db.Uuid
+  type        String
+  message     String?
+  metadata    Json?
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actorUser   User?    @relation("IncidentTimelineActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId, createdAt])
+  @@map("incident_timeline")
+}
+
+model IncidentParticipant {
+  id         String   @id @default(uuid()) @db.Uuid
+  incidentId String   @map("incident_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  role       String   @default("PARTICIPANT")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, userId])
+  @@map("incident_participants")
+}
+
+model IncidentPostmortem {
+  id                String   @id @default(uuid()) @db.Uuid
+  incidentId        String   @unique @map("incident_id") @db.Uuid
+  orgId             String   @map("org_id") @db.Uuid
+  summary           String?
+  rootCause         String?  @map("root_cause")
+  impact            String?
+  detectionGap      String?  @map("detection_gap")
+  correctiveActions Json?    @map("corrective_actions")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  incident          Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("incident_postmortems")
+}
+
+model EscalationPolicy {
+  id                String   @id @default(uuid()) @db.Uuid
+  orgId             String   @map("org_id") @db.Uuid
+  name              String
+  isEnabled         Boolean  @default(true) @map("is_enabled")
+  timezone          String   @default("UTC")
+  quietHoursEnabled Boolean  @default(false) @map("quiet_hours_enabled")
+  quietHoursStart   String?  @map("quiet_hours_start")
+  quietHoursEnd     String?  @map("quiet_hours_end")
+  businessDaysOnly  Boolean  @default(false) @map("business_days_only")
+  slaCritical       Int      @default(10) @map("sla_critical")
+  slaHigh           Int      @default(30) @map("sla_high")
+  slaMedium         Int      @default(180) @map("sla_medium")
+  slaLow            Int      @default(1440) @map("sla_low")
+  steps             Json
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId])
+  @@index([orgId])
+  @@index([orgId, isEnabled])
+  @@map("escalation_policies")
+}
+
+model AlertEscalation {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  alertEventId String  @map("alert_event_id") @db.Uuid
+  stepNumber  Int      @map("step_number")
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+  routedTo    Json     @map("routed_to")
+  suppressed  Boolean  @default(false)
+  reason      String?
+
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  alertEvent  AlertEvent @relation(fields: [alertEventId], references: [id], onDelete: Cascade)
+
+  @@unique([alertEventId, stepNumber])
+  @@index([orgId, attemptedAt])
+  @@index([alertEventId, attemptedAt])
+  @@map("alert_escalations")
+}
+
+model OnCallSchedule {
+  id              String   @id @default(uuid()) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  name            String
+  timezone        String   @default("UTC")
+  isEnabled       Boolean  @default(true) @map("is_enabled")
+  startAt         DateTime @default(now()) @map("start_at")
+  handoffInterval String   @default("WEEKLY") @map("handoff_interval")
+  handoffHour     Int      @default(10) @map("handoff_hour")
+  coverageEnabled Boolean  @default(false) @map("coverage_enabled")
+  coverageDays    Json?    @map("coverage_days")
+  coverageStart   String?  @map("coverage_start")
+  coverageEnd     String?  @map("coverage_end")
+  fallbackScheduleId String? @map("fallback_schedule_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members         OnCallRotationMember[]
+  overrides       OnCallOverride[]
+  assignments     OnCallAssignmentLog[]
+  calendars       OnCallScheduleCalendar[]
+  fallbackSchedule OnCallSchedule? @relation("OnCallFallback", fields: [fallbackScheduleId], references: [id], onDelete: SetNull)
+  fallbackDependents OnCallSchedule[] @relation("OnCallFallback")
+
+  @@index([orgId, isEnabled])
+  @@index([fallbackScheduleId])
+  @@map("on_call_schedules")
+}
+
+model OnCallRotationMember {
+  id         String   @id @default(uuid()) @db.Uuid
+  scheduleId String   @map("schedule_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  tier       String   @default("PRIMARY")
+  order      Int
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  schedule   OnCallSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, tier, order])
+  @@index([scheduleId, tier])
+  @@index([scheduleId, userId])
+  @@map("on_call_rotation_members")
+}
+
+model OnCallOverride {
+  id         String   @id @default(uuid()) @db.Uuid
+  scheduleId String   @map("schedule_id") @db.Uuid
+  tier       String   @default("PRIMARY")
+  fromUserId String?  @map("from_user_id") @db.Uuid
+  toUserId   String   @map("to_user_id") @db.Uuid
+  startAt    DateTime @map("start_at")
+  endAt      DateTime @map("end_at")
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  schedule   OnCallSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  fromUser   User?    @relation("OnCallOverrideFromUser", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUser     User     @relation("OnCallOverrideToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId, startAt])
+  @@index([scheduleId, tier])
+  @@map("on_call_overrides")
+}
+
+model OnCallAssignmentLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  scheduleId  String   @map("schedule_id") @db.Uuid
+  tier        String
+  userId      String   @map("user_id") @db.Uuid
+  effectiveAt DateTime @default(now()) @map("effective_at")
+  reason      String?
+
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  schedule    OnCallSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, effectiveAt])
+  @@index([scheduleId, effectiveAt])
+  @@map("on_call_assignment_logs")
+}
+
+model HolidayCalendar {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  name      String
+  timezone  String   @default("UTC")
+  isEnabled Boolean  @default(true) @map("is_enabled")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  entries   HolidayEntry[]
+  schedules OnCallScheduleCalendar[]
+
+  @@index([orgId, isEnabled])
+  @@map("holiday_calendars")
+}
+
+model HolidayEntry {
+  id         String   @id @default(uuid()) @db.Uuid
+  calendarId String   @map("calendar_id") @db.Uuid
+  startDate  DateTime @map("start_date")
+  endDate    DateTime? @map("end_date")
+  title      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  calendar   HolidayCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  @@index([calendarId, startDate])
+  @@map("holiday_entries")
+}
+
+model OnCallScheduleCalendar {
+  id         String   @id @default(uuid()) @db.Uuid
+  scheduleId String   @map("schedule_id") @db.Uuid
+  calendarId String   @map("calendar_id") @db.Uuid
+
+  schedule   OnCallSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  calendar   HolidayCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, calendarId])
+  @@index([scheduleId])
+  @@index([calendarId])
+  @@map("on_call_schedule_calendars")
+}
+
+model FailedJob {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String?  @map("org_id") @db.Uuid
+  queue       String
+  jobName     String   @map("job_name")
+  jobId       String   @map("job_id")
+  error       String
+  attemptsMade Int     @default(0) @map("attempts_made")
+  payloadHash String   @map("payload_hash")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  org         Org?     @relation(fields: [orgId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([queue])
+  @@index([orgId])
+  @@map("failed_jobs")
+}
+
+model AlertChannel {
+  id              String   @id @default(uuid()) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  type            String
+  name            String
+  isEnabled       Boolean  @default(true) @map("is_enabled")
+  minSeverity     String   @default("HIGH") @map("min_severity")
+  configEncrypted String?  @map("config_encrypted")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  org             Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deliveries      AlertDelivery[]
+
+  @@index([orgId, type])
+  @@index([orgId, isEnabled])
+  @@map("alert_channels")
+}
+
+model AlertDelivery {
+  id           String   @id @default(uuid()) @db.Uuid
+  orgId        String   @map("org_id") @db.Uuid
+  alertEventId String   @map("alert_event_id") @db.Uuid
+  channelId    String   @map("channel_id") @db.Uuid
+  success      Boolean
+  statusCode   Int?     @map("status_code")
+  error        String?
+  durationMs   Int?     @map("duration_ms")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  channel      AlertChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([alertEventId, channelId])
+  @@index([orgId, createdAt])
+  @@index([alertEventId, createdAt])
+  @@index([channelId, createdAt])
+  @@map("alert_deliveries")
 }

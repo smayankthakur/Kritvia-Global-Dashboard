@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule, RequestMethod } from "@nestjs/c
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { ActivityLogModule } from "./activity-log/activity-log.module";
+import { AlertsModule } from "./alerts/alerts.module";
 import { AiModule } from "./ai/ai.module";
 import { AiActionsModule } from "./ai-actions/ai-actions.module";
 import { AuthModule } from "./auth/auth.module";
@@ -20,11 +21,13 @@ import { JobsModule } from "./jobs/jobs.module";
 import { LeadsModule } from "./leads/leads.module";
 import { LlmModule } from "./llm/llm.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
+import { IncidentsModule } from "./incidents/incidents.module";
 import { NudgesModule } from "./nudges/nudges.module";
 import { OrgMembersModule } from "./org-members/org-members.module";
 import { OrgAuditModule } from "./org-audit/org-audit.module";
 import { OrgApiTokensModule } from "./org-api-tokens/org-api-tokens.module";
 import { OrgWebhooksModule } from "./org-webhooks/org-webhooks.module";
+import { OnCallModule } from "./oncall/oncall.module";
 import { OauthModule } from "./oauth/oauth.module";
 import { PortfolioModule } from "./portfolio/portfolio.module";
 import { PublicApiModule } from "./public-api/public-api.module";
@@ -34,6 +37,8 @@ import { RevenueVelocityModule } from "./revenue-velocity/revenue-velocity.modul
 import { SecureController } from "./secure/secure.controller";
 import { ShieldModule } from "./shield/shield.module";
 import { SettingsModule } from "./settings/settings.module";
+import { SchedulerModule } from "./scheduler/scheduler.module";
+import { StatusModule } from "./status/status.module";
 import { TimelineModule } from "./timeline/timeline.module";
 import { UsersModule } from "./users/users.module";
 import { WorkItemsModule } from "./work-items/work-items.module";
@@ -44,6 +49,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     PrismaModule,
     BillingModule,
     ActivityLogModule,
+    AlertsModule,
     AiModule,
     AiActionsModule,
     AuthModule,
@@ -54,6 +60,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     LlmModule,
     MarketplaceModule,
     DealsModule,
+    IncidentsModule,
     TimelineModule,
     ShieldModule,
     InvoicesModule,
@@ -66,6 +73,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     OrgAuditModule,
     OrgApiTokensModule,
     OrgWebhooksModule,
+    OnCallModule,
     OauthModule,
     PortfolioModule,
     PublicApiModule,
@@ -73,6 +81,8 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     NudgesModule,
     UsersModule,
     SettingsModule,
+    StatusModule,
+    SchedulerModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -99,6 +109,16 @@ export class AppModule implements NestModule {
       { path: "org/audit/(.*)", method: RequestMethod.ALL },
       { path: "org/webhooks", method: RequestMethod.ALL },
       { path: "org/webhooks/(.*)", method: RequestMethod.ALL },
+      { path: "org/alert-channels", method: RequestMethod.ALL },
+      { path: "org/alert-channels/(.*)", method: RequestMethod.ALL },
+      { path: "org/alert-deliveries", method: RequestMethod.ALL },
+      { path: "org/alert-deliveries/(.*)", method: RequestMethod.ALL },
+      { path: "org/escalation-policy", method: RequestMethod.ALL },
+      { path: "org/escalation-policy/(.*)", method: RequestMethod.ALL },
+      { path: "org/oncall", method: RequestMethod.ALL },
+      { path: "org/oncall/(.*)", method: RequestMethod.ALL },
+      { path: "org/holidays", method: RequestMethod.ALL },
+      { path: "org/holidays/(.*)", method: RequestMethod.ALL },
       { path: "jobs", method: RequestMethod.ALL },
       { path: "jobs/(.*)", method: RequestMethod.ALL }
     );

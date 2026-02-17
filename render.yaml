@@ -15,3 +15,28 @@ services:
         value: "true"
       - key: COOKIE_SAMESITE
         value: none
+      - key: JOBS_ENABLED
+        value: "true"
+      - key: JOBS_WORKER_MODE
+        value: api
+      - key: SCHEDULER_ENABLED
+        value: "true"
+      - key: SCHEDULER_MODE
+        value: worker
+  - type: worker
+    name: kritviya-api-worker
+    runtime: node
+    rootDir: .
+    buildCommand: npm ci --include=dev && npm run build:api
+    startCommand: JOBS_ENABLED=true JOBS_WORKER_MODE=worker node apps/api/dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JOBS_ENABLED
+        value: "true"
+      - key: JOBS_WORKER_MODE
+        value: worker
+      - key: SCHEDULER_ENABLED
+        value: "true"
+      - key: SCHEDULER_MODE
+        value: worker

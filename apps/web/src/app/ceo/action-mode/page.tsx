@@ -15,6 +15,7 @@ import {
   executeAiAction,
   executeNudge,
   generateCeoBriefing,
+  getIncidentMetrics,
   listCeoBriefingHistory,
   listAiActions,
   listCeoInsights,
@@ -147,6 +148,14 @@ export default function CeoActionModePage() {
   const [refreshingInsights, setRefreshingInsights] = useState(false);
   const [generatingActions, setGeneratingActions] = useState(false);
   const [tickMs, setTickMs] = useState(Date.now());
+  const [incidentMetrics, setIncidentMetrics] = useState<{
+    totalIncidents: number;
+    avgMTTA: number;
+    avgMTTR: number;
+    openIncidents: number;
+    resolvedIncidents: number;
+    rangeDays: number;
+  } | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -272,6 +281,15 @@ export default function CeoActionModePage() {
     void loadTopNudges();
     void loadInsights();
   }, [loadInsights, loadTopNudges, token, user]);
+
+  useEffect(() => {
+    if (!token || !user || !canAccess(user.role)) {
+      return;
+    }
+    getIncidentMetrics(token, { range: "30d" })
+      .then((payload) => setIncidentMetrics(payload))
+      .catch(() => setIncidentMetrics(null));
+  }, [token, user]);
 
   useEffect(() => {
     if (!user || !token || !canAccess(user.role)) {
@@ -599,6 +617,26 @@ export default function CeoActionModePage() {
           <p style={{ margin: "10px 0 0", fontWeight: 700 }}>Coming soon</p>
           <Link href="/ceo/dashboard" className="kv-note">
             View CEO dashboard
+          </Link>
+        </article>
+        <article className="kv-card">
+          <h3 style={{ margin: 0 }}>Open Incidents</h3>
+          <p className="kv-subtitle">Incident load (last 30 days)</p>
+          <p style={{ margin: "10px 0 0", fontWeight: 700 }}>
+            {incidentMetrics?.openIncidents ?? 0}
+          </p>
+          <Link href="/developer?tab=incidents" className="kv-note">
+            Open incidents panel
+          </Link>
+        </article>
+        <article className="kv-card">
+          <h3 style={{ margin: 0 }}>SLA Metrics</h3>
+          <p className="kv-subtitle">Avg acknowledge and resolve speed</p>
+          <p style={{ margin: "10px 0 0", fontWeight: 700 }}>
+            MTTA {incidentMetrics?.avgMTTA ?? 0}m | MTTR {incidentMetrics?.avgMTTR ?? 0}m
+          </p>
+          <Link href="/developer?tab=incidents" className="kv-note">
+            View incident timelines
           </Link>
         </article>
       </section>

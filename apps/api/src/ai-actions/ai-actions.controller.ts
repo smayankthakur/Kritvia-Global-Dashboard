@@ -19,6 +19,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { getActiveOrgId } from "../common/auth-org";
 import { assertFeatureEnabled } from "../common/feature-flags";
 import { JobQueueService } from "../queue/job-queue.service";
+import { QUEUE_NAMES } from "../jobs/queues";
 import { ListAiActionsDto } from "./dto/list-ai-actions.dto";
 import { AiActionsService } from "./ai-actions.service";
 
@@ -41,9 +42,10 @@ export class AiActionsController {
   ) {
     assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = this.assertAdminOrSecret(req, jobsSecretHeader);
-    return this.jobQueueService.enqueueAndWait("compute-actions", () =>
-      this.aiActionsService.computeActions(orgId)
-    );
+    if (!this.isJobsEnabled()) {
+      return this.aiActionsService.computeActions(orgId);
+    }
+    return this.jobQueueService.runNow(QUEUE_NAMES.ai, "compute-actions", { orgId });
   }
 
   @Get("ai/actions")
@@ -137,5 +139,9 @@ export class AiActionsController {
       return false;
     }
     return configuredSecret === headerValue;
+  }
+
+  private isJobsEnabled(): boolean {
+    return (process.env.JOBS_ENABLED ?? "true").toLowerCase() === "true";
   }
 }

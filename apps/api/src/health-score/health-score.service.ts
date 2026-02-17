@@ -67,6 +67,10 @@ export class HealthScoreService {
 
   async computeForUser(authUser: AuthUserContext): Promise<HealthScoreResponseDto> {
     const orgId = authUser.activeOrgId ?? authUser.orgId;
+    return this.computeForOrg(orgId);
+  }
+
+  async computeForOrg(orgId: string): Promise<HealthScoreResponseDto> {
     const snapshot = await this.computeAndUpsert(orgId, new Date());
     const breakdown = snapshot.breakdown as unknown as HealthScoreResponseDto["breakdown"];
     HealthScoreService.cache.delete(`health-score:${orgId}`);

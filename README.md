@@ -27,6 +27,10 @@
    ```bash
    npm run dev:db
    ```
+   This starts Postgres from `infra/docker-compose.yml`. For Phase 6.4.11 job workers, start Redis too:
+   ```bash
+   docker compose --env-file .env -f infra/docker-compose.yml up -d postgres redis
+   ```
 2. Apply migrations:
    ```bash
    npm run db:migrate
@@ -438,6 +442,14 @@ Render service:
 - Health Check Path: `/health`
 - Readiness Check Path: `/ready` (optional separate monitor)
 
+Important for manual Render services:
+
+- If you configure service commands in the Render UI, set build exactly to:
+  - `npm ci --include=dev && npm run build:api`
+- Or deploy via Blueprint (`render.yaml`) so this command is applied automatically.
+- `NODE_ENV=production` can cause devDependencies to be omitted during install.
+  Using `--include=dev` (or setting `NPM_CONFIG_PRODUCTION=false`) ensures TypeScript build dependencies are installed.
+
 Render backend env vars:
 
 - `NODE_ENV=production`
@@ -458,6 +470,32 @@ Render backend env vars:
 - `RAZORPAY_PLAN_ENTERPRISE=<plan_id_for_enterprise>`
 - `WEB_BASE_URL=https://executiv-dashboard.vercel.app`
 - `API_BASE_URL=https://<render-api-domain>`
+- `REDIS_URL=redis://default:<password>@<redis-host>:6379`
+- `JOBS_ENABLED=true`
+- `JOBS_WORKER_MODE=api` (API service) / `worker` (worker service)
+- `JOBS_CONCURRENCY_AI=2`
+- `JOBS_CONCURRENCY_WEBHOOKS=5`
+- `JOBS_CONCURRENCY_MAINT=1`
+- `SCHEDULER_ENABLED=true`
+- `SCHEDULER_MODE=worker` (recommended so only worker registers repeatables)
+- `SCHED_TZ=UTC`
+- `SCHED_HEALTH_CRON=0 2 * * *`
+- `SCHED_INSIGHTS_CRON=10 2 * * *`
+- `SCHED_ACTIONS_CRON=20 2 * * *`
+- `SCHED_BRIEFING_CRON=30 6 * * *`
+- `SCHED_INVOICE_SCAN_CRON=0 * * * *`
+- `SCHED_RETENTION_CRON=0 3 * * 0`
+- `SCHED_MAX_ORGS_PER_RUN=200`
+
+Optional dedicated worker service on Render:
+
+- Service type: `Worker`
+- Build Command: `npm ci --include=dev && npm run build:api`
+- Start Command: `JOBS_ENABLED=true JOBS_WORKER_MODE=worker node apps/api/dist/main.js`
+- Worker `/health` listens on `PORT` and returns `{ status:"ok", service:"api-worker" }`
+- Add scheduler env on worker:
+  - `SCHEDULER_ENABLED=true`
+  - `SCHEDULER_MODE=worker`
 
 ### Vercel Web Configuration (Copy/Paste)
 
@@ -585,3 +623,6 @@ Rollback:
 - Repeated `401` / refresh loop:
   - Refresh cookie is blocked by browser when SameSite/Secure is wrong.
   - Set `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true` on API.
+11. Verify job queues:
+   - `POST https://<render-api-domain>/ai/compute-insights` returns `{ queue, jobId, status:"queued" }`
+   - `GET https://<render-api-domain>/jobs/status/ai/<jobId>` shows state

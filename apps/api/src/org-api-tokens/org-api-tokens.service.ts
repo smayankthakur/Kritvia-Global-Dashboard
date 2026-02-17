@@ -4,9 +4,6 @@ import { randomBytes, createHash } from "node:crypto";
 import { AuthUserContext } from "../auth/auth.types";
 import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
-import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
-import { PaginatedResponseDto } from "../common/dto/paginated-response.dto";
-import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateApiTokenDto } from "./dto/create-api-token.dto";
 
@@ -55,8 +52,8 @@ export class OrgApiTokensService {
     };
   }
 
-  async list(authUser: AuthUserContext, query: PaginationQueryDto): Promise<
-    PaginatedResponseDto<{
+  async list(authUser: AuthUserContext): Promise<
+    Array<{
       id: string;
       name: string;
       role: Role;
@@ -68,32 +65,25 @@ export class OrgApiTokensService {
   > {
     const orgId = getActiveOrgId({ user: authUser });
     await this.billingService.assertFeature(orgId, "enterpriseControlsEnabled");
-    const skip = (query.page - 1) * query.pageSize;
-    const [tokens, total] = await this.prisma.$transaction([
-      this.prisma.apiToken.findMany({
-        where: { orgId },
-        select: {
-          id: true,
-          name: true,
-          role: true,
-          scopes: true,
-          createdAt: true,
-          lastUsedAt: true,
-          revokedAt: true
-        },
-        orderBy: [{ createdAt: "desc" }],
-        skip,
-        take: query.pageSize
-      }),
-      this.prisma.apiToken.count({ where: { orgId } })
-    ]);
+    const tokens = await this.prisma.apiToken.findMany({
+      where: { orgId },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        scopes: true,
+        createdAt: true,
+        lastUsedAt: true,
+        revokedAt: true
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: 100
+    });
 
-    const items = tokens.map((token) => ({
+    return tokens.map((token) => ({
       ...token,
       scopes: this.parseScopes(token.scopes)
     }));
-
-    return toPaginatedResponse(items, query.page, query.pageSize, total);
   }
 
   async revoke(authUser: AuthUserContext, tokenId: string): Promise<{ success: true }> {

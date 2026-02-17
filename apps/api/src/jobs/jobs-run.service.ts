@@ -48,6 +48,14 @@ export interface JobsRetentionSummary {
   perOrg: OrgRetentionSummary[];
 }
 
+export interface OrgRetentionRunResult {
+  processed: boolean;
+  skipped: boolean;
+  orgId: string;
+  logsDeleted: number;
+  eventsDeleted: number;
+}
+
 @Injectable()
 export class JobsRunService {
   private readonly logger = new Logger(JobsRunService.name);
@@ -108,44 +116,21 @@ export class JobsRunService {
     const perOrg: OrgRetentionSummary[] = [];
 
     for (const org of orgs) {
-      const canProcess = await this.isEnterpriseControlsEnabled(org.id);
-      if (!canProcess) {
+      const result = await this.runRetentionForOrg(org.id, now);
+      if (result.skipped) {
         skippedOrgs += 1;
         continue;
       }
-
-      const policy = await this.policyResolverService.getPolicyForOrg(org.id);
-      const auditRetentionDays = Math.max(30, policy.auditRetentionDays);
-      const securityEventRetentionDays = Math.max(30, policy.securityEventRetentionDays);
-      const cutoffLogs = new Date(now.getTime() - auditRetentionDays * 24 * 60 * 60 * 1000);
-      const cutoffEvents = new Date(
-        now.getTime() - securityEventRetentionDays * 24 * 60 * 60 * 1000
-      );
-
-      const [deletedLogsResult, deletedEventsResult] = await this.prisma.$transaction([
-        this.prisma.activityLog.deleteMany({
-          where: {
-            orgId: org.id,
-            createdAt: { lt: cutoffLogs }
-          }
-        }),
-        this.prisma.securityEvent.deleteMany({
-          where: {
-            orgId: org.id,
-            createdAt: { lt: cutoffEvents }
-          }
-        })
-      ]);
-
       processedOrgs += 1;
-      logsDeleted += deletedLogsResult.count;
-      eventsDeleted += deletedEventsResult.count;
+      logsDeleted += result.logsDeleted;
+      eventsDeleted += result.eventsDeleted;
+      const policy = await this.policyResolverService.getPolicyForOrg(org.id);
       perOrg.push({
         orgId: org.id,
-        logsDeleted: deletedLogsResult.count,
-        eventsDeleted: deletedEventsResult.count,
-        auditRetentionDays,
-        securityEventRetentionDays
+        logsDeleted: result.logsDeleted,
+        eventsDeleted: result.eventsDeleted,
+        auditRetentionDays: Math.max(30, policy.auditRetentionDays),
+        securityEventRetentionDays: Math.max(30, policy.securityEventRetentionDays)
       });
     }
 
@@ -168,6 +153,107 @@ export class JobsRunService {
       eventsDeleted,
       durationMs,
       perOrg
+    };
+  }
+
+  async runRetentionForOrg(orgId: string, now: Date = new Date()): Promise<OrgRetentionRunResult> {
+    const canProcess = await this.isEnterpriseControlsEnabled(orgId);
+    if (!canProcess) {
+      return {
+        processed: false,
+        skipped: true,
+        orgId,
+        logsDeleted: 0,
+        eventsDeleted: 0
+      };
+    }
+
+    const policy = await this.policyResolverService.getPolicyForOrg(orgId);
+    const auditRetentionDays = Math.max(30, policy.auditRetentionDays);
+    const securityEventRetentionDays = Math.max(30, policy.securityEventRetentionDays);
+    const cutoffLogs = new Date(now.getTime() - auditRetentionDays * 24 * 60 * 60 * 1000);
+    const cutoffEvents = new Date(now.getTime() - securityEventRetentionDays * 24 * 60 * 60 * 1000);
+
+    const [deletedLogsResult, deletedEventsResult] = await this.prisma.$transaction([
+      this.prisma.activityLog.deleteMany({
+        where: {
+          orgId,
+          createdAt: { lt: cutoffLogs }
+        }
+      }),
+      this.prisma.securityEvent.deleteMany({
+        where: {
+          orgId,
+          createdAt: { lt: cutoffEvents }
+        }
+      })
+    ]);
+
+    return {
+      processed: true,
+      skipped: false,
+      orgId,
+      logsDeleted: deletedLogsResult.count,
+      eventsDeleted: deletedEventsResult.count
+    };
+  }
+
+  async runInvoiceOverdueScanForOrg(orgId: string, now: Date = new Date()): Promise<{
+    orgId: string;
+    invoicesScanned: number;
+    nudgesCreated: number;
+  }> {
+    const systemUser = await this.prisma.user.findFirst({
+      where: { orgId, isActive: true },
+      orderBy: [{ role: "desc" }, { createdAt: "asc" }],
+      select: { id: true }
+    });
+    if (!systemUser) {
+      return { orgId, invoicesScanned: 0, nudgesCreated: 0 };
+    }
+
+    const overdueInvoices = await this.prisma.invoice.findMany({
+      where: {
+        orgId,
+        status: { not: InvoiceStatus.PAID },
+        dueDate: { lt: now }
+      },
+      take: 500,
+      orderBy: { dueDate: "asc" },
+      select: {
+        id: true,
+        dueDate: true,
+        amount: true,
+        createdByUserId: true
+      }
+    });
+
+    let created = 0;
+    for (const invoice of overdueInvoices) {
+      const wasCreated = await this.createAutoNudgeIfMissing({
+        orgId,
+        creatorUserId: systemUser.id,
+        targetUserId: invoice.createdByUserId,
+        type: NudgeType.OVERDUE_INVOICE,
+        entityType: ActivityEntityType.INVOICE,
+        entityId: invoice.id,
+        message: "Auto nudge: overdue invoice requires follow-up",
+        scoreInput: {
+          type: NudgeType.OVERDUE_INVOICE,
+          now,
+          dueDate: invoice.dueDate,
+          amount: Number(invoice.amount)
+        }
+      });
+      if (wasCreated) {
+        created += 1;
+      }
+    }
+
+    return {
+      orgId,
+      invoicesScanned: overdueInvoices.length,
+      nudgesCreated: created
     };
   }
 

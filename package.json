@@ -12,7 +12,7 @@
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev",
     "dev:api": "npm --workspace apps/api run start:dev",
-    "dev:db": "docker compose --env-file .env -f infra/docker-compose.yml up -d postgres",
+    "dev:db": "docker compose --env-file .env -f infra/docker-compose.yml up -d postgres redis",
     "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev:web\" \"npm run dev:api\"",
     "db:migrate": "npm run migrate",
     "db:seed": "npm run seed",
@@ -20,6 +20,7 @@
     "seed": "dotenv -e .env -- npm --workspace apps/api run db:seed",
     "build:web": "npm --workspace apps/web run build",
     "build:api": "npm --workspace apps/api run build",
+    "build:render": "npm ci --include=dev && npm run build:api",
     "seed:api": "npm --workspace apps/api run seed",
     "build": "npm run build:api && npm run build:web",
     "start:api": "npm --workspace apps/api run start:prod",

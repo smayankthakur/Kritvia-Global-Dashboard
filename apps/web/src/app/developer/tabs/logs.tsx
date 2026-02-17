@@ -3,13 +3,29 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
+  AlertChannel,
+  AlertDelivery,
+  AlertEscalation,
+  AlertEvent,
   ApiError,
+  EscalationPolicy,
+  acknowledgeOrgAlert,
+  createAlertChannel,
+  deleteAlertChannel,
   WebhookDeliveryRecord,
   WebhookEndpointRecord,
   exportOrgAuditCsv,
+  getEscalationPolicy,
+  listAlertEscalations,
+  listAlertChannels,
+  listAlertDeliveries,
+  listOrgAlerts,
   listOrgWebhooks,
   listWebhookDeliveries,
-  retryWebhookDelivery
+  retryWebhookDelivery,
+  saveEscalationPolicy,
+  testEscalationPolicy,
+  testAlertChannel
 } from "../../../lib/api";
 
 interface LogsTabProps {
@@ -127,9 +143,31 @@ export function LogsTab({ token }: LogsTabProps) {
   const [pageSize] = useState(20);
   const [selectedDelivery, setSelectedDelivery] = useState<WebhookDeliveryRecord | null>(null);
   const [tokenUsageLogs, setTokenUsageLogs] = useState<TokenUsageLogRow[]>([]);
+  const [alerts, setAlerts] = useState<AlertEvent[]>([]);
+  const [selectedAlert, setSelectedAlert] = useState<AlertEvent | null>(null);
+  const [selectedAlertForEscalation, setSelectedAlertForEscalation] = useState<AlertEvent | null>(null);
+  const [alertEscalations, setAlertEscalations] = useState<AlertEscalation[]>([]);
+  const [escalationPolicy, setEscalationPolicy] = useState<EscalationPolicy | null>(null);
+  const [savingEscalationPolicy, setSavingEscalationPolicy] = useState(false);
+  const [testingEscalationPolicy, setTestingEscalationPolicy] = useState(false);
+  const [alertChannels, setAlertChannels] = useState<AlertChannel[]>([]);
+  const [alertDeliveries, setAlertDeliveries] = useState<AlertDelivery[]>([]);
+  const [selectedAlertEventId, setSelectedAlertEventId] = useState<string>("");
+  const [creatingChannel, setCreatingChannel] = useState(false);
+  const [testingChannelId, setTestingChannelId] = useState<string | null>(null);
+  const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
+  const [channelType, setChannelType] = useState<"WEBHOOK" | "EMAIL" | "SLACK">("WEBHOOK");
+  const [channelName, setChannelName] = useState("");
+  const [channelSeverity, setChannelSeverity] = useState<"MEDIUM" | "HIGH" | "CRITICAL">("HIGH");
+  const [channelUrl, setChannelUrl] = useState("");
+  const [channelSecret, setChannelSecret] = useState("");
+  const [channelEmails, setChannelEmails] = useState("");
+  const [channelSlack, setChannelSlack] = useState("");
   const [loading, setLoading] = useState(true);
   const [deliveriesLoading, setDeliveriesLoading] = useState(false);
+  const [alertsLoading, setAlertsLoading] = useState(false);
   const [retryingDeliveryId, setRetryingDeliveryId] = useState<string | null>(null);
+  const [acknowledgingAlertId, setAcknowledgingAlertId] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -174,12 +212,51 @@ export function LogsTab({ token }: LogsTabProps) {
     setTokenUsageLogs(parseTokenUsageLogs(csvText));
   }, [token]);
 
+  const loadAlerts = useCallback(async (): Promise<void> => {
+    setAlertsLoading(true);
+    try {
+      const response = await listOrgAlerts(token, {
+        acknowledged: false,
+        page: 1,
+        pageSize: 20
+      });
+      setAlerts(response.items);
+    } finally {
+      setAlertsLoading(false);
+    }
+  }, [token]);
+
+  const loadAlertChannels = useCallback(async (): Promise<void> => {
+    const response = await listAlertChannels(token);
+    setAlertChannels(response);
+  }, [token]);
+
+  const loadEscalationPolicy = useCallback(async (): Promise<void> => {
+    const response = await getEscalationPolicy(token);
+    setEscalationPolicy(response);
+  }, [token]);
+
+  const loadAlertDeliveries = useCallback(async (): Promise<void> => {
+    const response = await listAlertDeliveries(token, {
+      alertEventId: selectedAlertEventId || undefined,
+      page: 1,
+      pageSize: 20
+    });
+    setAlertDeliveries(response.items);
+  }, [selectedAlertEventId, token]);
+
   const loadAll = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setRequestError(null);
-      await loadWebhooks();
-      await loadTokenUsageLogs();
+      await Promise.all([
+        loadWebhooks(),
+        loadTokenUsageLogs(),
+        loadAlerts(),
+        loadAlertChannels(),
+        loadAlertDeliveries(),
+        loadEscalationPolicy()
+      ]);
     } catch (requestFailure) {
       if (requestFailure instanceof ApiError && requestFailure.code === "UPGRADE_REQUIRED") {
         setRequestError("Upgrade required to view logs. Open Billing to continue.");
@@ -199,7 +276,14 @@ export function LogsTab({ token }: LogsTabProps) {
     } finally {
       setLoading(false);
     }
-  }, [loadTokenUsageLogs, loadWebhooks]);
+  }, [
+    loadAlertChannels,
+    loadAlertDeliveries,
+    loadAlerts,
+    loadEscalationPolicy,
+    loadTokenUsageLogs,
+    loadWebhooks
+  ]);
 
   useEffect(() => {
     void loadAll();
@@ -229,6 +313,14 @@ export function LogsTab({ token }: LogsTabProps) {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    void loadAlertDeliveries().catch((requestFailure: unknown) => {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to load alert deliveries"
+      );
+    });
+  }, [loadAlertDeliveries]);
+
   async function onRetryDelivery(delivery: WebhookDeliveryRecord): Promise<void> {
     if (!selectedWebhookId) {
       return;
@@ -248,6 +340,142 @@ export function LogsTab({ token }: LogsTabProps) {
       );
     } finally {
       setRetryingDeliveryId(null);
+    }
+  }
+
+  async function onAcknowledgeAlert(alertId: string): Promise<void> {
+    try {
+      setAcknowledgingAlertId(alertId);
+      await acknowledgeOrgAlert(token, alertId);
+      await loadAlerts();
+      setToast("Alert acknowledged.");
+    } catch (requestFailure) {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to acknowledge alert"
+      );
+    } finally {
+      setAcknowledgingAlertId(null);
+    }
+  }
+
+  async function onCreateChannel(): Promise<void> {
+    try {
+      setCreatingChannel(true);
+      const config: Record<string, unknown> =
+        channelType === "WEBHOOK"
+          ? { url: channelUrl.trim(), secret: channelSecret.trim() || undefined }
+          : channelType === "EMAIL"
+            ? { to: channelEmails.split(",").map((entry) => entry.trim()).filter(Boolean) }
+            : { channel: channelSlack.trim() };
+
+      await createAlertChannel(token, {
+        type: channelType,
+        name: channelName.trim(),
+        minSeverity: channelSeverity,
+        config
+      });
+
+      setChannelName("");
+      setChannelUrl("");
+      setChannelSecret("");
+      setChannelEmails("");
+      setChannelSlack("");
+      await Promise.all([loadAlertChannels(), loadAlertDeliveries()]);
+      setToast("Alert channel created.");
+    } catch (requestFailure) {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to create alert channel"
+      );
+    } finally {
+      setCreatingChannel(false);
+    }
+  }
+
+  async function onTestChannel(channelId: string): Promise<void> {
+    try {
+      setTestingChannelId(channelId);
+      await testAlertChannel(token, channelId, "HIGH");
+      await loadAlertDeliveries();
+      setToast("Channel test sent.");
+    } catch (requestFailure) {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to test alert channel"
+      );
+    } finally {
+      setTestingChannelId(null);
+    }
+  }
+
+  async function onDeleteChannel(channelId: string): Promise<void> {
+    try {
+      setDeletingChannelId(channelId);
+      await deleteAlertChannel(token, channelId);
+      await Promise.all([loadAlertChannels(), loadAlertDeliveries()]);
+      setToast("Alert channel deleted.");
+    } catch (requestFailure) {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to delete alert channel"
+      );
+    } finally {
+      setDeletingChannelId(null);
+    }
+  }
+
+  async function onSaveEscalationPolicy(): Promise<void> {
+    if (!escalationPolicy) {
+      return;
+    }
+    try {
+      setSavingEscalationPolicy(true);
+      const saved = await saveEscalationPolicy(token, {
+        name: escalationPolicy.name,
+        isEnabled: escalationPolicy.isEnabled,
+        timezone: escalationPolicy.timezone,
+        quietHoursEnabled: escalationPolicy.quietHoursEnabled,
+        quietHoursStart: escalationPolicy.quietHoursStart ?? undefined,
+        quietHoursEnd: escalationPolicy.quietHoursEnd ?? undefined,
+        businessDaysOnly: escalationPolicy.businessDaysOnly,
+        slaCritical: escalationPolicy.slaCritical,
+        slaHigh: escalationPolicy.slaHigh,
+        slaMedium: escalationPolicy.slaMedium,
+        slaLow: escalationPolicy.slaLow,
+        steps: escalationPolicy.steps
+      });
+      setEscalationPolicy(saved);
+      setToast("Escalation policy saved.");
+    } catch (requestFailure) {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to save escalation policy"
+      );
+    } finally {
+      setSavingEscalationPolicy(false);
+    }
+  }
+
+  async function onTestEscalationPolicy(): Promise<void> {
+    try {
+      setTestingEscalationPolicy(true);
+      const result = await testEscalationPolicy(token, "CRITICAL");
+      await Promise.all([loadAlerts(), loadAlertDeliveries()]);
+      setToast(`Escalation test ran: ${result.escalated} escalated, ${result.suppressed} suppressed.`);
+    } catch (requestFailure) {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to run escalation policy test"
+      );
+    } finally {
+      setTestingEscalationPolicy(false);
+    }
+  }
+
+  async function onViewEscalations(alert: AlertEvent): Promise<void> {
+    try {
+      const history = await listAlertEscalations(token, alert.id);
+      setAlertEscalations(history);
+      setSelectedAlertForEscalation(alert);
+    } catch (requestFailure) {
+      setRequestError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to load escalation history"
+      );
     }
   }
 
@@ -364,6 +592,415 @@ export function LogsTab({ token }: LogsTabProps) {
 
       <div className="kv-card">
         <h2 className="kv-section-title" style={{ marginTop: 0 }}>
+          Alerts
+        </h2>
+        <p className="kv-subtitle" style={{ marginBottom: "12px" }}>
+          Reliability and mitigation alerts for this org.
+        </p>
+        <div className="kv-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th align="left">Time</th>
+                <th align="left">Severity</th>
+                <th align="left">Type</th>
+                <th align="left">Title</th>
+                <th align="left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading || alertsLoading ? (
+                <tr>
+                  <td colSpan={5}>Loading alerts...</td>
+                </tr>
+              ) : null}
+              {!loading && !alertsLoading && alerts.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>No active alerts.</td>
+                </tr>
+              ) : null}
+              {!loading && !alertsLoading
+                ? alerts.map((alert) => (
+                    <tr key={alert.id}>
+                      <td>{formatDateTime(alert.createdAt)}</td>
+                      <td>
+                        <span className="kv-pill">{alert.severity}</span>
+                      </td>
+                      <td>{alert.type}</td>
+                      <td>{alert.title}</td>
+                      <td style={{ display: "flex", gap: "8px" }}>
+                        <button type="button" onClick={() => setSelectedAlert(alert)}>
+                          Details
+                        </button>
+                        <button type="button" onClick={() => void onViewEscalations(alert)}>
+                          Escalations
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onAcknowledgeAlert(alert.id)}
+                          disabled={acknowledgingAlertId === alert.id}
+                        >
+                          Acknowledge
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="kv-card">
+        <h2 className="kv-section-title" style={{ marginTop: 0 }}>
+          Escalation Policy
+        </h2>
+        <p className="kv-subtitle" style={{ marginBottom: "12px" }}>
+          Route unacknowledged alerts by severity and response SLA.
+        </p>
+        {escalationPolicy ? (
+          <div className="kv-stack">
+            <div className="kv-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+              <input
+                aria-label="Policy name"
+                value={escalationPolicy.name}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, name: event.target.value } : current
+                  )
+                }
+              />
+              <input
+                aria-label="Timezone"
+                value={escalationPolicy.timezone}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, timezone: event.target.value } : current
+                  )
+                }
+              />
+              <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <input
+                  type="checkbox"
+                  checked={escalationPolicy.isEnabled}
+                  onChange={(event) =>
+                    setEscalationPolicy((current) =>
+                      current ? { ...current, isEnabled: event.target.checked } : current
+                    )
+                  }
+                />
+                Enabled
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <input
+                  type="checkbox"
+                  checked={escalationPolicy.quietHoursEnabled}
+                  onChange={(event) =>
+                    setEscalationPolicy((current) =>
+                      current ? { ...current, quietHoursEnabled: event.target.checked } : current
+                    )
+                  }
+                />
+                Quiet hours
+              </label>
+            </div>
+            <div className="kv-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+              <input
+                aria-label="Quiet hours start"
+                placeholder="22:00"
+                value={escalationPolicy.quietHoursStart ?? ""}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, quietHoursStart: event.target.value } : current
+                  )
+                }
+              />
+              <input
+                aria-label="Quiet hours end"
+                placeholder="08:00"
+                value={escalationPolicy.quietHoursEnd ?? ""}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, quietHoursEnd: event.target.value } : current
+                  )
+                }
+              />
+              <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <input
+                  type="checkbox"
+                  checked={escalationPolicy.businessDaysOnly}
+                  onChange={(event) =>
+                    setEscalationPolicy((current) =>
+                      current ? { ...current, businessDaysOnly: event.target.checked } : current
+                    )
+                  }
+                />
+                Business days only
+              </label>
+            </div>
+            <div className="kv-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+              <input
+                type="number"
+                aria-label="Critical SLA"
+                value={escalationPolicy.slaCritical}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, slaCritical: Number(event.target.value) } : current
+                  )
+                }
+              />
+              <input
+                type="number"
+                aria-label="High SLA"
+                value={escalationPolicy.slaHigh}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, slaHigh: Number(event.target.value) } : current
+                  )
+                }
+              />
+              <input
+                type="number"
+                aria-label="Medium SLA"
+                value={escalationPolicy.slaMedium}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, slaMedium: Number(event.target.value) } : current
+                  )
+                }
+              />
+              <input
+                type="number"
+                aria-label="Low SLA"
+                value={escalationPolicy.slaLow}
+                onChange={(event) =>
+                  setEscalationPolicy((current) =>
+                    current ? { ...current, slaLow: Number(event.target.value) } : current
+                  )
+                }
+              />
+            </div>
+            <div className="kv-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th align="left">Step</th>
+                    <th align="left">After Minutes</th>
+                    <th align="left">Min Severity</th>
+                    <th align="left">Routes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {escalationPolicy.steps.map((step, index) => (
+                    <tr key={`step-${index}`}>
+                      <td>{index + 1}</td>
+                      <td>{step.afterMinutes}</td>
+                      <td>{step.minSeverity}</td>
+                      <td>{step.routeTo.join(", ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="kv-row">
+              <button
+                type="button"
+                onClick={() => void onSaveEscalationPolicy()}
+                disabled={savingEscalationPolicy}
+              >
+                Save escalation policy
+              </button>
+              <button
+                type="button"
+                onClick={() => void onTestEscalationPolicy()}
+                disabled={testingEscalationPolicy}
+              >
+                Test escalation
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p style={{ margin: 0 }}>Loading escalation policy...</p>
+        )}
+      </div>
+
+      <div className="kv-card">
+        <h2 className="kv-section-title" style={{ marginTop: 0 }}>
+          Alert Channels
+        </h2>
+        <p className="kv-subtitle" style={{ marginBottom: "12px" }}>
+          Route alerts to webhook, email, and Slack.
+        </p>
+        <div className="kv-stack">
+          <div className="kv-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+            <select
+              aria-label="Channel type"
+              value={channelType}
+              onChange={(event) => setChannelType(event.target.value as "WEBHOOK" | "EMAIL" | "SLACK")}
+            >
+              <option value="WEBHOOK">Webhook</option>
+              <option value="EMAIL">Email</option>
+              <option value="SLACK">Slack</option>
+            </select>
+            <input
+              aria-label="Channel name"
+              placeholder="Channel name"
+              value={channelName}
+              onChange={(event) => setChannelName(event.target.value)}
+            />
+            <select
+              aria-label="Minimum severity"
+              value={channelSeverity}
+              onChange={(event) =>
+                setChannelSeverity(event.target.value as "MEDIUM" | "HIGH" | "CRITICAL")
+              }
+            >
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="CRITICAL">CRITICAL</option>
+            </select>
+          </div>
+          {channelType === "WEBHOOK" ? (
+            <div className="kv-row" style={{ flexWrap: "wrap", gap: "10px" }}>
+              <input
+                aria-label="Webhook URL"
+                placeholder="https://example.com/alerts"
+                value={channelUrl}
+                onChange={(event) => setChannelUrl(event.target.value)}
+              />
+              <input
+                aria-label="Webhook secret"
+                placeholder="Optional shared secret"
+                value={channelSecret}
+                onChange={(event) => setChannelSecret(event.target.value)}
+              />
+            </div>
+          ) : null}
+          {channelType === "EMAIL" ? (
+            <input
+              aria-label="Alert email recipients"
+              placeholder="alice@company.com,bob@company.com"
+              value={channelEmails}
+              onChange={(event) => setChannelEmails(event.target.value)}
+            />
+          ) : null}
+          {channelType === "SLACK" ? (
+            <input
+              aria-label="Slack channel"
+              placeholder="#ops-alerts or C123456"
+              value={channelSlack}
+              onChange={(event) => setChannelSlack(event.target.value)}
+            />
+          ) : null}
+          <div className="kv-row">
+            <button
+              type="button"
+              onClick={() => void onCreateChannel()}
+              disabled={creatingChannel || channelName.trim().length === 0}
+            >
+              Create channel
+            </button>
+          </div>
+        </div>
+        <div className="kv-table-wrap" style={{ marginTop: "12px" }}>
+          <table>
+            <thead>
+              <tr>
+                <th align="left">Name</th>
+                <th align="left">Type</th>
+                <th align="left">Min Severity</th>
+                <th align="left">Enabled</th>
+                <th align="left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alertChannels.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>No alert channels configured.</td>
+                </tr>
+              ) : (
+                alertChannels.map((channel) => (
+                  <tr key={channel.id}>
+                    <td>{channel.name}</td>
+                    <td>{channel.type}</td>
+                    <td>{channel.minSeverity}</td>
+                    <td>{channel.isEnabled ? "Yes" : "No"}</td>
+                    <td style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => void onTestChannel(channel.id)}
+                        disabled={testingChannelId === channel.id}
+                      >
+                        Test
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void onDeleteChannel(channel.id)}
+                        disabled={deletingChannelId === channel.id}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="kv-card">
+        <div className="kv-row" style={{ justifyContent: "space-between" }}>
+          <h2 className="kv-section-title" style={{ marginTop: 0, marginBottom: 0 }}>
+            Alert Deliveries
+          </h2>
+          <select
+            aria-label="Filter by alert event"
+            value={selectedAlertEventId}
+            onChange={(event) => setSelectedAlertEventId(event.target.value)}
+          >
+            <option value="">All alerts</option>
+            {alerts.map((alert) => (
+              <option key={alert.id} value={alert.id}>
+                {alert.type} - {alert.title}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="kv-table-wrap" style={{ marginTop: "12px" }}>
+          <table>
+            <thead>
+              <tr>
+                <th align="left">Time</th>
+                <th align="left">Channel</th>
+                <th align="left">Success</th>
+                <th align="left">Status</th>
+                <th align="left">Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alertDeliveries.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>No alert deliveries recorded.</td>
+                </tr>
+              ) : (
+                alertDeliveries.map((delivery) => (
+                  <tr key={delivery.id}>
+                    <td>{formatDateTime(delivery.createdAt)}</td>
+                    <td>{delivery.channel?.name ?? delivery.channelId}</td>
+                    <td>{delivery.success ? "Yes" : "No"}</td>
+                    <td>{delivery.statusCode ?? "-"}</td>
+                    <td>{delivery.error ?? "-"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="kv-card">
+        <h2 className="kv-section-title" style={{ marginTop: 0 }}>
           API token usage logs
         </h2>
         <p className="kv-subtitle" style={{ marginBottom: "12px" }}>
@@ -431,6 +1068,82 @@ export function LogsTab({ token }: LogsTabProps) {
             </div>
             <div className="kv-row" style={{ justifyContent: "flex-end", marginTop: "12px" }}>
               <button type="button" onClick={() => setSelectedDelivery(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedAlert ? (
+        <div className="kv-modal-backdrop">
+          <div className="kv-modal">
+            <h2 style={{ marginTop: 0 }}>Alert details</h2>
+            <div className="kv-stack">
+              <p style={{ margin: 0 }}>
+                <strong>{selectedAlert.title}</strong>
+              </p>
+              <p style={{ margin: 0 }}>
+                {selectedAlert.type} · {selectedAlert.severity}
+              </p>
+              <pre className="kv-dev-pre">
+                {JSON.stringify(selectedAlert.details ?? {}, null, 2)}
+              </pre>
+            </div>
+            <div className="kv-row" style={{ justifyContent: "flex-end", marginTop: "12px" }}>
+              <button type="button" onClick={() => setSelectedAlert(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedAlertForEscalation ? (
+        <div className="kv-modal-backdrop">
+          <div className="kv-modal">
+            <h2 style={{ marginTop: 0 }}>Escalation history</h2>
+            <p style={{ marginTop: 0 }}>
+              {selectedAlertForEscalation.title} ({selectedAlertForEscalation.severity})
+            </p>
+            <div className="kv-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th align="left">Step</th>
+                    <th align="left">Attempted</th>
+                    <th align="left">Routed To</th>
+                    <th align="left">Suppressed</th>
+                    <th align="left">Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alertEscalations.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>No escalation attempts yet.</td>
+                    </tr>
+                  ) : (
+                    alertEscalations.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>{entry.stepNumber}</td>
+                        <td>{formatDateTime(entry.attemptedAt)}</td>
+                        <td>{entry.routedTo.join(", ")}</td>
+                        <td>{entry.suppressed ? "Yes" : "No"}</td>
+                        <td>{entry.reason ?? "-"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="kv-row" style={{ justifyContent: "flex-end", marginTop: "12px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedAlertForEscalation(null);
+                  setAlertEscalations([]);
+                }}
+              >
                 Close
               </button>
             </div>

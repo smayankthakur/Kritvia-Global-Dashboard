@@ -260,6 +260,144 @@ async function main() {
     }
   });
 
+  const defaultAlertRules = [
+    {
+      type: "JOB_FAILURE_SPIKE",
+      thresholdCount: 5,
+      windowMinutes: 10,
+      severity: "HIGH",
+      autoMitigation: null
+    },
+    {
+      type: "WEBHOOK_FAILURE_SPIKE",
+      thresholdCount: 10,
+      windowMinutes: 10,
+      severity: "HIGH",
+      autoMitigation: { action: "DISABLE_WEBHOOK" }
+    },
+    {
+      type: "APP_COMMAND_FAILURE_SPIKE",
+      thresholdCount: 20,
+      windowMinutes: 10,
+      severity: "CRITICAL",
+      autoMitigation: { action: "PAUSE_APP_INSTALL" }
+    },
+    {
+      type: "OAUTH_REFRESH_FAILURE",
+      thresholdCount: 5,
+      windowMinutes: 60,
+      severity: "HIGH",
+      autoMitigation: { action: "OPEN_CIRCUIT" }
+    }
+  ];
+
+  for (const rule of defaultAlertRules) {
+    const existingRule = await prisma.alertRule.findFirst({
+      where: {
+        orgId: org.id,
+        type: rule.type
+      },
+      select: { id: true }
+    });
+
+    if (existingRule) {
+      await prisma.alertRule.update({
+        where: { id: existingRule.id },
+        data: {
+          isEnabled: true,
+          thresholdCount: rule.thresholdCount,
+          windowMinutes: rule.windowMinutes,
+          severity: rule.severity,
+          autoCreateIncident: false,
+          autoMitigation: rule.autoMitigation ?? undefined
+        }
+      });
+      continue;
+    }
+
+    await prisma.alertRule.create({
+      data: {
+        orgId: org.id,
+        type: rule.type,
+        isEnabled: true,
+        thresholdCount: rule.thresholdCount,
+        windowMinutes: rule.windowMinutes,
+        severity: rule.severity,
+        autoCreateIncident: false,
+        autoMitigation: rule.autoMitigation ?? undefined
+      }
+    });
+  }
+
+  const statusComponents = [
+    { key: "api", name: "API", description: "Core API request handling" },
+    { key: "web", name: "Web App", description: "Dashboard web frontend availability" },
+    { key: "db", name: "Database", description: "Primary Postgres availability" },
+    { key: "webhooks", name: "Webhooks", description: "Outbound webhook delivery pipeline" },
+    { key: "ai", name: "AI", description: "AI insight/action and LLM services" },
+    { key: "billing", name: "Billing", description: "Subscription and payment integrations" }
+  ];
+
+  for (const component of statusComponents) {
+    await prisma.statusComponent.upsert({
+      where: { key: component.key },
+      update: {
+        orgId: org.id,
+        name: component.name,
+        description: component.description
+      },
+      create: {
+        orgId: org.id,
+        key: component.key,
+        name: component.name,
+        description: component.description
+      }
+    });
+  }
+
+  await prisma.escalationPolicy.upsert({
+    where: {
+      orgId: org.id
+    },
+    update: {
+      name: "Default escalation policy",
+      isEnabled: true,
+      timezone: "UTC",
+      quietHoursEnabled: false,
+      quietHoursStart: "22:00",
+      quietHoursEnd: "08:00",
+      businessDaysOnly: false,
+      slaCritical: 10,
+      slaHigh: 30,
+      slaMedium: 180,
+      slaLow: 1440,
+      steps: [
+        { afterMinutes: 10, routeTo: ["SLACK"], minSeverity: "CRITICAL" },
+        { afterMinutes: 30, routeTo: ["EMAIL", "WEBHOOK"], minSeverity: "HIGH" },
+        { afterMinutes: 180, routeTo: ["EMAIL"], minSeverity: "MEDIUM" }
+      ]
+    },
+    create: {
+      orgId: org.id,
+      name: "Default escalation policy",
+      isEnabled: true,
+      timezone: "UTC",
+      quietHoursEnabled: false,
+      quietHoursStart: "22:00",
+      quietHoursEnd: "08:00",
+      businessDaysOnly: false,
+      slaCritical: 10,
+      slaHigh: 30,
+      slaMedium: 180,
+      slaLow: 1440,
+      steps: [
+        { afterMinutes: 10, routeTo: ["SLACK"], minSeverity: "CRITICAL" },
+        { afterMinutes: 30, routeTo: ["EMAIL", "WEBHOOK"], minSeverity: "HIGH" },
+        { afterMinutes: 180, routeTo: ["EMAIL"], minSeverity: "MEDIUM" }
+      ]
+    }
+  });
+
   const demoUsers = [
     { name: "Demo CEO", email: "ceo@demo.kritviya.local", role: Role.CEO },
     { name: "Demo Ops", email: "ops@demo.kritviya.local", role: Role.OPS },
@@ -308,6 +446,95 @@ async function main() {
         role: demoUser.role,
         status: "ACTIVE",
         joinedAt: user.createdAt
+      }
+    });
+  }
+
+  const seededUsers = await prisma.user.findMany({
+    where: {
+      orgId: org.id,
+      email: {
+        in: demoUsers.map((entry) => entry.email)
+      }
+    },
+    select: {
+      id: true,
+      email: true
+    }
+  });
+  const userByEmail = new Map(seededUsers.map((entry) => [entry.email, entry.id]));
+
+  const existingOnCallSchedule = await prisma.onCallSchedule.findFirst({
+    where: { orgId: org.id },
+    orderBy: { createdAt: "asc" }
+  });
+  const onCallSchedule = existingOnCallSchedule
+    ? await prisma.onCallSchedule.update({
+        where: { id: existingOnCallSchedule.id },
+        data: {
+          name: "Default On-call",
+          timezone: "UTC",
+          handoffInterval: "WEEKLY",
+          handoffHour: 10,
+          isEnabled: true
+        }
+      })
+    : await prisma.onCallSchedule.create({
+        data: {
+          orgId: org.id,
+          name: "Default On-call",
+          timezone: "UTC",
+          handoffInterval: "WEEKLY",
+          handoffHour: 10,
+          isEnabled: true
+        }
+      });
+
+  const primaryUserId = userByEmail.get("ceo@demo.kritviya.local") ?? userByEmail.get("admin@demo.kritviya.local");
+  const secondaryUserId = userByEmail.get("admin@demo.kritviya.local") ?? userByEmail.get("ops@demo.kritviya.local");
+
+  if (primaryUserId) {
+    await prisma.onCallRotationMember.upsert({
+      where: {
+        scheduleId_tier_order: {
+          scheduleId: onCallSchedule.id,
+          tier: "PRIMARY",
+          order: 1
+        }
+      },
+      update: {
+        userId: primaryUserId,
+        isActive: true
+      },
+      create: {
+        scheduleId: onCallSchedule.id,
+        userId: primaryUserId,
+        tier: "PRIMARY",
+        order: 1,
+        isActive: true
+      }
+    });
+  }
+
+  if (secondaryUserId) {
+    await prisma.onCallRotationMember.upsert({
+      where: {
+        scheduleId_tier_order: {
+          scheduleId: onCallSchedule.id,
+          tier: "SECONDARY",
+          order: 1
+        }
+      },
+      update: {
+        userId: secondaryUserId,
+        isActive: true
+      },
+      create: {
+        scheduleId: onCallSchedule.id,
+        userId: secondaryUserId,
+        tier: "SECONDARY",
+        order: 1,
+        isActive: true
       }
     });
   }

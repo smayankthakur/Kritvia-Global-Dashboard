@@ -7,6 +7,7 @@ import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { getActiveOrgId } from "../common/auth-org";
 import { assertFeatureEnabled } from "../common/feature-flags";
+import { QUEUE_NAMES } from "../jobs/queues";
 import { JobQueueService } from "../queue/job-queue.service";
 import { GenerateCeoDailyBriefDto } from "./dto/generate-ceo-daily-brief.dto";
 import { ListLlmReportsDto } from "./dto/list-llm-reports.dto";
@@ -30,9 +31,12 @@ export class LlmController {
     assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
     const periodDays = body.periodDays ?? 7;
-    return this.jobQueueService.enqueueAndWait("llm-ceo-daily-brief", () =>
-      this.llmService.generateCeoDailyBrief(orgId, req.user.userId, periodDays)
-    );
+    return this.jobQueueService.runNow(QUEUE_NAMES.ai, "llm-generate-report", {
+      orgId,
+      actorUserId: req.user.userId,
+      reportType: "ceo-daily-brief",
+      periodDays
+    });
   }
 
   @Post("score-drop-explain")
@@ -40,9 +44,11 @@ export class LlmController {
   async generateScoreDropExplain(@Req() req: { user: AuthUserContext }) {
     assertFeatureEnabled("FEATURE_AI_ENABLED");
     const orgId = getActiveOrgId(req);
-    return this.jobQueueService.enqueueAndWait("llm-score-drop-explain", () =>
-      this.llmService.generateScoreDropExplain(orgId, req.user.userId)
-    );
+    return this.jobQueueService.runNow(QUEUE_NAMES.ai, "llm-generate-report", {
+      orgId,
+      actorUserId: req.user.userId,
+      reportType: "score-drop-explain"
+    });
   }
 
   @Get()

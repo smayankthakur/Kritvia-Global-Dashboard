@@ -10,14 +10,18 @@ import { AppsTab } from "./tabs/apps";
 import { ApiTokensTab } from "./tabs/api-tokens";
 import { DocsTab } from "./tabs/docs";
 import { LogsTab } from "./tabs/logs";
+import { IncidentsTab } from "./tabs/incidents";
+import { OnCallTab } from "./tabs/oncall";
 import { WebhooksTab } from "./tabs/webhooks";
 
-type DeveloperTab = "tokens" | "webhooks" | "logs" | "docs" | "apps";
+type DeveloperTab = "tokens" | "webhooks" | "logs" | "incidents" | "docs" | "apps" | "oncall";
 
 const TABS: Array<{ key: DeveloperTab; label: string }> = [
   { key: "tokens", label: "Tokens" },
   { key: "webhooks", label: "Webhooks" },
   { key: "logs", label: "Logs" },
+  { key: "incidents", label: "Incidents" },
+  { key: "oncall", label: "On-call" },
   { key: "docs", label: "Docs" },
   { key: "apps", label: "Apps" }
 ];
@@ -27,7 +31,15 @@ function canAccess(role: string): boolean {
 }
 
 function parseTab(value: string | null): DeveloperTab {
-  if (value === "tokens" || value === "webhooks" || value === "logs" || value === "docs" || value === "apps") {
+  if (
+    value === "tokens" ||
+    value === "webhooks" ||
+    value === "logs" ||
+    value === "incidents" ||
+    value === "oncall" ||
+    value === "docs" ||
+    value === "apps"
+  ) {
     return value;
   }
   return "tokens";
@@ -56,6 +68,18 @@ function tabContent(tab: DeveloperTab): { title: string; description: string } {
     return {
       title: "Test installed apps",
       description: "Run test triggers and review app-specific delivery and command activity."
+    };
+  }
+  if (tab === "incidents") {
+    return {
+      title: "Incident timelines and postmortems",
+      description: "Track acknowledge/resolve SLAs, mitigation history, and incident notes."
+    };
+  }
+  if (tab === "oncall") {
+    return {
+      title: "Manage on-call rotations",
+      description: "Configure escalation targets for primary and secondary incident responders."
     };
   }
   return {
@@ -181,11 +205,15 @@ function DeveloperPortalPageInner() {
       {activeTab === "tokens" ? <ApiTokensTab token={token} /> : null}
       {activeTab === "webhooks" ? <WebhooksTab token={token} /> : null}
       {activeTab === "logs" ? <LogsTab token={token} /> : null}
+      {activeTab === "incidents" ? <IncidentsTab token={token} /> : null}
+      {activeTab === "oncall" ? <OnCallTab token={token} /> : null}
       {activeTab === "docs" ? <DocsTab token={token} /> : null}
       {activeTab === "apps" ? <AppsTab token={token} /> : null}
       {activeTab !== "tokens" &&
       activeTab !== "webhooks" &&
       activeTab !== "logs" &&
+      activeTab !== "incidents" &&
+      activeTab !== "oncall" &&
       activeTab !== "docs" &&
       activeTab !== "apps" ? (
         <section className="kv-card kv-dev-card" aria-live="polite">

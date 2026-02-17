@@ -134,8 +134,11 @@ Details covered: `/api/v1` + token scope enforcement, webhook registry/retry/cir
 | 12.5 AI Copilot Mode (real-time suggestions) | Planned |
 
 ## Latest Completed Step Update
-- Date: 2026-02-16
+- Date: 2026-02-17
 - Completed:
-  - Phase 6.4 Scale Hardening v2 implementation pass
-  - Developer Portal App Test Console in `/developer?tab=apps`
-  - Marketplace app delivery visibility/replay and command-log visibility wiring
+  - Phase 6.4.19 Public Status Page + Uptime
+  - New status models (`StatusComponent`, `UptimeCheck`) and public incident fields (`isPublic`, `publicSummary`, `publicUpdates`, `publicSlug`)
+  - Public status APIs (`/status`, `/status/incidents`, `/status/incidents/:slug`) with 60s server-side cache
+  - Incident publishing APIs (`/org/incidents/:id/publish|unpublish|public-update`) and public component mapping
+  - Scheduled uptime scan job (`schedule-uptime` / `uptime-scan`) wired into BullMQ scheduler + worker flow
+  - Public Next.js pages `/status` and `/status/incidents/[slug]` plus internal incident publishing controls in Developer Incidents tab

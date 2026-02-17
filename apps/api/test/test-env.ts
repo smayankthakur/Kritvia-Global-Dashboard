@@ -5,3 +5,4 @@ process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 process.env.COOKIE_SECURE = "false";
 process.env.RAZORPAY_WEBHOOK_SECRET =
   process.env.RAZORPAY_WEBHOOK_SECRET || "kritviya_webhook_test_secret";
+process.env.JOBS_ENABLED = process.env.JOBS_ENABLED || "false";

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ActivityLogModule } from "../activity-log/activity-log.module";
+import { AlertsModule } from "../alerts/alerts.module";
 import { AuthModule } from "../auth/auth.module";
 import { DealsModule } from "../deals/deals.module";
 import { NudgesModule } from "../nudges/nudges.module";
@@ -17,6 +18,7 @@ import { ServiceAccountOnlyGuard } from "./service-account-only.guard";
     AuthModule,
     PrismaModule,
     ActivityLogModule,
+    AlertsModule,
     NudgesModule,
     WorkItemsModule,
     DealsModule

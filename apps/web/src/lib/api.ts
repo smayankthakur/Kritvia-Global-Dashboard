@@ -725,6 +725,262 @@ export interface SecurityEvent {
   createdAt: string;
 }
 
+export interface AlertRule {
+  id: string;
+  orgId: string;
+  type: string;
+  isEnabled: boolean;
+  thresholdCount: number;
+  windowMinutes: number;
+  severity: "MEDIUM" | "HIGH" | "CRITICAL";
+  autoMitigation: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlertEvent {
+  id: string;
+  orgId: string;
+  ruleId: string | null;
+  type: string;
+  severity: "MEDIUM" | "HIGH" | "CRITICAL";
+  title: string;
+  details: Record<string, unknown>;
+  isAcknowledged: boolean;
+  acknowledgedByUserId: string | null;
+  acknowledgedAt: string | null;
+  createdAt: string;
+}
+
+export interface EscalationStepConfig {
+  afterMinutes: number;
+  routeTo: Array<"WEBHOOK" | "EMAIL" | "SLACK">;
+  minSeverity: "MEDIUM" | "HIGH" | "CRITICAL";
+}
+
+export interface EscalationPolicy {
+  id: string;
+  orgId: string;
+  name: string;
+  isEnabled: boolean;
+  timezone: string;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
+  businessDaysOnly: boolean;
+  slaCritical: number;
+  slaHigh: number;
+  slaMedium: number;
+  slaLow: number;
+  steps: EscalationStepConfig[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlertEscalation {
+  id: string;
+  orgId: string;
+  alertEventId: string;
+  stepNumber: number;
+  attemptedAt: string;
+  routedTo: Array<
+    | "WEBHOOK"
+    | "EMAIL"
+    | "SLACK"
+    | "ONCALL_PRIMARY"
+    | "ONCALL_SECONDARY"
+    | "ONCALL_PRIMARY_GLOBAL"
+    | "ONCALL_PRIMARY_EMAIL"
+    | "ONCALL_SECONDARY_EMAIL"
+  >;
+  suppressed: boolean;
+  reason: string | null;
+}
+
+export interface OnCallSchedule {
+  id: string;
+  orgId: string;
+  name: string;
+  timezone: string;
+  isEnabled: boolean;
+  startAt: string;
+  handoffInterval: "DAILY" | "WEEKLY";
+  handoffHour: number;
+  coverageEnabled?: boolean;
+  coverageDays?: string[] | null;
+  coverageStart?: string | null;
+  coverageEnd?: string | null;
+  fallbackScheduleId?: string | null;
+  calendars?: Array<{
+    calendar: {
+      id: string;
+      name: string;
+      timezone: string;
+      isEnabled: boolean;
+    };
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OnCallMember {
+  id: string;
+  scheduleId: string;
+  userId: string;
+  tier: "PRIMARY" | "SECONDARY";
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
+
+export interface OnCallOverride {
+  id: string;
+  scheduleId: string;
+  tier: "PRIMARY" | "SECONDARY";
+  fromUserId: string | null;
+  toUserId: string;
+  startAt: string;
+  endAt: string;
+  reason: string | null;
+  createdAt: string;
+  fromUser?: { id: string; name: string; email: string } | null;
+  toUser?: { id: string; name: string; email: string } | null;
+}
+
+export interface HolidayCalendar {
+  id: string;
+  orgId: string;
+  name: string;
+  timezone: string;
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HolidayEntry {
+  id: string;
+  calendarId: string;
+  startDate: string;
+  endDate: string | null;
+  title: string | null;
+  createdAt: string;
+}
+
+export interface IncidentTimelineEntry {
+  id: string;
+  incidentId: string;
+  type: "CREATED" | "ACKNOWLEDGED" | "ESCALATED" | "SEVERITY_CHANGED" | "NOTE" | "MITIGATION" | "RESOLVED";
+  message: string | null;
+  metadata: Record<string, unknown> | null;
+  actorUserId: string | null;
+  createdAt: string;
+  actorUser?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+}
+
+export interface Incident {
+  id: string;
+  orgId: string;
+  alertEventId: string | null;
+  title: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED" | "POSTMORTEM";
+  ownerUserId: string | null;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+  isPublic: boolean;
+  publicSummary: string | null;
+  publicSlug: string | null;
+  publicUpdates?: Array<{ ts: string; message: string }> | null;
+  publicComponentKeys?: string[] | null;
+  createdAt: string;
+  updatedAt: string;
+  mttaMinutes?: number | null;
+  mttrMinutes?: number | null;
+  owner?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+  timeline?: IncidentTimelineEntry[];
+}
+
+export interface IncidentPostmortem {
+  id: string;
+  incidentId: string;
+  orgId: string;
+  summary: string | null;
+  rootCause: string | null;
+  impact: string | null;
+  detectionGap: string | null;
+  correctiveActions: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicStatusComponent {
+  key: string;
+  name: string;
+  description: string | null;
+  status: "OPERATIONAL" | "DEGRADED" | "PARTIAL_OUTAGE" | "MAJOR_OUTAGE";
+  updatedAt: string;
+  uptime24h: number;
+  uptime7d: number;
+}
+
+export interface PublicStatusIncident {
+  id: string;
+  slug: string | null;
+  title: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED" | "POSTMORTEM";
+  summary: string | null;
+  updates: Array<{ ts: string; message: string }>;
+  componentKeys: string[];
+  createdAt?: string;
+  updatedAt: string;
+}
+
+export interface AlertChannel {
+  id: string;
+  orgId: string;
+  type: "WEBHOOK" | "EMAIL" | "SLACK";
+  name: string;
+  isEnabled: boolean;
+  minSeverity: "MEDIUM" | "HIGH" | "CRITICAL";
+  hasConfig: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlertDelivery {
+  id: string;
+  orgId: string;
+  alertEventId: string;
+  channelId: string;
+  success: boolean;
+  statusCode: number | null;
+  error: string | null;
+  durationMs: number | null;
+  createdAt: string;
+  channel?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+}
+
 export interface BillingPlanPayload {
   subscription: {
     status: string;
@@ -1946,6 +2202,631 @@ export async function retryWebhookDelivery(
     body: JSON.stringify({ deliveryId })
   });
   return parseResponse(response, "Failed to retry webhook delivery");
+}
+
+export async function listOrgAlerts(
+  token: string,
+  options?: {
+    acknowledged?: boolean;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  }
+): Promise<PaginatedResponse<AlertEvent>> {
+  const params = new URLSearchParams();
+  if (options?.acknowledged !== undefined) {
+    params.set("acknowledged", String(options.acknowledged));
+  }
+  addPaginationParams(params, options);
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/org/alerts${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch alerts");
+}
+
+export async function acknowledgeOrgAlert(
+  token: string,
+  alertId: string
+): Promise<AlertEvent> {
+  const response = await request(`${API_BASE_URL}/org/alerts/${alertId}/acknowledge`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to acknowledge alert");
+}
+
+export async function listAlertRules(token: string): Promise<AlertRule[]> {
+  const response = await request(`${API_BASE_URL}/org/alert-rules`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch alert rules");
+}
+
+export async function getEscalationPolicy(token: string): Promise<EscalationPolicy> {
+  const response = await request(`${API_BASE_URL}/org/escalation-policy`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch escalation policy");
+}
+
+export async function saveEscalationPolicy(
+  token: string,
+  payload: Partial<
+    Omit<EscalationPolicy, "id" | "orgId" | "createdAt" | "updatedAt"> & {
+      steps: EscalationStepConfig[];
+    }
+  >
+): Promise<EscalationPolicy> {
+  const response = await request(`${API_BASE_URL}/org/escalation-policy`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to save escalation policy");
+}
+
+export async function listAlertEscalations(
+  token: string,
+  alertId: string
+): Promise<AlertEscalation[]> {
+  const response = await request(`${API_BASE_URL}/org/alerts/${alertId}/escalations`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch escalation history");
+}
+
+export async function testEscalationPolicy(
+  token: string,
+  severity: "MEDIUM" | "HIGH" | "CRITICAL" = "HIGH"
+): Promise<{ alertEventId: string; escalated: number; suppressed: number; totalProcessed: number }> {
+  const response = await request(`${API_BASE_URL}/org/escalation-policy/test`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ severity })
+  });
+  return parseResponse(response, "Failed to test escalation policy");
+}
+
+export async function listOnCallSchedules(token: string): Promise<OnCallSchedule[]> {
+  const response = await request(`${API_BASE_URL}/org/oncall/schedules`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch on-call schedules");
+}
+
+export async function createOnCallSchedule(
+  token: string,
+  payload: {
+    name: string;
+    timezone?: string;
+    handoffInterval?: "DAILY" | "WEEKLY";
+    handoffHour?: number;
+    startAt?: string;
+    coverageEnabled?: boolean;
+    coverageDays?: string[];
+    coverageStart?: string;
+    coverageEnd?: string;
+    fallbackScheduleId?: string;
+  }
+): Promise<OnCallSchedule> {
+  const response = await request(`${API_BASE_URL}/org/oncall/schedules`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create on-call schedule");
+}
+
+export async function updateOnCallSchedule(
+  token: string,
+  scheduleId: string,
+  payload: Partial<{
+    name: string;
+    timezone: string;
+    handoffInterval: "DAILY" | "WEEKLY";
+    handoffHour: number;
+    isEnabled: boolean;
+    startAt: string;
+    coverageEnabled: boolean;
+    coverageDays: string[];
+    coverageStart: string;
+    coverageEnd: string;
+    fallbackScheduleId: string | null;
+  }>
+): Promise<OnCallSchedule> {
+  const response = await request(`${API_BASE_URL}/org/oncall/schedules/${scheduleId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update on-call schedule");
+}
+
+export async function deleteOnCallSchedule(token: string, scheduleId: string): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/oncall/schedules/${scheduleId}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to remove on-call schedule");
+}
+
+export async function listOnCallMembers(token: string, scheduleId: string): Promise<OnCallMember[]> {
+  const response = await request(`${API_BASE_URL}/org/oncall/schedules/${scheduleId}/members`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch on-call members");
+}
+
+export async function createOnCallMember(
+  token: string,
+  scheduleId: string,
+  payload: { userId: string; tier: "PRIMARY" | "SECONDARY"; order: number }
+): Promise<OnCallMember> {
+  const response = await request(`${API_BASE_URL}/org/oncall/schedules/${scheduleId}/members`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create on-call member");
+}
+
+export async function updateOnCallMember(
+  token: string,
+  memberId: string,
+  payload: Partial<{ order: number; isActive: boolean }>
+): Promise<OnCallMember> {
+  const response = await request(`${API_BASE_URL}/org/oncall/members/${memberId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update on-call member");
+}
+
+export async function deleteOnCallMember(token: string, memberId: string): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/oncall/members/${memberId}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to remove on-call member");
+}
+
+export async function listOnCallOverrides(
+  token: string,
+  scheduleId?: string
+): Promise<OnCallOverride[]> {
+  const params = new URLSearchParams();
+  if (scheduleId) {
+    params.set("scheduleId", scheduleId);
+  }
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/org/oncall/overrides${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch on-call overrides");
+}
+
+export async function createOnCallOverride(
+  token: string,
+  payload: {
+    scheduleId: string;
+    tier: "PRIMARY" | "SECONDARY";
+    fromUserId?: string;
+    toUserId: string;
+    startAt: string;
+    endAt: string;
+    reason?: string;
+  }
+): Promise<OnCallOverride> {
+  const response = await request(`${API_BASE_URL}/org/oncall/overrides`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create on-call override");
+}
+
+export async function deleteOnCallOverride(token: string, id: string): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/oncall/overrides/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to remove on-call override");
+}
+
+export async function getOnCallNow(
+  token: string
+): Promise<{
+  scheduleId: string | null;
+  activeScheduleId?: string | null;
+  inCoverageWindow?: boolean;
+  isHoliday?: boolean;
+  primary: { id: string; name: string; email: string; role: string } | null;
+  secondary: { id: string; name: string; email: string; role: string } | null;
+}> {
+  const response = await request(`${API_BASE_URL}/org/oncall/now`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to resolve on-call assignment");
+}
+
+export async function linkOnCallScheduleCalendar(
+  token: string,
+  scheduleId: string,
+  calendarId: string
+): Promise<{ id: string; scheduleId: string; calendarId: string }> {
+  const response = await request(`${API_BASE_URL}/org/oncall/schedules/${scheduleId}/calendars`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ calendarId })
+  });
+  return parseResponse(response, "Failed to link calendar to schedule");
+}
+
+export async function unlinkOnCallScheduleCalendar(
+  token: string,
+  scheduleId: string,
+  calendarId: string
+): Promise<{ success: true }> {
+  const response = await request(
+    `${API_BASE_URL}/org/oncall/schedules/${scheduleId}/calendars/${calendarId}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(token)
+    }
+  );
+  return parseResponse(response, "Failed to unlink calendar from schedule");
+}
+
+export async function listHolidayCalendars(token: string): Promise<HolidayCalendar[]> {
+  const response = await request(`${API_BASE_URL}/org/holidays/calendars`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch holiday calendars");
+}
+
+export async function createHolidayCalendar(
+  token: string,
+  payload: { name: string; timezone?: string }
+): Promise<HolidayCalendar> {
+  const response = await request(`${API_BASE_URL}/org/holidays/calendars`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create holiday calendar");
+}
+
+export async function updateHolidayCalendar(
+  token: string,
+  calendarId: string,
+  payload: Partial<{ name: string; timezone: string; isEnabled: boolean }>
+): Promise<HolidayCalendar> {
+  const response = await request(`${API_BASE_URL}/org/holidays/calendars/${calendarId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update holiday calendar");
+}
+
+export async function deleteHolidayCalendar(
+  token: string,
+  calendarId: string
+): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/holidays/calendars/${calendarId}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to disable holiday calendar");
+}
+
+export async function listHolidayEntries(token: string, calendarId: string): Promise<HolidayEntry[]> {
+  const response = await request(`${API_BASE_URL}/org/holidays/calendars/${calendarId}/entries`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch holiday entries");
+}
+
+export async function createHolidayEntry(
+  token: string,
+  calendarId: string,
+  payload: { startDate: string; endDate?: string; title?: string }
+): Promise<HolidayEntry> {
+  const response = await request(`${API_BASE_URL}/org/holidays/calendars/${calendarId}/entries`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create holiday entry");
+}
+
+export async function deleteHolidayEntry(token: string, entryId: string): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/holidays/entries/${entryId}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to remove holiday entry");
+}
+
+export async function listIncidents(
+  token: string,
+  query?: {
+    status?: "OPEN" | "ACKNOWLEDGED" | "RESOLVED" | "POSTMORTEM";
+    severity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+    page?: number;
+    pageSize?: number;
+  }
+): Promise<PaginatedResponse<Incident>> {
+  const params = new URLSearchParams();
+  if (query?.status) {
+    params.set("status", query.status);
+  }
+  if (query?.severity) {
+    params.set("severity", query.severity);
+  }
+  params.set("page", String(query?.page ?? 1));
+  params.set("pageSize", String(query?.pageSize ?? 20));
+
+  const response = await request(`${API_BASE_URL}/org/incidents?${params.toString()}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch incidents");
+}
+
+export async function getIncident(token: string, incidentId: string): Promise<Incident> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch incident");
+}
+
+export async function acknowledgeIncident(token: string, incidentId: string): Promise<Incident> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/acknowledge`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to acknowledge incident");
+}
+
+export async function resolveIncident(token: string, incidentId: string): Promise<Incident> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/resolve`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to resolve incident");
+}
+
+export async function updateIncidentSeverity(
+  token: string,
+  incidentId: string,
+  payload: { severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" }
+): Promise<Incident> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/severity`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update incident severity");
+}
+
+export async function addIncidentNote(
+  token: string,
+  incidentId: string,
+  payload: { message: string }
+): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/notes`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to add incident note");
+}
+
+export async function getIncidentPostmortem(
+  token: string,
+  incidentId: string
+): Promise<IncidentPostmortem | null> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/postmortem`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch incident postmortem");
+}
+
+export async function upsertIncidentPostmortem(
+  token: string,
+  incidentId: string,
+  payload: {
+    summary?: string;
+    rootCause?: string;
+    impact?: string;
+    detectionGap?: string;
+    correctiveActions?: unknown;
+  }
+): Promise<IncidentPostmortem> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/postmortem`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to save incident postmortem");
+}
+
+export async function getIncidentMetrics(
+  token: string,
+  query?: { range?: string }
+): Promise<{
+  totalIncidents: number;
+  avgMTTA: number;
+  avgMTTR: number;
+  openIncidents: number;
+  resolvedIncidents: number;
+  rangeDays: number;
+}> {
+  const params = new URLSearchParams();
+  if (query?.range) {
+    params.set("range", query.range);
+  }
+  const response = await request(`${API_BASE_URL}/org/incidents/metrics?${params.toString()}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch incident metrics");
+}
+
+export async function publishIncident(
+  token: string,
+  incidentId: string,
+  payload: { publicSummary: string; componentKeys?: string[] }
+): Promise<Incident> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/publish`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to publish incident");
+}
+
+export async function unpublishIncident(token: string, incidentId: string): Promise<Incident> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/unpublish`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to unpublish incident");
+}
+
+export async function addPublicIncidentUpdate(
+  token: string,
+  incidentId: string,
+  payload: { message: string }
+): Promise<Incident> {
+  const response = await request(`${API_BASE_URL}/org/incidents/${incidentId}/public-update`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to add public incident update");
+}
+
+export async function getPublicStatus(): Promise<{
+  overallStatus: "OPERATIONAL" | "DEGRADED" | "PARTIAL_OUTAGE" | "MAJOR_OUTAGE";
+  components: PublicStatusComponent[];
+  activeIncidents: PublicStatusIncident[];
+}> {
+  const response = await request(`${API_BASE_URL}/status`, {
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to load public status");
+}
+
+export async function listPublicStatusIncidents(): Promise<PublicStatusIncident[]> {
+  const response = await request(`${API_BASE_URL}/status/incidents`, {
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to load public incidents");
+}
+
+export async function getPublicStatusIncident(slug: string): Promise<PublicStatusIncident> {
+  const response = await request(`${API_BASE_URL}/status/incidents/${slug}`, {
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to load public incident");
+}
+
+export async function listAlertChannels(token: string): Promise<AlertChannel[]> {
+  const response = await request(`${API_BASE_URL}/org/alert-channels`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch alert channels");
+}
+
+export async function createAlertChannel(
+  token: string,
+  payload: {
+    type: "WEBHOOK" | "EMAIL" | "SLACK";
+    name: string;
+    minSeverity: "MEDIUM" | "HIGH" | "CRITICAL";
+    config: Record<string, unknown>;
+  }
+): Promise<AlertChannel> {
+  const response = await request(`${API_BASE_URL}/org/alert-channels`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create alert channel");
+}
+
+export async function updateAlertChannel(
+  token: string,
+  channelId: string,
+  payload: Partial<{
+    name: string;
+    minSeverity: "MEDIUM" | "HIGH" | "CRITICAL";
+    isEnabled: boolean;
+    config: Record<string, unknown>;
+  }>
+): Promise<AlertChannel> {
+  const response = await request(`${API_BASE_URL}/org/alert-channels/${channelId}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update alert channel");
+}
+
+export async function deleteAlertChannel(token: string, channelId: string): Promise<{ success: true }> {
+  const response = await request(`${API_BASE_URL}/org/alert-channels/${channelId}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to delete alert channel");
+}
+
+export async function testAlertChannel(
+  token: string,
+  channelId: string,
+  severity: "MEDIUM" | "HIGH" | "CRITICAL" = "HIGH"
+): Promise<{ success: boolean; delivery: AlertDelivery | null }> {
+  const response = await request(`${API_BASE_URL}/org/alert-channels/${channelId}/test`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ severity })
+  });
+  return parseResponse(response, "Failed to test alert channel");
+}
+
+export async function listAlertDeliveries(
+  token: string,
+  options?: { alertEventId?: string; page?: number; pageSize?: number; sortBy?: string; sortDir?: "asc" | "desc" }
+): Promise<PaginatedResponse<AlertDelivery>> {
+  const params = new URLSearchParams();
+  if (options?.alertEventId) {
+    params.set("alertEventId", options.alertEventId);
+  }
+  addPaginationParams(params, options);
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/org/alert-deliveries${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch alert deliveries");
 }
 
 export async function getPublicOpenApi(token: string): Promise<PublicOpenApiDocument> {

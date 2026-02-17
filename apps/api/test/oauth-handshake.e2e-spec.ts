@@ -125,13 +125,21 @@ describe("OAuth Apps + Install Handshake", () => {
     };
     const billing = { assertFeature: jest.fn().mockResolvedValue(undefined) };
     const activity = { log: jest.fn().mockResolvedValue(undefined) };
+    const webhook = { sendTestTriggerToInstalledApp: jest.fn().mockResolvedValue(undefined) };
     const oauthState = new OAuthStateService();
-    const providerFactory = new OAuthProviderFactory();
+    const providerFactory = {
+      getProvider: jest.fn().mockReturnValue({
+        getAuthUrl: jest.fn().mockReturnValue("https://oauth.example.com/start"),
+        exchangeCode: jest.fn(),
+        refreshToken: jest.fn()
+      })
+    } as unknown as OAuthProviderFactory;
 
     const orgAppsService = new OrgAppsService(
       prisma as never,
       billing as never,
       activity as never,
+      webhook as never,
       oauthState as never,
       providerFactory as never
     );

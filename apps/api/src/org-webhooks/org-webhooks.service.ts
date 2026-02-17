@@ -3,13 +3,12 @@ import { randomBytes } from "node:crypto";
 import { AuthUserContext } from "../auth/auth.types";
 import { BillingService } from "../billing/billing.service";
 import { getActiveOrgId } from "../common/auth-org";
-import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { PrismaService } from "../prisma/prisma.service";
-import { PaginationQueryDto } from "../common/dto/pagination-query.dto";
 import { CreateWebhookEndpointDto } from "./dto/create-webhook-endpoint.dto";
 import { ListWebhookDeliveriesDto } from "./dto/list-webhook-deliveries.dto";
 import { RetryWebhookDeliveryDto } from "./dto/retry-webhook-delivery.dto";
 import { WebhookService } from "./webhook.service";
+import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 
 @Injectable()
 export class OrgWebhooksService {
@@ -57,47 +56,32 @@ export class OrgWebhooksService {
     };
   }
 
-  async list(authUser: AuthUserContext, query: PaginationQueryDto) {
+  async list(authUser: AuthUserContext) {
     const orgId = getActiveOrgId({ user: authUser });
     await this.billingService.assertFeature(orgId, "enterpriseControlsEnabled");
-
-    const skip = (query.page - 1) * query.pageSize;
-    const [endpoints, total] = await this.prisma.$transaction([
-      this.prisma.webhookEndpoint.findMany({
-        where: {
-          orgId,
-          url: {
-            not: {
-              startsWith: "app-install://"
-            }
-          }
-        },
-        select: {
-          id: true,
-          url: true,
-          events: true,
-          isActive: true,
-          lastFailureAt: true,
-          failureCount: true,
-          createdAt: true
-        },
-        orderBy: [{ createdAt: "desc" }],
-        skip,
-        take: query.pageSize
-      }),
-      this.prisma.webhookEndpoint.count({
-        where: {
-          orgId,
-          url: {
-            not: {
-              startsWith: "app-install://"
-            }
+    const endpoints = await this.prisma.webhookEndpoint.findMany({
+      where: {
+        orgId,
+        url: {
+          not: {
+            startsWith: "app-install://"
           }
         }
-      })
-    ]);
+      },
+      select: {
+        id: true,
+        url: true,
+        events: true,
+        isActive: true,
+        lastFailureAt: true,
+        failureCount: true,
+        createdAt: true
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: 100
+    });
 
-    const items = endpoints.map((endpoint) => ({
+    return endpoints.map((endpoint) => ({
       id: endpoint.id,
       url: endpoint.url,
       events: this.parseEvents(endpoint.events),
@@ -106,7 +90,6 @@ export class OrgWebhooksService {
       failureCount: endpoint.failureCount,
       createdAt: endpoint.createdAt
     }));
-    return toPaginatedResponse(items, query.page, query.pageSize, total);
   }
 
   async remove(authUser: AuthUserContext, id: string): Promise<{ success: true }> {

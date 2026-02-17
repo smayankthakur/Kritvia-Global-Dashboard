@@ -5,6 +5,7 @@ import {
   Role
 } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { createHash, randomBytes } from "node:crypto";
 
 const prisma = new PrismaClient();
 const TEST_PASSWORD = "kritviyaTest123!";
@@ -76,6 +77,70 @@ async function upsertUser(input: {
       joinedAt: user.createdAt
     }
   });
+
+  const seededApiToken = `ktv_live_seed_${randomBytes(16).toString("hex")}`;
+  const seededApiTokenHash = createHash("sha256").update(seededApiToken).digest("hex");
+  await prisma.apiToken.upsert({
+    where: { tokenHash: seededApiTokenHash },
+    update: {
+      orgId: IDS.orgA,
+      name: "Seeded Public API Token",
+      role: Role.ADMIN,
+      scopes: ["read:deals", "read:invoices", "read:users"]
+    },
+    create: {
+      orgId: IDS.orgA,
+      name: "Seeded Public API Token",
+      role: Role.ADMIN,
+      tokenHash: seededApiTokenHash,
+      scopes: ["read:deals", "read:invoices", "read:users"]
+    }
+  });
+
+  await prisma.webhookEndpoint.upsert({
+    where: { id: "10000000-0000-0000-0000-000000000901" },
+    update: {
+      orgId: IDS.orgA,
+      url: "https://example.test/seed-webhook",
+      secret: "seed-test-secret",
+      events: ["deal.created", "invoice.status_changed"],
+      isActive: true,
+      failureCount: 0
+    },
+    create: {
+      id: "10000000-0000-0000-0000-000000000901",
+      orgId: IDS.orgA,
+      url: "https://example.test/seed-webhook",
+      secret: "seed-test-secret",
+      events: ["deal.created", "invoice.status_changed"],
+      isActive: true,
+      failureCount: 0
+    }
+  });
+
+  const inviteRawToken = `seed-invite-${randomBytes(16).toString("hex")}`;
+  const inviteTokenHash = createHash("sha256").update(inviteRawToken).digest("hex");
+  await prisma.orgInviteToken.upsert({
+    where: { id: "10000000-0000-0000-0000-000000000902" },
+    update: {
+      orgId: IDS.orgA,
+      email: "seed.invite@test.kritviya.local",
+      role: Role.OPS,
+      tokenHash: inviteTokenHash,
+      invitedByUserId: IDS.users.adminA,
+      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      usedAt: null
+    },
+    create: {
+      id: "10000000-0000-0000-0000-000000000902",
+      orgId: IDS.orgA,
+      email: "seed.invite@test.kritviya.local",
+      role: Role.OPS,
+      tokenHash: inviteTokenHash,
+      invitedByUserId: IDS.users.adminA,
+      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000)
+    }
+  });
 }
 
 async function main(): Promise<void> {
@@ -108,6 +173,36 @@ async function main(): Promise<void> {
         shieldEnabled: false,
         portfolioEnabled: false,
         revenueIntelligenceEnabled: false,
+        enterpriseControlsEnabled: false,
+        developerPlatformEnabled: false
+      }
+    }),
+    growth: await prisma.plan.upsert({
+      where: { key: "growth" },
+      update: {
+        name: "Growth",
+        priceMonthly: 4999,
+        seatLimit: 15,
+        orgLimit: 1,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: true,
+        enterpriseControlsEnabled: false,
+        developerPlatformEnabled: false,
+        maxWorkItems: null,
+        maxInvoices: null
+      },
+      create: {
+        key: "growth",
+        name: "Growth",
+        priceMonthly: 4999,
+        seatLimit: 15,
+        orgLimit: 1,
+        autopilotEnabled: true,
+        shieldEnabled: true,
+        portfolioEnabled: false,
+        revenueIntelligenceEnabled: true,
         enterpriseControlsEnabled: false,
         developerPlatformEnabled: false
       }
@@ -235,6 +330,23 @@ async function main(): Promise<void> {
       }
     });
   }
+
+  await prisma.marketplaceApp.upsert({
+    where: { key: "internal-hidden-test" },
+    update: {
+      name: "Internal Hidden Test App",
+      description: "Non-published app fixture for test filtering.",
+      category: "Ops",
+      isPublished: false
+    },
+    create: {
+      key: "internal-hidden-test",
+      name: "Internal Hidden Test App",
+      description: "Non-published app fixture for test filtering.",
+      category: "Ops",
+      isPublished: false
+    }
+  });
 
   await prisma.org.upsert({
     where: { id: IDS.orgA },
@@ -397,6 +509,28 @@ async function main(): Promise<void> {
     email: "adminb@test.kritviya.local",
     role: Role.ADMIN,
     passwordHash
+  });
+
+  await prisma.orgMember.upsert({
+    where: {
+      orgId_email: {
+        orgId: IDS.orgB,
+        email: "admina@test.kritviya.local"
+      }
+    },
+    update: {
+      userId: IDS.users.adminA,
+      role: Role.ADMIN,
+      status: "ACTIVE"
+    },
+    create: {
+      orgId: IDS.orgB,
+      userId: IDS.users.adminA,
+      email: "admina@test.kritviya.local",
+      role: Role.ADMIN,
+      status: "ACTIVE",
+      joinedAt: new Date()
+    }
   });
 
   await prisma.company.upsert({

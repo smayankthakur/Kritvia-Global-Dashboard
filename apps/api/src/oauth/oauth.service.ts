@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import { ActivityEntityType, OrgAppInstall } from "@prisma/client";
 import { createHash, randomBytes } from "node:crypto";
 import { ActivityLogService } from "../activity-log/activity-log.service";
+import { AlertingService } from "../alerts/alerting.service";
 import { BillingService } from "../billing/billing.service";
 import { encryptAppSecret } from "../marketplace/app-secret-crypto.util";
 import { PrismaService } from "../prisma/prisma.service";
@@ -15,6 +16,7 @@ export class OAuthService {
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly activityLogService: ActivityLogService,
+    private readonly alertingService: AlertingService,
     private readonly stateService: OAuthStateService,
     private readonly providerFactory: OAuthProviderFactory
   ) {}
@@ -142,7 +144,17 @@ export class OAuthService {
 
     const refreshToken = decryptOAuthToken(install.oauthRefreshTokenEncrypted);
     const provider = this.providerFactory.getProvider(install.oauthProvider);
-    const refreshed = await provider.refreshToken(refreshToken);
+    let refreshed: { accessToken: string; expiresAt?: Date };
+    try {
+      refreshed = await provider.refreshToken(refreshToken);
+    } catch (error) {
+      await this.alertingService.recordFailure("OAUTH_REFRESH_FAILURE", install.orgId, {
+        appInstallId: install.id,
+        oauthProvider: install.oauthProvider,
+        reason: error instanceof Error ? error.message : "OAuth refresh failed"
+      });
+      throw error;
+    }
     const encryptedAccessToken = encryptOAuthToken(refreshed.accessToken);
 
     await this.prisma.orgAppInstall.update({

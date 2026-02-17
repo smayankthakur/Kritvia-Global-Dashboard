@@ -6,6 +6,7 @@ import {
   Injectable,
   UnauthorizedException
 } from "@nestjs/common";
+import { AlertingService } from "../alerts/alerting.service";
 import { ActivityEntityType, DealStage, Role } from "@prisma/client";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { ActivityLogService } from "../activity-log/activity-log.service";
@@ -41,7 +42,8 @@ export class AppCommandsService {
     private readonly nudgesService: NudgesService,
     private readonly workItemsService: WorkItemsService,
     private readonly dealsService: DealsService,
-    private readonly activityLogService: ActivityLogService
+    private readonly activityLogService: ActivityLogService,
+    private readonly alertingService: AlertingService
   ) {}
 
   async handleCommand(input: HandleAppCommandInput): Promise<{ ok: boolean; result: CommandResult; requestId?: string; idempotent?: boolean }> {
@@ -150,6 +152,11 @@ export class AppCommandsService {
     });
 
     if (!success) {
+      await this.alertingService.recordFailure("APP_COMMAND_FAILURE_SPIKE", install.orgId, {
+        appInstallId: install.id,
+        command: input.body.command,
+        reason: errorMessage ?? "App command failed"
+      });
       throw new HttpException(
         {
           code: "APP_COMMAND_FAILED",

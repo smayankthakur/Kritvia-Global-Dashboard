@@ -1,9 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHash, createHmac } from "node:crypto";
+import { AlertingService } from "../alerts/alerting.service";
+import { JobService } from "../jobs/job.service";
+import { QUEUE_NAMES } from "../jobs/queues";
 import { decryptAppConfig } from "../marketplace/app-config-crypto.util";
 import { decryptAppSecret } from "../marketplace/app-secret-crypto.util";
 import { PrismaService } from "../prisma/prisma.service";
-import { JobQueueService } from "../queue/job-queue.service";
 
 type DispatchEndpoint = {
   id: string;
@@ -11,11 +13,8 @@ type DispatchEndpoint = {
   url: string;
   secret: string;
   failureCount: number;
-};
-
-type DispatchOptions = {
-  extraHeaders?: Record<string, string>;
-  onSuccess?: () => Promise<void>;
+  appKey?: string | null;
+  appInstallId?: string | null;
 };
 
 type AppInstallCandidate = {
@@ -26,56 +25,71 @@ type AppInstallCandidate = {
   secret: string;
 };
 
+type DispatchJobPayload = {
+  orgId: string;
+  endpointId: string;
+  url: string;
+  secret: string;
+  failureCount: number;
+  eventName: string;
+  body: string;
+  appKey?: string | null;
+  appInstallId?: string | null;
+};
+
 @Injectable()
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jobQueueService: JobQueueService
+    private readonly jobService: JobService,
+    private readonly alertingService: AlertingService
   ) {}
 
   async dispatch(orgId: string, eventName: string, payload: Record<string, unknown>): Promise<void> {
-    await this.jobQueueService
-      .enqueueAndWait(`webhook-dispatch:${eventName}`, async () => {
-        const body = JSON.stringify(payload);
-
-        const endpoints = await this.prisma.webhookEndpoint.findMany({
-          where: {
-            orgId,
-            isActive: true,
-            url: {
-              not: {
-                startsWith: "app-install://"
-              }
-            }
-          },
-          select: {
-            id: true,
-            orgId: true,
-            url: true,
-            secret: true,
-            events: true,
-            failureCount: true
-          }
+    if ((process.env.JOBS_ENABLED ?? "true").toLowerCase() !== "true") {
+      // Fallback for local mode without queue workers.
+      const body = JSON.stringify(payload);
+      const jobs = await this.collectDispatchJobs(orgId, eventName, body);
+      for (const job of jobs) {
+        await this.processDispatchJob(job).catch((error) => {
+          this.logger.warn(
+            `Inline webhook dispatch failed for endpoint=${job.endpointId}: ${
+              error instanceof Error ? error.message : "unknown"
+            }`
+          );
         });
+      }
+      return;
+    }
 
-        if (endpoints.length > 0) {
-          const matching = endpoints.filter((endpoint) => this.supportsEvent(endpoint.events, eventName));
-          if (matching.length > 0) {
-            await Promise.all(matching.map((endpoint) => this.dispatchToEndpoint(endpoint, eventName, body)));
-          }
-        }
+    const body = JSON.stringify(payload);
+    const jobs = await this.collectDispatchJobs(orgId, eventName, body);
+    await Promise.all(
+      jobs.map((job) =>
+        this.jobService.enqueue(QUEUE_NAMES.webhooks, "webhook-dispatch", job, {
+          attempts: 1
+        })
+      )
+    );
+  }
 
-        await this.dispatchToInstalledApps(orgId, eventName, body);
-      })
-      .catch((error) => {
-        this.logger.error(
-          `Webhook dispatch failed for org=${orgId} event=${eventName}: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        );
-      });
+  async processDispatchJob(payload: Record<string, unknown>): Promise<void> {
+    const job = this.toDispatchJob(payload);
+    await this.dispatchToEndpoint(
+      {
+        id: job.endpointId,
+        orgId: job.orgId,
+        url: job.url,
+        secret: job.secret,
+        failureCount: job.failureCount,
+        appKey: job.appKey,
+        appInstallId: job.appInstallId
+      },
+      job.eventName,
+      job.body
+    );
   }
 
   async retryDelivery(
@@ -238,6 +252,107 @@ export class WebhookService {
     await this.dispatchToInstalledAppCandidate(candidate, delivery.event, body);
   }
 
+  private async collectDispatchJobs(
+    orgId: string,
+    eventName: string,
+    body: string
+  ): Promise<DispatchJobPayload[]> {
+    const endpoints = await this.prisma.webhookEndpoint.findMany({
+      where: {
+        orgId,
+        isActive: true,
+        url: {
+          not: {
+            startsWith: "app-install://"
+          }
+        }
+      },
+      select: {
+        id: true,
+        orgId: true,
+        url: true,
+        secret: true,
+        events: true,
+        failureCount: true
+      }
+    });
+
+    const endpointJobs: DispatchJobPayload[] = endpoints
+      .filter((endpoint) => this.supportsEvent(endpoint.events, eventName))
+      .map((endpoint) => ({
+        orgId: endpoint.orgId,
+        endpointId: endpoint.id,
+        url: endpoint.url,
+        secret: endpoint.secret,
+        failureCount: endpoint.failureCount,
+        eventName,
+        body
+      }));
+
+    const appJobs = await this.collectInstalledAppDispatchJobs(orgId, eventName, body);
+    return [...endpointJobs, ...appJobs];
+  }
+
+  private async collectInstalledAppDispatchJobs(
+    orgId: string,
+    eventName: string,
+    body: string
+  ): Promise<DispatchJobPayload[]> {
+    const installs = await this.prisma.orgAppInstall.findMany({
+      where: {
+        orgId,
+        status: "INSTALLED",
+        configEncrypted: { not: null },
+        secretEncrypted: { not: null }
+      },
+      select: {
+        id: true,
+        orgId: true,
+        configEncrypted: true,
+        secretEncrypted: true,
+        app: {
+          select: {
+            key: true,
+            webhookEvents: true
+          }
+        }
+      }
+    });
+
+    const jobs: DispatchJobPayload[] = [];
+    for (const install of installs) {
+      const supportsEvent = this.supportsEvent(install.app.webhookEvents, eventName);
+      if (!supportsEvent || !install.configEncrypted || !install.secretEncrypted) {
+        continue;
+      }
+
+      try {
+        const config = decryptAppConfig(install.configEncrypted);
+        const webhookUrl = typeof config.webhookUrl === "string" ? config.webhookUrl.trim() : "";
+        if (!webhookUrl) {
+          continue;
+        }
+
+        const secret = decryptAppSecret(install.secretEncrypted);
+        jobs.push({
+          orgId: install.orgId,
+          endpointId: install.id,
+          url: webhookUrl,
+          secret,
+          failureCount: 0,
+          eventName,
+          body,
+          appKey: install.app.key,
+          appInstallId: install.id
+        });
+      } catch {
+        continue;
+      }
+    }
+
+    return jobs;
+  }
+
   private supportsEvent(events: unknown, eventName: string): boolean {
     if (!Array.isArray(events)) {
       return false;
@@ -248,8 +363,7 @@ export class WebhookService {
   private async dispatchToEndpoint(
     endpoint: DispatchEndpoint,
     eventName: string,
-    body: string,
-    options?: DispatchOptions
+    body: string
   ): Promise<void> {
     const signature = createHmac("sha256", endpoint.secret).update(body).digest("hex");
     const requestBodyHash = createHash("sha256").update(body).digest("hex");
@@ -269,7 +383,7 @@ export class WebhookService {
             "Content-Type": "application/json",
             "X-Kritviya-Event": eventName,
             "X-Kritviya-Signature": signature,
-            ...(options?.extraHeaders ?? {})
+            ...(endpoint.appKey ? { "X-Kritviya-App-Key": endpoint.appKey } : {})
           },
           body
         });
@@ -302,15 +416,19 @@ export class WebhookService {
       });
 
       if (success) {
-        await this.prisma.webhookEndpoint.update({
-          where: { id: endpoint.id },
-          data: {
-            failureCount: 0,
-            lastFailureAt: null
-          }
-        });
-        if (options?.onSuccess) {
-          await options.onSuccess();
+        if (endpoint.appInstallId) {
+          await this.prisma.orgAppInstall.update({
+            where: { id: endpoint.appInstallId },
+            data: { lastUsedAt: new Date() }
+          });
+        } else {
+          await this.prisma.webhookEndpoint.update({
+            where: { id: endpoint.id },
+            data: {
+              failureCount: 0,
+              lastFailureAt: null
+            }
+          });
         }
         return;
       }
@@ -320,24 +438,26 @@ export class WebhookService {
         continue;
       }
 
-      const updated = await this.prisma.webhookEndpoint.update({
-        where: { id: endpoint.id },
-        data: {
-          failureCount: { increment: 1 },
-          lastFailureAt: new Date()
-        },
-        select: {
-          failureCount: true
-        }
-      });
-
-      if (updated.failureCount >= 10) {
-        await this.prisma.webhookEndpoint.update({
+      if (!endpoint.appInstallId) {
+        const updated = await this.prisma.webhookEndpoint.update({
           where: { id: endpoint.id },
           data: {
-            isActive: false
+            failureCount: { increment: 1 },
+            lastFailureAt: new Date()
+          },
+          select: {
+            failureCount: true
           }
         });
+
+        if (updated.failureCount >= 10) {
+          await this.prisma.webhookEndpoint.update({
+            where: { id: endpoint.id },
+            data: {
+              isActive: false
+            }
+          });
+        }
       }
 
       this.logger.warn(
@@ -345,68 +465,17 @@ export class WebhookService {
           errorMessage ?? "Unknown error"
         }`
       );
+
+      await this.alertingService.recordFailure("WEBHOOK_FAILURE_SPIKE", endpoint.orgId, {
+        endpointId: endpoint.id,
+        appInstallId: endpoint.appInstallId ?? undefined,
+        eventName,
+        queue: QUEUE_NAMES.webhooks,
+        reason: errorMessage ?? "Unknown error"
+      });
+
+      throw new Error(errorMessage ?? "Webhook delivery failed");
     }
-  }
-
-  private async dispatchToInstalledApps(orgId: string, eventName: string, body: string): Promise<void> {
-    const installs = await this.prisma.orgAppInstall.findMany({
-      where: {
-        orgId,
-        status: "INSTALLED",
-        configEncrypted: { not: null },
-        secretEncrypted: { not: null }
-      },
-      select: {
-        id: true,
-        orgId: true,
-        appId: true,
-        configEncrypted: true,
-        secretEncrypted: true,
-        app: {
-          select: {
-            key: true,
-            webhookEvents: true
-          }
-        }
-      }
-    });
-
-    const candidates = installs
-      .map((install) => {
-        const supportsEvent = this.supportsEvent(install.app.webhookEvents, eventName);
-        if (!supportsEvent || !install.configEncrypted || !install.secretEncrypted) {
-          return null;
-        }
-
-        try {
-          const config = decryptAppConfig(install.configEncrypted);
-          const webhookUrl = typeof config.webhookUrl === "string" ? config.webhookUrl.trim() : "";
-          if (!webhookUrl) {
-            return null;
-          }
-          const secret = decryptAppSecret(install.secretEncrypted);
-          return {
-            installId: install.id,
-            orgId: install.orgId,
-            appKey: install.app.key,
-            webhookUrl,
-            secret
-          };
-        } catch {
-          return null;
-        }
-      })
-      .filter(
-        (value): value is AppInstallCandidate => Boolean(value)
-      );
-
-    if (candidates.length === 0) {
-      return;
-    }
-
-    await Promise.all(
-      candidates.map((candidate) => this.dispatchToInstalledAppCandidate(candidate, eventName, body))
-    );
   }
 
   private async dispatchToInstalledAppCandidate(
@@ -414,46 +483,26 @@ export class WebhookService {
     eventName: string,
     body: string
   ): Promise<void> {
-    const endpoint = await this.ensureInstallDeliveryEndpoint(candidate);
-    await this.dispatchToEndpoint(endpoint, eventName, body, {
-      extraHeaders: {
-        "X-Kritviya-App-Key": candidate.appKey
-      },
-      onSuccess: async () => {
-        await this.prisma.orgAppInstall.update({
-          where: { id: candidate.installId },
-          data: { lastUsedAt: new Date() }
-        });
-      }
-    });
-  }
+    const payload: DispatchJobPayload = {
+      orgId: candidate.orgId,
+      endpointId: candidate.installId,
+      url: candidate.webhookUrl,
+      secret: candidate.secret,
+      failureCount: 0,
+      eventName,
+      body,
+      appKey: candidate.appKey,
+      appInstallId: candidate.installId
+    };
 
-  private async ensureInstallDeliveryEndpoint(candidate: AppInstallCandidate): Promise<DispatchEndpoint> {
-    const endpoint = await this.prisma.webhookEndpoint.upsert({
-      where: { id: candidate.installId },
-      update: {
-        orgId: candidate.orgId,
-        url: `app-install://${candidate.appKey}`,
-        secret: candidate.secret,
-        events: []
-      },
-      create: {
-        id: candidate.installId,
-        orgId: candidate.orgId,
-        url: `app-install://${candidate.appKey}`,
-        secret: candidate.secret,
-        events: []
-      },
-      select: {
-        id: true,
-        orgId: true,
-        url: true,
-        secret: true,
-        failureCount: true
-      }
-    });
+    if ((process.env.JOBS_ENABLED ?? "true").toLowerCase() !== "true") {
+      await this.processDispatchJob(payload);
+      return;
+    }
 
-    return endpoint;
+    await this.jobService.enqueue(QUEUE_NAMES.webhooks, "webhook-dispatch", payload, {
+      attempts: 1
+    });
   }
 
   private truncateSnippet(value: string): string | null {
@@ -466,5 +515,19 @@ export class WebhookService {
 
   private async delay(ms: number): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private toDispatchJob(payload: Record<string, unknown>): DispatchJobPayload {
+    return {
+      orgId: String(payload.orgId ?? ""),
+      endpointId: String(payload.endpointId ?? ""),
+      url: String(payload.url ?? ""),
+      secret: String(payload.secret ?? ""),
+      failureCount: Number(payload.failureCount ?? 0),
+      eventName: String(payload.eventName ?? ""),
+      body: String(payload.body ?? ""),
+      appKey: typeof payload.appKey === "string" ? payload.appKey : null,
+      appInstallId: typeof payload.appInstallId === "string" ? payload.appInstallId : null
+    };
   }
 }

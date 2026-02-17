@@ -8,6 +8,7 @@ import { HealthScoreService } from "./health-score.service";
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [HealthScoreController, HealthScoreJobsController],
-  providers: [HealthScoreService]
+  providers: [HealthScoreService],
+  exports: [HealthScoreService]
 })
 export class HealthScoreModule {}
