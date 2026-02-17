@@ -93,7 +93,7 @@ describe("SchedulerService", () => {
   it("does not schedule briefing when LLM is disabled", async () => {
     process.env.LLM_ENABLED = "false";
     const aiAdd = jest.fn().mockResolvedValue({});
-    jest.spyOn(queues, "getQueue").mockImplementation(((name: queues.QueueName) => {
+    jest.spyOn(queues, "getQueue").mockImplementation((() => {
       return {
         add: aiAdd,
         getRepeatableJobs: jest.fn().mockResolvedValue([]),
@@ -108,4 +108,3 @@ describe("SchedulerService", () => {
     expect(scheduledNames).not.toContain("schedule-briefing");
   });
 });
-

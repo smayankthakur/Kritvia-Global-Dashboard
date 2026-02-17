@@ -39,3 +39,22 @@
 - `npm run build:api` -> passes
 - `npm run build:web` -> passes
 - `npm run test:setup` -> now fails fast with clear database connectivity error when test DB is not reachable (expected until Postgres is up)
+
+## Re-Audit Timestamp
+- Date: 2026-02-17
+- Scope: Full monorepo + current Phase 6.4.20 status subscriber changes
+- Checks run: `npm ci`, `npm run lint`, `npm run build:api`, `npm run build:web`
+
+## New Bugs Found and Fixed
+
+| ID | Area | Bug | Impact | Fix Applied | Status |
+|---|---|---|---|---|---|
+| BUG-010 | Tooling / ESLint | Missing `esquery` / `@ungap/structured-clone` modules in local dependency tree caused lint/build lint phase crashes | Blocked lint and Next build lint stage | Performed clean deterministic install with `npm ci` and updated lockfile state; verified full lint/build pipeline | Fixed |
+| BUG-011 | API lint | Unused constants/types in incident + on-call resolver modules (`INCIDENT_STATUSES`, `ResolvedSchedule`) | CI lint failure | Removed dead constants/type aliases | Fixed |
+| BUG-012 | Test lint | Unused variables in scheduler spec and on-call e2e (`name` mock arg, `adminToken`) | CI lint failure | Removed unused variables and simplified mock signatures | Fixed |
+| BUG-013 | Web lint | Unused React state setter in developer on-call tab | CI lint failure | Removed unused setter from state tuple | Fixed |
+
+## Latest Verification
+- `npm run lint` -> passes
+- `npm run build:api` -> passes
+- `npm run build:web` -> passes

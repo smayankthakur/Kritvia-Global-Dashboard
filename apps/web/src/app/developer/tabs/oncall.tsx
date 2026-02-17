@@ -62,7 +62,7 @@ export function OnCallTab({ token }: OnCallTabProps) {
   const [newScheduleCoverageEnabled, setNewScheduleCoverageEnabled] = useState(false);
   const [newScheduleCoverageStart, setNewScheduleCoverageStart] = useState("10:00");
   const [newScheduleCoverageEnd, setNewScheduleCoverageEnd] = useState("19:00");
-  const [newScheduleCoverageDays, setNewScheduleCoverageDays] = useState<string[]>([
+  const [newScheduleCoverageDays] = useState<string[]>([
     "MON",
     "TUE",
     "WED",

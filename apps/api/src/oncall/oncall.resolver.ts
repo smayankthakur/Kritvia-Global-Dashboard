@@ -16,14 +16,6 @@ type ResolveOptions = {
   forceFallback?: boolean;
 };
 
-type ResolvedSchedule = {
-  scheduleId: string;
-  primaryUserId: string | null;
-  secondaryUserId: string | null;
-  inCoverageWindow: boolean;
-  isHoliday: boolean;
-};
-
 @Injectable()
 export class OnCallResolver {
   constructor(private readonly prisma: PrismaService) {}

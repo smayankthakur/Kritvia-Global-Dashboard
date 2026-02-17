@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StatusSubscribeCard } from "./subscribe-card";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000").replace(/\/$/, "");
 
@@ -49,6 +50,13 @@ export default async function PublicStatusPage() {
         </div>
       ) : (
         <>
+          <StatusSubscribeCard
+            components={payload.components.map((component) => ({
+              key: component.key,
+              name: component.name
+            }))}
+          />
+
           <div className="kv-card" style={{ marginBottom: "12px" }}>
             <p style={{ margin: 0 }}>Overall status</p>
             <h2 className="kv-section-title" style={{ marginTop: "8px" }}>{payload.overallStatus}</h2>

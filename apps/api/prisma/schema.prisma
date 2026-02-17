@@ -121,6 +121,7 @@ model Org {
   alertChannels AlertChannel[]
   alertDeliveries AlertDelivery[]
   statusComponents StatusComponent[]
+  statusSubscribers StatusSubscriber[]
 
   @@map("orgs")
 }
@@ -860,6 +861,7 @@ model Incident {
   timeline       IncidentTimeline[]
   participants   IncidentParticipant[]
   postmortem     IncidentPostmortem?
+  statusNotificationLogs StatusNotificationLog[]
 
   @@index([orgId, status])
   @@index([orgId, createdAt])
@@ -881,6 +883,59 @@ model StatusComponent {
 
   @@index([orgId])
   @@map("status_components")
+}
+
+model StatusSubscriber {
+  id                String   @id @default(uuid()) @db.Uuid
+  orgId             String?  @map("org_id") @db.Uuid
+  email             String?
+  webhookUrl        String?  @map("webhook_url")
+  secretEncrypted   String?  @map("secret_encrypted")
+  isConfirmed       Boolean  @default(false) @map("is_confirmed")
+  confirmationToken String   @unique @map("confirmation_token")
+  unsubToken        String   @unique @map("unsub_token")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  org               Org?     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  subscriptions     StatusSubscription[]
+  notificationLogs  StatusNotificationLog[]
+
+  @@index([orgId])
+  @@index([email])
+  @@index([webhookUrl])
+  @@index([confirmationToken])
+  @@index([unsubToken])
+  @@map("status_subscribers")
+}
+
+model StatusSubscription {
+  id           String   @id @default(uuid()) @db.Uuid
+  subscriberId String   @map("subscriber_id") @db.Uuid
+  componentKey String?  @map("component_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  subscriber   StatusSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, componentKey])
+  @@index([componentKey])
+  @@map("status_subscriptions")
+}
+
+model StatusNotificationLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  subscriberId String   @map("subscriber_id") @db.Uuid
+  incidentId   String   @map("incident_id") @db.Uuid
+  type         String
+  success      Boolean
+  error        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  subscriber   StatusSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  incident     Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([subscriberId, createdAt])
+  @@index([incidentId, createdAt])
+  @@map("status_notification_logs")
 }
 
 model UptimeCheck {

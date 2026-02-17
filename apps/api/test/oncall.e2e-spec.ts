@@ -46,7 +46,6 @@ describe("On-call rotations", () => {
   let prisma: PrismaService;
   let onCallResolver: OnCallResolver;
   let alertsService: AlertsService;
-  let adminToken = "";
   let opsToken = "";
   let enterprisePlanId = "";
 
@@ -86,7 +85,7 @@ describe("On-call rotations", () => {
     onCallResolver = app.get(OnCallResolver);
     alertsService = app.get(AlertsService);
 
-    adminToken = await login(app, "admina@test.kritviya.local");
+    await login(app, "admina@test.kritviya.local");
     opsToken = await login(app, "opsa@test.kritviya.local");
 
     const enterprisePlan = await prisma.plan.findUnique({ where: { key: "enterprise" }, select: { id: true } });

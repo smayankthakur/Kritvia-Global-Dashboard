@@ -11,6 +11,7 @@ import { getActiveOrgId } from "../common/auth-org";
 import { toPaginatedResponse } from "../common/dto/paginated-response.dto";
 import { OnCallResolver } from "../oncall/oncall.resolver";
 import { PrismaService } from "../prisma/prisma.service";
+import { StatusService } from "../status/status.service";
 import { IncidentMetricsQueryDto } from "./dto/incident-metrics-query.dto";
 import { IncidentNoteDto } from "./dto/incident-note.dto";
 import { ListIncidentsQueryDto } from "./dto/list-incidents-query.dto";
@@ -19,7 +20,6 @@ import { PublishIncidentDto } from "./dto/publish-incident.dto";
 import { UpdateIncidentSeverityDto } from "./dto/update-incident-severity.dto";
 import { UpsertIncidentPostmortemDto } from "./dto/upsert-incident-postmortem.dto";
 
-const INCIDENT_STATUSES = ["OPEN", "ACKNOWLEDGED", "RESOLVED", "POSTMORTEM"] as const;
 const INCIDENT_SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 
 @Injectable()
@@ -27,7 +27,8 @@ export class IncidentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly onCallResolver: OnCallResolver,
-    private readonly activityLogService: ActivityLogService
+    private readonly activityLogService: ActivityLogService,
+    private readonly statusService: StatusService
   ) {}
 
   async listIncidents(authUser: AuthUserContext, query: ListIncidentsQueryDto) {
@@ -201,6 +202,20 @@ export class IncidentsService {
       action: "INCIDENT_RESOLVED"
     });
 
+    await this.statusService.notifyPublicIncidentChange(
+      {
+        id: updated.id,
+        orgId: updated.orgId,
+        title: updated.title,
+        severity: updated.severity,
+        publicSummary: updated.publicSummary,
+        publicSlug: updated.publicSlug,
+        publicComponentKeys: updated.publicComponentKeys,
+        isPublic: updated.isPublic
+      },
+      "RESOLVED"
+    );
+
     return this.getIncident(authUser, incident.id);
   }
 
@@ -353,6 +368,20 @@ export class IncidentsService {
       }
     });
 
+    await this.statusService.notifyPublicIncidentChange(
+      {
+        id: updated.id,
+        orgId: updated.orgId,
+        title: updated.title,
+        severity: updated.severity,
+        publicSummary: updated.publicSummary,
+        publicSlug: updated.publicSlug,
+        publicComponentKeys: updated.publicComponentKeys,
+        isPublic: updated.isPublic
+      },
+      "CREATED"
+    );
+
     return updated;
   }
 
@@ -405,6 +434,20 @@ export class IncidentsService {
       actorUserId: authUser.userId,
       message: `Public update: ${dto.message.trim()}`
     });
+
+    await this.statusService.notifyPublicIncidentChange(
+      {
+        id: updated.id,
+        orgId: updated.orgId,
+        title: updated.title,
+        severity: updated.severity,
+        publicSummary: updated.publicSummary,
+        publicSlug: updated.publicSlug,
+        publicComponentKeys: updated.publicComponentKeys,
+        isPublic: updated.isPublic
+      },
+      "UPDATED"
+    );
 
     return updated;
   }
