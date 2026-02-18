@@ -23,6 +23,8 @@ services:
         value: "true"
       - key: SCHEDULER_MODE
         value: worker
+      - key: ALLOW_MIGRATION_RECOVERY
+        value: "true"
   - type: worker
     name: kritviya-api-worker
     runtime: node
@@ -40,3 +42,5 @@ services:
         value: "true"
       - key: SCHEDULER_MODE
         value: worker
+      - key: ALLOW_MIGRATION_RECOVERY
+        value: "true"

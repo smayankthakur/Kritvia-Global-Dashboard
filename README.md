@@ -438,7 +438,7 @@ Render service:
 - Repo: this repo
 - Root Directory: `.` (repo root)
 - Build Command: `npm ci --include=dev && npm run build:api`
-- Start Command: `npm run migrate:deploy && npm run seed:api && npm run start:api`
+- Start Command: `npm --workspace apps/api run migrate:deploy:render && npm run seed:api && npm run start:api`
 - Health Check Path: `/health`
 - Readiness Check Path: `/ready` (optional separate monitor)
 
@@ -554,16 +554,20 @@ Use these exact commands to mirror Render behavior:
    - `http://localhost:4000/health`
    - `http://localhost:4000/ready`
 
-### Render Migration Recovery (P3009) for `20260218150000_phase6421_whitelabel_status`
+### Render: Prisma P3009 recovery
 
 If Render fails with Prisma `P3009` on migration `20260218150000_phase6421_whitelabel_status`, use one of these paths:
+
+Why this happens:
+- Prisma `P3009` means a migration is marked failed in `prisma_migrations`.
+- `migrate deploy` will refuse all future migrations until that failed row is resolved.
 
 Automatic Render self-heal (configured in `render.yaml`):
 - Start command runs:
   - `npm --workspace apps/api run migrate:deploy:render`
 - Script behavior:
   - runs `npx prisma migrate deploy --schema prisma/schema.prisma`
-  - if output contains `P3009` + `20260218150000_phase6421_whitelabel_status`, runs:
+  - if output contains `P3009` + `20260218150000_phase6421_whitelabel_status` and `ALLOW_MIGRATION_RECOVERY=true`, runs:
     - `npx prisma migrate resolve --schema prisma/schema.prisma --rolled-back 20260218150000_phase6421_whitelabel_status`
   - retries deploy once
   - fails fast for any other migration failure
@@ -578,8 +582,8 @@ Automatic Render self-heal (configured in `render.yaml`):
    - Inspect migration state:
      - `npx prisma migrate status`
    - Manual recovery commands for this exact migration:
-     - `npx prisma migrate resolve --schema prisma/schema.prisma --rolled-back 20260218150000_phase6421_whitelabel_status`
-     - `npx prisma migrate deploy --schema prisma/schema.prisma`
+     - `npx prisma migrate resolve --schema apps/api/prisma/schema.prisma --rolled-back 20260218150000_phase6421_whitelabel_status`
+     - `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma`
    - Use only after verifying DB state for this migration (columns/indexes/constraints) is consistent.
 
 Recommended deploy command remains:
