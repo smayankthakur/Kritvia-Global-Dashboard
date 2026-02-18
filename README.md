@@ -554,6 +554,27 @@ Use these exact commands to mirror Render behavior:
    - `http://localhost:4000/health`
    - `http://localhost:4000/ready`
 
+### Render Migration Recovery (P3009) for `20260218150000_phase6421_whitelabel_status`
+
+If Render fails with Prisma `P3009` on migration `20260218150000_phase6421_whitelabel_status`, use one of these paths:
+
+1. Disposable DB (simplest):
+   - Reset/recreate the Render Postgres database.
+   - Redeploy or run:
+     - `npx prisma migrate deploy`
+
+2. Preserve DB data:
+   - Inspect migration state:
+     - `npx prisma migrate status`
+   - If schema objects from this migration already exist, mark it applied:
+     - `npx prisma migrate resolve --applied 20260218150000_phase6421_whitelabel_status`
+   - If migration should be retried, mark rolled back then redeploy:
+     - `npx prisma migrate resolve --rolled-back 20260218150000_phase6421_whitelabel_status`
+     - `npx prisma migrate deploy`
+
+Recommended deploy command remains:
+- `npx prisma migrate deploy`
+
 ### Option B: VPS Docker Compose (Self-Hosted)
 
 Files:
