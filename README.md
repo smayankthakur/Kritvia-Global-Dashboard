@@ -720,9 +720,9 @@ Rollback:
 - Repeated `401` / refresh loop:
   - Refresh cookie is blocked by browser when SameSite/Secure is wrong.
   - Set `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true` on API.
- - Web build fails with `EPERM ... trace` on OneDrive/synced folders:
-  - The web workspace uses `node scripts/build-with-retry.mjs` and retries transient trace-file lock errors.
-  - Next build output is written to `.next-build` (not `.next`) to reduce lock contention.
+- Web build fails with `EPERM ... trace` on OneDrive/synced folders:
+  - The web workspace uses the standard `next build` output directory `.next`.
+  - Keep Vercel output directory aligned to `apps/web/.next` (repo root deploy) or `.next` (apps/web root deploy).
 11. Verify job queues:
    - `POST https://<render-api-domain>/ai/compute-insights` returns `{ queue, jobId, status:"queued" }`
    - `GET https://<render-api-domain>/jobs/status/ai/<jobId>` shows state
