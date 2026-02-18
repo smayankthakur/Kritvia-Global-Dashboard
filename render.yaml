@@ -9,6 +9,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ALLOW_MIGRATION_RECOVERY
+        value: "true"
       - key: API_PORT
         value: 10000
       - key: COOKIE_SECURE
@@ -23,8 +25,6 @@ services:
         value: "true"
       - key: SCHEDULER_MODE
         value: worker
-      - key: ALLOW_MIGRATION_RECOVERY
-        value: "true"
   - type: worker
     name: kritviya-api-worker
     runtime: node

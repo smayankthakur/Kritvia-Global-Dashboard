@@ -558,7 +558,7 @@ Use these exact commands to mirror Render behavior:
    - `http://localhost:4000/health`
    - `http://localhost:4000/ready`
 
-### Render: Prisma P3009 recovery
+### Render Deploy Fix: Prisma P3009
 
 If Render fails with Prisma `P3009` on migration `20260218150000_phase6421_whitelabel_status`, use one of these paths:
 
@@ -575,6 +575,12 @@ Automatic Render self-heal (configured in `render.yaml`):
     - `npx prisma migrate resolve --schema prisma/schema.prisma --rolled-back 20260218150000_phase6421_whitelabel_status`
   - retries deploy once
   - fails fast for any other migration failure
+
+Set recovery env var and redeploy:
+1. Open Render service dashboard -> `Environment`.
+2. Add `ALLOW_MIGRATION_RECOVERY=true`.
+3. Save changes.
+4. Trigger `Manual Deploy` (or push a new commit).
 
 1. Disposable DB (simplest):
    - Reset/recreate the Render Postgres database.

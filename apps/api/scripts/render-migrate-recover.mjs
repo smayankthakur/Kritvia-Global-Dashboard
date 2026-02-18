@@ -38,6 +38,10 @@ function isTargetP3009(output) {
 
 async function main() {
   const recoveryAllowed = process.env.ALLOW_MIGRATION_RECOVERY === "true";
+  console.log("[render-migrate-recover] startup");
+  console.log(
+    `[render-migrate-recover] ALLOW_MIGRATION_RECOVERY=${process.env.ALLOW_MIGRATION_RECOVERY ?? "undefined"}`
+  );
   const deployArgs = ["prisma", "migrate", "deploy", "--schema", SCHEMA_PATH];
   const firstDeploy = await runCommand("npx", deployArgs);
 
@@ -56,6 +60,10 @@ async function main() {
     console.error(
       "\nDetected targeted P3009 migration failure, but ALLOW_MIGRATION_RECOVERY is not set to true."
     );
+    console.error("Render dashboard instructions:");
+    console.error("1) Open Render service -> Environment.");
+    console.error("2) Add env var: ALLOW_MIGRATION_RECOVERY=true");
+    console.error("3) Save changes and trigger a new deploy.");
     console.error("Operator actions:");
     console.error("1) Reset DB (safe for non-production/early-stage environments), OR");
     console.error(
