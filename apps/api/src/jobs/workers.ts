@@ -10,10 +10,12 @@ import { WebhookService } from "../org-webhooks/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { SchedulerService } from "../scheduler/scheduler.service";
 import { StatusService } from "../status/status.service";
+import { RiskEngineService } from "../graph/risk/risk-engine.service";
 import { JobsRunService } from "./jobs-run.service";
 import { QUEUE_NAMES, getQueue } from "./queues";
 import { parseBool, safeGetRedis } from "./redis";
 import { createHash } from "node:crypto";
+import { Redis } from "ioredis";
 
 type WorkerHandle = {
   name: string;
@@ -30,6 +32,33 @@ function toPositiveInt(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
+async function ensureRedisReadyForWorkers(redis: Redis): Promise<boolean> {
+  const maxAttempts = toPositiveInt(process.env.JOBS_REDIS_CONNECT_ATTEMPTS, 5);
+  const baseDelayMs = toPositiveInt(process.env.JOBS_REDIS_CONNECT_BASE_DELAY_MS, 1000);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await redis.ping();
+      if (attempt > 1) {
+        logger.log(`Redis became available on attempt ${attempt}/${maxAttempts}.`);
+      }
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown error";
+      logger.warn(
+        `Redis unavailable for workers (attempt ${attempt}/${maxAttempts}): ${message}`
+      );
+      if (attempt < maxAttempts) {
+        const delayMs = baseDelayMs * 2 ** (attempt - 1);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  logger.warn("Skipping worker startup because Redis is unavailable after retries.");
+  return false;
+}
+
 export async function startJobWorkers(app: INestApplication): Promise<WorkerHandle[]> {
   if (!parseBool(process.env.JOBS_ENABLED, true)) {
     logger.log("Jobs disabled (JOBS_ENABLED!=true), workers not started.");
@@ -40,6 +69,10 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
     logger.warn("JOBS_ENABLED=true but REDIS_URL missing; skipping worker startup.");
     return [];
   }
+  const redisReady = await ensureRedisReadyForWorkers(redis);
+  if (!redisReady) {
+    return [];
+  }
 
   const aiService = app.get(AiService);
   const aiActionsService = app.get(AiActionsService);
@@ -48,6 +81,7 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
   const jobsRunService = app.get(JobsRunService);
   const schedulerService = app.get(SchedulerService);
   const statusService = app.get(StatusService);
+  const riskEngineService = app.get(RiskEngineService);
   const alertRoutingService = app.get(AlertRoutingService);
   const alertingService = app.get(AlertingService);
   const alertsService = app.get(AlertsService);
@@ -66,6 +100,9 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
 
       if (job.name === "schedule-insights") {
         return schedulerService.handleScheduledTick("schedule-insights");
+      }
+      if (job.name === "risk-recompute-nightly") {
+        return schedulerService.handleScheduledTick("risk-recompute-nightly");
       }
 
       if (job.name === "schedule-actions") {
@@ -94,6 +131,16 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
         const orgId = String(job.data.orgId ?? "");
         logger.log(`job=${job.id} queue=ai name=compute-insights orgId=${orgId}`);
         return aiService.computeInsights(orgId);
+      }
+      if (job.name === "graph-risk-recompute") {
+        const orgId = String(job.data.orgId ?? "");
+        logger.log(`job=${job.id} queue=ai name=graph-risk-recompute orgId=${orgId}`);
+        return riskEngineService.computeOrgRisk(orgId, {
+          maxNodes:
+            typeof job.data.maxNodes === "number"
+              ? (job.data.maxNodes as number)
+              : undefined
+        });
       }
 
       if (job.name === "compute-actions") {

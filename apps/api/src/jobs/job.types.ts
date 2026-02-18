@@ -2,11 +2,13 @@ import { QueueName } from "./queues";
 
 export type AIQueueJobName =
   | "compute-health-score"
+  | "graph-risk-recompute"
   | "compute-insights"
   | "compute-actions"
   | "llm-generate-report"
   | "invoice-overdue-scan"
   | "schedule-health"
+  | "risk-recompute-nightly"
   | "schedule-insights"
   | "schedule-actions"
   | "schedule-briefing"

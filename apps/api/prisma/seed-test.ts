@@ -26,6 +26,72 @@ const IDS = {
   }
 } as const;
 
+type FixTemplateSeed = {
+  key: string;
+  title: string;
+  description: string;
+  requiresConfirmation: boolean;
+  allowedRoles: Role[];
+};
+
+const DEFAULT_FIX_TEMPLATES: FixTemplateSeed[] = [
+  {
+    key: "SEND_INVOICE_REMINDER",
+    title: "Send invoice reminder",
+    description: "Send a payment reminder for an unpaid invoice.",
+    requiresConfirmation: true,
+    allowedRoles: [Role.FINANCE, Role.ADMIN, Role.CEO]
+  },
+  {
+    key: "REASSIGN_WORK",
+    title: "Reassign work owner",
+    description: "Move ownership of a work item to another active teammate.",
+    requiresConfirmation: true,
+    allowedRoles: [Role.OPS, Role.ADMIN, Role.CEO]
+  },
+  {
+    key: "SET_DUE_DATE",
+    title: "Set due date",
+    description: "Update due date for work or invoice execution follow-up.",
+    requiresConfirmation: true,
+    allowedRoles: [Role.OPS, Role.FINANCE, Role.ADMIN, Role.CEO]
+  },
+  {
+    key: "ESCALATE_INCIDENT",
+    title: "Escalate incident",
+    description: "Escalate an active incident to on-call responders.",
+    requiresConfirmation: false,
+    allowedRoles: [Role.OPS, Role.ADMIN, Role.CEO]
+  }
+];
+
+async function seedFixActionTemplates(orgId: string): Promise<void> {
+  for (const template of DEFAULT_FIX_TEMPLATES) {
+    await prisma.fixActionTemplate.upsert({
+      where: {
+        orgId_key: {
+          orgId,
+          key: template.key
+        }
+      },
+      update: {
+        title: template.title,
+        description: template.description,
+        requiresConfirmation: template.requiresConfirmation,
+        allowedRoles: template.allowedRoles
+      },
+      create: {
+        orgId,
+        key: template.key,
+        title: template.title,
+        description: template.description,
+        requiresConfirmation: template.requiresConfirmation,
+        allowedRoles: template.allowedRoles
+      }
+    });
+  }
+}
+
 async function upsertUser(input: {
   id: string;
   orgId: string;
@@ -611,6 +677,9 @@ async function main(): Promise<void> {
       dealId: IDS.dealA
     }
   });
+
+  await seedFixActionTemplates(IDS.orgA);
+  await seedFixActionTemplates(IDS.orgB);
 
   console.log("Test seed complete.");
 }

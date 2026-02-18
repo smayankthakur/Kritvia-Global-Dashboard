@@ -265,6 +265,45 @@ Deals:
 - `POST /deals/:id/mark-lost`
 - `GET /deals/:id/timeline`
 
+Execution Graph:
+
+- `GET /graph/nodes?page=&pageSize=&type=&q=`
+- `GET /graph/edges?page=&pageSize=&type=&fromNodeId=&toNodeId=`
+- `GET /graph/node/:id`
+- `POST /graph/traverse`
+- `POST /graph/risk/recompute` (CEO, ADMIN)
+- `GET /ceo/risk` (CEO, ADMIN, OPS)
+- `GET /ceo/risk/why` (CEO, ADMIN, OPS)
+- `GET /ceo/risk/nudges` (CEO, ADMIN, OPS)
+- `POST /graph/risk/generate-nudges-now` (CEO, ADMIN)
+- `POST /graph/impact-radius` (CEO, ADMIN, OPS)
+- `GET /graph/impact-radius/node/:id` (CEO, ADMIN, OPS)
+- `GET /graph/deeplink/:nodeId` (CEO, ADMIN, OPS)
+
+Fix Actions (Guarded 1-click fixes):
+
+- `GET /fix-actions/templates` (CEO, ADMIN, OPS, FINANCE)
+- `POST /fix-actions/runs` (role must be allowed by template)
+- `POST /fix-actions/runs/:id/confirm` (requester or CEO/ADMIN)
+- `GET /fix-actions/runs?entityType=&entityId=&page=&pageSize=` (CEO, ADMIN, OPS, FINANCE)
+- Feature flags:
+  - `FEATURE_FIX_ACTIONS=true|false`
+  - `FEATURE_FIX_ACTIONS_EXECUTION=true|false`
+
+Autopilot Engine:
+
+- `GET /autopilot/policies` (CEO, ADMIN)
+- `POST /autopilot/policies` (CEO, ADMIN)
+- `PATCH /autopilot/policies/:id` (CEO, ADMIN)
+- `DELETE /autopilot/policies/:id` (CEO, ADMIN)
+- `GET /autopilot/runs?entityType=&status=&page=&pageSize=` (CEO, ADMIN, OPS)
+- `POST /autopilot/runs/:id/approve` (CEO, ADMIN)
+- `POST /autopilot/runs/:id/rollback` (CEO, ADMIN; rollback supported for `SET_DUE_DATE` and `REASSIGN_WORK`)
+- Feature flags:
+  - `FEATURE_AUTOPILOT_ENABLED=true|false`
+  - `FEATURE_AUTOPILOT=true|false`
+  - `KILL_SWITCH_AUTOPILOT=true|false`
+
 CEO Health Score:
 
 - `GET /ceo/health-score` (CEO, ADMIN)
@@ -484,12 +523,16 @@ Render backend env vars:
 - `SCHEDULER_MODE=worker` (recommended so only worker registers repeatables)
 - `SCHED_TZ=UTC`
 - `SCHED_HEALTH_CRON=0 2 * * *`
+- `SCHED_RISK_CRON=0 2 * * *`
 - `SCHED_INSIGHTS_CRON=10 2 * * *`
 - `SCHED_ACTIONS_CRON=20 2 * * *`
 - `SCHED_BRIEFING_CRON=30 6 * * *`
 - `SCHED_INVOICE_SCAN_CRON=0 * * * *`
 - `SCHED_RETENTION_CRON=0 3 * * 0`
 - `SCHED_MAX_ORGS_PER_RUN=200`
+- `FEATURE_RISK_ENGINE=true`
+- `FEATURE_RISK_AUTO_NUDGES=true`
+- `FEATURE_RISK_SUGGESTED_ACTIONS=false`
 
 Optional dedicated worker service on Render:
 
@@ -677,6 +720,9 @@ Rollback:
 - Repeated `401` / refresh loop:
   - Refresh cookie is blocked by browser when SameSite/Secure is wrong.
   - Set `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true` on API.
+ - Web build fails with `EPERM ... trace` on OneDrive/synced folders:
+  - The web workspace uses `node scripts/build-with-retry.mjs` and retries transient trace-file lock errors.
+  - Next build output is written to `.next-build` (not `.next`) to reduce lock contention.
 11. Verify job queues:
    - `POST https://<render-api-domain>/ai/compute-insights` returns `{ queue, jobId, status:"queued" }`
    - `GET https://<render-api-domain>/jobs/status/ai/<jobId>` shows state
@@ -716,3 +762,49 @@ Custom domain TXT setup:
    - Value: `<token from API response>`
 3. `POST /org/status/domain/verify`
 4. Optionally resolve domain via `GET /status/resolve-domain?host=status.acme.com`
+
+## Impact Radius UI (Phase 11.3)
+
+- Web route: `/ceo/impact-radius`
+- Access: `CEO`, `ADMIN`, `OPS`
+- Features:
+  - Graph node search (`/graph/nodes`) with strict pagination
+  - Impact recompute controls (`maxDepth`, `direction`)
+  - Radius summary cards (money at risk, overdue/open execution counts, impacted companies/incidents)
+  - Hotspots list with deeplink resolution (`/graph/deeplink/:nodeId`)
+  - Radius explorer tables for nodes and edges
+
+## Risk Propagation Scoring (Phase 11.4)
+
+- API:
+  - `POST /graph/risk/recompute` (CEO, ADMIN) computes org risk, updates node risk scores, and upserts the daily snapshot.
+  - `GET /ceo/risk` (CEO, ADMIN, OPS) returns `orgRiskScore`, `deltaVsYesterday`, top drivers, and generation time.
+  - `GET /ceo/risk/why` (CEO, ADMIN, OPS) returns explainable top drivers with reason codes and evidence.
+- Scheduler:
+  - Repeatable job name: `risk-recompute-nightly`
+  - Cron/env: `SCHED_RISK_CRON` in `SCHED_TZ`
+  - Feature flag: `FEATURE_RISK_ENGINE=true`
+- Web:
+  - CEO risk page at `/ceo/risk` with score/delta cards, top driver table, and `Recompute now` (CEO/ADMIN only).
+
+## Risk Auto Nudges (Phase 11.5)
+
+- Deterministic risk nudge types generated from risk drivers:
+  - `RISK_INVOICE_OVERDUE`
+  - `RISK_INVOICE_HIGH_AMOUNT_UNPAID`
+  - `RISK_WORK_OVERDUE`
+  - `RISK_WORK_BLOCKED`
+  - `RISK_INCIDENT_OPEN`
+  - `RISK_DEAL_STALLED` (when signal is present)
+- Dedupe key stored in `nudges.unique_key`:
+  - `<orgId>:<nudgeType>:<entityType>:<entityId>:<yyyy-mm-dd>`
+- Safety:
+  - Max 1 risk nudge per entity/day
+  - Skip if any open nudge already exists for the same entity
+  - Hard cap `20` auto nudges per org/day
+- APIs:
+  - `GET /ceo/risk/nudges` returns recent risk-generated nudges
+  - `POST /graph/risk/generate-nudges-now` replays generation from latest risk snapshot drivers
+- Trigger:
+  - Runs automatically after `computeOrgRisk` when `FEATURE_RISK_AUTO_NUDGES=true`
+  - Works for manual recompute and scheduled worker recompute paths

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { HealthScoreService } from "../health-score/health-score.service";
+import { assertFeatureEnabled, isFeatureEnabled } from "../common/feature-flags";
 import { JobService } from "../jobs/job.service";
 import { QueueName, QUEUE_NAMES, getQueue } from "../jobs/queues";
 import { parseBool, safeGetRedis } from "../jobs/redis";
@@ -8,6 +9,7 @@ import { PrismaService } from "../prisma/prisma.service";
 type ProcessMode = "api" | "worker";
 type SchedulerJobName =
   | "schedule-health"
+  | "risk-recompute-nightly"
   | "schedule-insights"
   | "schedule-actions"
   | "schedule-briefing"
@@ -36,6 +38,7 @@ export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name);
   private readonly repeatableNames: SchedulerJobName[] = [
     "schedule-health",
+    "risk-recompute-nightly",
     "schedule-insights",
     "schedule-actions",
     "schedule-briefing",
@@ -64,7 +67,16 @@ export class SchedulerService {
     if (this.started) {
       return;
     }
-    await this.reload();
+    try {
+      await this.reload();
+    } catch (error) {
+      this.logger.warn(
+        `Scheduler startup skipped due to queue connectivity issue: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`
+      );
+      return;
+    }
     this.started = true;
   }
 
@@ -130,6 +142,10 @@ export class SchedulerService {
     if (name === "health") {
       return this.jobService.runNow(QUEUE_NAMES.ai, "compute-health-score", { orgId });
     }
+    if (name === "risk") {
+      assertFeatureEnabled("FEATURE_RISK_ENGINE");
+      return this.jobService.runNow(QUEUE_NAMES.ai, "graph-risk-recompute", { orgId });
+    }
     if (name === "insights") {
       return this.jobService.runNow(QUEUE_NAMES.ai, "compute-insights", { orgId });
     }
@@ -177,6 +193,13 @@ export class SchedulerService {
       for (const org of orgs) {
         await this.jobService.enqueue(QUEUE_NAMES.ai, "compute-health-score", { orgId: org.id });
         enqueued += 1;
+      }
+    } else if (jobName === "risk-recompute-nightly") {
+      if (isFeatureEnabled("FEATURE_RISK_ENGINE")) {
+        for (const org of orgs) {
+          await this.jobService.enqueue(QUEUE_NAMES.ai, "graph-risk-recompute", { orgId: org.id });
+          enqueued += 1;
+        }
       }
     } else if (jobName === "schedule-insights") {
       if (this.isFeatureAiEnabled()) {
@@ -251,6 +274,12 @@ export class SchedulerService {
         queue: QUEUE_NAMES.ai,
         cron: process.env.SCHED_HEALTH_CRON ?? "0 2 * * *",
         enabled: true
+      },
+      {
+        name: "risk-recompute-nightly",
+        queue: QUEUE_NAMES.ai,
+        cron: process.env.SCHED_RISK_CRON ?? "0 2 * * *",
+        enabled: isFeatureEnabled("FEATURE_RISK_ENGINE")
       },
       {
         name: "schedule-insights",

@@ -123,6 +123,27 @@ Details covered: `/api/v1` + token scope enforcement, webhook registry/retry/cir
 | 11.3 Brand Customization | Planned |
 | 11.4 Reseller Billing Layer | Planned |
 
+## PHASE OVERRIDE TRACK — Execution Graph Intelligence
+
+| Step | Status |
+|---|---|
+| 11.1 Execution Graph Schema | Completed |
+| 11.2 Graph Auto-sync on Mutations | Completed |
+| 11.3 Impact Radius API + UI | Completed |
+| 11.4 Risk Propagation Scoring | Completed |
+| 11.5 Auto-Nudges from Risk Drivers | Completed |
+| 11.6 1-Click Fix Actions (guarded) | Completed |
+| 11.7 Autopilot Engine (guarded policy execution) | Completed |
+
+Details covered:
+- GraphNode/GraphEdge foundation, graph read/traverse endpoints, and admin graph page.
+- GraphSyncService wired into deal/work-item/invoice mutation flows with best-effort non-breaking sync.
+- Impact radius BFS APIs with safety caps, deterministic ordering, summary/hotspots, deeplink mapping, and CEO Impact Radius page.
+- Risk propagation scoring engine with daily snapshotting, explainability drivers, recompute/read APIs, scheduler integration, and CEO Risk page.
+- Risk auto-nudge generation from top risk drivers with deterministic mapping, org-safe assignee selection, dedupe keying, open-entity duplicate suppression, and hard cap controls.
+- 1-click guarded fix actions with org-scoped templates/runs, confirmation workflow, idempotency, execution safety checks, audit logs, and CEO Risk UI integration for Fix + Action Run history.
+- Policy-driven autopilot orchestration with condition evaluator, dry-run previews, approval gate, guarded auto-execution, per-policy execution throttles, kill-switch enforcement, rollback hooks for reversible actions, and admin/CEO UI visibility.
+
 ## PHASE 12 — Enterprise Scale & Competitive Moat
 
 | Step | Status |
@@ -134,11 +155,22 @@ Details covered: `/api/v1` + token scope enforcement, webhook registry/retry/cir
 | 12.5 AI Copilot Mode (real-time suggestions) | Planned |
 
 ## Latest Completed Step Update
-- Date: 2026-02-17
+- Date: 2026-02-18
 - Completed:
-  - Phase 6.4.22 Private Status Page SSO (Magic Link + Domain Allowlist)
-  - Added `/status-auth/request-link`, `/status-auth/verify`, `/status-auth/logout`
-  - Added PRIVATE_SSO mode with allowed email domains + one-time status auth tokens
-  - Added status session cookie (`kritviya_status_session`) signed with `STATUS_SESSION_SECRET`
-  - Added org status login/callback UI (`/status/o/[orgSlug]/login`, `/status/o/[orgSlug]/login/callback`)
-  - Preserved PRIVATE_TOKEN mode behavior and org-scoped status endpoints
+  - Phase 11.7 Autopilot Engine (policy-based guarded execution)
+  - Added `AutopilotPolicy` and `AutopilotRun` Prisma models + migration
+  - Implemented `AutopilotService` with condition operators (`gt/gte/lt/lte/eq/in`), dry-run preview, policy/hour rate limit, approval/auto paths, and kill-switch checks
+  - Integrated Risk Engine post-driver pipeline to trigger autopilot when feature + org policy are enabled
+  - Added API endpoints for policy CRUD, run listing, approval, and rollback
+  - Added `/admin/autopilot` management UI and `/ceo/risk` Autopilot Activity panel with approve/rollback actions
+
+## Latest Stabilization Audit Update
+- Date: 2026-02-18
+- Completed:
+  - Full monorepo audit and bug-fix pass requested by owner
+  - Fixed API lint/type regressions in autopilot/fix-actions/graph services
+  - Fixed startup banner lint issue in API bootstrap
+  - Stabilized web build for OneDrive lock contention via retry wrapper and dedicated Next build dir
+  - Fixed `/admin/autopilot` payload typing mismatch (`riskThreshold` nullability)
+  - Reinstalled workspace dependencies with `npm ci --include=dev` to resolve transient missing module errors
+  - Re-verified `npm run lint`, `npm run build:api`, and `npm run build:web` pass

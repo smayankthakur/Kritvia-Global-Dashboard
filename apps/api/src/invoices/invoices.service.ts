@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException
 } from "@nestjs/common";
 import { ActivityEntityType, InvoiceStatus, Prisma } from "@prisma/client";
@@ -16,6 +17,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ShieldService } from "../shield/shield.service";
 import { WEBHOOK_EVENTS } from "../org-webhooks/webhook-events";
 import { WebhookService } from "../org-webhooks/webhook.service";
+import { GraphSyncService } from "../graph/graph-sync.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { ListInvoicesDto } from "./dto/list-invoices.dto";
 import { UpdateInvoiceDto } from "./dto/update-invoice.dto";
@@ -36,13 +38,16 @@ function startOfUtcDay(date: Date): Date {
 
 @Injectable()
 export class InvoicesService {
+  private readonly logger = new Logger(InvoicesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
     private readonly policyResolverService: PolicyResolverService,
     private readonly shieldService: ShieldService,
     private readonly billingService: BillingService,
-    private readonly webhookService: WebhookService
+    private readonly webhookService: WebhookService,
+    private readonly graphSyncService: GraphSyncService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListInvoicesDto) {
@@ -137,6 +142,7 @@ export class InvoicesService {
       action: "CREATE",
       after: created
     });
+    this.syncInvoiceGraph(activeOrgId, created.id);
 
     return this.getById(created.id, authUser);
   }
@@ -173,6 +179,7 @@ export class InvoicesService {
       before: existing,
       after: updated
     });
+    this.syncInvoiceGraph(authUser.orgId, updated.id);
 
     return this.getById(updated.id, authUser);
   }
@@ -230,6 +237,7 @@ export class InvoicesService {
         after: { sentAt, lockAt }
       });
     }
+    this.syncInvoiceGraph(authUser.orgId, updated.id);
 
     return this.getById(updated.id, authUser);
   }
@@ -266,6 +274,7 @@ export class InvoicesService {
       dueDate: updated.dueDate.toISOString(),
       occurredAt: new Date().toISOString()
     });
+    this.syncInvoiceGraph(authUser.orgId, updated.id);
 
     return this.getById(updated.id, authUser);
   }
@@ -306,8 +315,19 @@ export class InvoicesService {
         invoiceId: updated.id
       }
     });
+    this.syncInvoiceGraph(authUser.orgId, updated.id);
 
     return this.getById(updated.id, authUser);
+  }
+
+  private syncInvoiceGraph(orgId: string, invoiceId: string): void {
+    void this.graphSyncService.upsertNodeFromInvoice(orgId, invoiceId).catch((error) => {
+      this.logger.warn(`Graph sync failed for invoice ${invoiceId}: ${this.formatError(error)}`);
+    });
+  }
+
+  private formatError(error: unknown): string {
+    return error instanceof Error ? error.message : "unknown error";
   }
 
   async listActivity(id: string, authUser: AuthUserContext, query: PaginationQueryDto) {

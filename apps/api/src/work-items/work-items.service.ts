@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException
 } from "@nestjs/common";
 import { ActivityEntityType, Prisma, WorkItemStatus } from "@prisma/client";
@@ -15,6 +16,7 @@ import { WEBHOOK_EVENTS } from "../org-webhooks/webhook-events";
 import { WebhookService } from "../org-webhooks/webhook.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
+import { GraphSyncService } from "../graph/graph-sync.service";
 import { CreateWorkItemDto } from "./dto/create-work-item.dto";
 import { ListWorkItemsDto } from "./dto/list-work-items.dto";
 import { TransitionWorkItemDto } from "./dto/transition-work-item.dto";
@@ -30,12 +32,15 @@ function endOfDay(date: Date): Date {
 
 @Injectable()
 export class WorkItemsService {
+  private readonly logger = new Logger(WorkItemsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
     private readonly policyResolverService: PolicyResolverService,
     private readonly billingService: BillingService,
-    private readonly webhookService: WebhookService
+    private readonly webhookService: WebhookService,
+    private readonly graphSyncService: GraphSyncService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListWorkItemsDto) {
@@ -167,6 +172,7 @@ export class WorkItemsService {
         after: { dueDate }
       });
     }
+    this.syncWorkItemGraph(activeOrgId, created.id);
 
     return created;
   }
@@ -242,6 +248,7 @@ export class WorkItemsService {
         after: { dueDate }
       });
     }
+    this.syncWorkItemGraph(authUser.orgId, updated.id);
 
     return updated;
   }
@@ -275,6 +282,7 @@ export class WorkItemsService {
       before: existing,
       after: updated
     });
+    this.syncWorkItemGraph(authUser.orgId, updated.id);
 
     return updated;
   }
@@ -315,8 +323,19 @@ export class WorkItemsService {
       completedAt: updated.completedAt?.toISOString() ?? null,
       occurredAt: new Date().toISOString()
     });
+    this.syncWorkItemGraph(authUser.orgId, updated.id);
 
     return updated;
+  }
+
+  private syncWorkItemGraph(orgId: string, workItemId: string): void {
+    void this.graphSyncService.upsertNodeFromWorkItem(orgId, workItemId).catch((error) => {
+      this.logger.warn(`Graph sync failed for work item ${workItemId}: ${this.formatError(error)}`);
+    });
+  }
+
+  private formatError(error: unknown): string {
+    return error instanceof Error ? error.message : "unknown error";
   }
 
   async listActivity(id: string, authUser: AuthUserContext, query: PaginationQueryDto) {

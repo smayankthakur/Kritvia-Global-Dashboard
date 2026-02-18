@@ -82,3 +82,24 @@
 - `npm run build:api` -> passes
 - `npm run build:web` -> passes
 - `npm run test:setup` -> fails with clear DB connectivity message (expected until Postgres test DB is up)
+
+## Re-Audit Timestamp
+- Date: 2026-02-18
+- Scope: Full monorepo verification after Phase 11.7 and docs/status alignment request
+- Checks run: `npm ci --include=dev`, `npm run lint`, `npm run build:api`, `npm run build:web`, `npm run test:ci`
+
+## New Bugs Found and Fixed
+
+| ID | Area | Bug | Impact | Fix Applied | Status |
+|---|---|---|---|---|---|
+| BUG-017 | API lint | Unused imports/types in `autopilot.service.ts`, `fix-actions.service.ts`, and `impact-radius.service.ts` | CI lint failure | Removed dead symbols and simplified union type declarations | Fixed |
+| BUG-018 | API lint | Escaped quote sequence in startup banner string in `main.ts` (`no-useless-escape`) | CI lint failure | Replaced escaped quotes with normal template-string quoting | Fixed |
+| BUG-019 | Web build reliability | Next.js build intermittently failed with OneDrive file lock (`EPERM` on build trace file) | Build/deploy instability on local/CI agents using synced drives | Added web build retry wrapper script and set dedicated Next build output dir (`.next-build`) | Fixed |
+| BUG-020 | Web type safety | `/admin/autopilot` sent `riskThreshold: undefined` where API type requires `number|null` | `npm run build:web` type check failure | Updated payload to send `null` instead of `undefined` | Fixed |
+| BUG-021 | Dependency tree integrity | Next build failed with missing module (`../../lib/picocolors`) from corrupted install state | Build blocked | Performed clean reinstall with `npm ci --include=dev` and updated lockfile state | Fixed |
+
+## Latest Verification
+- `npm run lint` -> passes
+- `npm run build:api` -> passes
+- `npm run build:web` -> passes
+- `npm run test:ci` -> still blocked by local test database schema-engine/runtime availability in this environment (infrastructure prerequisite)

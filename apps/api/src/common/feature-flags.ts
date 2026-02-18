@@ -3,7 +3,13 @@ import { HttpException, HttpStatus } from "@nestjs/common";
 type FeatureFlagKey =
   | "FEATURE_AI_ENABLED"
   | "FEATURE_MARKETPLACE_ENABLED"
-  | "FEATURE_AUTOPILOT_ENABLED";
+  | "FEATURE_AUTOPILOT_ENABLED"
+  | "FEATURE_AUTOPILOT"
+  | "FEATURE_RISK_ENGINE"
+  | "FEATURE_RISK_AUTO_NUDGES"
+  | "FEATURE_RISK_SUGGESTED_ACTIONS"
+  | "FEATURE_FIX_ACTIONS"
+  | "FEATURE_FIX_ACTIONS_EXECUTION";
 
 function parseBoolean(value: string | undefined, fallback = true): boolean {
   if (value === undefined) {
@@ -28,4 +34,3 @@ export function assertFeatureEnabled(flag: FeatureFlagKey): void {
     HttpStatus.SERVICE_UNAVAILABLE
   );
 }
-

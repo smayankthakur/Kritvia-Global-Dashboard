@@ -337,8 +337,18 @@ export interface Nudge {
   id: string;
   targetUserId: string;
   createdByUserId: string;
-  type: "MANUAL" | "OVERDUE_INVOICE" | "OVERDUE_WORK" | "STALE_DEAL";
-  entityType: "COMPANY" | "CONTACT" | "LEAD" | "DEAL" | "WORK_ITEM" | "INVOICE";
+  type:
+    | "MANUAL"
+    | "OVERDUE_INVOICE"
+    | "OVERDUE_WORK"
+    | "STALE_DEAL"
+    | "RISK_INVOICE_OVERDUE"
+    | "RISK_INVOICE_HIGH_AMOUNT_UNPAID"
+    | "RISK_WORK_OVERDUE"
+    | "RISK_WORK_BLOCKED"
+    | "RISK_INCIDENT_OPEN"
+    | "RISK_DEAL_STALLED";
+  entityType: "COMPANY" | "CONTACT" | "LEAD" | "DEAL" | "WORK_ITEM" | "INVOICE" | "ALERT";
   entityId: string;
   message: string;
   status: "OPEN" | "RESOLVED";
@@ -3039,4 +3049,523 @@ export async function listOrgAppCommandLogs(
     }
   );
   return parseResponse(response, "Failed to fetch app command logs");
+}
+
+export interface GraphNodeRecord {
+  id: string;
+  type: string;
+  entityId: string;
+  title: string | null;
+  status: string | null;
+  amountCents: number | null;
+  currency: string | null;
+  dueAt: string | null;
+  occurredAt: string | null;
+  riskScore: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GraphEdgeRecord {
+  id: string;
+  type: string;
+  weight: number;
+  createdAt: string;
+  fromNodeId: string;
+  toNodeId: string;
+  fromNode?: { id: string; type: string; title: string | null; status: string | null };
+  toNode?: { id: string; type: string; title: string | null; status: string | null };
+}
+
+export interface GraphNodeDetailPayload {
+  node: GraphNodeRecord;
+  edges: GraphEdgeRecord[];
+}
+
+export interface GraphImpactSummary {
+  moneyAtRiskCents: number;
+  overdueInvoicesCount: number;
+  openWorkCount: number;
+  overdueWorkCount: number;
+  dealsAtRiskCents: number;
+  companiesImpactedCount: number;
+  incidentsCount: number;
+  maxRiskNode: { id: string; type: string; title: string | null; riskScore: number } | null;
+  pathCountsByType: Record<string, number>;
+}
+
+export interface GraphImpactHotspot {
+  id: string;
+  type: string;
+  title: string | null;
+  status: string | null;
+  amountCents: number | null;
+  dueAt: string | null;
+  riskScore: number;
+}
+
+export interface GraphImpactRadiusPayload {
+  startNode: GraphNodeRecord;
+  summary: GraphImpactSummary;
+  hotspots: GraphImpactHotspot[];
+  nodes: GraphNodeRecord[];
+  edges: GraphEdgeRecord[];
+}
+
+export async function listGraphNodes(
+  token: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+    type?: string;
+    q?: string;
+  }
+): Promise<
+  PaginatedResponse<GraphNodeRecord> & {
+    totalPages?: number;
+  }
+> {
+  const params = new URLSearchParams();
+  addPaginationParams(params, options);
+  if (options?.type) {
+    params.set("type", options.type);
+  }
+  if (options?.q) {
+    params.set("q", options.q);
+  }
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/graph/nodes${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch graph nodes");
+}
+
+export async function listGraphEdges(
+  token: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+    type?: string;
+    fromNodeId?: string;
+    toNodeId?: string;
+  }
+): Promise<
+  PaginatedResponse<GraphEdgeRecord> & {
+    totalPages?: number;
+  }
+> {
+  const params = new URLSearchParams();
+  addPaginationParams(params, options);
+  if (options?.type) {
+    params.set("type", options.type);
+  }
+  if (options?.fromNodeId) {
+    params.set("fromNodeId", options.fromNodeId);
+  }
+  if (options?.toNodeId) {
+    params.set("toNodeId", options.toNodeId);
+  }
+  const query = params.toString();
+  const response = await request(`${API_BASE_URL}/graph/edges${query ? `?${query}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch graph edges");
+}
+
+export async function getGraphNode(token: string, id: string): Promise<GraphNodeDetailPayload> {
+  const response = await request(`${API_BASE_URL}/graph/node/${id}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch graph node");
+}
+
+export async function traverseGraph(
+  token: string,
+  payload: { startNodeId: string; maxDepth: number; edgeTypes?: string[] }
+): Promise<{ nodes: GraphNodeRecord[]; edges: GraphEdgeRecord[] }> {
+  const response = await request(`${API_BASE_URL}/graph/traverse`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to traverse graph");
+}
+
+export async function graphImpactRadius(
+  token: string,
+  payload: {
+    startNodeId: string;
+    maxDepth?: number;
+    direction?: "OUT" | "IN" | "BOTH";
+    edgeTypes?: string[];
+  }
+): Promise<GraphImpactRadiusPayload> {
+  const response = await request(`${API_BASE_URL}/graph/impact-radius`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to compute impact radius");
+}
+
+export async function graphImpactRadiusByNode(
+  token: string,
+  nodeId: string,
+  options?: {
+    maxDepth?: number;
+    direction?: "OUT" | "IN" | "BOTH";
+    edgeTypes?: string[];
+  }
+): Promise<GraphImpactRadiusPayload> {
+  const params = new URLSearchParams();
+  if (options?.maxDepth !== undefined) {
+    params.set("maxDepth", String(options.maxDepth));
+  }
+  if (options?.direction) {
+    params.set("direction", options.direction);
+  }
+  if (options?.edgeTypes?.length) {
+    params.set("edgeTypes", options.edgeTypes.join(","));
+  }
+  const query = params.toString();
+  const response = await request(
+    `${API_BASE_URL}/graph/impact-radius/node/${nodeId}${query ? `?${query}` : ""}`,
+    {
+      headers: authHeaders(token),
+      cache: "no-store"
+    }
+  );
+  return parseResponse(response, "Failed to compute impact radius");
+}
+
+export async function graphDeeplink(
+  token: string,
+  nodeId: string
+): Promise<{ url: string | null; label: string }> {
+  const response = await request(`${API_BASE_URL}/graph/deeplink/${nodeId}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to resolve deeplink");
+}
+
+export interface RiskDriver {
+  nodeId: string;
+  entityId: string;
+  type: string;
+  title: string | null;
+  riskScore: number;
+  reasonCodes: string[];
+  evidence: {
+    dueAt?: string;
+    amountCents?: number;
+    status?: string;
+    counts?: Record<string, number>;
+  };
+  deeplink?: { url: string; label: string };
+}
+
+export interface CeoRiskSummaryPayload {
+  orgRiskScore: number;
+  deltaVsYesterday: number | null;
+  topDrivers: RiskDriver[];
+  generatedAt: string;
+}
+
+export interface RiskAutoNudgeItem {
+  id: string;
+  type: Nudge["type"];
+  entityType: Nudge["entityType"];
+  entityId: string;
+  message: string;
+  severity: Nudge["severity"];
+  status: Nudge["status"];
+  targetUser: { id: string; name: string; email: string } | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  deeplink: { url?: string; label?: string } | null;
+  meta: Record<string, unknown> | null;
+}
+
+export interface FixActionTemplate {
+  id: string;
+  key: "SEND_INVOICE_REMINDER" | "REASSIGN_WORK" | "SET_DUE_DATE" | "ESCALATE_INCIDENT";
+  title: string;
+  description: string | null;
+  requiresConfirmation: boolean;
+  allowedRoles: Role[];
+  config: Record<string, unknown> | null;
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FixActionRun {
+  id: string;
+  orgId: string;
+  templateId: string;
+  nudgeId: string | null;
+  entityType: "INVOICE" | "WORK_ITEM" | "INCIDENT";
+  entityId: string;
+  requestedByUserId: string;
+  status: "PENDING" | "CONFIRMED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+  idempotencyKey: string;
+  input: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+  template?: {
+    id: string;
+    key: string;
+    title: string;
+    requiresConfirmation: boolean;
+  };
+  requestedByUser?: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+  };
+}
+
+export interface AutopilotPolicy {
+  id: string;
+  orgId: string;
+  name: string;
+  isEnabled: boolean;
+  entityType: "INVOICE" | "WORK_ITEM" | "INCIDENT";
+  condition: Record<string, unknown>;
+  actionTemplateKey: string;
+  riskThreshold: number | null;
+  autoExecute: boolean;
+  maxExecutionsPerHour: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutopilotRun {
+  id: string;
+  orgId: string;
+  policyId: string;
+  fixActionRunId: string | null;
+  entityType: string;
+  entityId: string;
+  status: "DRY_RUN" | "APPROVAL_REQUIRED" | "EXECUTED" | "SKIPPED" | "FAILED";
+  preview: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  createdAt: string;
+  policy?: {
+    id: string;
+    name: string;
+    actionTemplateKey: string;
+    autoExecute: boolean;
+  };
+  fixActionRun?: {
+    id: string;
+    status: string;
+    error: string | null;
+    createdAt: string;
+  } | null;
+}
+
+export async function getCeoRisk(token: string): Promise<CeoRiskSummaryPayload> {
+  const response = await request(`${API_BASE_URL}/ceo/risk`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch risk summary");
+}
+
+export async function getCeoRiskWhy(
+  token: string
+): Promise<{ drivers: RiskDriver[]; generatedAt: string }> {
+  const response = await request(`${API_BASE_URL}/ceo/risk/why`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch risk drivers");
+}
+
+export async function recomputeRisk(
+  token: string,
+  payload?: { scope?: "ORG"; maxNodes?: number }
+): Promise<{ orgRiskScore: number; topDrivers: RiskDriver[]; updatedNodesCount: number }> {
+  const response = await request(`${API_BASE_URL}/graph/risk/recompute`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload ?? {})
+  });
+  return parseResponse(response, "Failed to recompute risk");
+}
+
+export async function getCeoRiskNudges(
+  token: string
+): Promise<{ items: RiskAutoNudgeItem[] }> {
+  const response = await request(`${API_BASE_URL}/ceo/risk/nudges`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch risk nudges");
+}
+
+export async function generateRiskNudgesNow(
+  token: string
+): Promise<{ created: number; skipped: number; capped: boolean }> {
+  const response = await request(`${API_BASE_URL}/graph/risk/generate-nudges-now`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to generate risk nudges");
+}
+
+export async function getFixActionTemplates(token: string): Promise<FixActionTemplate[]> {
+  const response = await request(`${API_BASE_URL}/fix-actions/templates`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch fix action templates");
+}
+
+export async function createFixActionRun(
+  token: string,
+  payload: {
+    templateKey: FixActionTemplate["key"];
+    nudgeId?: string;
+    entityType: "INVOICE" | "WORK_ITEM" | "INCIDENT";
+    entityId: string;
+    input?: Record<string, unknown>;
+    idempotencyKey?: string;
+  }
+): Promise<{ id: string; status: string; requiresConfirmation: boolean; idempotencyKey: string }> {
+  const response = await request(`${API_BASE_URL}/fix-actions/runs`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create fix action run");
+}
+
+export async function confirmFixActionRun(token: string, runId: string): Promise<FixActionRun> {
+  const response = await request(`${API_BASE_URL}/fix-actions/runs/${runId}/confirm`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ confirm: true })
+  });
+  return parseResponse(response, "Failed to confirm fix action run");
+}
+
+export async function listFixActionRuns(
+  token: string,
+  query: {
+    entityType?: string;
+    entityId?: string;
+    status?: string;
+    page?: number;
+    pageSize?: number;
+  } = {}
+): Promise<PaginatedResponse<FixActionRun>> {
+  const params = new URLSearchParams();
+  if (query.entityType) {
+    params.set("entityType", query.entityType);
+  }
+  if (query.entityId) {
+    params.set("entityId", query.entityId);
+  }
+  if (query.status) {
+    params.set("status", query.status);
+  }
+  addPaginationParams(params, query);
+
+  const queryString = params.toString();
+  const response = await request(`${API_BASE_URL}/fix-actions/runs${queryString ? `?${queryString}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch fix action runs");
+}
+
+export async function listAutopilotPolicies(token: string): Promise<AutopilotPolicy[]> {
+  const response = await request(`${API_BASE_URL}/autopilot/policies`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch autopilot policies");
+}
+
+export async function createAutopilotPolicy(
+  token: string,
+  payload: Omit<AutopilotPolicy, "id" | "orgId" | "createdAt" | "updatedAt">
+): Promise<AutopilotPolicy> {
+  const response = await request(`${API_BASE_URL}/autopilot/policies`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to create autopilot policy");
+}
+
+export async function updateAutopilotPolicy(
+  token: string,
+  id: string,
+  payload: Partial<Omit<AutopilotPolicy, "id" | "orgId" | "createdAt" | "updatedAt">>
+): Promise<AutopilotPolicy> {
+  const response = await request(`${API_BASE_URL}/autopilot/policies/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  return parseResponse(response, "Failed to update autopilot policy");
+}
+
+export async function deleteAutopilotPolicy(token: string, id: string): Promise<{ success: boolean }> {
+  const response = await request(`${API_BASE_URL}/autopilot/policies/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to delete autopilot policy");
+}
+
+export async function listAutopilotRuns(
+  token: string,
+  query: { entityType?: string; status?: string; page?: number; pageSize?: number } = {}
+): Promise<PaginatedResponse<AutopilotRun>> {
+  const params = new URLSearchParams();
+  if (query.entityType) {
+    params.set("entityType", query.entityType);
+  }
+  if (query.status) {
+    params.set("status", query.status);
+  }
+  addPaginationParams(params, query);
+  const queryString = params.toString();
+  const response = await request(`${API_BASE_URL}/autopilot/runs${queryString ? `?${queryString}` : ""}`, {
+    headers: authHeaders(token),
+    cache: "no-store"
+  });
+  return parseResponse(response, "Failed to fetch autopilot runs");
+}
+
+export async function approveAutopilotRun(token: string, id: string): Promise<AutopilotRun> {
+  const response = await request(`${API_BASE_URL}/autopilot/runs/${id}/approve`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to approve autopilot run");
+}
+
+export async function rollbackAutopilotRun(token: string, id: string): Promise<AutopilotRun> {
+  const response = await request(`${API_BASE_URL}/autopilot/runs/${id}/rollback`, {
+    method: "POST",
+    headers: authHeaders(token)
+  });
+  return parseResponse(response, "Failed to rollback autopilot run");
 }

@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
-    "start": "node .next/standalone/apps/web/server.js",
+    "build": "node scripts/build-with-retry.mjs",
+    "start": "node .next-build/standalone/apps/web/server.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {

@@ -5,6 +5,7 @@ import { ActivityLogModule } from "./activity-log/activity-log.module";
 import { AlertsModule } from "./alerts/alerts.module";
 import { AiModule } from "./ai/ai.module";
 import { AiActionsModule } from "./ai-actions/ai-actions.module";
+import { AutopilotModule } from "./autopilot/autopilot.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
 import { CompaniesModule } from "./companies/companies.module";
@@ -14,6 +15,8 @@ import { DebugController } from "./debug.controller";
 import { DirectoryModule } from "./directory/directory.module";
 import { HealthController } from "./health.controller";
 import { HealthScoreModule } from "./health-score/health-score.module";
+import { GraphModule } from "./graph/graph.module";
+import { FixActionsModule } from "./fix-actions/fix-actions.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { HygieneModule } from "./hygiene/hygiene.module";
 import { InvoicesModule } from "./invoices/invoices.module";
@@ -52,6 +55,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     AlertsModule,
     AiModule,
     AiActionsModule,
+    AutopilotModule,
     AuthModule,
     CompaniesModule,
     ContactsModule,
@@ -69,6 +73,8 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     DashboardModule,
     RevenueVelocityModule,
     HealthScoreModule,
+    GraphModule,
+    FixActionsModule,
     OrgMembersModule,
     OrgAuditModule,
     OrgApiTokensModule,

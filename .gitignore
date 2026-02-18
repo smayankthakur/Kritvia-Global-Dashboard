@@ -6,3 +6,5 @@ apps/*/.next-kritviya
 apps/*/dist
 *.log
 *.tsbuildinfo
+
+apps/*/.next-build

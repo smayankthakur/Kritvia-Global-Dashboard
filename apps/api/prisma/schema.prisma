@@ -71,6 +71,12 @@ enum NudgeType {
   OVERDUE_INVOICE
   OVERDUE_WORK
   STALE_DEAL
+  RISK_INVOICE_OVERDUE
+  RISK_INVOICE_HIGH_AMOUNT_UNPAID
+  RISK_WORK_OVERDUE
+  RISK_WORK_BLOCKED
+  RISK_INCIDENT_OPEN
+  RISK_DEAL_STALLED
 }
 
 enum NudgeSeverity {
@@ -139,6 +145,13 @@ model Org {
   statusNotificationLogs StatusNotificationLog[]
   uptimeChecks  UptimeCheck[]
   statusAuthTokens StatusAuthToken[]
+  graphNodes    GraphNode[]
+  graphEdges    GraphEdge[]
+  riskSnapshots OrgRiskSnapshot[]
+  fixActionTemplates FixActionTemplate[]
+  fixActionRuns FixActionRun[]
+  autopilotPolicies AutopilotPolicy[]
+  autopilotRuns AutopilotRun[]
 
   @@map("orgs")
 }
@@ -273,6 +286,7 @@ model User {
   onCallOverrideFrom OnCallOverride[] @relation("OnCallOverrideFromUser")
   onCallOverrideTo  OnCallOverride[] @relation("OnCallOverrideToUser")
   onCallAssignmentLogs OnCallAssignmentLog[]
+  requestedFixActionRuns FixActionRun[] @relation("FixActionRequestedByUser")
 
   @@index([orgId])
   @@map("users")
@@ -679,6 +693,7 @@ model Nudge {
   meta            Json?
   actionType      String?            @map("action_type")
   actionPayload   Json?              @map("action_payload")
+  uniqueKey       String?            @unique @map("unique_key")
   executedAt      DateTime?          @map("executed_at")
   undoExpiresAt   DateTime?          @map("undo_expires_at")
   undoData        Json?              @map("undo_data")
@@ -688,6 +703,7 @@ model Nudge {
   org             Org                @relation(fields: [orgId], references: [id], onDelete: Cascade)
   createdByUser   User               @relation("NudgeCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   targetUser      User               @relation("NudgeTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+  fixActionRuns   FixActionRun[]
 
   @@index([orgId, targetUserId, status])
   @@index([orgId, status, priorityScore])
@@ -1274,4 +1290,158 @@ model AlertDelivery {
   @@index([alertEventId, createdAt])
   @@index([channelId, createdAt])
   @@map("alert_deliveries")
+}
+
+model GraphNode {
+  id         String   @id @default(uuid()) @db.Uuid
+  orgId      String   @map("org_id") @db.Uuid
+  type       String
+  entityId   String   @map("entity_id")
+  title      String?
+  status     String?
+  amountCents Int?    @map("amount_cents")
+  currency   String?
+  dueAt      DateTime? @map("due_at")
+  occurredAt DateTime? @map("occurred_at")
+  riskScore  Int      @default(0) @map("risk_score")
+  meta       Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  org        Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  fromEdges  GraphEdge[] @relation("GraphEdgeFromNode")
+  toEdges    GraphEdge[] @relation("GraphEdgeToNode")
+
+  @@unique([orgId, type, entityId])
+  @@index([orgId, type, updatedAt])
+  @@index([orgId, updatedAt])
+  @@index([orgId, riskScore])
+  @@map("graph_nodes")
+}
+
+model GraphEdge {
+  id         String   @id @default(uuid()) @db.Uuid
+  orgId      String   @map("org_id") @db.Uuid
+  fromNodeId String   @map("from_node_id") @db.Uuid
+  toNodeId   String   @map("to_node_id") @db.Uuid
+  type       String
+  weight     Int      @default(1)
+  meta       Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  org        Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  fromNode   GraphNode @relation("GraphEdgeFromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode     GraphNode @relation("GraphEdgeToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, fromNodeId, toNodeId, type])
+  @@index([orgId, fromNodeId])
+  @@index([orgId, toNodeId])
+  @@index([orgId, type, createdAt])
+  @@map("graph_edges")
+}
+
+model OrgRiskSnapshot {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  asOfDate  DateTime @map("as_of_date") @db.Date
+  riskScore Int      @map("risk_score")
+  drivers   Json
+  meta      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, asOfDate])
+  @@index([orgId, asOfDate])
+  @@map("org_risk_snapshots")
+}
+
+model FixActionTemplate {
+  id                   String   @id @default(uuid()) @db.Uuid
+  orgId                String   @map("org_id") @db.Uuid
+  key                  String
+  title                String
+  description          String?
+  requiresConfirmation Boolean  @default(true) @map("requires_confirmation")
+  allowedRoles         Json     @map("allowed_roles")
+  config               Json?
+  isEnabled            Boolean  @default(true) @map("is_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  org                  Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  runs                 FixActionRun[]
+
+  @@unique([orgId, key])
+  @@map("fix_action_templates")
+}
+
+model FixActionRun {
+  id                String   @id @default(uuid()) @db.Uuid
+  orgId             String   @map("org_id") @db.Uuid
+  templateId        String   @map("template_id") @db.Uuid
+  nudgeId           String?  @map("nudge_id") @db.Uuid
+  entityType        String   @map("entity_type")
+  entityId          String   @map("entity_id")
+  requestedByUserId String   @map("requested_by_user_id") @db.Uuid
+  status            String   @default("PENDING")
+  idempotencyKey    String   @map("idempotency_key")
+  input             Json?
+  result            Json?
+  error             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  template          FixActionTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  nudge             Nudge?   @relation(fields: [nudgeId], references: [id], onDelete: SetNull)
+  requestedByUser   User     @relation("FixActionRequestedByUser", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  autopilotRuns     AutopilotRun[]
+
+  @@unique([orgId, idempotencyKey])
+  @@index([orgId, createdAt])
+  @@index([orgId, status])
+  @@map("fix_action_runs")
+}
+
+model AutopilotPolicy {
+  id                  String   @id @default(uuid()) @db.Uuid
+  orgId               String   @map("org_id") @db.Uuid
+  name                String
+  isEnabled           Boolean  @default(true) @map("is_enabled")
+  entityType          String   @map("entity_type")
+  condition           Json
+  actionTemplateKey   String   @map("action_template_key")
+  riskThreshold       Int?     @map("risk_threshold")
+  autoExecute         Boolean  @default(false) @map("auto_execute")
+  maxExecutionsPerHour Int     @default(10) @map("max_executions_per_hour")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  org                 Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  runs                AutopilotRun[]
+
+  @@index([orgId, entityType, isEnabled])
+  @@map("autopilot_policies")
+}
+
+model AutopilotRun {
+  id             String   @id @default(uuid()) @db.Uuid
+  orgId          String   @map("org_id") @db.Uuid
+  policyId       String   @map("policy_id") @db.Uuid
+  fixActionRunId String?  @map("fix_action_run_id") @db.Uuid
+  entityType     String   @map("entity_type")
+  entityId       String   @map("entity_id")
+  status         String   @default("DRY_RUN")
+  preview        Json?
+  result         Json?
+  error          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  policy         AutopilotPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  fixActionRun   FixActionRun? @relation(fields: [fixActionRunId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, createdAt])
+  @@map("autopilot_runs")
 }

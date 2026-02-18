@@ -38,6 +38,7 @@ export class SchedulerController {
 
   private toScheduleName(name: string):
     | "schedule-health"
+    | "risk-recompute-nightly"
     | "schedule-insights"
     | "schedule-actions"
     | "schedule-briefing"
@@ -46,6 +47,7 @@ export class SchedulerController {
     | "schedule-escalation"
     | "schedule-uptime" {
     if (name === "health") return "schedule-health";
+    if (name === "risk") return "risk-recompute-nightly";
     if (name === "insights") return "schedule-insights";
     if (name === "actions") return "schedule-actions";
     if (name === "briefing") return "schedule-briefing";

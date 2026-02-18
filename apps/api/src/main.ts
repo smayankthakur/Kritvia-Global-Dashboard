@@ -30,7 +30,7 @@ function printStartupBanner(workerMode: string): void {
   console.log(`[startup] NODE_ENV=${nodeEnv}`);
   console.log(`[startup] DATABASE_URL_HOST=${dbHost}`);
   console.log(`[startup] ALLOW_MIGRATION_RECOVERY=${recoveryEnabled}`);
-  console.log(`[startup] expected_render_start_command=\"${renderStartCommand}\"`);
+  console.log(`[startup] expected_render_start_command="${renderStartCommand}"`);
 }
 
 async function bootstrap(): Promise<void> {

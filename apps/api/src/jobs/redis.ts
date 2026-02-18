@@ -38,9 +38,32 @@ export function safeGetRedis(): Redis | null {
     return null;
   }
 
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(redisUrl);
+  } catch {
+    if (!missingRedisWarned) {
+      missingRedisWarned = true;
+      logger.warn("Invalid REDIS_URL format; workers disabled");
+    }
+    return null;
+  }
+
+  if (parsedUrl.protocol !== "redis:" && parsedUrl.protocol !== "rediss:") {
+    if (!missingRedisWarned) {
+      missingRedisWarned = true;
+      logger.warn("REDIS_URL must start with redis:// or rediss://; workers disabled");
+    }
+    return null;
+  }
+
   redis = new Redis(redisUrl, {
     maxRetriesPerRequest: null,
-    enableReadyCheck: true
+    enableReadyCheck: true,
+    ...(parsedUrl.protocol === "rediss:" ? { tls: {} } : {})
+  });
+  redis.on("error", (error) => {
+    logger.warn(`Redis connection warning: ${error?.message ?? "unknown error"}`);
   });
 
   return redis;

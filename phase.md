@@ -27,7 +27,13 @@ After **every step update** (feature, fix, migration, or hardening task), update
 4. Keep this file in the same commit as the implementation whenever possible.
 
 ## Latest Step Update
-- Date: 2026-02-17
-- Step: Phase 6.4.22 Private Status Page SSO (Magic Link + Domain Allowlist)
+- Date: 2026-02-18
+- Step: Phase 11.7 Autopilot Engine (policy-based guarded execution)
 - Status: Completed
-- Highlights: Added PRIVATE_SSO visibility with domain allowlist, one-time status magic-link auth tokens, `/status-auth/*` endpoints, signed HTTP-only status session cookie flow, and Next.js login/callback routes for private status pages.
+- Highlights: Added org-scoped `AutopilotPolicy` and `AutopilotRun` models, created autopilot policy/run APIs with RBAC and pagination, integrated risk-driver trigger pipeline with condition evaluation + dry-run preview + approval/auto-execution paths, enforced kill-switch/rate-limit guards, added rollback endpoint for reversible actions, and shipped `/admin/autopilot` plus CEO risk "Autopilot Activity" UI.
+
+## Latest Maintenance Update
+- Date: 2026-02-18
+- Step: Stabilization audit + bug fix pass (lint/build reliability)
+- Status: Completed
+- Highlights: Fixed API lint/type regressions, hardened web build reliability under OneDrive lock contention, corrected autopilot page typing issue, and revalidated monorepo lint/build health.

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException
 } from "@nestjs/common";
 import { ActivityEntityType, DealStage, WorkItemStatus } from "@prisma/client";
@@ -12,17 +13,21 @@ import { PrismaService } from "../prisma/prisma.service";
 import { PolicyResolverService } from "../policy/policy-resolver.service";
 import { WEBHOOK_EVENTS } from "../org-webhooks/webhook-events";
 import { WebhookService } from "../org-webhooks/webhook.service";
+import { GraphSyncService } from "../graph/graph-sync.service";
 import { CreateDealDto } from "./dto/create-deal.dto";
 import { ListDealsDto } from "./dto/list-deals.dto";
 import { UpdateDealDto } from "./dto/update-deal.dto";
 
 @Injectable()
 export class DealsService {
+  private readonly logger = new Logger(DealsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
     private readonly policyResolverService: PolicyResolverService,
-    private readonly webhookService: WebhookService
+    private readonly webhookService: WebhookService,
+    private readonly graphSyncService: GraphSyncService
   ) {}
 
   async findAll(authUser: AuthUserContext, query: ListDealsDto) {
@@ -102,6 +107,7 @@ export class DealsService {
       ownerUserId: created.ownerUserId,
       occurredAt: new Date().toISOString()
     });
+    this.syncDealGraph(authUser.orgId, created.id);
 
     return created;
   }
@@ -162,6 +168,7 @@ export class DealsService {
       expectedCloseDate: updated.expectedCloseDate?.toISOString() ?? null,
       occurredAt: new Date().toISOString()
     });
+    this.syncDealGraph(authUser.orgId, updated.id);
 
     return updated;
   }
@@ -205,6 +212,7 @@ export class DealsService {
         action: "CREATE",
         after: rootWorkItem
       });
+      this.syncWorkItemGraph(authUser.orgId, rootWorkItem.id);
     }
 
     await this.activityLogService.log({
@@ -216,6 +224,7 @@ export class DealsService {
       before: existing,
       after: updated
     });
+    this.syncDealGraph(authUser.orgId, updated.id);
 
     return updated;
   }
@@ -240,8 +249,25 @@ export class DealsService {
       before: existing,
       after: updated
     });
+    this.syncDealGraph(authUser.orgId, updated.id);
 
     return updated;
+  }
+
+  private syncDealGraph(orgId: string, dealId: string): void {
+    void this.graphSyncService.upsertNodeFromDeal(orgId, dealId).catch((error) => {
+      this.logger.warn(`Graph sync failed for deal ${dealId}: ${this.formatError(error)}`);
+    });
+  }
+
+  private syncWorkItemGraph(orgId: string, workItemId: string): void {
+    void this.graphSyncService.upsertNodeFromWorkItem(orgId, workItemId).catch((error) => {
+      this.logger.warn(`Graph sync failed for work item ${workItemId}: ${this.formatError(error)}`);
+    });
+  }
+
+  private formatError(error: unknown): string {
+    return error instanceof Error ? error.message : "unknown error";
   }
 
   private async findDealOr404(id: string, orgId: string) {
