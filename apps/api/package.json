@@ -17,6 +17,7 @@
     "start:dev": "nest start --watch",
     "db:migrate": "npx prisma migrate deploy --schema prisma/schema.prisma",
     "migrate:deploy": "npx prisma migrate deploy --schema prisma/schema.prisma",
+    "migrate:deploy:render": "node scripts/render-migrate-recover.mjs",
     "seed": "npx prisma db seed --schema prisma/schema.prisma",
     "db:migrate:dev": "npx prisma migrate dev --schema prisma/schema.prisma",
     "db:reset": "npx prisma migrate reset --force --skip-seed --schema prisma/schema.prisma",

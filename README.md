@@ -558,19 +558,29 @@ Use these exact commands to mirror Render behavior:
 
 If Render fails with Prisma `P3009` on migration `20260218150000_phase6421_whitelabel_status`, use one of these paths:
 
+Automatic Render self-heal (configured in `render.yaml`):
+- Start command runs:
+  - `npm --workspace apps/api run migrate:deploy:render`
+- Script behavior:
+  - runs `npx prisma migrate deploy --schema prisma/schema.prisma`
+  - if output contains `P3009` + `20260218150000_phase6421_whitelabel_status`, runs:
+    - `npx prisma migrate resolve --schema prisma/schema.prisma --rolled-back 20260218150000_phase6421_whitelabel_status`
+  - retries deploy once
+  - fails fast for any other migration failure
+
 1. Disposable DB (simplest):
    - Reset/recreate the Render Postgres database.
    - Redeploy or run:
      - `npx prisma migrate deploy`
+   - Safe when environment is early-stage/demo and data loss is acceptable.
 
 2. Preserve DB data:
    - Inspect migration state:
      - `npx prisma migrate status`
-   - If schema objects from this migration already exist, mark it applied:
-     - `npx prisma migrate resolve --applied 20260218150000_phase6421_whitelabel_status`
-   - If migration should be retried, mark rolled back then redeploy:
-     - `npx prisma migrate resolve --rolled-back 20260218150000_phase6421_whitelabel_status`
-     - `npx prisma migrate deploy`
+   - Manual recovery commands for this exact migration:
+     - `npx prisma migrate resolve --schema prisma/schema.prisma --rolled-back 20260218150000_phase6421_whitelabel_status`
+     - `npx prisma migrate deploy --schema prisma/schema.prisma`
+   - Use only after verifying DB state for this migration (columns/indexes/constraints) is consistent.
 
 Recommended deploy command remains:
 - `npx prisma migrate deploy`
