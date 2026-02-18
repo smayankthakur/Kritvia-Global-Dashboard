@@ -28,6 +28,6 @@ After **every step update** (feature, fix, migration, or hardening task), update
 
 ## Latest Step Update
 - Date: 2026-02-17
-- Step: Phase 6.4.19 Public Status Page + Uptime
+- Step: Phase 6.4.22 Private Status Page SSO (Magic Link + Domain Allowlist)
 - Status: Completed
-- Highlights: Public status infrastructure added (status components + uptime checks), incident publishing flow with public summaries/updates/slugs, public status endpoints and pages (`/status`, `/status/incidents/[slug]`), periodic uptime-scan scheduler/worker integration, and internal incident publish/update controls in Developer Incidents tab.
+- Highlights: Added PRIVATE_SSO visibility with domain allowlist, one-time status magic-link auth tokens, `/status-auth/*` endpoints, signed HTTP-only status session cookie flow, and Next.js login/callback routes for private status pages.

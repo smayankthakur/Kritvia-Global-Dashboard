@@ -159,7 +159,9 @@ describe("Public status page + incident publishing", () => {
     const checks = await prisma.uptimeCheck.findMany({ where: { componentKey: "api" } });
     expect(checks.length).toBeGreaterThanOrEqual(5);
 
-    const apiComponent = await prisma.statusComponent.findUnique({ where: { key: "api" } });
+    const apiComponent = await prisma.statusComponent.findFirst({
+      where: { orgId: ORG_A, key: "api" }
+    });
     expect(apiComponent?.status).toBe("MAJOR_OUTAGE");
 
     fetchSpy.mockRestore();

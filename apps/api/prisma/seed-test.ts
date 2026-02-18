@@ -350,14 +350,14 @@ async function main(): Promise<void> {
 
   await prisma.org.upsert({
     where: { id: IDS.orgA },
-    update: { name: "Test Org A" },
-    create: { id: IDS.orgA, name: "Test Org A" }
+    update: { name: "Test Org A", slug: "test-org-a", statusEnabled: true, statusName: "Test Org A Status" },
+    create: { id: IDS.orgA, name: "Test Org A", slug: "test-org-a", statusEnabled: true, statusName: "Test Org A Status" }
   });
 
   await prisma.org.upsert({
     where: { id: IDS.orgB },
-    update: { name: "Test Org B" },
-    create: { id: IDS.orgB, name: "Test Org B" }
+    update: { name: "Test Org B", slug: "test-org-b", statusEnabled: false },
+    create: { id: IDS.orgB, name: "Test Org B", slug: "test-org-b", statusEnabled: false }
   });
 
   await prisma.policy.upsert({

@@ -9,11 +9,13 @@ type ComponentOption = {
 
 type Props = {
   components: ComponentOption[];
+  orgSlug: string;
+  privateToken?: string;
 };
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000").replace(/\/$/, "");
 
-export function StatusSubscribeCard({ components }: Props) {
+export function StatusSubscribeCard({ components, orgSlug, privateToken }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"email" | "webhook">("email");
   const [email, setEmail] = useState("");
@@ -38,7 +40,8 @@ export function StatusSubscribeCard({ components }: Props) {
     setSubmitting(true);
     setMessage(null);
     try {
-      const response = await fetch(`${API_BASE}/status/subscribe`, {
+      const query = privateToken ? `?token=${encodeURIComponent(privateToken)}` : "";
+      const response = await fetch(`${API_BASE}/status/o/${encodeURIComponent(orgSlug)}/subscribe${query}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

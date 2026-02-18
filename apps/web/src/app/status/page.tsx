@@ -55,6 +55,7 @@ export default async function PublicStatusPage() {
               key: component.key,
               name: component.name
             }))}
+            orgSlug={process.env.NEXT_PUBLIC_STATUS_DEFAULT_ORG_SLUG ?? "demo-org"}
           />
 
           <div className="kv-card" style={{ marginBottom: "12px" }}>

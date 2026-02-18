@@ -82,6 +82,19 @@ enum NudgeSeverity {
 model Org {
   id           String        @id @default(uuid()) @db.Uuid
   name         String
+  slug         String        @unique @default(cuid())
+  statusEnabled Boolean      @default(false) @map("status_enabled")
+  statusName   String?       @map("status_name")
+  statusLogoUrl String?      @map("status_logo_url")
+  statusAccentColor String?  @map("status_accent_color")
+  statusFooterText String?   @map("status_footer_text")
+  statusVisibility String    @default("PUBLIC") @map("status_visibility")
+  statusAllowedEmailDomains Json? @map("status_allowed_email_domains")
+  statusSessionTtlMinutes Int @default(720) @map("status_session_ttl_minutes")
+  statusAccessTokenHash String? @map("status_access_token_hash")
+  customStatusDomain String? @map("custom_status_domain")
+  customDomainVerifyToken String? @map("custom_domain_verify_token")
+  customDomainVerifiedAt DateTime? @map("custom_domain_verified_at")
   createdAt    DateTime      @default(now()) @map("created_at")
   users        User[]
   policies     Policy[]
@@ -122,6 +135,10 @@ model Org {
   alertDeliveries AlertDelivery[]
   statusComponents StatusComponent[]
   statusSubscribers StatusSubscriber[]
+  statusSubscriptions StatusSubscription[]
+  statusNotificationLogs StatusNotificationLog[]
+  uptimeChecks  UptimeCheck[]
+  statusAuthTokens StatusAuthToken[]
 
   @@map("orgs")
 }
@@ -865,29 +882,31 @@ model Incident {
 
   @@index([orgId, status])
   @@index([orgId, createdAt])
+  @@index([orgId, isPublic, createdAt])
   @@index([alertEventId])
   @@map("incidents")
 }
 
 model StatusComponent {
   id          String   @id @default(uuid()) @db.Uuid
-  orgId       String?  @map("org_id") @db.Uuid
-  key         String   @unique
+  orgId       String   @map("org_id") @db.Uuid
+  key         String
   name        String
   description String?
   status      String   @default("OPERATIONAL")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  org         Org?     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   checks      UptimeCheck[]
 
   @@index([orgId])
+  @@unique([orgId, key])
   @@map("status_components")
 }
 
 model StatusSubscriber {
   id                String   @id @default(uuid()) @db.Uuid
-  orgId             String?  @map("org_id") @db.Uuid
+  orgId             String   @map("org_id") @db.Uuid
   email             String?
   webhookUrl        String?  @map("webhook_url")
   secretEncrypted   String?  @map("secret_encrypted")
@@ -896,7 +915,7 @@ model StatusSubscriber {
   unsubToken        String   @unique @map("unsub_token")
   createdAt         DateTime @default(now()) @map("created_at")
 
-  org               Org?     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   subscriptions     StatusSubscription[]
   notificationLogs  StatusNotificationLog[]
 
@@ -910,10 +929,12 @@ model StatusSubscriber {
 
 model StatusSubscription {
   id           String   @id @default(uuid()) @db.Uuid
+  orgId        String   @map("org_id") @db.Uuid
   subscriberId String   @map("subscriber_id") @db.Uuid
   componentKey String?  @map("component_key")
   createdAt    DateTime @default(now()) @map("created_at")
 
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   subscriber   StatusSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
 
   @@unique([subscriberId, componentKey])
@@ -923,6 +944,7 @@ model StatusSubscription {
 
 model StatusNotificationLog {
   id           String   @id @default(uuid()) @db.Uuid
+  orgId        String   @map("org_id") @db.Uuid
   subscriberId String   @map("subscriber_id") @db.Uuid
   incidentId   String   @map("incident_id") @db.Uuid
   type         String
@@ -930,6 +952,7 @@ model StatusNotificationLog {
   error        String?
   createdAt    DateTime @default(now()) @map("created_at")
 
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   subscriber   StatusSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
   incident     Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
@@ -940,16 +963,34 @@ model StatusNotificationLog {
 
 model UptimeCheck {
   id           String   @id @default(uuid()) @db.Uuid
+  orgId        String   @map("org_id") @db.Uuid
   componentKey String   @map("component_key")
   ok           Boolean
   statusCode   Int?     @map("status_code")
   latencyMs    Int?     @map("latency_ms")
   checkedAt    DateTime @default(now()) @map("checked_at")
 
-  component    StatusComponent @relation(fields: [componentKey], references: [key], onDelete: Cascade)
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  component    StatusComponent @relation(fields: [orgId, componentKey], references: [orgId, key], onDelete: Cascade)
 
-  @@index([componentKey, checkedAt])
+  @@index([orgId, componentKey, checkedAt])
   @@map("uptime_checks")
+}
+
+model StatusAuthToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  email     String
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+  @@index([expiresAt])
+  @@map("status_auth_tokens")
 }
 
 model IncidentTimeline {

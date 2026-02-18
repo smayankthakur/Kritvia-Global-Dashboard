@@ -195,10 +195,20 @@ async function main() {
 
   const org = await prisma.org.upsert({
     where: { id: "00000000-0000-0000-0000-000000000001" },
-    update: { name: "Demo Org" },
+    update: {
+      name: "Demo Org",
+      slug: "demo-org",
+      statusEnabled: true,
+      statusName: "Demo Org Status",
+      statusVisibility: "PUBLIC"
+    },
     create: {
       id: "00000000-0000-0000-0000-000000000001",
-      name: "Demo Org"
+      name: "Demo Org",
+      slug: "demo-org",
+      statusEnabled: true,
+      statusName: "Demo Org Status",
+      statusVisibility: "PUBLIC"
     }
   });
 
@@ -340,9 +350,13 @@ async function main() {
 
   for (const component of statusComponents) {
     await prisma.statusComponent.upsert({
-      where: { key: component.key },
+      where: {
+        orgId_key: {
+          orgId: org.id,
+          key: component.key
+        }
+      },
       update: {
-        orgId: org.id,
         name: component.name,
         description: component.description
       },

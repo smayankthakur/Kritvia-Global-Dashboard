@@ -136,9 +136,9 @@ Details covered: `/api/v1` + token scope enforcement, webhook registry/retry/cir
 ## Latest Completed Step Update
 - Date: 2026-02-17
 - Completed:
-  - Phase 6.4.19 Public Status Page + Uptime
-  - New status models (`StatusComponent`, `UptimeCheck`) and public incident fields (`isPublic`, `publicSummary`, `publicUpdates`, `publicSlug`)
-  - Public status APIs (`/status`, `/status/incidents`, `/status/incidents/:slug`) with 60s server-side cache
-  - Incident publishing APIs (`/org/incidents/:id/publish|unpublish|public-update`) and public component mapping
-  - Scheduled uptime scan job (`schedule-uptime` / `uptime-scan`) wired into BullMQ scheduler + worker flow
-  - Public Next.js pages `/status` and `/status/incidents/[slug]` plus internal incident publishing controls in Developer Incidents tab
+  - Phase 6.4.22 Private Status Page SSO (Magic Link + Domain Allowlist)
+  - Added `/status-auth/request-link`, `/status-auth/verify`, `/status-auth/logout`
+  - Added PRIVATE_SSO mode with allowed email domains + one-time status auth tokens
+  - Added status session cookie (`kritviya_status_session`) signed with `STATUS_SESSION_SECRET`
+  - Added org status login/callback UI (`/status/o/[orgSlug]/login`, `/status/o/[orgSlug]/login/callback`)
+  - Preserved PRIVATE_TOKEN mode behavior and org-scoped status endpoints

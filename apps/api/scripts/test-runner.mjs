@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import net from "node:net";
 import { resolve } from "node:path";
 import dotenv from "dotenv";
@@ -30,13 +30,30 @@ function testEnv() {
     }
   }
 
+  if (!process.env.DATABASE_URL_TEST) {
+    const envExampleCandidates = [
+      resolve(process.cwd(), ".env.example"),
+      resolve(process.cwd(), "../../.env.example")
+    ];
+    for (const candidate of envExampleCandidates) {
+      if (!existsSync(candidate)) {
+        continue;
+      }
+      const parsed = dotenv.parse(readFileSync(candidate));
+      if (parsed.DATABASE_URL_TEST) {
+        process.env.DATABASE_URL_TEST = parsed.DATABASE_URL_TEST;
+        break;
+      }
+    }
+  }
+
   const allowFallback =
     process.env.ALLOW_DATABASE_URL_FALLBACK_FOR_TESTS === "true" ||
     process.env.ALLOW_DATABASE_URL_FALLBACK_FOR_TESTS === "1";
   const databaseUrl = process.env.DATABASE_URL_TEST || (allowFallback ? process.env.DATABASE_URL : "");
   if (!databaseUrl) {
     console.error(
-      "Missing DATABASE_URL_TEST for tests. Add DATABASE_URL_TEST in your environment before running test scripts."
+      "Missing DATABASE_URL_TEST for tests. Add DATABASE_URL_TEST (or set it in .env/.env.example) before running test scripts."
     );
     process.exit(1);
   }

@@ -626,3 +626,39 @@ Rollback:
 11. Verify job queues:
    - `POST https://<render-api-domain>/ai/compute-insights` returns `{ queue, jobId, status:"queued" }`
    - `GET https://<render-api-domain>/jobs/status/ai/<jobId>` shows state
+
+## White-Labeled Status Pages (Phase 6.4.21)
+
+Org settings APIs (CEO/ADMIN):
+- `GET /org/status/settings`
+- `PATCH /org/status/settings`
+- `POST /org/status/domain/request`
+- `POST /org/status/domain/verify`
+
+Public status routes:
+- `/status/o/<orgSlug>`
+- `/status/o/<orgSlug>/incidents`
+- `/status/o/<orgSlug>/incidents/<incidentSlug>`
+
+Private token mode usage:
+- If org visibility is `PRIVATE_TOKEN`, pass `token` query:
+  - `/status/o/<orgSlug>?token=<status-access-token>`
+
+Private SSO mode (magic link):
+- Set org visibility to `PRIVATE_SSO`
+- Configure allowed domains in status settings
+- Required env:
+  - `STATUS_SESSION_SECRET`
+  - `STATUS_BASE_URL`
+- Auth endpoints:
+  - `POST /status-auth/request-link`
+  - `GET /status-auth/verify`
+  - `POST /status-auth/logout`
+
+Custom domain TXT setup:
+1. `POST /org/status/domain/request` with `{ "domain": "status.acme.com" }`
+2. Add TXT record:
+   - Name: `_kritviya-status.status.acme.com`
+   - Value: `<token from API response>`
+3. `POST /org/status/domain/verify`
+4. Optionally resolve domain via `GET /status/resolve-domain?host=status.acme.com`

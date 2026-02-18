@@ -58,3 +58,27 @@
 - `npm run lint` -> passes
 - `npm run build:api` -> passes
 - `npm run build:web` -> passes
+
+## Re-Audit Timestamp
+- Date: 2026-02-18
+- Scope: Full monorepo audit after Phase 6.4.21/6.4.22 status changes
+- Checks run: `npm run lint`, `npm run build:api`, `npm run build:web`, `npm run test:setup`, `npm run test:ci`
+
+## New Bugs Found and Fixed
+
+| ID | Area | Bug | Impact | Fix Applied | Status |
+|---|---|---|---|---|---|
+| BUG-014 | Status SSO session | `kritviya_status_session` cookie was always set with `secure=true` | Magic-link login fails on non-HTTPS local/staging environments | Added environment-aware cookie security (`COOKIE_SECURE` override, production default) for set/clear cookie paths | Fixed |
+| BUG-015 | Status SSO throttling | Rate-limit path used non-existent Nest export (`TooManyRequestsException`) | TypeScript build failure in API | Replaced with explicit `HttpException(..., 429)` | Fixed |
+| BUG-016 | Test runner env resilience | Test runner failed immediately when `DATABASE_URL_TEST` missing even if `.env.example` contained it | Reduced developer reliability and prevented DB preflight diagnostics | Added fallback read from `.env.example` (`DATABASE_URL_TEST`) before validation; preserved strict failure when unresolved | Fixed |
+
+## Remaining External Blocker (Not Code Bug)
+- `npm run test:setup` / `npm run test:ci` currently fail because Postgres test DB is not reachable:
+  - `Cannot reach test database at localhost:5432`
+- This is infrastructure/runtime availability, not an application code defect.
+
+## Current Verification
+- `npm run lint` -> passes
+- `npm run build:api` -> passes
+- `npm run build:web` -> passes
+- `npm run test:setup` -> fails with clear DB connectivity message (expected until Postgres test DB is up)

@@ -194,10 +194,20 @@ async function main(): Promise<void> {
 
   const org = await prisma.org.upsert({
     where: { id: "00000000-0000-0000-0000-000000000001" },
-    update: { name: "Demo Org" },
+    update: {
+      name: "Demo Org",
+      slug: "demo-org",
+      statusEnabled: true,
+      statusName: "Demo Org Status",
+      statusVisibility: "PUBLIC"
+    },
     create: {
       id: "00000000-0000-0000-0000-000000000001",
-      name: "Demo Org"
+      name: "Demo Org",
+      slug: "demo-org",
+      statusEnabled: true,
+      statusName: "Demo Org Status",
+      statusVisibility: "PUBLIC"
     }
   });
 
@@ -258,6 +268,36 @@ async function main(): Promise<void> {
       status: "ACTIVE"
     }
   });
+
+  const statusComponents = [
+    { key: "api", name: "API", description: "Core API request handling" },
+    { key: "web", name: "Web App", description: "Dashboard web frontend availability" },
+    { key: "db", name: "Database", description: "Primary Postgres availability" },
+    { key: "webhooks", name: "Webhooks", description: "Outbound webhook delivery pipeline" },
+    { key: "ai", name: "AI", description: "AI insight/action and LLM services" },
+    { key: "billing", name: "Billing", description: "Subscription and payment integrations" }
+  ];
+
+  for (const component of statusComponents) {
+    await prisma.statusComponent.upsert({
+      where: {
+        orgId_key: {
+          orgId: org.id,
+          key: component.key
+        }
+      },
+      update: {
+        name: component.name,
+        description: component.description
+      },
+      create: {
+        orgId: org.id,
+        key: component.key,
+        name: component.name,
+        description: component.description
+      }
+    });
+  }
 
   const demoUsers: Array<{ name: string; email: string; role: Role }> = [
     { name: "Demo CEO", email: "ceo@demo.kritviya.local", role: Role.CEO },
