@@ -4,30 +4,19 @@ on:
   push:
     branches: ["main", "master"]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
 
 jobs:
-  api-tests:
+  api-typecheck:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: kritviya
-          POSTGRES_PASSWORD: kritviya
-          POSTGRES_DB: kritviya_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U kritviya -d kritviya_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
     env:
-      DATABASE_URL_TEST: postgresql://kritviya:kritviya@localhost:5432/kritviya_test
-      JWT_SECRET: kritviya_ci_secret
       NODE_ENV: test
-
+      JOBS_ENABLED: "false"
+      RATE_LIMIT_BACKEND: memory
+      JWT_SECRET: kritviya_ci_secret
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,5 +30,90 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Run API integration tests
-        run: npm run test:ci
+      - name: API typecheck
+        run: npm --workspace apps/api run typecheck
+
+  api-lint:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      JOBS_ENABLED: "false"
+      RATE_LIMIT_BACKEND: memory
+      JWT_SECRET: kritviya_ci_secret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: API lint
+        run: npm --workspace apps/api run lint
+
+  api-unit:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      CI_FAST: "true"
+      RUN_E2E: "false"
+      JOBS_ENABLED: "false"
+      RATE_LIMIT_BACKEND: memory
+      JWT_SECRET: kritviya_ci_secret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: API fast CI checks
+        run: npm --workspace apps/api run test:ci
+
+  api-e2e:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      CI_FAST: "false"
+      RUN_E2E: "true"
+      JOBS_ENABLED: "false"
+      RATE_LIMIT_BACKEND: memory
+      JWT_SECRET: kritviya_ci_secret
+      DATABASE_URL_TEST: ${{ secrets.CI_E2E_DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Guard missing E2E database secret
+        run: |
+          if [ -z "${DATABASE_URL_TEST}" ]; then
+            echo "CI_E2E_DATABASE_URL is not set. Skipping E2E run."
+            exit 0
+          fi
+
+      - name: API E2E suite
+        run: npm --workspace apps/api run test:ci

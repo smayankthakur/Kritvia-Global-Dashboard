@@ -25,8 +25,11 @@
     "db:seed:test": "ts-node --project tsconfig.json prisma/seed-test.ts",
     "graph:backfill": "ts-node --project tsconfig.json src/graph/graph.backfill.ts",
     "prisma:generate": "npx prisma generate --schema prisma/schema.prisma",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "node scripts/test-runner.mjs test",
+    "test:unit": "jest -c test/jest-unit.config.js --passWithNoTests",
+    "test:e2e": "jest -c test/jest-e2e.config.js --runInBand",
     "test:setup": "node scripts/test-runner.mjs setup",
     "test:ci": "node scripts/test-runner.mjs ci"
   },
