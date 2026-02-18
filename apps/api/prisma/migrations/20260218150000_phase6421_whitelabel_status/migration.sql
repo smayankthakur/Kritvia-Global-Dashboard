@@ -15,6 +15,7 @@ ALTER TABLE "orgs"
   ADD COLUMN IF NOT EXISTS "custom_domain_verify_token" TEXT,
   ADD COLUMN IF NOT EXISTS "custom_domain_verified_at" TIMESTAMP(3);
 
+-- Normalize and backfill slugs for missing/empty values
 WITH ranked AS (
   SELECT
     id,
@@ -40,6 +41,43 @@ WHERE o.id = r.id
 UPDATE "orgs"
 SET "slug" = concat('org-', substring(replace(id::text, '-', ''), 1, 12))
 WHERE "slug" IS NULL OR "slug" = '';
+
+-- Normalize non-empty slugs and dedupe collisions before unique index creation
+UPDATE "orgs"
+SET "slug" = trim(both '-' FROM regexp_replace(lower(trim("slug")), '[^a-z0-9]+', '-', 'g'))
+WHERE "slug" IS NOT NULL AND "slug" <> '';
+
+WITH slug_dupes AS (
+  SELECT
+    id,
+    "slug",
+    ROW_NUMBER() OVER (PARTITION BY "slug" ORDER BY created_at, id) AS rn
+  FROM "orgs"
+  WHERE "slug" IS NOT NULL AND "slug" <> ''
+)
+UPDATE "orgs" o
+SET "slug" = concat(o."slug", '-', sd.rn::text)
+FROM slug_dupes sd
+WHERE o.id = sd.id
+  AND sd.rn > 1;
+
+UPDATE "orgs"
+SET "slug" = concat('org-', substring(replace(id::text, '-', ''), 1, 12))
+WHERE "slug" IS NULL OR "slug" = '';
+
+-- Deduplicate custom domains (keep oldest row, null out duplicates)
+WITH domain_dupes AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (PARTITION BY "custom_status_domain" ORDER BY created_at, id) AS rn
+  FROM "orgs"
+  WHERE "custom_status_domain" IS NOT NULL
+)
+UPDATE "orgs" o
+SET "custom_status_domain" = NULL
+FROM domain_dupes dd
+WHERE o.id = dd.id
+  AND dd.rn > 1;
 
 ALTER TABLE "orgs"
   ALTER COLUMN "slug" SET NOT NULL;
@@ -99,6 +137,32 @@ BEGIN
       FOREIGN KEY ("org_id") REFERENCES "orgs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
   END IF;
 END $$;
+
+-- Verification checklist (post-migration expectations):
+-- 1) orgs:
+--    - slug (NOT NULL)
+--    - status_enabled, status_name, status_logo_url, status_accent_color, status_footer_text
+--    - status_visibility, status_access_token_hash
+--    - custom_status_domain, custom_domain_verify_token, custom_domain_verified_at
+--    - unique indexes: orgs_slug_key, orgs_custom_status_domain_key
+-- 2) status_components:
+--    - org_id is populated and NOT NULL
+--    - unique index: status_components_org_id_key_key on (org_id, key)
+-- 3) uptime_checks:
+--    - org_id exists and is NOT NULL
+--    - FK uptime_checks_org_id_fkey -> orgs(id)
+--    - FK uptime_checks_org_id_component_key_fkey -> status_components(org_id, key)
+--    - index uptime_checks_org_id_component_key_checked_at_idx
+-- 4) status_subscriptions:
+--    - org_id exists and is NOT NULL
+--    - FK status_subscriptions_org_id_fkey -> orgs(id)
+--    - index status_subscriptions_org_id_idx
+-- 5) status_notification_logs:
+--    - org_id exists and is NOT NULL
+--    - FK status_notification_logs_org_id_fkey -> orgs(id)
+--    - index status_notification_logs_org_id_created_at_idx
+-- 6) incidents:
+--    - index incidents_org_id_is_public_created_at_idx
 
 DO $$
 BEGIN
@@ -162,11 +226,11 @@ END $$;
 ALTER TABLE "status_notification_logs" ADD COLUMN IF NOT EXISTS "org_id" UUID;
 
 UPDATE "status_notification_logs" snl
-SET "org_id" = COALESCE(ss."org_id", i."org_id")
-FROM "status_subscribers" ss
-LEFT JOIN "incidents" i ON i.id = snl."incident_id"
-WHERE ss.id = snl."subscriber_id"
-  AND snl."org_id" IS NULL;
+SET "org_id" = COALESCE(
+  (SELECT ss."org_id" FROM "status_subscribers" ss WHERE ss.id = snl."subscriber_id"),
+  (SELECT i."org_id" FROM "incidents" i WHERE i.id = snl."incident_id")
+)
+WHERE snl."org_id" IS NULL;
 
 WITH default_org AS (
   SELECT id FROM "orgs" ORDER BY created_at ASC LIMIT 1

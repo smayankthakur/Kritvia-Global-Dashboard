@@ -36,6 +36,12 @@ function isTargetP3009(output) {
   return output.includes("P3009") && output.includes(TARGET_MIGRATION);
 }
 
+function printFailureOutput(label, output) {
+  console.error(`\n[render-migrate-recover] ${label} output start`);
+  console.error(output || "(no output captured)");
+  console.error(`[render-migrate-recover] ${label} output end`);
+}
+
 async function main() {
   const recoveryAllowed = process.env.ALLOW_MIGRATION_RECOVERY === "true";
   console.log("[render-migrate-recover] startup");
@@ -53,6 +59,7 @@ async function main() {
   if (!isTargetP3009(firstDeploy.output)) {
     console.error("\nMigration failed, but not with the targeted auto-recover case.");
     console.error(`Only ${TARGET_MIGRATION} with P3009 is auto-resolved by this script.`);
+    printFailureOutput("initial migrate deploy failure", firstDeploy.output);
     process.exit(1);
   }
 
@@ -89,6 +96,7 @@ async function main() {
   const resolveResult = await runCommand("npx", resolveArgs);
   if (resolveResult.code !== 0) {
     console.error("\nFailed to resolve migration state. Manual intervention required.");
+    printFailureOutput("migrate resolve failure", resolveResult.output);
     process.exit(1);
   }
 
@@ -96,6 +104,7 @@ async function main() {
   const secondDeploy = await runCommand("npx", deployArgs);
   if (secondDeploy.code !== 0) {
     console.error("\nPrisma migrate deploy failed after recovery attempt.");
+    printFailureOutput("retry migrate deploy failure", secondDeploy.output);
     process.exit(1);
   }
 
