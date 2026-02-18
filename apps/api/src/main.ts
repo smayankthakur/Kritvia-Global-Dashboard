@@ -1,6 +1,6 @@
 import { createConfiguredApp } from "./bootstrap";
 import { createServer } from "node:http";
-import { closeRedis } from "./jobs/redis";
+import { closeRedis, parseBool, safeGetRedis } from "./jobs/redis";
 import { startJobWorkers, stopJobWorkers } from "./jobs/workers";
 import { SchedulerService } from "./scheduler/scheduler.service";
 
@@ -34,7 +34,8 @@ function printStartupBanner(workerMode: string): void {
 }
 
 async function bootstrap(): Promise<void> {
-  const jobsEnabled = (process.env.JOBS_ENABLED ?? "true").toLowerCase() === "true";
+  const jobsEnabled = parseBool(process.env.JOBS_ENABLED, true);
+  const jobsRuntimeEnabled = jobsEnabled && !!safeGetRedis();
   const workerMode = (process.env.JOBS_WORKER_MODE ?? "api").toLowerCase();
   printStartupBanner(workerMode);
   const app = await createConfiguredApp();
@@ -43,7 +44,7 @@ async function bootstrap(): Promise<void> {
     await app.init();
     const scheduler = app.get(SchedulerService);
     await scheduler.start("worker");
-    const workers = await startJobWorkers(app);
+    const workers = jobsRuntimeEnabled ? await startJobWorkers(app) : [];
     const port = Number(process.env.PORT ?? process.env.API_PORT ?? process.env.WORKER_PORT ?? 4001);
     const server = createServer((req, res) => {
       if (req.url === "/health") {
@@ -72,7 +73,7 @@ async function bootstrap(): Promise<void> {
   await app.listen(port);
 
   let workers: Awaited<ReturnType<typeof startJobWorkers>> = [];
-  if (jobsEnabled && workerMode === "api") {
+  if (jobsRuntimeEnabled && workerMode === "api") {
     workers = await startJobWorkers(app);
   }
   const scheduler = app.get(SchedulerService);

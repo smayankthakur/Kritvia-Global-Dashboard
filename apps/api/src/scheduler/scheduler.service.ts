@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { HealthScoreService } from "../health-score/health-score.service";
 import { JobService } from "../jobs/job.service";
 import { QueueName, QUEUE_NAMES, getQueue } from "../jobs/queues";
+import { parseBool, safeGetRedis } from "../jobs/redis";
 import { PrismaService } from "../prisma/prisma.service";
 
 type ProcessMode = "api" | "worker";
@@ -305,11 +306,14 @@ export class SchedulerService {
   }
 
   private shouldRunInCurrentProcess(): boolean {
-    const jobsEnabled = (process.env.JOBS_ENABLED ?? "true").toLowerCase() === "true";
+    const jobsEnabled = parseBool(process.env.JOBS_ENABLED, true);
     if (!jobsEnabled) {
       return false;
     }
-    const enabled = (process.env.SCHEDULER_ENABLED ?? "true").toLowerCase() === "true";
+    if (!safeGetRedis()) {
+      return false;
+    }
+    const enabled = parseBool(process.env.SCHEDULER_ENABLED, true);
     if (!enabled) {
       return false;
     }

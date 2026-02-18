@@ -1,7 +1,14 @@
 import { JobService } from "./job.service";
 import * as queues from "./queues";
+import * as redis from "./redis";
 
 describe("JobService", () => {
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.spyOn(redis, "safeGetRedis").mockReturnValue({});
+    process.env.JOBS_ENABLED = "true";
+  });
+
   it("enqueue uses retries/backoff defaults", async () => {
     const add = jest.fn().mockResolvedValue({ id: "123" });
     jest.spyOn(queues, "getQueue").mockReturnValue({
@@ -31,4 +38,3 @@ describe("JobService", () => {
     );
   });
 });
-

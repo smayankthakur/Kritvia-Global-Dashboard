@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { JobsOptions } from "bullmq";
 import { QueueName, QUEUE_NAMES, getQueue, withDefaultJobOptions } from "./queues";
 import { JobEnqueueResult, JobName } from "./job.types";
+import { parseBool, safeGetRedis } from "./redis";
 
 @Injectable()
 export class JobService {
@@ -11,7 +12,7 @@ export class JobService {
     payload: Record<string, unknown>,
     options?: JobsOptions
   ): Promise<JobEnqueueResult> {
-    if ((process.env.JOBS_ENABLED ?? "true").toLowerCase() !== "true") {
+    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
       // Keep a non-breaking response shape in disabled mode.
       return Promise.resolve({
         queue: queueName,
@@ -37,6 +38,9 @@ export class JobService {
   }
 
   async getStatus(queueName: QueueName, jobId: string) {
+    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
+      return null;
+    }
     const queue = getQueue(queueName);
     const job = await queue.getJob(jobId);
     if (!job) {
@@ -57,6 +61,9 @@ export class JobService {
   }
 
   async getFailed(queueName: QueueName, start = 0, end = 50) {
+    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
+      return [];
+    }
     const queue = getQueue(queueName);
     const failed = await queue.getJobs(["failed"], start, end, true);
     return failed.map((job) => ({
@@ -70,6 +77,9 @@ export class JobService {
   }
 
   async getStats() {
+    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
+      return { queues: [] };
+    }
     const queues = [
       QUEUE_NAMES.ai,
       QUEUE_NAMES.webhooks,

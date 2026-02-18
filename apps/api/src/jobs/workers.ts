@@ -12,7 +12,7 @@ import { SchedulerService } from "../scheduler/scheduler.service";
 import { StatusService } from "../status/status.service";
 import { JobsRunService } from "./jobs-run.service";
 import { QUEUE_NAMES, getQueue } from "./queues";
-import { getRedis } from "./redis";
+import { parseBool, safeGetRedis } from "./redis";
 import { createHash } from "node:crypto";
 
 type WorkerHandle = {
@@ -31,8 +31,13 @@ function toPositiveInt(value: string | undefined, fallback: number): number {
 }
 
 export async function startJobWorkers(app: INestApplication): Promise<WorkerHandle[]> {
-  if ((process.env.JOBS_ENABLED ?? "true").toLowerCase() !== "true") {
+  if (!parseBool(process.env.JOBS_ENABLED, true)) {
     logger.log("Jobs disabled (JOBS_ENABLED!=true), workers not started.");
+    return [];
+  }
+  const redis = safeGetRedis();
+  if (!redis) {
+    logger.warn("JOBS_ENABLED=true but REDIS_URL missing; skipping worker startup.");
     return [];
   }
 
@@ -118,7 +123,7 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
       throw new Error(`Unsupported ai job: ${job.name}`);
     },
     {
-      connection: getRedis() as never,
+      connection: redis as never,
       concurrency: aiConcurrency
     }
   );
@@ -136,7 +141,7 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
       return webhookService.processDispatchJob(payload);
     },
     {
-      connection: getRedis() as never,
+      connection: redis as never,
       concurrency: webhookConcurrency
     }
   );
@@ -178,7 +183,7 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
       throw new Error(`Unsupported maintenance job: ${job.name}`);
     },
     {
-      connection: getRedis() as never,
+      connection: redis as never,
       concurrency: maintenanceConcurrency
     }
   );
@@ -215,7 +220,7 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
       return { stored: true };
     },
     {
-      connection: getRedis() as never,
+      connection: redis as never,
       concurrency: 1
     }
   );
@@ -237,7 +242,7 @@ export async function startJobWorkers(app: INestApplication): Promise<WorkerHand
       return alertRoutingService.processDeliveryJob(job.data as Record<string, unknown>);
     },
     {
-      connection: getRedis() as never,
+      connection: redis as never,
       concurrency: 5
     }
   );

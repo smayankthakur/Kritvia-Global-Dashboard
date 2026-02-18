@@ -1,5 +1,6 @@
 import { SchedulerService } from "./scheduler.service";
 import * as queues from "../jobs/queues";
+import * as redis from "../jobs/redis";
 
 describe("SchedulerService", () => {
   const originalEnv = process.env;
@@ -12,6 +13,8 @@ describe("SchedulerService", () => {
     process.env.SCHED_TZ = "UTC";
     process.env.FEATURE_AI_ENABLED = "true";
     process.env.LLM_ENABLED = "true";
+    process.env.JOBS_ENABLED = "true";
+    jest.spyOn(redis, "safeGetRedis").mockReturnValue({});
   });
 
   afterAll(() => {
