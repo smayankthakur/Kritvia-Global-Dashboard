@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npx turbo run build --filter=@kritviya/web",
+  "outputDirectory": "apps/web/.next"
+}
