@@ -4,10 +4,40 @@ import { closeRedis } from "./jobs/redis";
 import { startJobWorkers, stopJobWorkers } from "./jobs/workers";
 import { SchedulerService } from "./scheduler/scheduler.service";
 
+function getDatabaseHost(databaseUrl?: string): string {
+  if (!databaseUrl) {
+    return "not-set";
+  }
+
+  try {
+    return new URL(databaseUrl).host;
+  } catch {
+    return "invalid-url";
+  }
+}
+
+function printStartupBanner(workerMode: string): void {
+  const nodeEnv = process.env.NODE_ENV ?? "development";
+  const dbHost = getDatabaseHost(process.env.DATABASE_URL);
+  const recoveryEnabled = process.env.ALLOW_MIGRATION_RECOVERY === "true";
+  const entryScript = process.argv[1] ?? "unknown-entry";
+  const renderStartCommand =
+    "npm --workspace apps/api run migrate:deploy:render && npm run seed:api && npm run start:api";
+
+  console.log("[startup] Kritviya API bootstrap");
+  console.log(`[startup] entry=${entryScript}`);
+  console.log(`[startup] mode=${workerMode}`);
+  console.log(`[startup] NODE_ENV=${nodeEnv}`);
+  console.log(`[startup] DATABASE_URL_HOST=${dbHost}`);
+  console.log(`[startup] ALLOW_MIGRATION_RECOVERY=${recoveryEnabled}`);
+  console.log(`[startup] expected_render_start_command=\"${renderStartCommand}\"`);
+}
+
 async function bootstrap(): Promise<void> {
-  const app = await createConfiguredApp();
   const jobsEnabled = (process.env.JOBS_ENABLED ?? "true").toLowerCase() === "true";
   const workerMode = (process.env.JOBS_WORKER_MODE ?? "api").toLowerCase();
+  printStartupBanner(workerMode);
+  const app = await createConfiguredApp();
 
   if (jobsEnabled && workerMode === "worker") {
     await app.init();

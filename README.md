@@ -446,6 +446,10 @@ Important for manual Render services:
 
 - If you configure service commands in the Render UI, set build exactly to:
   - `npm ci --include=dev && npm run build:api`
+- Existing manually-created Render services keep the Build/Start commands saved in the dashboard.
+- Updating `render.yaml` in git does not automatically overwrite those dashboard commands unless you deploy via Blueprint sync/recreate.
+- Set Start command in Render dashboard exactly to:
+  - `npm --workspace apps/api run migrate:deploy:render && npm run seed:api && npm run start:api`
 - Or deploy via Blueprint (`render.yaml`) so this command is applied automatically.
 - `NODE_ENV=production` can cause devDependencies to be omitted during install.
   Using `--include=dev` (or setting `NPM_CONFIG_PRODUCTION=false`) ensures TypeScript build dependencies are installed.
@@ -588,6 +592,15 @@ Automatic Render self-heal (configured in `render.yaml`):
 
 Recommended deploy command remains:
 - `npx prisma migrate deploy`
+
+Render checklist:
+1. In Render dashboard, verify Build Command is `npm ci --include=dev && npm run build:api`.
+2. In Render dashboard, verify Start Command is `npm --workspace apps/api run migrate:deploy:render && npm run seed:api && npm run start:api`.
+3. Set env `ALLOW_MIGRATION_RECOVERY=true` on the API service.
+4. Redeploy and confirm startup logs show:
+   - `ALLOW_MIGRATION_RECOVERY=true`
+   - expected render start command banner
+5. If deploy still fails on non-target migration, stop auto-recovery and use manual Prisma recovery for that migration.
 
 ### Option B: VPS Docker Compose (Self-Hosted)
 
