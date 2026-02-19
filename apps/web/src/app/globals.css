@@ -1,41 +1,45 @@
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f7f8fa;
-  --bg-card: #ffffff;
-  --border-color: #e6e8ec;
-  --text-primary: #0b1220;
-  --text-secondary: #526070;
-  --accent-color: #4f46e5;
-  --accent-hover: #4338ca;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --danger-color: #ef4444;
-  --sidebar-bg: #ffffff;
-  --input-bg: #ffffff;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --hover-bg: #f3f4f6;
-  --chart-bg: linear-gradient(180deg, rgba(79, 70, 229, 0.12), rgba(79, 70, 229, 0));
+  --bg-primary: #080d16;
+  --bg-secondary: #0f1726;
+  --bg-card: rgba(15, 23, 38, 0.74);
+  --bg-elevated: rgba(13, 20, 33, 0.9);
+  --border-color: rgba(214, 174, 92, 0.22);
+  --text-primary: #f5f7ff;
+  --text-secondary: #b6becf;
+  --accent-color: #d7a951;
+  --accent-hover: #e4be74;
+  --accent-secondary: #6f92ff;
+  --success-color: #2abf8e;
+  --warning-color: #efbb55;
+  --danger-color: #f06b74;
+  --sidebar-bg: rgba(10, 16, 28, 0.9);
+  --input-bg: rgba(10, 16, 28, 0.85);
+  --hover-bg: rgba(255, 255, 255, 0.04);
+  --shadow-sm: 0 2px 14px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 18px 48px rgba(0, 0, 0, 0.35);
+  --chart-bg: linear-gradient(180deg, rgba(215, 169, 81, 0.18), rgba(215, 169, 81, 0));
 }
 
-[data-theme="dark"] {
-  --bg-primary: #0b0f17;
-  --bg-secondary: #111827;
-  --bg-card: #0f172a;
-  --border-color: #223046;
-  --text-primary: #eaf0ff;
-  --text-secondary: #a8b3c7;
-  --accent-color: #6366f1;
-  --accent-hover: #818cf8;
-  --success-color: #34d399;
-  --warning-color: #fbbf24;
-  --danger-color: #f87171;
-  --sidebar-bg: #0f172a;
-  --input-bg: #111827;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
-  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
-  --hover-bg: #1a2638;
-  --chart-bg: linear-gradient(180deg, rgba(99, 102, 241, 0.22), rgba(99, 102, 241, 0));
+[data-theme="light"] {
+  --bg-primary: #f4f6fb;
+  --bg-secondary: #e9edf5;
+  --bg-card: rgba(255, 255, 255, 0.82);
+  --bg-elevated: rgba(255, 255, 255, 0.94);
+  --border-color: rgba(114, 90, 42, 0.24);
+  --text-primary: #151c2a;
+  --text-secondary: #5f6777;
+  --accent-color: #b37a18;
+  --accent-hover: #9f6913;
+  --accent-secondary: #3f6ce1;
+  --success-color: #15966e;
+  --warning-color: #b97d17;
+  --danger-color: #cb454f;
+  --sidebar-bg: rgba(255, 255, 255, 0.86);
+  --input-bg: rgba(255, 255, 255, 0.92);
+  --hover-bg: rgba(7, 16, 34, 0.04);
+  --shadow-sm: 0 2px 16px rgba(19, 28, 45, 0.08);
+  --shadow-md: 0 20px 44px rgba(19, 28, 45, 0.16);
+  --chart-bg: linear-gradient(180deg, rgba(179, 122, 24, 0.2), rgba(179, 122, 24, 0));
 }
 
 * {
@@ -52,8 +56,11 @@ body {
 }
 
 body {
+  font-family: var(--font-sans), "Inter", sans-serif;
   line-height: 1.5;
   transition: background-color 0.2s ease, color 0.2s ease;
+  background-image: radial-gradient(circle at 15% -8%, rgba(111, 146, 255, 0.2), transparent 36%),
+    radial-gradient(circle at 85% 0%, rgba(215, 169, 81, 0.18), transparent 28%);
 }
 
 a {
@@ -1092,4 +1099,167 @@ tbody tr:hover {
   .kv-grid-3 {
     grid-template-columns: 1fr;
   }
+}
+
+/* --- Kritviya 2.0 visual refit overrides --- */
+.kv-header {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(14px);
+}
+
+.kv-brand {
+  font-family: var(--font-serif), "Playfair Display", serif;
+  letter-spacing: 0.01em;
+}
+
+.kv-sidebar {
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(10px);
+}
+
+.kv-nav-link {
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.kv-nav-link-active {
+  border-color: var(--border-color);
+  background: color-mix(in srgb, var(--accent-color) 14%, var(--bg-secondary));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 32%, transparent);
+}
+
+.kv-btn-primary {
+  background: linear-gradient(120deg, var(--accent-color), var(--accent-hover));
+  border-color: color-mix(in srgb, var(--accent-color) 55%, var(--border-color));
+  color: #101010;
+  font-weight: 700;
+}
+
+[data-theme="light"] .kv-btn-primary {
+  color: #fff;
+}
+
+.kv-btn-ghost {
+  background: transparent;
+  border-color: var(--border-color);
+}
+
+.kv-card {
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.kv-glass {
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-sm);
+}
+
+.kv-glass:hover {
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--accent-color) 42%, var(--border-color));
+}
+
+.kv-toolbar-dropdown-wrap {
+  position: relative;
+}
+
+.kv-dropdown-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.kv-sidebar-title-gap {
+  margin-top: 16px;
+}
+
+.kv-main-title {
+  margin-top: 0;
+}
+
+.kv-serif {
+  font-family: var(--font-serif), "Playfair Display", serif;
+}
+
+.kv-header-brand {
+  display: grid;
+  gap: 2px;
+}
+
+.kv-home-widgets {
+  margin-top: 14px;
+}
+
+.kv-focus-card,
+.kv-highlight-card {
+  min-height: 330px;
+}
+
+.kv-focus-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.kv-highlight-item {
+  margin-top: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-secondary) 86%, transparent);
+  padding: 14px;
+}
+
+.kv-highlight-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.kv-focus-ring-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 16px auto 20px;
+  width: 190px;
+  height: 190px;
+}
+
+.kv-focus-ring {
+  width: 190px;
+  height: 190px;
+  transform: rotate(-90deg);
+}
+
+.kv-focus-ring-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-secondary) 20%, transparent);
+  stroke-width: 10;
+}
+
+.kv-focus-ring-progress {
+  fill: none;
+  stroke: var(--accent-color);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent-color) 42%, transparent));
+}
+
+.kv-focus-time {
+  position: absolute;
+  font-family: var(--font-serif), "Playfair Display", serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.kv-org-switcher-trigger,
+.kv-org-static,
+.kv-org-create-inline-btn,
+.kv-org-dropdown,
+.kv-org-option,
+.kv-org-create-btn,
+.kv-org-toast {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }

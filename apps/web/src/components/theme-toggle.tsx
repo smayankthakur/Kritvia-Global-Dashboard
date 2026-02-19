@@ -8,7 +8,8 @@ export function ThemeToggle() {
 
   return (
     <button type="button" onClick={toggleTheme} className="kv-theme-btn" aria-label="Toggle theme">
-      {isDark ? "☀️ Light" : "🌙 Dark"}
+      {isDark ? "Light" : "Dark"}
     </button>
   );
 }
+

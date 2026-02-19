@@ -165,19 +165,19 @@ export function AppShell({ user, title, children }: AppShellProps) {
   return (
     <div className="kv-app">
       <header className="kv-header">
-        <div>
+        <div className="kv-header-brand">
           <p className="kv-brand">{APP_NAME}</p>
           <p className="kv-role">Role: {user.role}</p>
         </div>
         <div className="kv-toolbar">
           <OrgSwitcher user={user} />
-          <div style={{ position: "relative" }}>
+          <div className="kv-toolbar-dropdown-wrap">
             <button type="button" onClick={() => setFeedOpen((prev) => !prev)} className="kv-btn-primary">
               Bell ({myOpenNudges.length})
             </button>
             {feedOpen ? (
               <div className="kv-dropdown">
-                <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Latest Nudges</p>
+                <p className="kv-dropdown-title">Latest Nudges</p>
                 <ul>
                   {feedItems.slice(0, 5).map((item) => (
                     <li key={item.id}>
@@ -218,12 +218,7 @@ export function AppShell({ user, title, children }: AppShellProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="kv-nav-link"
-                style={
-                  pathname === item.href
-                    ? { borderColor: "var(--border-color)", background: "var(--bg-secondary)" }
-                    : undefined
-                }
+                className={`kv-nav-link${pathname === item.href ? " kv-nav-link-active" : ""}`}
               >
                 {item.label}
               </Link>
@@ -231,7 +226,7 @@ export function AppShell({ user, title, children }: AppShellProps) {
           </nav>
           {settingsNav.length > 0 ? (
             <>
-              <p className="kv-sidebar-title" style={{ marginTop: "16px" }}>
+              <p className="kv-sidebar-title kv-sidebar-title-gap">
                 Settings
               </p>
               <nav className="kv-nav">
@@ -239,12 +234,7 @@ export function AppShell({ user, title, children }: AppShellProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="kv-nav-link"
-                    style={
-                      pathname === item.href
-                        ? { borderColor: "var(--border-color)", background: "var(--bg-secondary)" }
-                        : undefined
-                    }
+                    className={`kv-nav-link${pathname === item.href ? " kv-nav-link-active" : ""}`}
                   >
                     {item.label}
                   </Link>
@@ -255,7 +245,7 @@ export function AppShell({ user, title, children }: AppShellProps) {
         </aside>
 
         <main className="kv-main">
-          {title ? <h1 style={{ marginTop: 0 }}>{title}</h1> : null}
+          {title ? <h1 className="kv-main-title">{title}</h1> : null}
           {children}
         </main>
       </div>
