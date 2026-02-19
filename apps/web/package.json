@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@kritviya/shared": "file:../../packages/shared",
-    "kritviya": "file:../..",
     "next": "^15.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

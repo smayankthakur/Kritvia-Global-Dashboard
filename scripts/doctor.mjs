@@ -42,13 +42,13 @@ if (fs.existsSync(turboPath)) {
 const prismaClientDts = path.join(repoRoot, "node_modules", ".prisma", "client", "index.d.ts");
 warn(
   fs.existsSync(prismaClientDts),
-  "Prisma client is not generated. Run: npm -w apps/api run prisma:generate"
+  "Prisma client is not generated. Run: npm --workspace @kritviya/api run prisma:generate"
 );
 
 const routesManifest = path.join(repoRoot, "apps", "web", ".next", "routes-manifest.json");
 warn(
   fs.existsSync(routesManifest),
-  "Next routes manifest missing. Run: npm -w apps/web run build"
+  "Next routes manifest missing. Run: npm --workspace @kritviya/web run build"
 );
 
 if (warnings.length) {
