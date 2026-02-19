@@ -28,10 +28,9 @@ export function ModeSwitcher({ role }: ModeSwitcherProps) {
 
   return (
     <div className="kv-mode-switcher">
-      <p className="kv-note" style={{ margin: "0 0 6px" }}>
-        Mode
-      </p>
       <select
+        aria-label="Select mode"
+        className="kv-topbar-select"
         defaultValue={role}
         onChange={(event) => router.push(routeByMode[event.target.value as Role])}
       >

@@ -1263,3 +1263,181 @@ tbody tr:hover {
   border-color: var(--border-color);
   color: var(--text-primary);
 }
+
+.kv-app {
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.kv-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kv-sidebar {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.kv-main {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.kv-header {
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, backdrop-filter 0.25s ease;
+}
+
+.kv-header.is-scrolled {
+  background: color-mix(in srgb, var(--bg-elevated) 86%, var(--bg-primary));
+  border-bottom-color: color-mix(in srgb, var(--accent-color) 34%, var(--border-color));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(18px);
+}
+
+.kv-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.kv-toolbar > * {
+  flex: 0 0 auto;
+}
+
+.kv-mode-switcher {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kv-topbar-select {
+  height: 38px;
+  min-width: 110px;
+}
+
+.kv-topbar-btn,
+.kv-topbar-icon-btn,
+.kv-theme-btn,
+.kv-profile-trigger {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.kv-topbar-icon-btn {
+  width: 38px;
+  padding: 0;
+  position: relative;
+}
+
+.kv-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.kv-topbar-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-color);
+  color: #0f0f0f;
+}
+
+[data-theme="light"] .kv-topbar-badge {
+  color: #fff;
+}
+
+.kv-topbar-dropdown {
+  width: 320px;
+  right: 0;
+  left: auto;
+  top: 46px;
+}
+
+.kv-profile-wrap {
+  position: relative;
+}
+
+.kv-profile-trigger {
+  gap: 8px;
+  padding: 0 10px 0 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.kv-profile-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.kv-profile-dropdown {
+  width: 180px;
+  right: 0;
+  left: auto;
+  top: 44px;
+}
+
+.kv-menu-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 9px 10px;
+  border-radius: 8px;
+}
+
+.kv-menu-item:hover {
+  background: var(--hover-bg);
+  border-color: var(--border-color);
+}
+
+.kv-menu-item-danger {
+  color: var(--danger-color);
+}
+
+.kv-focus-edit {
+  margin: 8px 0 14px;
+}
+
+.kv-focus-edit-input {
+  max-width: 120px;
+}
+
+.kv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+}
+
+.kv-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 980px) {
+  .kv-toolbar {
+    flex-wrap: wrap;
+  }
+}
