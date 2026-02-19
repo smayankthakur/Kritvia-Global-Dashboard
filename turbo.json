@@ -5,11 +5,11 @@
       "dependsOn": ["^build"],
       "outputs": [
         "apps/web/.next/**",
+        "apps/web/.next/cache/**",
         "apps/web/next-env.d.ts",
         "apps/web/.vercel/**",
         "apps/web/public/**",
-        "dist/**",
-        "!.next/cache/**"
+        "apps/api/dist/**"
       ]
     }
   }
