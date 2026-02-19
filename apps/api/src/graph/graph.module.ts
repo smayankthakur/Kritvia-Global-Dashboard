@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ActivityLogModule } from "../activity-log/activity-log.module";
 import { AutopilotModule } from "../autopilot/autopilot.module";
 import { AuthModule } from "../auth/auth.module";
 import { PrismaModule } from "../prisma/prisma.module";
@@ -13,7 +14,7 @@ import { RiskController } from "./risk/risk.controller";
 import { RiskEngineService } from "./risk/risk-engine.service";
 
 @Module({
-  imports: [PrismaModule, AuthModule, AutopilotModule],
+  imports: [PrismaModule, AuthModule, ActivityLogModule, AutopilotModule],
   controllers: [GraphController, GraphAdminController, ImpactRadiusController, RiskController],
   providers: [GraphService, GraphSyncService, ImpactRadiusService, RiskEngineService, AutoNudgeService],
   exports: [GraphService, GraphSyncService, ImpactRadiusService, RiskEngineService, AutoNudgeService]
