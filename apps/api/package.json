@@ -9,10 +9,10 @@
     "seed": "node prisma/seed.js"
   },
   "scripts": {
-    "prebuild": "npm run prisma:generate",
-    "pretypecheck": "npm run prisma:generate",
-    "pretest:ci": "npm run prisma:generate",
-    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
+    "prebuild": "prisma generate --schema prisma/schema.prisma",
+    "pretypecheck": "prisma generate --schema prisma/schema.prisma",
+    "pretest:ci": "prisma generate --schema prisma/schema.prisma",
+    "build": "node -e \"const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('tsconfig.build.tsbuildinfo',{force:true});\" && tsc -p tsconfig.build.json",
     "start": "node dist/src/main.js",
     "start:prod": "node dist/main.js",
     "start:worker": "node dist/main.js",
@@ -26,7 +26,7 @@
     "db:seed": "ts-node --project tsconfig.json prisma/seed.ts",
     "db:seed:test": "ts-node --project tsconfig.json prisma/seed-test.ts",
     "graph:backfill": "ts-node --project tsconfig.json src/graph/graph.backfill.ts",
-    "prisma:generate": "npx prisma generate --schema prisma/schema.prisma",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "node scripts/test-runner.mjs test",
