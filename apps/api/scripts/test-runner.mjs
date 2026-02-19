@@ -145,7 +145,7 @@ async function ensureDbReachable(databaseUrl) {
 
 const mode = process.argv[2];
 loadEnvFiles();
-const ciFast = parseBool(process.env.CI_FAST, parseBool(process.env.CI, false));
+const ciFast = parseBool(process.env.CI_FAST, true);
 const runE2E = parseBool(process.env.RUN_E2E, false);
 
 if (mode === "setup") {

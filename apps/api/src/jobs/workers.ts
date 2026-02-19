@@ -60,7 +60,7 @@ async function ensureRedisReadyForWorkers(redis: Redis): Promise<boolean> {
 }
 
 export async function startJobWorkers(app: INestApplication): Promise<WorkerHandle[]> {
-  if (!parseBool(process.env.JOBS_ENABLED, true)) {
+  if (!parseBool(process.env.JOBS_ENABLED, false)) {
     logger.log("Jobs disabled (JOBS_ENABLED!=true), workers not started.");
     return [];
   }

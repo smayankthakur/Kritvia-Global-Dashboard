@@ -12,7 +12,7 @@ export class JobService {
     payload: Record<string, unknown>,
     options?: JobsOptions
   ): Promise<JobEnqueueResult> {
-    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
+    if (!parseBool(process.env.JOBS_ENABLED, false) || !safeGetRedis()) {
       // Keep a non-breaking response shape in disabled mode.
       return Promise.resolve({
         queue: queueName,
@@ -38,7 +38,7 @@ export class JobService {
   }
 
   async getStatus(queueName: QueueName, jobId: string) {
-    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
+    if (!parseBool(process.env.JOBS_ENABLED, false) || !safeGetRedis()) {
       return null;
     }
     const queue = getQueue(queueName);
@@ -61,7 +61,7 @@ export class JobService {
   }
 
   async getFailed(queueName: QueueName, start = 0, end = 50) {
-    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
+    if (!parseBool(process.env.JOBS_ENABLED, false) || !safeGetRedis()) {
       return [];
     }
     const queue = getQueue(queueName);
@@ -77,7 +77,7 @@ export class JobService {
   }
 
   async getStats() {
-    if (!parseBool(process.env.JOBS_ENABLED, true) || !safeGetRedis()) {
+    if (!parseBool(process.env.JOBS_ENABLED, false) || !safeGetRedis()) {
       return { queues: [] };
     }
     const queues = [

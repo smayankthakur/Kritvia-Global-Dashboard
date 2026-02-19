@@ -119,6 +119,15 @@ export class SchedulerService {
   }
 
   async status() {
+    if (!this.shouldRunInCurrentProcess()) {
+      return {
+        enabled: false,
+        processMode: this.processMode,
+        timezone: process.env.SCHED_TZ ?? "UTC",
+        items: [] as Array<{ name: string; key: string; next?: number; pattern?: string }>
+      };
+    }
+
     const aiRepeatables = await getQueue(QUEUE_NAMES.ai).getRepeatableJobs();
     const maintenanceRepeatables = await getQueue(QUEUE_NAMES.maintenance).getRepeatableJobs();
     const items = [...aiRepeatables, ...maintenanceRepeatables]
@@ -335,7 +344,7 @@ export class SchedulerService {
   }
 
   private shouldRunInCurrentProcess(): boolean {
-    const jobsEnabled = parseBool(process.env.JOBS_ENABLED, true);
+    const jobsEnabled = parseBool(process.env.JOBS_ENABLED, false);
     if (!jobsEnabled) {
       return false;
     }

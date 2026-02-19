@@ -34,7 +34,7 @@ function printStartupBanner(workerMode: string): void {
 }
 
 async function bootstrap(): Promise<void> {
-  const jobsEnabled = parseBool(process.env.JOBS_ENABLED, true);
+  const jobsEnabled = parseBool(process.env.JOBS_ENABLED, false);
   const jobsRuntimeEnabled = jobsEnabled && !!safeGetRedis();
   const workerMode = (process.env.JOBS_WORKER_MODE ?? "api").toLowerCase();
   printStartupBanner(workerMode);

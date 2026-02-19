@@ -3,7 +3,13 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["apps/web/.next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [
+        "apps/web/.next/**",
+        "apps/web/next-env.d.ts",
+        "apps/web/.vercel/**",
+        "dist/**",
+        "!.next/cache/**"
+      ]
     }
   }
 }

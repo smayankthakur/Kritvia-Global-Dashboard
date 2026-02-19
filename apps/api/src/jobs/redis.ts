@@ -24,7 +24,7 @@ export function safeGetRedis(): Redis | null {
     return redis;
   }
 
-  const jobsEnabled = parseBool(process.env.JOBS_ENABLED, true);
+  const jobsEnabled = parseBool(process.env.JOBS_ENABLED, false);
   if (!jobsEnabled) {
     return null;
   }
@@ -72,6 +72,9 @@ export function safeGetRedis(): Redis | null {
 export function getRedis(): Redis {
   const client = safeGetRedis();
   if (!client) {
+    if (parseBool(process.env.STRICT_JOBS, false)) {
+      throw new Error("REDIS_URL is required when JOBS_ENABLED=true and STRICT_JOBS=true");
+    }
     throw new Error("REDIS_URL is required when JOBS_ENABLED=true");
   }
   return client;

@@ -10,6 +10,8 @@
   },
   "scripts": {
     "prebuild": "npm run prisma:generate",
+    "pretypecheck": "npm run prisma:generate",
+    "pretest:ci": "npm run prisma:generate",
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "start": "node dist/src/main.js",
     "start:prod": "node dist/main.js",
