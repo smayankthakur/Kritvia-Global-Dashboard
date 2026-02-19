@@ -210,15 +210,13 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: {
         id: authUser.userId,
-        orgId: activeOrgId,
         isActive: true
       },
       select: {
         id: true,
         name: true,
         email: true,
-        role: true,
-        orgId: true
+        role: true
       }
     });
 
@@ -243,26 +241,39 @@ export class AuthService {
       orderBy: [{ createdAt: "asc" }]
     });
 
+    const mappedMemberships =
+      memberships.length > 0
+        ? memberships.map((membership) => ({
+            orgId: membership.orgId,
+            orgName: membership.org.name,
+            role: membership.role,
+            status: membership.status
+          }))
+        : [
+            {
+              orgId: activeOrgId,
+              orgName: "Current Org",
+              role: user.role,
+              status: "ACTIVE"
+            }
+          ];
+
+    const activeMembership = mappedMemberships.find(
+      (membership) => membership.orgId === activeOrgId && membership.status === "ACTIVE"
+    );
+
+    if (!activeMembership) {
+      throw new ForbiddenException("Org access denied");
+    }
+
     return {
-      ...user,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: activeMembership.role,
       orgId: activeOrgId,
       activeOrgId,
-      memberships:
-        memberships.length > 0
-          ? memberships.map((membership) => ({
-              orgId: membership.orgId,
-              orgName: membership.org.name,
-              role: membership.role,
-              status: membership.status
-            }))
-          : [
-              {
-                orgId: activeOrgId,
-                orgName: "Current Org",
-                role: user.role,
-                status: "ACTIVE"
-              }
-            ]
+      memberships: mappedMemberships
     };
   }
 
@@ -301,61 +312,24 @@ export class AuthService {
       targetMembership = null;
     }
 
-    let targetUser = await this.prisma.user.findFirst({
-      where: {
-        orgId: targetOrgId,
-        email: currentUser.email,
-        isActive: true
-      },
-      select: {
-        id: true,
-        orgId: true,
-        email: true,
-        role: true,
-        name: true
-      }
-    });
-
-    if (!targetUser && currentUser.role === "ADMIN") {
-      targetUser = await this.prisma.user.findFirst({
-        where: {
-          orgId: targetOrgId,
-          role: currentUser.role,
-          isActive: true
-        },
-        orderBy: [{ createdAt: "asc" }],
-        select: {
-          id: true,
-          orgId: true,
-          email: true,
-          role: true,
-          name: true
-        }
-      });
-    }
-
     if (!targetMembership) {
       throw new ForbiddenException("Org access denied");
     }
 
-    if (!targetUser) {
-      throw new ForbiddenException("Org access denied");
-    }
-
     const accessToken = await this.issueAccessToken({
-      sub: targetUser.id,
-      orgId: targetUser.orgId,
-      activeOrgId: targetUser.orgId,
+      sub: currentUser.id,
+      orgId: targetOrgId,
+      activeOrgId: targetOrgId,
       role: targetMembership.role,
-      email: targetUser.email,
-      name: targetUser.name
+      email: currentUser.email,
+      name: currentUser.name
     });
 
     await this.activityLogService.log({
-      orgId: targetUser.orgId,
-      actorUserId: targetUser.id,
+      orgId: targetOrgId,
+      actorUserId: currentUser.id,
       entityType: ActivityEntityType.AUTH,
-      entityId: targetUser.id,
+      entityId: currentUser.id,
       action: "SWITCH_ORG",
       before: {
         fromOrgId: authUser.activeOrgId ?? authUser.orgId
