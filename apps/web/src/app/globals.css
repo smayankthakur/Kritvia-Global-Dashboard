@@ -907,6 +907,100 @@ tbody tr:hover {
   word-break: break-word;
 }
 
+.kv-marketplace-head {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.kv-marketplace-subtitle {
+  margin: 0;
+}
+
+.kv-marketplace-filters {
+  margin-bottom: 12px;
+}
+
+.kv-marketplace-search {
+  max-width: 360px;
+}
+
+.kv-marketplace-category {
+  max-width: 220px;
+}
+
+.kv-marketplace-empty {
+  margin: 0;
+}
+
+.kv-marketplace-card-title {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+.kv-marketplace-card-subtitle {
+  margin-bottom: 10px;
+}
+
+.kv-marketplace-card-meta {
+  margin-bottom: 10px;
+}
+
+.kv-marketplace-toast {
+  color: var(--success-color);
+  margin: 10px 0;
+}
+
+.kv-marketplace-warning-toast {
+  color: var(--warning-color);
+  margin: 0 0 8px;
+}
+
+.kv-marketplace-secret-card {
+  margin-bottom: 12px;
+}
+
+.kv-marketplace-secret-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.kv-marketplace-secret-note {
+  margin-bottom: 8px;
+}
+
+.kv-marketplace-detail-title {
+  margin-top: 0;
+}
+
+.kv-marketplace-detail-pills {
+  margin-top: 8px;
+}
+
+.kv-marketplace-oauth-row {
+  margin-top: 8px;
+}
+
+.kv-marketplace-website {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.kv-marketplace-section-title {
+  margin-top: 0;
+}
+
+.kv-marketplace-meta-row {
+  margin-top: 10px;
+}
+
+.kv-marketplace-config-textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.kv-marketplace-actions-end {
+  justify-content: flex-end;
+}
+
 @media (max-width: 980px) {
   .kv-content {
     grid-template-columns: 1fr;

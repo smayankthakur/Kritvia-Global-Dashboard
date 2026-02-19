@@ -73,20 +73,24 @@ export default function MarketplacePage() {
 
   return (
     <AppShell user={user} title="Marketplace">
-      <div className="kv-row" style={{ justifyContent: "space-between", marginBottom: "12px" }}>
-        <p className="kv-subtitle" style={{ margin: 0 }}>
+      <div className="kv-row kv-marketplace-head">
+        <p className="kv-subtitle kv-marketplace-subtitle">
           Install and manage integrations for your organization.
         </p>
       </div>
 
-      <div className="kv-row" style={{ marginBottom: "12px" }}>
+      <div className="kv-row kv-marketplace-filters">
         <input
+          className="kv-marketplace-search"
           placeholder="Search apps"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          style={{ maxWidth: "360px" }}
         />
-        <select value={category} onChange={(event) => setCategory(event.target.value)} style={{ maxWidth: "220px" }}>
+        <select
+          className="kv-marketplace-category"
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
+        >
           {categories.map((categoryOption) => (
             <option key={categoryOption} value={categoryOption}>
               {categoryOption === "all" ? "All categories" : categoryOption}
@@ -104,19 +108,19 @@ export default function MarketplacePage() {
         </div>
       ) : apps.length === 0 ? (
         <div className="kv-state">
-          <p style={{ margin: 0 }}>No marketplace apps found.</p>
+          <p className="kv-marketplace-empty">No marketplace apps found.</p>
         </div>
       ) : (
         <div className="kv-grid-2">
           {apps.map((app) => (
             <article key={app.id} className="kv-card kv-portfolio-card kv-portfolio-glow">
-              <h2 className="kv-section-title kv-revenue-title" style={{ marginTop: 0, marginBottom: "6px" }}>
+              <h2 className="kv-section-title kv-revenue-title kv-marketplace-card-title">
                 {app.name}
               </h2>
-              <p className="kv-subtitle" style={{ marginBottom: "10px" }}>
+              <p className="kv-subtitle kv-marketplace-card-subtitle">
                 {app.description}
               </p>
-              <div className="kv-row" style={{ marginBottom: "10px" }}>
+              <div className="kv-row kv-marketplace-card-meta">
                 {app.category ? <span className="kv-pill">{app.category}</span> : null}
                 <span className="kv-pill">{app.key}</span>
               </div>

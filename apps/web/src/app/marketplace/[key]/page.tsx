@@ -290,12 +290,12 @@ export default function MarketplaceDetailPage() {
           ) : null}
         </p>
       ) : null}
-      {toast ? <p style={{ color: "var(--success-color)", margin: "10px 0" }}>{toast}</p> : null}
+      {toast ? <p className="kv-marketplace-toast">{toast}</p> : null}
 
       {secretOneTime ? (
-        <div className="kv-card" style={{ marginBottom: "12px" }}>
-          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>App secret (shown once)</p>
-          <p className="kv-subtitle" style={{ marginBottom: "8px" }}>
+        <div className="kv-card kv-marketplace-secret-card">
+          <p className="kv-marketplace-secret-title">App secret (shown once)</p>
+          <p className="kv-subtitle kv-marketplace-secret-note">
             Save this secret now. You cannot view it again.
           </p>
           <div className="kv-row">
@@ -315,11 +315,11 @@ export default function MarketplaceDetailPage() {
       ) : (
         <div className="kv-stack">
           <article className="kv-card kv-portfolio-card">
-            <h2 className="kv-section-title kv-revenue-title" style={{ marginTop: 0 }}>
+            <h2 className="kv-section-title kv-revenue-title kv-marketplace-detail-title">
               {app.name}
             </h2>
             <p className="kv-subtitle">{app.description}</p>
-            <div className="kv-row" style={{ marginTop: "8px" }}>
+            <div className="kv-row kv-marketplace-detail-pills">
               <span className="kv-pill">{app.category || "General"}</span>
               <span className="kv-pill">{app.key}</span>
               {isInstalled ? <span className="kv-pill">Installed in {activeOrgName}</span> : null}
@@ -327,7 +327,7 @@ export default function MarketplaceDetailPage() {
               {supportsOauth && oauthConnected ? <span className="kv-pill">Connected</span> : null}
             </div>
             {supportsOauth && oauthConnected ? (
-              <div className="kv-row" style={{ marginTop: "8px" }}>
+              <div className="kv-row kv-marketplace-oauth-row">
                 <span className="kv-subtitle">
                   Connected to {app.oauthProvider} account{oauthAccountId ? ` (${oauthAccountId})` : ""}
                 </span>
@@ -337,7 +337,7 @@ export default function MarketplaceDetailPage() {
               </div>
             ) : null}
             {app.websiteUrl ? (
-              <p style={{ marginTop: "10px", marginBottom: 0 }}>
+              <p className="kv-marketplace-website">
                 Website:{" "}
                 <a href={app.websiteUrl} target="_blank" rel="noreferrer">
                   {app.websiteUrl}
@@ -348,7 +348,7 @@ export default function MarketplaceDetailPage() {
 
           <div className="kv-grid-2">
             <section className="kv-card">
-              <h3 className="kv-section-title" style={{ marginTop: 0 }}>
+              <h3 className="kv-section-title kv-marketplace-section-title">
                 Scopes
               </h3>
               <div className="kv-row">
@@ -361,7 +361,7 @@ export default function MarketplaceDetailPage() {
               </div>
             </section>
             <section className="kv-card">
-              <h3 className="kv-section-title" style={{ marginTop: 0 }}>
+              <h3 className="kv-section-title kv-marketplace-section-title">
                 Webhook Events
               </h3>
               <div className="kv-row">
@@ -377,7 +377,7 @@ export default function MarketplaceDetailPage() {
 
           {canManageApp ? (
             <section className="kv-card">
-              <h3 className="kv-section-title" style={{ marginTop: 0 }}>
+              <h3 className="kv-section-title kv-marketplace-section-title">
                 Manage Installation
               </h3>
               <div className="kv-row">
@@ -439,7 +439,7 @@ export default function MarketplaceDetailPage() {
             </section>
           ) : (
             <section className="kv-card">
-              <p style={{ margin: 0 }}>Only CEO and ADMIN can install or configure this app.</p>
+              <p className="kv-marketplace-empty">Only CEO and ADMIN can install or configure this app.</p>
             </section>
           )}
         </div>
@@ -448,15 +448,15 @@ export default function MarketplaceDetailPage() {
       {configOpen ? (
         <div className="kv-modal-backdrop">
           <div className="kv-modal">
-            <h3 style={{ marginTop: 0 }}>Configure app (JSON)</h3>
+            <h3 className="kv-marketplace-section-title">Configure app (JSON)</h3>
             <form className="kv-form" onSubmit={(event) => void onSaveConfig(event)}>
               <textarea
+                className="kv-marketplace-config-textarea"
                 value={configText}
                 onChange={(event) => setConfigText(event.target.value)}
                 rows={12}
-                style={{ fontFamily: "monospace" }}
               />
-              <div className="kv-row" style={{ justifyContent: "flex-end" }}>
+              <div className="kv-row kv-marketplace-actions-end">
                 <button type="button" onClick={() => setConfigOpen(false)} disabled={saving}>
                   Cancel
                 </button>

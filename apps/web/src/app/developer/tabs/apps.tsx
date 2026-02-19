@@ -165,13 +165,13 @@ export function AppsTab({ token }: AppsTabProps) {
   return (
     <section className="kv-stack" aria-live="polite">
       <div className="kv-card kv-dev-card">
-        <h2 className="kv-section-title" style={{ marginTop: 0 }}>
+        <h2 className="kv-section-title kv-marketplace-section-title">
           App Test Console
         </h2>
         <p className="kv-subtitle">Send test triggers, inspect deliveries, and replay failed attempts.</p>
 
         {requestError ? <p className="kv-error">{requestError}</p> : null}
-        {toast ? <p style={{ color: "var(--warning-color)", margin: "0 0 8px" }}>{toast}</p> : null}
+        {toast ? <p className="kv-marketplace-warning-toast">{toast}</p> : null}
 
         <div className="kv-grid-2">
           <label>
@@ -200,7 +200,7 @@ export function AppsTab({ token }: AppsTabProps) {
           </label>
         </div>
 
-        <p className="kv-subtitle" style={{ marginTop: "10px" }}>
+        <p className="kv-subtitle kv-marketplace-meta-row">
           Webhook URL: <strong>{selectedApp?.webhookUrl ?? "Not configured"}</strong>
         </p>
 
@@ -217,7 +217,7 @@ export function AppsTab({ token }: AppsTabProps) {
       </div>
 
       <div className="kv-card">
-        <h3 className="kv-section-title" style={{ marginTop: 0 }}>
+        <h3 className="kv-section-title kv-marketplace-section-title">
           Last 20 Deliveries
         </h3>
         <div className="kv-table-wrap">
@@ -275,7 +275,7 @@ export function AppsTab({ token }: AppsTabProps) {
       </div>
 
       <div className="kv-card">
-        <h3 className="kv-section-title" style={{ marginTop: 0 }}>
+        <h3 className="kv-section-title kv-marketplace-section-title">
           Last 20 Command Logs
         </h3>
         <div className="kv-table-wrap">
