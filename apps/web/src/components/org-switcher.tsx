@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, meRequest, switchOrgRequest } from "../lib/api";
+import { ApiError, createOrganization, meRequest, switchOrgRequest } from "../lib/api";
 import { getAccessToken, setAccessToken } from "../lib/auth";
 import { AuthMeResponse, OrgMembership } from "../types/auth";
 
@@ -19,6 +19,11 @@ export function OrgSwitcher({ user }: OrgSwitcherProps) {
   const [open, setOpen] = useState(false);
   const [busyOrgId, setBusyOrgId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createSlug, setCreateSlug] = useState("");
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const memberships = sortedMemberships(user.memberships ?? []);
   const activeOrgId = user.activeOrgId ?? user.orgId;
   const activeMembership = memberships.find((membership) => membership.orgId === activeOrgId) ?? null;
@@ -64,6 +69,48 @@ export function OrgSwitcher({ user }: OrgSwitcherProps) {
     }
   }
 
+  async function onCreateOrg(): Promise<void> {
+    const token = getAccessToken();
+    if (!token) {
+      setCreateError("Session missing. Please login again.");
+      return;
+    }
+    if (!createName.trim()) {
+      setCreateError("Organization name is required.");
+      return;
+    }
+    try {
+      setCreateBusy(true);
+      setCreateError(null);
+      const created = await createOrganization(token, {
+        name: createName.trim(),
+        slug: createSlug.trim() ? createSlug.trim() : undefined
+      });
+      const switched = await switchOrgRequest(token, created.org.id);
+      setAccessToken(switched.accessToken);
+      await meRequest(switched.accessToken);
+      setCreateOpen(false);
+      setCreateName("");
+      setCreateSlug("");
+      setToast(`Created and switched to ${created.org.name}`);
+      router.replace("/");
+      router.refresh();
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 120);
+    } catch (requestFailure) {
+      if (requestFailure instanceof ApiError) {
+        setCreateError(requestFailure.message);
+        return;
+      }
+      setCreateError(
+        requestFailure instanceof Error ? requestFailure.message : "Failed to create organization."
+      );
+    } finally {
+      setCreateBusy(false);
+    }
+  }
+
   return (
     <div className="kv-org-switcher-wrap">
       {showDropdown ? (
@@ -103,14 +150,74 @@ export function OrgSwitcher({ user }: OrgSwitcherProps) {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                className="kv-org-create-btn"
+                onClick={() => {
+                  setOpen(false);
+                  setCreateOpen(true);
+                }}
+                disabled={busyOrgId !== null}
+              >
+                + Create new organization
+              </button>
             </div>
           ) : null}
         </div>
       ) : (
-        <span className="kv-org-static">{activeMembership?.orgName ?? "Current Org"}</span>
+        <div className="kv-org-static-wrap">
+          <span className="kv-org-static">{activeMembership?.orgName ?? "Current Org"}</span>
+          <button
+            type="button"
+            className="kv-org-create-inline-btn"
+            onClick={() => setCreateOpen(true)}
+          >
+            + New Org
+          </button>
+        </div>
       )}
       {toast ? <span className="kv-org-toast">{toast}</span> : null}
+      {createOpen ? (
+        <div className="kv-modal-backdrop">
+          <div className="kv-modal">
+            <h3 className="kv-org-create-title">Create Organization</h3>
+            <p className="kv-note">Create a new org and switch to it immediately.</p>
+            {createError ? <p className="kv-error">{createError}</p> : null}
+            <div className="kv-form">
+              <label htmlFor="orgCreateName">Organization Name</label>
+              <input
+                id="orgCreateName"
+                value={createName}
+                onChange={(event) => setCreateName(event.target.value)}
+                placeholder="Acme Ventures"
+                maxLength={80}
+              />
+              <label htmlFor="orgCreateSlug">Slug (optional)</label>
+              <input
+                id="orgCreateSlug"
+                value={createSlug}
+                onChange={(event) => setCreateSlug(event.target.value)}
+                placeholder="acme-ventures"
+                maxLength={80}
+              />
+              <p className="kv-note">Leave slug blank to auto-generate.</p>
+              <div className="kv-row kv-org-create-actions">
+                <button type="button" onClick={() => setCreateOpen(false)} disabled={createBusy}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="kv-btn-primary"
+                  onClick={() => void onCreateOrg()}
+                  disabled={createBusy}
+                >
+                  {createBusy ? "Creating..." : "Create & Switch"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
-

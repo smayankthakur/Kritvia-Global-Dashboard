@@ -202,6 +202,21 @@ export async function switchOrgRequest(
   return parseResponse(response, "Failed to switch organization");
 }
 
+export async function createOrganization(
+  token: string,
+  input: { name: string; slug?: string }
+): Promise<{
+  org: { id: string; name: string; slug: string };
+  membership: { role: Role; status: "ACTIVE" | "INVITED" | "REMOVED" };
+}> {
+  const response = await request(`${API_BASE_URL}/orgs`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(input)
+  });
+  return parseResponse(response, "Failed to create organization");
+}
+
 export interface Company {
   id: string;
   name: string;

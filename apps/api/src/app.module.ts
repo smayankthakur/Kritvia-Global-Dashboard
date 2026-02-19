@@ -27,6 +27,7 @@ import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { IncidentsModule } from "./incidents/incidents.module";
 import { NudgesModule } from "./nudges/nudges.module";
 import { OrgMembersModule } from "./org-members/org-members.module";
+import { OrgsModule } from "./orgs/orgs.module";
 import { OrgAuditModule } from "./org-audit/org-audit.module";
 import { OrgApiTokensModule } from "./org-api-tokens/org-api-tokens.module";
 import { OrgWebhooksModule } from "./org-webhooks/org-webhooks.module";
@@ -76,6 +77,7 @@ import { IpAllowlistMiddleware } from "./common/middleware/ip-allowlist.middlewa
     GraphModule,
     FixActionsModule,
     OrgMembersModule,
+    OrgsModule,
     OrgAuditModule,
     OrgApiTokensModule,
     OrgWebhooksModule,
