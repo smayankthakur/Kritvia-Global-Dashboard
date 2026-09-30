@@ -1,16 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": [
-        "apps/web/.next/**",
-        "apps/web/.next/cache/**",
-        "apps/web/next-env.d.ts",
-        "apps/web/.vercel/**",
-        "apps/web/public/**",
-        "apps/api/dist/**"
-      ]
-    }
+    "build": { "dependsOn": ["^build"], "outputs": [".next/**", "!.next/cache/**", "dist/**"] },
+    "dev": { "cache": false, "persistent": true },
+    "lint": {},
+    "test": { "dependsOn": ["^build"] }
   }
 }

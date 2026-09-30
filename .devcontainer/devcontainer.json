@@ -1,0 +1,21 @@
+{
+  "name": "Kritvia (API + web + Postgres)",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "hostRequirements": { "cpus": 4, "memory": "8gb" },
+  "postCreateCommand": "bash scripts/codespace-setup.sh",
+  "postAttachCommand": "bash scripts/dev-up.sh",
+  "forwardPorts": [3000, 8000],
+  "portsAttributes": {
+    "3000": { "label": "Kritvia dashboard", "onAutoForward": "openBrowser" },
+    "8000": { "label": "Kritvia API (docs at /docs)", "onAutoForward": "silent" }
+  },
+  "customizations": {
+    "vscode": { "extensions": ["ms-python.python", "dbaeumer.vscode-eslint", "bradlc.vscode-tailwindcss"] }
+  }
+}

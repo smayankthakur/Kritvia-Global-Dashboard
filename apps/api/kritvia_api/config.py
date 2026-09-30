@@ -1,0 +1,63 @@
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    app_name: str = "Kritvia API"
+    environment: str = "development"
+
+    # The API connects as kritvia_app (NOBYPASSRLS). Never point this at the owner role.
+    database_url: str = "postgresql+asyncpg://kritvia_app:app@localhost:5432/kritvia"
+
+    jwt_secret: str = Field(min_length=32, default="dev-only-secret-change-me-dev-only-secret")
+    jwt_algorithm: str = "HS256"
+    access_token_minutes: int = 60
+
+    # base64-encoded 32-byte key-encryption key. Held on the VM for dogfooding;
+    # replaced by the client's KMS in VPC deployments (see services/crypto.py).
+    master_kek_b64: str = ""
+    master_kek_id: str = "local-v1"
+
+    litellm_base_url: str = "http://localhost:4000"
+    litellm_api_key: str = "sk-local-dev"
+    tiers_config_path: Path = REPO_ROOT / "infra" / "litellm" / "tiers.yaml"
+
+    allowed_origins: list[str] = ["http://localhost:3000"]
+    public_api_url: str = "http://localhost:8000"
+    public_web_url: str = "http://localhost:3000"
+
+    refresh_token_days: int = 30
+    auth_rate_limit_per_minute: int = 10
+    client_ip_header: str = ""   # e.g. "cf-connecting-ip" when only reachable via Cloudflare Tunnel
+
+    # Execution: 'arq' (Valkey queue, production), 'background' (in-process task,
+    # single-process dev) or 'inline' (run to completion before returning; tests)
+    dispatch_mode: str = "background"
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Sandbox runner (services/sandbox). Empty -> LocalSandbox (dev only, not isolated).
+    sandbox_url: str = ""
+    sandbox_token: str = ""
+
+    # Outbound messages when a venture has no Google connector: 'log' records to the
+    # outbox without sending (dogfooding); 'none' fails the step.
+    messaging_fallback: str = "log"
+
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:3000/api/oauth/google/callback"  # the WEB app route
+
+    # Uploads
+    max_upload_mb: int = 25
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

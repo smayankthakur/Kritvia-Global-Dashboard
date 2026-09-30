@@ -1,24 +1,39 @@
-FROM node:20-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
+# Kritvia web (Next.js standalone). Build from the MONOREPO ROOT so the workspace
+# package @kritvia/shared-types is available:
+#
+#   docker build -f apps/web/Dockerfile -t kritvia-web .
+#   docker run -p 3000:3000 -e KRITVIA_API_URL=http://api:8000 kritvia-web
+
+ARG NODE_VERSION=22-alpine
+
+FROM node:${NODE_VERSION} AS base
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+WORKDIR /repo
+
+# 1) dependencies (cached unless manifests change)
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/package.json
-COPY apps/api/package.json apps/api/package.json
-COPY packages/shared/package.json packages/shared/package.json
-RUN npm ci
+COPY packages/shared-types/package.json packages/shared-types/package.json
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter @kritvia/web...
 
-FROM deps AS builder
-WORKDIR /app
-COPY . .
-RUN npm run build --workspace @kritviya/web
+# 2) build
+FROM deps AS build
+COPY packages/shared-types packages/shared-types
+COPY apps/web apps/web
+RUN pnpm --filter @kritvia/web build
 
-FROM node:20-alpine AS runner
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+# 3) runtime: only the standalone server, static assets and public files
+FROM node:${NODE_VERSION} AS runner
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
+RUN addgroup -S -g 1001 kritvia && adduser -S -u 1001 -G kritvia kritvia
+COPY --from=build --chown=kritvia:kritvia /repo/apps/web/.next/standalone ./
+COPY --from=build --chown=kritvia:kritvia /repo/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=kritvia:kritvia /repo/apps/web/public ./apps/web/public
+USER kritvia
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || '3000')).then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD wget -qO- http://127.0.0.1:3000/login >/dev/null || exit 1
 CMD ["node", "apps/web/server.js"]

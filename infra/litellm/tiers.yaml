@@ -1,0 +1,32 @@
+# Kritvia capability tiers. Order = fallback order.
+#
+# data_policy per deployment:
+#   local        runs on our VM or the client's VPC; data never leaves
+#   byok_client  the client's own key/account (their contract, their terms)
+#   no_training  hosted, provider contractually does not train on inputs
+#   may_train    free tier whose terms may allow training -> NEVER sensitive data
+#
+# A request flagged sensitive may only reach deployments whose policy is listed
+# in sensitive_allowed. This is enforced in code, not left to workflow authors.
+
+sensitive_allowed: [local, byok_client]
+
+deployments:
+  groq-llama-70b:   { data_policy: may_train }
+  groq-llama-8b:    { data_policy: may_train }
+  groq-whisper:     { data_policy: may_train }
+  gemini-flash:     { data_policy: may_train }
+  openrouter-free:  { data_policy: may_train }
+  ollama-qwen-7b:   { data_policy: local }
+  ollama-bge-m3:    { data_policy: local }
+  local-whisper:    { data_policy: local }
+
+tiers:
+  fast:         [groq-llama-8b, openrouter-free, ollama-qwen-7b]
+  extract:      [groq-llama-70b, ollama-qwen-7b]
+  reason:       [groq-llama-70b, openrouter-free, gemini-flash, ollama-qwen-7b]
+  long_context: [gemini-flash, groq-llama-70b]
+  private:      [ollama-qwen-7b]
+  embed:        [ollama-bge-m3]
+  # Hindi-heavy audio: add a Sarvam deployment (byok_client) ahead of groq-whisper.
+  speech:       [groq-whisper, local-whisper]

@@ -1,29 +1,17 @@
-FROM node:20-alpine AS deps
+# Build from the monorepo root:  docker build -f apps/api/Dockerfile -t kritvia-api .
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+# Local OCR (Tesseract with Hindi); loan documents are never sent to a hosted OCR API.
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-hin \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY package*.json ./
-COPY apps/api/package.json apps/api/package.json
-COPY apps/web/package.json apps/web/package.json
-COPY packages/shared/package.json packages/shared/package.json
-RUN npm ci
-
-FROM deps AS builder
-WORKDIR /app
-COPY . .
-RUN npm run build --workspace @kritviya/api
-RUN npm run prisma:generate --workspace @kritviya/api
-
-FROM node:20-alpine AS runner
-ENV NODE_ENV=production
-WORKDIR /app
-COPY package*.json ./
-COPY apps/api/package.json apps/api/package.json
-COPY apps/web/package.json apps/web/package.json
-COPY packages/shared/package.json packages/shared/package.json
-RUN npm ci --omit=dev
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-EXPOSE 4000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "fetch('http://127.0.0.1:' + (process.env.API_PORT || '4000') + '/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "apps/api/dist/src/main.js"]
+COPY apps/api/pyproject.toml ./
+COPY apps/api/kritvia_api ./kritvia_api
+RUN pip install ".[ocr]"
+COPY apps/api/migrations ./migrations
+COPY infra/litellm/tiers.yaml ./tiers.yaml
+ENV TIERS_CONFIG_PATH=/app/tiers.yaml KRITVIA_MIGRATIONS_DIR=/app/migrations
+RUN useradd --uid 10001 --no-create-home kritvia
+USER kritvia
+EXPOSE 8000
+CMD ["uvicorn", "kritvia_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

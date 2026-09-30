@@ -1,0 +1,5 @@
+{
+  "name": "@kritvia/worker",
+  "private": true,
+  "scripts": { "dev": "arq kritvia_worker.main.WorkerSettings" }
+}

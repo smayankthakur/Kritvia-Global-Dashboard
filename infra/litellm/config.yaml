@@ -1,0 +1,37 @@
+# LiteLLM proxy — model deployments. Kritvia never names these in workflow code;
+# workflows ask for a tier and tiers.yaml maps tiers -> ordered deployments.
+#
+# VERIFY BEFORE USE: provider model IDs and free-tier limits change often.
+model_list:
+  # --- Groq (free tier, hosted) ---
+  - model_name: groq-llama-70b
+    litellm_params: { model: groq/llama-3.3-70b-versatile, api_key: os.environ/GROQ_API_KEY }
+  - model_name: groq-llama-8b
+    litellm_params: { model: groq/llama-3.1-8b-instant, api_key: os.environ/GROQ_API_KEY }
+  - model_name: groq-whisper
+    litellm_params: { model: groq/whisper-large-v3, api_key: os.environ/GROQ_API_KEY }
+
+  # --- Gemini (free tier; terms may allow training on inputs -> never sensitive) ---
+  - model_name: gemini-flash
+    litellm_params: { model: gemini/gemini-2.5-flash, api_key: os.environ/GEMINI_API_KEY }
+
+  # --- OpenRouter free models ---
+  - model_name: openrouter-free
+    litellm_params: { model: openrouter/meta-llama/llama-3.3-70b-instruct:free, api_key: os.environ/OPENROUTER_API_KEY }
+
+  # --- Local Ollama on the VM (the only 'private' destination at MVP) ---
+  - model_name: ollama-qwen-7b
+    litellm_params: { model: ollama_chat/qwen2.5:7b-instruct, api_base: os.environ/OLLAMA_BASE_URL }
+  - model_name: local-whisper   # faster-whisper server on the VM (OpenAI-compatible)
+    litellm_params: { model: openai/Systran/faster-whisper-small, api_base: os.environ/WHISPER_BASE_URL, api_key: "none" }
+    model_info: { mode: audio_transcription }
+  - model_name: ollama-bge-m3
+    litellm_params: { model: ollama/bge-m3, api_base: os.environ/OLLAMA_BASE_URL }
+
+litellm_settings:
+  num_retries: 0          # Kritvia's router owns retry/fallback so every attempt is metered
+  request_timeout: 120
+  drop_params: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

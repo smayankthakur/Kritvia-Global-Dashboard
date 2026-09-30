@@ -1,55 +1,14 @@
 {
-  "name": "kritviya",
+  "name": "kritvia",
   "private": true,
-  "version": "0.1.0",
-  "packageManager": "npm@10.8.2",
-  "engines": {
-    "node": "20.x",
-    "npm": "10.x"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev:web": "npm --workspace @kritviya/web run dev",
-    "dev:api": "npm --workspace @kritviya/api run start:dev",
-    "dev:db": "docker compose --env-file .env -f infra/docker-compose.yml up -d postgres redis",
-    "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev:web\" \"npm run dev:api\"",
-    "db:migrate": "npm run migrate",
-    "db:seed": "npm run seed",
-    "migrate": "dotenv -e .env -- npm --workspace @kritviya/api run db:migrate",
-    "seed": "dotenv -e .env -- npm --workspace @kritviya/api run db:seed",
-    "build:web": "npm --workspace apps/web run build",
-    "lint:web": "npm --workspace apps/web run lint || true",
-    "build:api": "npm --workspace apps/api run build",
-    "vercel-build": "npm run build:web",
-    "build:render": "npm ci --include=dev && npm run build:api",
-    "seed:api": "npm --workspace apps/api run seed",
-    "build": "npm run build:api && npm run build:web",
-    "start:api": "npm --workspace apps/api run start:prod",
-    "start:web": "node scripts/start-web.mjs",
-    "start:prod": "npm run migrate:deploy && concurrently -n web,api -c cyan,magenta \"npm run start:web\" \"npm run start:api\"",
-    "migrate:deploy": "npm --workspace apps/api run migrate:deploy",
-    "seed:prod": "dotenv -e .env -- npm --workspace apps/api run db:seed",
-    "test": "npm --workspace apps/api run test",
-    "test:setup": "npm --workspace apps/api run test:setup",
-    "test:ci": "npm --workspace apps/api run test:ci",
-    "doctor": "node scripts/doctor.mjs",
-    "lint": "eslint \"apps/**/*.{ts,tsx,js,cjs,mjs}\" \"packages/**/*.{ts,tsx,js,cjs,mjs}\"",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,cjs,mjs,json,md,yml,yaml}\""
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.24.0",
-    "@typescript-eslint/parser": "^8.24.0",
-    "concurrently": "^9.1.2",
-    "dotenv-cli": "^7.4.2",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^15.5.0",
-    "eslint-config-prettier": "^10.1.8",
-    "esquery": "^1.6.0",
-    "prettier": "^3.5.0",
-    "turbo": "^2.8.10",
-    "typescript": "^5.8.2"
+    "turbo": "^2.3.0"
   }
 }

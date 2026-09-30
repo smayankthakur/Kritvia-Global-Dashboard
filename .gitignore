@@ -1,10 +1,17 @@
-node_modules
+node_modules/
+.next/
+dist/
+.turbo/
+__pycache__/
+*.pyc
+.venv/
 .env
-apps/*/node_modules
-apps/*/.next
-apps/*/.next-kritviya
-apps/*/dist
-*.log
-*.tsbuildinfo
+.env.*
+!.env.example
+.pytest_cache/
 
-apps/*/.next-build
+.dev/
+*.egg-info/
+.kilo/
+kritvia-foundation/
+*.tgz

@@ -1,23 +1,164 @@
+# Kritvia stack — the same file runs on the Oracle Always Free ARM VM and, later,
+# inside a client's VPC. Images publish linux/arm64 builds (verify tags when upgrading).
+# Nothing is exposed publicly: web and API bind to 127.0.0.1 and are published
+# through Cloudflare Tunnel (profile "tunnel") or a reverse proxy you run.
+#
+#   cp ../.env.example ../.env   # fill in secrets
+#   docker compose build sandbox-jobs && docker compose up -d
+#   docker compose --profile tunnel --profile speech up -d   # optional extras
+name: kritvia
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql+asyncpg://kritvia_app:${KRITVIA_APP_PASSWORD}@postgres:5432/kritvia
+  REDIS_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+  DISPATCH_MODE: arq
+  LITELLM_BASE_URL: http://litellm:4000
+  TIERS_CONFIG_PATH: /app/tiers.yaml
+  SANDBOX_URL: http://sandbox:8100
+
 services:
   postgres:
-    image: postgres:16
-    container_name: kritviya-postgres
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: kritvia
+      KRITVIA_OWNER_PASSWORD: ${KRITVIA_OWNER_PASSWORD:?set in .env}
+      KRITVIA_APP_PASSWORD: ${KRITVIA_APP_PASSWORD:?set in .env}
     volumes:
-      - pg_data:/var/lib/postgresql/data
-  redis:
-    image: redis:7-alpine
-    container_name: kritviya-redis
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
+    command: ["postgres", "-c", "shared_buffers=512MB", "-c", "max_connections=100", "-c", "log_min_duration_statement=2000"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kritvia"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  valkey:
+    image: valkey/valkey:8-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
-    command: ["redis-server", "--requirepass", "password"]
+    command: ["valkey-server", "--appendonly", "yes", "--requirepass", "${VALKEY_PASSWORD:?set in .env}"]
+    volumes:
+      - valkeydata:/data
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollamadata:/root/.ollama
+    # First run: docker compose exec ollama ollama pull qwen2.5:7b-instruct && docker compose exec ollama ollama pull bge-m3
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    env_file: ../.env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      WHISPER_BASE_URL: http://whisper:8000/v1
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    depends_on: [ollama]
+
+  migrate:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    command: ["python", "-m", "kritvia_api.db.migrate"]
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://kritvia_owner:${KRITVIA_OWNER_PASSWORD}@postgres:5432/kritvia
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    restart: unless-stopped
+    env_file: ../.env
+    environment: *app-env
+    volumes:
+      - ./litellm/tiers.yaml:/app/tiers.yaml:ro
+    ports: ["127.0.0.1:8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      litellm: { condition: service_started }
+      valkey: { condition: service_started }
+
+  worker:
+    build: { context: .., dockerfile: apps/worker/Dockerfile }
+    restart: unless-stopped
+    env_file: ../.env
+    environment: *app-env
+    volumes:
+      - ./litellm/tiers.yaml:/app/tiers.yaml:ro
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      valkey: { condition: service_started }
+
+  web:
+    build: { context: .., dockerfile: apps/web/Dockerfile }
+    restart: unless-stopped
+    environment:
+      KRITVIA_API_URL: http://api:8000
+      NODE_ENV: production
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [api]
+
+  # The ONLY service with the Docker socket. Internal network only, token-authenticated.
+  sandbox:
+    build: { context: ../services/sandbox, dockerfile: runner/Dockerfile }
+    restart: unless-stopped
+    environment:
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?set in .env}
+      SANDBOX_IMAGE: kritvia-sandbox-jobs:latest
+      SANDBOX_RUNTIME: ${SANDBOX_RUNTIME:-runsc}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8100"]
+
+  # Build-only: produces the image the sandbox runs jobs in (no network at runtime).
+  sandbox-jobs:
+    build: { context: ../services/sandbox, dockerfile: jobs/Dockerfile }
+    image: kritvia-sandbox-jobs:latest
+    entrypoint: ["true"]
+    restart: "no"
+    network_mode: none
+
+  # Local speech-to-text for sensitive audio (tier 'speech' falls back to it).
+  # Verify the arm64 tag before use.
+  whisper:
+    profiles: ["speech"]
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    restart: unless-stopped
+    volumes:
+      - whispercache:/home/ubuntu/.cache/huggingface
+
+  # Speaker separation for meeting recordings (set DIARIZATION_URL=http://diarization:8200).
+  diarization:
+    profiles: ["speech"]
+    build: { context: ../services/diarization }
+    restart: unless-stopped
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      DIARIZATION_TOKEN: ${DIARIZATION_TOKEN:-}
+    volumes:
+      - hfcache:/home/diar/.cache
+
+  cloudflared:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:?set in .env}"]
+    depends_on: [web, api]
 
 volumes:
-  pg_data:
+  pgdata:
+  valkeydata:
+  ollamadata:
+  whispercache:
+  hfcache:

@@ -1,0 +1,12 @@
+{
+  "name": "@kritvia/shared-types",
+  "private": true,
+  "version": "0.1.0",
+  "types": "src/api.d.ts",
+  "scripts": {
+    "generate": "cd ../../apps/api && python -c \"import json; from kritvia_api.main import app; print(json.dumps(app.openapi(), indent=2, sort_keys=True))\" > ../../packages/shared-types/openapi.json && cd - && openapi-typescript openapi.json -o src/api.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
+  }
+}
