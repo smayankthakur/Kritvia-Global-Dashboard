@@ -23,15 +23,23 @@ export function requestHost(req: Request): string {
 export function isSameOrigin(req: Request, extraTrusted: string[] = trustedOrigins()): boolean {
   if (SAFE_METHODS.has(req.method.toUpperCase())) return true;
   const origin = req.headers.get("origin");
-  if (!origin || origin === "null") return false;
-  let parsed: URL;
-  try {
-    parsed = new URL(origin);
-  } catch {
-    return false;
+  let ok = false;
+  if (origin && origin !== "null") {
+    try {
+      const parsed = new URL(origin);
+      ok = parsed.host === requestHost(req) || extraTrusted.includes(parsed.origin);
+    } catch {
+      ok = false;
+    }
   }
-  if (parsed.host === requestHost(req)) return true;
-  return extraTrusted.includes(parsed.origin);
+  if (!ok) {
+    // Diagnostic only: header names/values below are not secrets.
+    console.warn(
+      `[kritvia-bff] cross-site refused: origin=${origin ?? "-"} host=${req.headers.get("host") ?? "-"} ` +
+        `x-forwarded-host=${req.headers.get("x-forwarded-host") ?? "-"} trusted=${extraTrusted.join(",") || "-"}`,
+    );
+  }
+  return ok;
 }
 
 export function trustedOrigins(): string[] {
