@@ -33,3 +33,22 @@ describe("isSameOrigin (CSRF check)", () => {
     expect(isSameOrigin(r, ["https://admin.kritvia.in"])).toBe(true);
   });
 });
+
+describe("proxies that rewrite Origin (GitHub Codespaces)", () => {
+  it("accepts an Origin matching the internal Host while X-Forwarded-Host is public", async () => {
+    const { isSameOrigin } = await import("@/lib/bff/origin");
+    const req = new Request("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: { origin: "http://localhost:3000", host: "localhost:3000", "x-forwarded-host": "abc-3000.app.github.dev" },
+    });
+    expect(isSameOrigin(req, [])).toBe(true);
+  });
+  it("still refuses a different site", async () => {
+    const { isSameOrigin } = await import("@/lib/bff/origin");
+    const req = new Request("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: { origin: "https://evil.example", host: "localhost:3000", "x-forwarded-host": "abc-3000.app.github.dev" },
+    });
+    expect(isSameOrigin(req, [])).toBe(false);
+  });
+});

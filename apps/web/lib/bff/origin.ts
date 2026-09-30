@@ -27,7 +27,11 @@ export function isSameOrigin(req: Request, extraTrusted: string[] = trustedOrigi
   if (origin && origin !== "null") {
     try {
       const parsed = new URL(origin);
-      ok = parsed.host === requestHost(req) || extraTrusted.includes(parsed.origin);
+      // Match the public host (X-Forwarded-Host behind a tunnel/proxy) OR the Host the request
+      // actually arrived on: some proxies (GitHub Codespaces) rewrite Origin to the internal
+      // address while forwarding the public host. A page on another site still never matches.
+      const hosts = new Set([requestHost(req), firstValue(req.headers.get("host"))].filter(Boolean));
+      ok = hosts.has(parsed.host) || extraTrusted.includes(parsed.origin);
     } catch {
       ok = false;
     }
