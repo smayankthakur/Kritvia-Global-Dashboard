@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob: mediastream:" />
+  <title>Kritvia Voice</title>
+  <link rel="stylesheet" href="bubble.css" />
+</head>
+<body>
+  <div id="stack">
+    <div id="learn" class="card interactive" hidden role="dialog" aria-label="Remember this correction?">
+      <div class="row">
+        <div class="learn-text">
+          <div class="muted small">Remember this?</div>
+          <div><s id="heard"></s> <span class="muted">→</span> <b id="correct"></b></div>
+        </div>
+        <button id="learn-x" class="icon" aria-label="Dismiss">✕</button>
+      </div>
+      <div class="row gap">
+        <button id="learn-me" class="primary">Save for me</button>
+        <button id="learn-team" class="secondary">Save for the team</button>
+      </div>
+    </div>
+    <div id="label" class="card label" hidden role="status" aria-live="polite"></div>
+    <div id="toolbar" class="card toolbar interactive" hidden>
+      <button data-mode="type" aria-pressed="true" title="Type where your cursor is">Type</button>
+      <button data-mode="note" aria-pressed="false" title="Save to Kritvia as a note">Note</button>
+      <span class="sep"></span>
+      <button id="hide" title="Hide the widget (the hotkey keeps working)">Hide</button>
+    </div>
+    <div id="dock">
+      <div id="wave" hidden></div>
+      <button id="orb" class="interactive" aria-label="Dictate">
+        <span id="pulse"></span>
+        <svg id="mic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+        <span id="spin" hidden></span>
+        <span id="badge" hidden>N</span>
+      </button>
+    </div>
+  </div>
+  <script src="bubble.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+name: desktop
+# Kritvia Voice (apps/desktop): test on every change; build installers on demand or for a
+# `desktop-v*` tag, which also publishes them as a GitHub release.
+on:
+  push:
+    branches: [main]
+    tags: ["desktop-v*"]
+    paths: ["apps/desktop/**", "apps/web/lib/voice/**", ".github/workflows/desktop.yml"]
+  pull_request:
+    paths: ["apps/desktop/**", "apps/web/lib/voice/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+
+concurrency: { group: desktop-${{ github.ref }}, cancel-in-progress: true }
+
+defaults:
+  run: { working-directory: apps/desktop }
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: apps/desktop/package-lock.json }
+      - run: npm ci
+        env: { ELECTRON_SKIP_BINARY_DOWNLOAD: "1" }
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  package:
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || github.event_name == 'workflow_dispatch'
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, flags: "--win" }
+          - { os: macos-latest, flags: "--mac" }
+          - { os: ubuntu-latest, flags: "--linux" }
+    runs-on: ${{ matrix.os }}
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: apps/desktop/package-lock.json }
+      - run: npm ci
+      - name: Build installers (unsigned unless signing secrets are configured)
+        run: npm run build && npx electron-builder ${{ matrix.flags }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK == '' && 'false' || 'true' }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kritvia-voice-${{ matrix.os }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/latest*.yml
+          if-no-files-found: error
+      - name: Attach to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/latest*.yml

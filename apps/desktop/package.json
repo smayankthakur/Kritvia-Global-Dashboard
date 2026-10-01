@@ -1,0 +1,97 @@
+{
+  "name": "kritvia-desktop",
+  "productName": "Kritvia Voice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kritvia's desktop companion: hold a key, speak, and your words appear in any app \u2014 in your vocabulary.",
+  "author": "Sitelytc Digital Media Pvt. Ltd.",
+  "license": "UNLICENSED",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dist": "npm run build && electron-builder --publish never",
+    "icons": "python3 scripts/make_icons.py"
+  },
+  "dependencies": {
+    "uiohook-napi": "1.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.25.10",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "build": {
+    "appId": "com.sitelytc.kritvia.voice",
+    "productName": "Kritvia Voice",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**",
+      "assets/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Kritvia-Voice-Setup-${version}-${arch}.exe"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png",
+      "artifactName": "Kritvia-Voice-${version}-${arch}.dmg",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Kritvia Voice records your voice while you hold the dictation key, to turn it into text.",
+        "LSUIElement": true
+      }
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "icon": "assets/icon.png",
+      "artifactName": "Kritvia-Voice-${version}-${arch}.AppImage",
+      "executableName": "kritvia-voice"
+    },
+    "npmRebuild": false,
+    "publish": {
+      "provider": "github",
+      "owner": "smayankthakur",
+      "repo": "Kritvia-Global-Dashboard",
+      "releaseType": "release"
+    }
+  }
+}

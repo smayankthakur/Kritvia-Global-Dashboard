@@ -1,0 +1,47 @@
+:root {
+  --surface: #ffffff; --surface-2: #f1f3f6; --border: #e2e5ea; --fg: #0f172a; --muted: #64748b;
+  --accent: #4f46e5; --accent-fg: #fff; --danger: #dc2626; --success: #15803d;
+  --shadow: 0 10px 30px rgb(15 23 42 / .18), 0 2px 6px rgb(15 23 42 / .08);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --surface: #111723; --surface-2: #1e2636; --border: #2a3446; --fg: #e6eaf1; --muted: #8591a5;
+          --accent: #6d68f5; --danger: #f87171; --success: #22c55e; --shadow: 0 10px 30px rgb(0 0 0 / .55); }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none;
+  font: 13px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg); }
+#stack { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+.label { max-width: 300px; padding: 6px 10px; }
+.toolbar { display: flex; align-items: center; gap: 2px; padding: 3px; }
+.toolbar button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.toolbar button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); font-weight: 600; }
+.toolbar button:hover { background: var(--surface-2); }
+.sep { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
+#learn { width: 290px; padding: 10px 12px; }
+.row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.row.gap { justify-content: flex-start; margin-top: 8px; }
+.learn-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+s { color: var(--muted); text-decoration-color: var(--danger); }
+.muted { color: var(--muted); } .small { font-size: 11px; }
+button.primary { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+button.icon { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 6px; }
+#dock { display: flex; align-items: center; gap: 8px; }
+#wave { display: flex; align-items: center; gap: 3px; height: 32px; }
+#wave i { display: block; width: 3px; border-radius: 3px; background: var(--danger); height: 4px; transition: height .1s; }
+#orb { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--border);
+  background: var(--surface); color: var(--fg); box-shadow: var(--shadow); cursor: grab; display: grid; place-items: center; padding: 0; }
+#orb:active { cursor: grabbing; }
+#orb svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; position: relative; }
+#orb.recording { background: var(--danger); border-color: var(--danger); color: #fff; }
+#orb.transcribing { border-color: var(--accent); }
+#orb.done { border-color: var(--success); }
+#orb.error { border-color: var(--danger); }
+#pulse { position: absolute; inset: 0; border-radius: 50%; background: color-mix(in srgb, var(--danger) 45%, transparent); transform: scale(1); display: none; }
+#orb.recording #pulse { display: block; }
+#spin { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+#badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-size: 9px; font-weight: 700; display: grid; place-items: center; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #spin { animation-duration: 2.4s; } #wave i { transition: none; } }
+[hidden] { display: none !important; }
