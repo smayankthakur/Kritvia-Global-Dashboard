@@ -32,6 +32,7 @@ class FakeLiteLLM:
         self.calls: list[dict[str, Any]] = []
         self.fail: dict[str, int] = {}          # deployment -> HTTP status
         self.transcript: dict[str, Any] = {"text": "", "segments": []}
+        self.sarvam_language = "hi-IN"
 
     def on(self, marker: str, reply: Any) -> None:
         """Reply to chat calls whose system/user prompt contains `marker`.
@@ -44,11 +45,22 @@ class FakeLiteLLM:
     def __call__(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if path.endswith("/audio/transcriptions"):
-            model = re.search(rb'name="model"\r\n\r\n([^\r]+)', request.content).group(1).decode()
-            self.calls.append({"kind": "speech", "model": model, "prompt": ""})
+            fields = _form_fields(request.content)
+            model = fields["model"]
+            self.calls.append({"kind": "speech", "model": model, "prompt": fields.get("prompt", ""),
+                               "language": fields.get("language")})
             if model in self.fail:
                 return httpx.Response(self.fail[model], json={"error": "scripted"})
             return httpx.Response(200, json=self.transcript)
+        if path.endswith("/speech-to-text"):  # Sarvam, called natively
+            fields = _form_fields(request.content)
+            self.calls.append({"kind": "speech", "model": "sarvam-saaras", "prompt": "",
+                               "language": fields.get("language_code"), "keyterms": fields.get("keyterms"),
+                               "sarvam_model": fields.get("model"), "api_key": request.headers.get("api-subscription-key")})
+            if "sarvam-saaras" in self.fail:
+                return httpx.Response(self.fail["sarvam-saaras"], json={"error": "scripted"})
+            return httpx.Response(200, json={"request_id": "r1", "transcript": self.transcript.get("text", ""),
+                                             "language_code": self.sarvam_language})
         body = json.loads(request.content)
         model = body["model"]
         if path.endswith("/embeddings"):
@@ -70,3 +82,17 @@ class FakeLiteLLM:
                                                  "usage": {"prompt_tokens": 10, "completion_tokens": 10}})
         return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}],
                                          "usage": {"prompt_tokens": 1, "completion_tokens": 1}})
+
+
+def _form_fields(body: bytes) -> dict[str, str]:
+    """Text fields of a multipart/form-data body (file parts are skipped)."""
+    out: dict[str, str] = {}
+    for m in re.finditer(rb'name="([^"]+)"(?:; filename="[^"]*")?\r\n(?:[^\r\n]+\r\n)*\r\n(.*?)\r\n--',
+                         body, re.S):
+        if b'filename="' in body[max(0, m.start() - 5):m.start(2)]:
+            continue
+        try:
+            out[m.group(1).decode()] = m.group(2).decode()
+        except UnicodeDecodeError:
+            continue
+    return out

@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     litellm_base_url: str = "http://localhost:4000"
     litellm_api_key: str = "sk-local-dev"
     tiers_config_path: Path = REPO_ROOT / "infra" / "litellm" / "tiers.yaml"
+    # Sarvam speech-to-text (Indian languages); called directly by the API, not via LiteLLM.
+    sarvam_api_key: str = ""
+    sarvam_base_url: str = "https://api.sarvam.ai"
 
     allowed_origins: list[str] = ["http://localhost:3000"]
     public_api_url: str = "http://localhost:8000"

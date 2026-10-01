@@ -20,6 +20,10 @@ deployments:
   ollama-qwen-7b:   { data_policy: local }
   ollama-bge-m3:    { data_policy: local }
   local-whisper:    { data_policy: local }
+  # Sarvam (Indian languages, Hinglish), called natively by the API with SARVAM_API_KEY; skipped when
+  # the key is empty. Declared may_train until you have reviewed Sarvam's data terms for your account;
+  # if you are satisfied they act as your processor, change it to byok_client to allow sensitive audio.
+  sarvam-saaras:    { data_policy: may_train, provider: sarvam, model: "saaras:v4" }
 
 tiers:
   fast:         [groq-llama-8b, openrouter-free, ollama-qwen-7b]
@@ -28,5 +32,7 @@ tiers:
   long_context: [gemini-flash, groq-llama-70b]
   private:      [ollama-qwen-7b]
   embed:        [ollama-bge-m3]
-  # Hindi-heavy audio: add a Sarvam deployment (byok_client) ahead of groq-whisper.
+  # Long recordings (meetings). Sarvam's REST API takes short clips only, so it is not in this chain.
   speech:       [groq-whisper, local-whisper]
+  # Dictation (voice input, desktop widget): short clips; Sarvam first for Indian languages and Hinglish.
+  dictation:    [sarvam-saaras, groq-whisper, local-whisper]

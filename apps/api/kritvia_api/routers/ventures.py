@@ -62,6 +62,7 @@ class VentureSettingsIn(BaseModel):
     kind: VentureKind | None = None
     trust_threshold: int | None = Field(default=None, ge=5, le=1000)
     timezone: str | None = Field(default=None, max_length=60)
+    speech_people_hints: bool | None = None
 
 
 class VentureSettingsOut(BaseModel):
@@ -69,6 +70,9 @@ class VentureSettingsOut(BaseModel):
     kind: str
     trust_threshold: int
     timezone: str
+    speech_people_hints: bool = Field(
+        default=False, description="Send people's names from the knowledge graph to hosted speech models as "
+                                   "spelling hints (local models always get them)")
 
 
 async def _require_admin(db, venture_id: uuid.UUID) -> None:
@@ -82,7 +86,8 @@ async def get_settings_(venture_id: uuid.UUID, db: TenantDB) -> VentureSettingsO
     await venture_org(db, venture_id)
     row = (await db.execute(text(
         "SELECT coalesce(kind, 'general') AS kind, coalesce(trust_threshold, 30) AS trust_threshold,"
-        " coalesce(timezone, 'Asia/Kolkata') AS timezone FROM (SELECT 1) x"
+        " coalesce(timezone, 'Asia/Kolkata') AS timezone,"
+        " coalesce(speech_people_hints, false) AS speech_people_hints FROM (SELECT 1) x"
         " LEFT JOIN venture_settings s ON s.venture_id = :v"), {"v": venture_id})).first()
     return VentureSettingsOut(venture_id=venture_id, **row._mapping)
 
@@ -94,12 +99,15 @@ async def put_settings(venture_id: uuid.UUID, body: VentureSettingsIn, db: Tenan
     try:
         async with db.begin_nested():
             await db.execute(text(
-                "INSERT INTO venture_settings (org_id, venture_id, kind, trust_threshold, timezone)"
-                " VALUES (:o, :v, coalesce(:k, 'general'), coalesce(:t, 30), coalesce(:tz, 'Asia/Kolkata'))"
+                "INSERT INTO venture_settings (org_id, venture_id, kind, trust_threshold, timezone,"
+                " speech_people_hints) VALUES (:o, :v, coalesce(:k, 'general'), coalesce(:t, 30),"
+                " coalesce(:tz, 'Asia/Kolkata'), coalesce(:ph, false))"
                 " ON CONFLICT (venture_id) DO UPDATE SET kind = coalesce(:k, venture_settings.kind),"
                 " trust_threshold = coalesce(:t, venture_settings.trust_threshold),"
-                " timezone = coalesce(:tz, venture_settings.timezone), updated_at = now()"),
-                {"o": org, "v": venture_id, "k": body.kind, "t": body.trust_threshold, "tz": body.timezone})
+                " timezone = coalesce(:tz, venture_settings.timezone),"
+                " speech_people_hints = coalesce(:ph, venture_settings.speech_people_hints), updated_at = now()"),
+                {"o": org, "v": venture_id, "k": body.kind, "t": body.trust_threshold, "tz": body.timezone,
+                 "ph": body.speech_people_hints})
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return await get_settings_(venture_id, db)

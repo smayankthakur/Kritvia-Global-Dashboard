@@ -815,6 +815,85 @@
         "title": "AutonomyIn",
         "type": "object"
       },
+      "Body_dictate_endpoint_ventures__venture_id__voice_dictate_post": {
+        "properties": {
+          "duration_ms": {
+            "anyOf": [
+              {
+                "maximum": 3600000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "enum": [
+                  "auto",
+                  "sarvam",
+                  "whisper",
+                  "local"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "mode": {
+            "default": "type",
+            "enum": [
+              "type",
+              "note",
+              "ask"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "sensitive": {
+            "default": false,
+            "title": "Sensitive",
+            "type": "boolean"
+          },
+          "surface": {
+            "default": "web",
+            "enum": [
+              "web",
+              "desktop"
+            ],
+            "title": "Surface",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_dictate_endpoint_ventures__venture_id__voice_dictate_post",
+        "type": "object"
+      },
       "Body_import_csv_ventures__venture_id__kitchen_import__entity__post": {
         "properties": {
           "file": {
@@ -1209,6 +1288,29 @@
           }
         },
         "title": "BreachPatch",
+        "type": "object"
+      },
+      "Breakdown": {
+        "properties": {
+          "dictations": {
+            "title": "Dictations",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "words",
+          "dictations"
+        ],
+        "title": "Breakdown",
         "type": "object"
       },
       "ChecklistIn": {
@@ -1867,6 +1969,30 @@
         "title": "DashboardOut",
         "type": "object"
       },
+      "DayCount": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "dictations": {
+            "title": "Dictations",
+            "type": "integer"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "words",
+          "dictations"
+        ],
+        "title": "DayCount",
+        "type": "object"
+      },
       "DecisionIn": {
         "properties": {
           "comment": {
@@ -1907,6 +2033,79 @@
           "decision"
         ],
         "title": "DecisionIn",
+        "type": "object"
+      },
+      "DictationOut": {
+        "properties": {
+          "deployment": {
+            "title": "Deployment",
+            "type": "string"
+          },
+          "engine": {
+            "title": "Engine",
+            "type": "string"
+          },
+          "fallback": {
+            "description": "True when the chosen engine was unavailable and another one answered",
+            "title": "Fallback",
+            "type": "boolean"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "note_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Document Id"
+          },
+          "status": {
+            "default": "ok",
+            "enum": [
+              "ok",
+              "too_short",
+              "no_speech"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "vocabulary_applied": {
+            "title": "Vocabulary Applied",
+            "type": "integer"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "text",
+          "language",
+          "engine",
+          "deployment",
+          "words",
+          "vocabulary_applied",
+          "fallback"
+        ],
+        "title": "DictationOut",
         "type": "object"
       },
       "DocumentDetailOut": {
@@ -2266,6 +2465,29 @@
           "document_id"
         ],
         "title": "EdgeOut",
+        "type": "object"
+      },
+      "EngineOut": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "engine": {
+            "title": "Engine",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine",
+          "available",
+          "detail"
+        ],
+        "title": "EngineOut",
         "type": "object"
       },
       "EntityBatch": {
@@ -2847,25 +3069,22 @@
         "title": "IdOut",
         "type": "object"
       },
-      "ImportOut": {
+      "ImportIn": {
         "properties": {
-          "errors": {
+          "terms": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/TermIn"
             },
-            "title": "Errors",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Terms",
             "type": "array"
-          },
-          "upserted": {
-            "title": "Upserted",
-            "type": "integer"
           }
         },
         "required": [
-          "upserted",
-          "errors"
+          "terms"
         ],
-        "title": "ImportOut",
+        "title": "ImportIn",
         "type": "object"
       },
       "IngestOut": {
@@ -3000,6 +3219,89 @@
           "body"
         ],
         "title": "InquiryIn",
+        "type": "object"
+      },
+      "InsightsOut": {
+        "properties": {
+          "audio_minutes": {
+            "title": "Audio Minutes",
+            "type": "number"
+          },
+          "avg_wpm": {
+            "title": "Avg Wpm",
+            "type": "integer"
+          },
+          "by_engine": {
+            "items": {
+              "$ref": "#/components/schemas/Breakdown"
+            },
+            "title": "By Engine",
+            "type": "array"
+          },
+          "by_language": {
+            "items": {
+              "$ref": "#/components/schemas/Breakdown"
+            },
+            "title": "By Language",
+            "type": "array"
+          },
+          "by_mode": {
+            "items": {
+              "$ref": "#/components/schemas/Breakdown"
+            },
+            "title": "By Mode",
+            "type": "array"
+          },
+          "by_surface": {
+            "items": {
+              "$ref": "#/components/schemas/Breakdown"
+            },
+            "title": "By Surface",
+            "type": "array"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "dictations": {
+            "title": "Dictations",
+            "type": "integer"
+          },
+          "streak_days": {
+            "title": "Streak Days",
+            "type": "integer"
+          },
+          "time_saved_minutes": {
+            "title": "Time Saved Minutes",
+            "type": "integer"
+          },
+          "vocabulary_terms": {
+            "title": "Vocabulary Terms",
+            "type": "integer"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dictations",
+          "words",
+          "audio_minutes",
+          "avg_wpm",
+          "time_saved_minutes",
+          "streak_days",
+          "vocabulary_terms",
+          "days",
+          "by_engine",
+          "by_language",
+          "by_surface",
+          "by_mode"
+        ],
+        "title": "InsightsOut",
         "type": "object"
       },
       "InvitationCreatedOut": {
@@ -3166,6 +3468,34 @@
           }
         },
         "title": "KitchenRunIn",
+        "type": "object"
+      },
+      "LanguageOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sarvam": {
+            "title": "Sarvam",
+            "type": "boolean"
+          },
+          "whisper": {
+            "title": "Whisper",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "sarvam",
+          "whisper"
+        ],
+        "title": "LanguageOut",
         "type": "object"
       },
       "LeadIn": {
@@ -3457,6 +3787,120 @@
           }
         },
         "title": "LeadPatch",
+        "type": "object"
+      },
+      "LearnIn": {
+        "description": "Either the pair directly, or the text as inserted and as the user left it.",
+        "properties": {
+          "correct": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
+          },
+          "edited": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited"
+          },
+          "heard": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heard"
+          },
+          "original": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original"
+          },
+          "save": {
+            "default": true,
+            "title": "Save",
+            "type": "boolean"
+          },
+          "scope": {
+            "default": "personal",
+            "enum": [
+              "personal",
+              "shared"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "title": "LearnIn",
+        "type": "object"
+      },
+      "LearnOut": {
+        "properties": {
+          "correct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
+          },
+          "heard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heard"
+          },
+          "learned": {
+            "title": "Learned",
+            "type": "boolean"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "learned"
+        ],
+        "title": "LearnOut",
         "type": "object"
       },
       "LoanDocOut": {
@@ -4742,6 +5186,29 @@
         "title": "StockIn",
         "type": "object"
       },
+      "SuggestionOut": {
+        "properties": {
+          "mentions": {
+            "title": "Mentions",
+            "type": "integer"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term",
+          "type",
+          "mentions"
+        ],
+        "title": "SuggestionOut",
+        "type": "object"
+      },
       "SyncOut": {
         "properties": {
           "started": {
@@ -4756,6 +5223,151 @@
           "started"
         ],
         "title": "SyncOut",
+        "type": "object"
+      },
+      "TermIn": {
+        "properties": {
+          "case_sensitive": {
+            "default": false,
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "scope": {
+            "default": "personal",
+            "enum": [
+              "personal",
+              "shared"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "sounds_like": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Sounds Like",
+            "type": "array"
+          },
+          "term": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Term",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term"
+        ],
+        "title": "TermIn",
+        "type": "object"
+      },
+      "TermOut": {
+        "properties": {
+          "case_sensitive": {
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "personal",
+              "shared"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "sounds_like": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sounds Like",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "uses": {
+            "title": "Uses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "term",
+          "sounds_like",
+          "case_sensitive",
+          "scope",
+          "source",
+          "uses",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TermOut",
+        "type": "object"
+      },
+      "TermPatch": {
+        "properties": {
+          "case_sensitive": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Sensitive"
+          },
+          "sounds_like": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sounds Like"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          }
+        },
+        "title": "TermPatch",
         "type": "object"
       },
       "TierOut": {
@@ -5353,6 +5965,17 @@
             ],
             "title": "Kind"
           },
+          "speech_people_hints": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speech People Hints"
+          },
           "timezone": {
             "anyOf": [
               {
@@ -5388,6 +6011,12 @@
             "title": "Kind",
             "type": "string"
           },
+          "speech_people_hints": {
+            "default": false,
+            "description": "Send people's names from the knowledge graph to hosted speech models as spelling hints (local models always get them)",
+            "title": "Speech People Hints",
+            "type": "boolean"
+          },
           "timezone": {
             "title": "Timezone",
             "type": "string"
@@ -5409,6 +6038,78 @@
           "timezone"
         ],
         "title": "VentureSettingsOut",
+        "type": "object"
+      },
+      "VoiceOptionsOut": {
+        "properties": {
+          "engines": {
+            "items": {
+              "$ref": "#/components/schemas/EngineOut"
+            },
+            "title": "Engines",
+            "type": "array"
+          },
+          "languages": {
+            "items": {
+              "$ref": "#/components/schemas/LanguageOut"
+            },
+            "title": "Languages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "languages",
+          "engines"
+        ],
+        "title": "VoiceOptionsOut",
+        "type": "object"
+      },
+      "VoiceSettings": {
+        "properties": {
+          "auto_learn": {
+            "default": true,
+            "title": "Auto Learn",
+            "type": "boolean"
+          },
+          "engine": {
+            "default": "auto",
+            "enum": [
+              "auto",
+              "sarvam",
+              "whisper",
+              "local"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "hotkey": {
+            "default": "ControlRight",
+            "pattern": "^[A-Za-z0-9]{2,24}$",
+            "title": "Hotkey",
+            "type": "string"
+          },
+          "language": {
+            "default": "auto",
+            "title": "Language",
+            "type": "string"
+          },
+          "profanity_filter": {
+            "default": false,
+            "title": "Profanity Filter",
+            "type": "boolean"
+          },
+          "remove_fillers": {
+            "default": true,
+            "title": "Remove Fillers",
+            "type": "boolean"
+          },
+          "widget_enabled": {
+            "default": true,
+            "title": "Widget Enabled",
+            "type": "boolean"
+          }
+        },
+        "title": "VoiceSettings",
         "type": "object"
       },
       "WebhookOut": {
@@ -5605,6 +6306,27 @@
         "title": "ConsentIn",
         "type": "object"
       },
+      "kritvia_api__routers__kitchen__ImportOut": {
+        "properties": {
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "upserted": {
+            "title": "Upserted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "upserted",
+          "errors"
+        ],
+        "title": "ImportOut",
+        "type": "object"
+      },
       "kritvia_api__routers__truhome__ConsentIn": {
         "properties": {
           "channel": {
@@ -5630,6 +6352,19 @@
           "notice_version"
         ],
         "title": "ConsentIn",
+        "type": "object"
+      },
+      "kritvia_api__routers__voice__ImportOut": {
+        "properties": {
+          "imported": {
+            "title": "Imported",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported"
+        ],
+        "title": "ImportOut",
         "type": "object"
       }
     },
@@ -6139,6 +6874,164 @@
         "summary": "My Access",
         "tags": [
           "ventures"
+        ]
+      }
+    },
+    "/me/dictation/history": {
+      "delete": {
+        "description": "Delete your dictation statistics (they never contained text or audio).",
+        "operationId": "clear_history_me_dictation_history_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Clear History",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/me/dictation/insights": {
+      "get": {
+        "description": "Your own dictation stats (never anyone else's): words, speed, time saved, streak.",
+        "operationId": "insights_me_dictation_insights_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "venture_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Venture Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 84,
+              "maximum": 366,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Insights",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/me/voice-settings": {
+      "get": {
+        "operationId": "get_voice_settings_me_voice_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Voice Settings",
+        "tags": [
+          "voice"
+        ]
+      },
+      "put": {
+        "operationId": "put_voice_settings_me_voice_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Voice Settings",
+        "tags": [
+          "voice"
         ]
       }
     },
@@ -9432,7 +10325,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
                 }
               }
             },
@@ -9609,7 +10502,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
                 }
               }
             },
@@ -9746,7 +10639,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
                 }
               }
             },
@@ -9926,7 +10819,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
                 }
               }
             },
@@ -10035,7 +10928,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
                 }
               }
             },
@@ -10144,7 +11037,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
                 }
               }
             },
@@ -11884,7 +12777,7 @@
     },
     "/ventures/{venture_id}/transcribe": {
       "post": {
-        "description": "In-app voice: short recording -> text (inserted into the active field or sent as a command).",
+        "description": "In-app voice (kept for older clients): same pipeline as /voice/dictate in 'type' mode.",
         "operationId": "voice_input_ventures__venture_id__transcribe_post",
         "parameters": [
           {
@@ -12135,6 +13028,510 @@
         ]
       }
     },
+    "/ventures/{venture_id}/vocabulary": {
+      "get": {
+        "operationId": "list_terms_ventures__venture_id__vocabulary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "personal",
+                    "shared"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TermOut"
+                  },
+                  "title": "Response List Terms Ventures  Venture Id  Vocabulary Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Terms",
+        "tags": [
+          "voice"
+        ]
+      },
+      "post": {
+        "description": "Personal terms: anyone who can see the venture. Shared terms: members who can write.",
+        "operationId": "add_term_ventures__venture_id__vocabulary_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Term",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/vocabulary/import": {
+      "post": {
+        "operationId": "import_terms_ventures__venture_id__vocabulary_import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/kritvia_api__routers__voice__ImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Import Terms",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/vocabulary/learn": {
+      "post": {
+        "description": "Auto-learn: a one-span correction of dictated text becomes \"<heard> sounds like <correct>\".\nWith save=false it only reports what would be learned (the widget asks the user first).",
+        "operationId": "learn_ventures__venture_id__vocabulary_learn_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearnIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Learn",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/vocabulary/suggestions": {
+      "get": {
+        "description": "Names from the knowledge graph not yet in the vocabulary \u2014 people, clients, vendors, products \u2014\nmost connected first. Adding them with their usual mishearings fixes them everywhere.",
+        "operationId": "suggestions_ventures__venture_id__vocabulary_suggestions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionOut"
+                  },
+                  "title": "Response Suggestions Ventures  Venture Id  Vocabulary Suggestions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Suggestions",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/vocabulary/{term_id}": {
+      "delete": {
+        "operationId": "delete_term_ventures__venture_id__vocabulary__term_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "term_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Term Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Term",
+        "tags": [
+          "voice"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_term_ventures__venture_id__vocabulary__term_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "term_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Term Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Term",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/voice/dictate": {
+      "post": {
+        "description": "Dictation: short recording -> cleaned text in the user's vocabulary.\nmode 'note' also saves it to the knowledge base; 'ask' only returns the text for the caller to ask.",
+        "operationId": "dictate_endpoint_ventures__venture_id__voice_dictate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_dictate_endpoint_ventures__venture_id__voice_dictate_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dictate Endpoint",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
     "/ventures/{venture_id}/workflow-configs": {
       "get": {
         "operationId": "list_configs_ventures__venture_id__workflow_configs_get",
@@ -12251,6 +13648,33 @@
         "summary": "Put Config",
         "tags": [
           "workflows"
+        ]
+      }
+    },
+    "/voice/options": {
+      "get": {
+        "description": "Languages and which speech engines this deployment can actually use.",
+        "operationId": "voice_options_voice_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOptionsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Voice Options",
+        "tags": [
+          "voice"
         ]
       }
     },

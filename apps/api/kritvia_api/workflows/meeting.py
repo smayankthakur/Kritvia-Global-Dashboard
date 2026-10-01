@@ -14,7 +14,7 @@ from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
 from kritvia_api.engine.core import Finish, Goto, Workflow, registry
-from kritvia_api.services import memory
+from kritvia_api.services import memory, speech
 from kritvia_api.services.memory import RAW_PURPOSE
 
 async def _authorize(conn, venture_id: uuid.UUID, inp: dict) -> None:
@@ -71,8 +71,18 @@ async def transcribe(ctx: RunContext, state: dict) -> Goto | Finish:
         if doc is None or doc.raw_enc is None:
             return Finish("recording_not_found")
         audio = await ctx.crypto(conn).decrypt(ctx.venture_id, RAW_PURPOSE, doc.raw_enc)
+        # Shared venture vocabulary: spelling hints for the model, then sounds-like replacement.
+        vocab = await speech.load_vocabulary(conn, ctx.venture_id, personal=False)
+        hints, share_people = await speech.load_hints(conn, ctx.venture_id, vocab)
     filename = doc.meta.get("filename", "meeting.webm")
-    tr = await ctx.transcribe(audio, filename, sensitive=doc.sensitive)
+    cfg = ctx.services.router.config
+    tr = await ctx.transcribe(audio, filename, sensitive=doc.sensitive,
+                              hints_for=lambda d: hints.for_policy(cfg.is_private(d), share_people))
+    opts = speech.CleanupOptions(remove_fillers=True, profanity_filter=False, vocabulary=vocab)
+    tr.text, used = speech.clean_transcript(tr.text, opts)
+    tr.segments = speech.clean_segments(tr.segments, opts)
+    if used:
+        ctx.note(f"vocabulary corrected {len(used)} term(s)")
     try:
         turns = await diarize(audio, filename)
     except Exception as exc:

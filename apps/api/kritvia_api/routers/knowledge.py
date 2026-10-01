@@ -20,7 +20,7 @@ from kritvia_api.engine.runner import start_run
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services import memory
 from kritvia_api.services.crypto import EnvelopeCrypto
-from kritvia_api.services.model_router import CallContext, RouterError, transcribe
+from kritvia_api.services.model_router import RouterError
 from kritvia_api.services.textextract import ExtractionError
 
 router = APIRouter(tags=["knowledge"])
@@ -402,19 +402,13 @@ class TranscriptOut(BaseModel):
 @router.post("/ventures/{venture_id}/transcribe", response_model=TranscriptOut)
 async def voice_input(venture_id: uuid.UUID, user_id: UserId, svc: Svc, file: UploadFile = File(...),
                       sensitive: bool = Form(default=False)) -> TranscriptOut:
-    """In-app voice: short recording -> text (inserted into the active field or sent as a command)."""
-    async with tenant_tx(user_id) as conn:
-        org = await venture_org(conn, venture_id)
-    data = await read_upload(file)
-    if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "voice notes are limited to 10 MB")
-    try:
-        tr = await transcribe(svc.router, CallContext(org_id=org, venture_id=venture_id, user_id=user_id,
-                                                      workflow="voice"),
-                              data, file.filename or "voice.webm", sensitive=sensitive)
-    except RouterError as exc:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"speech model unavailable: {exc}") from None
-    return TranscriptOut(text=tr.text, language=tr.language, deployment=tr.deployment)
+    """In-app voice (kept for older clients): same pipeline as /voice/dictate in 'type' mode."""
+    from kritvia_api.routers.voice import dictate, read_dictation
+    data = await read_dictation(file)
+    out = await dictate(venture_id=venture_id, user_id=user_id, svc=svc, data=data,
+                        filename=file.filename or "voice.webm", sensitive=sensitive, language=None, engine=None,
+                        mode="type", surface="web", duration_ms=None)
+    return TranscriptOut(text=out.text, language=out.language, deployment=out.deployment)
 
 
 class MeetingOut(BaseModel):

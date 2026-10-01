@@ -248,6 +248,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/dictation/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Clear History
+         * @description Delete your dictation statistics (they never contained text or audio).
+         */
+        delete: operations["clear_history_me_dictation_history_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/dictation/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Insights
+         * @description Your own dictation stats (never anyone else's): words, speed, time saved, streak.
+         */
+        get: operations["insights_me_dictation_insights_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/voice-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Voice Settings */
+        get: operations["get_voice_settings_me_voice_settings_get"];
+        /** Put Voice Settings */
+        put: operations["put_voice_settings_me_voice_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs": {
         parameters: {
             query?: never;
@@ -1594,7 +1652,7 @@ export interface paths {
         put?: never;
         /**
          * Voice Input
-         * @description In-app voice: short recording -> text (inserted into the active field or sent as a command).
+         * @description In-app voice (kept for older clients): same pipeline as /voice/dictate in 'type' mode.
          */
         post: operations["voice_input_ventures__venture_id__transcribe_post"];
         delete?: never;
@@ -1654,6 +1712,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Terms */
+        get: operations["list_terms_ventures__venture_id__vocabulary_get"];
+        put?: never;
+        /**
+         * Add Term
+         * @description Personal terms: anyone who can see the venture. Shared terms: members who can write.
+         */
+        post: operations["add_term_ventures__venture_id__vocabulary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/vocabulary/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Terms */
+        post: operations["import_terms_ventures__venture_id__vocabulary_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/vocabulary/learn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn
+         * @description Auto-learn: a one-span correction of dictated text becomes "<heard> sounds like <correct>".
+         *     With save=false it only reports what would be learned (the widget asks the user first).
+         */
+        post: operations["learn_ventures__venture_id__vocabulary_learn_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/vocabulary/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggestions
+         * @description Names from the knowledge graph not yet in the vocabulary — people, clients, vendors, products —
+         *     most connected first. Adding them with their usual mishearings fixes them everywhere.
+         */
+        get: operations["suggestions_ventures__venture_id__vocabulary_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/vocabulary/{term_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Term */
+        delete: operations["delete_term_ventures__venture_id__vocabulary__term_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Term */
+        patch: operations["patch_term_ventures__venture_id__vocabulary__term_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/voice/dictate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dictate Endpoint
+         * @description Dictation: short recording -> cleaned text in the user's vocabulary.
+         *     mode 'note' also saves it to the knowledge base; 'ask' only returns the text for the caller to ask.
+         */
+        post: operations["dictate_endpoint_ventures__venture_id__voice_dictate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/workflow-configs": {
         parameters: {
             query?: never;
@@ -1681,6 +1858,26 @@ export interface paths {
         get?: never;
         /** Put Config */
         put: operations["put_config_ventures__venture_id__workflow_configs__workflow__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/voice/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Voice Options
+         * @description Languages and which speech engines this deployment can actually use.
+         */
+        get: operations["voice_options_voice_options_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1992,6 +2189,34 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** Body_dictate_endpoint_ventures__venture_id__voice_dictate_post */
+        Body_dictate_endpoint_ventures__venture_id__voice_dictate_post: {
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Engine */
+            engine?: ("auto" | "sarvam" | "whisper" | "local") | null;
+            /** File */
+            file: string;
+            /** Language */
+            language?: string | null;
+            /**
+             * Mode
+             * @default type
+             * @enum {string}
+             */
+            mode: "type" | "note" | "ask";
+            /**
+             * Sensitive
+             * @default false
+             */
+            sensitive: boolean;
+            /**
+             * Surface
+             * @default web
+             * @enum {string}
+             */
+            surface: "web" | "desktop";
+        };
         /** Body_import_csv_ventures__venture_id__kitchen_import__entity__post */
         Body_import_csv_ventures__venture_id__kitchen_import__entity__post: {
             /** File */
@@ -2132,6 +2357,15 @@ export interface components {
             principals_notified?: boolean | null;
             /** Status */
             status?: ("open" | "contained" | "closed") | null;
+        };
+        /** Breakdown */
+        Breakdown: {
+            /** Dictations */
+            dictations: number;
+            /** Key */
+            key: string;
+            /** Words */
+            words: number;
         };
         /** ChecklistIn */
         ChecklistIn: {
@@ -2390,6 +2624,18 @@ export interface components {
             /** Ventures */
             ventures: components["schemas"]["VentureCard"][];
         };
+        /** DayCount */
+        DayCount: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Dictations */
+            dictations: number;
+            /** Words */
+            words: number;
+        };
         /** DecisionIn */
         DecisionIn: {
             /** Comment */
@@ -2406,6 +2652,34 @@ export interface components {
             edited_payload?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** DictationOut */
+        DictationOut: {
+            /** Deployment */
+            deployment: string;
+            /** Engine */
+            engine: string;
+            /**
+             * Fallback
+             * @description True when the chosen engine was unavailable and another one answered
+             */
+            fallback: boolean;
+            /** Language */
+            language: string | null;
+            /** Note Document Id */
+            note_document_id?: string | null;
+            /**
+             * Status
+             * @default ok
+             * @enum {string}
+             */
+            status: "ok" | "too_short" | "no_speech";
+            /** Text */
+            text: string;
+            /** Vocabulary Applied */
+            vocabulary_applied: number;
+            /** Words */
+            words: number;
         };
         /** DocumentDetailOut */
         DocumentDetailOut: {
@@ -2547,6 +2821,15 @@ export interface components {
             other_type: string;
             /** Type */
             type: string;
+        };
+        /** EngineOut */
+        EngineOut: {
+            /** Available */
+            available: boolean;
+            /** Detail */
+            detail: string;
+            /** Engine */
+            engine: string;
         };
         /** EntityBatch */
         EntityBatch: {
@@ -2776,12 +3059,10 @@ export interface components {
              */
             id: string;
         };
-        /** ImportOut */
-        ImportOut: {
-            /** Errors */
-            errors: string[];
-            /** Upserted */
-            upserted: number;
+        /** ImportIn */
+        ImportIn: {
+            /** Terms */
+            terms: components["schemas"]["TermIn"][];
         };
         /** IngestOut */
         IngestOut: {
@@ -2825,6 +3106,33 @@ export interface components {
             source: "manual" | "referral" | "email" | "webhook";
             /** Subject */
             subject?: string | null;
+        };
+        /** InsightsOut */
+        InsightsOut: {
+            /** Audio Minutes */
+            audio_minutes: number;
+            /** Avg Wpm */
+            avg_wpm: number;
+            /** By Engine */
+            by_engine: components["schemas"]["Breakdown"][];
+            /** By Language */
+            by_language: components["schemas"]["Breakdown"][];
+            /** By Mode */
+            by_mode: components["schemas"]["Breakdown"][];
+            /** By Surface */
+            by_surface: components["schemas"]["Breakdown"][];
+            /** Days */
+            days: components["schemas"]["DayCount"][];
+            /** Dictations */
+            dictations: number;
+            /** Streak Days */
+            streak_days: number;
+            /** Time Saved Minutes */
+            time_saved_minutes: number;
+            /** Vocabulary Terms */
+            vocabulary_terms: number;
+            /** Words */
+            words: number;
         };
         /** InvitationCreatedOut */
         InvitationCreatedOut: {
@@ -2898,6 +3206,17 @@ export interface components {
         KitchenRunIn: {
             /** Target Date */
             target_date?: string | null;
+        };
+        /** LanguageOut */
+        LanguageOut: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Sarvam */
+            sarvam: boolean;
+            /** Whisper */
+            whisper: boolean;
         };
         /** LeadIn */
         LeadIn: {
@@ -2983,6 +3302,41 @@ export interface components {
             score?: number | null;
             /** Status */
             status?: ("new" | "qualified" | "proposal" | "won" | "lost" | "archived") | null;
+        };
+        /**
+         * LearnIn
+         * @description Either the pair directly, or the text as inserted and as the user left it.
+         */
+        LearnIn: {
+            /** Correct */
+            correct?: string | null;
+            /** Edited */
+            edited?: string | null;
+            /** Heard */
+            heard?: string | null;
+            /** Original */
+            original?: string | null;
+            /**
+             * Save
+             * @default true
+             */
+            save: boolean;
+            /**
+             * Scope
+             * @default personal
+             * @enum {string}
+             */
+            scope: "personal" | "shared";
+        };
+        /** LearnOut */
+        LearnOut: {
+            /** Correct */
+            correct?: string | null;
+            /** Heard */
+            heard?: string | null;
+            /** Learned */
+            learned: boolean;
+            term?: components["schemas"]["TermOut"] | null;
         };
         /** LoanDocOut */
         LoanDocOut: {
@@ -3498,12 +3852,81 @@ export interface components {
             /** Counts */
             counts: components["schemas"]["StockCount"][];
         };
+        /** SuggestionOut */
+        SuggestionOut: {
+            /** Mentions */
+            mentions: number;
+            /** Term */
+            term: string;
+            /** Type */
+            type: string;
+        };
         /** SyncOut */
         SyncOut: {
             /** Started */
             started: {
                 [key: string]: number;
             };
+        };
+        /** TermIn */
+        TermIn: {
+            /**
+             * Case Sensitive
+             * @default false
+             */
+            case_sensitive: boolean;
+            /**
+             * Scope
+             * @default personal
+             * @enum {string}
+             */
+            scope: "personal" | "shared";
+            /** Sounds Like */
+            sounds_like?: string[];
+            /** Term */
+            term: string;
+        };
+        /** TermOut */
+        TermOut: {
+            /** Case Sensitive */
+            case_sensitive: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "personal" | "shared";
+            /** Sounds Like */
+            sounds_like: string[];
+            /** Source */
+            source: string;
+            /** Term */
+            term: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Uses */
+            uses: number;
+        };
+        /** TermPatch */
+        TermPatch: {
+            /** Case Sensitive */
+            case_sensitive?: boolean | null;
+            /** Sounds Like */
+            sounds_like?: string[] | null;
+            /** Term */
+            term?: string | null;
         };
         /** TierOut */
         TierOut: {
@@ -3721,6 +4144,8 @@ export interface components {
         VentureSettingsIn: {
             /** Kind */
             kind?: ("general" | "software" | "finance" | "kitchen") | null;
+            /** Speech People Hints */
+            speech_people_hints?: boolean | null;
             /** Timezone */
             timezone?: string | null;
             /** Trust Threshold */
@@ -3730,6 +4155,12 @@ export interface components {
         VentureSettingsOut: {
             /** Kind */
             kind: string;
+            /**
+             * Speech People Hints
+             * @description Send people's names from the knowledge graph to hosted speech models as spelling hints (local models always get them)
+             * @default false
+             */
+            speech_people_hints: boolean;
             /** Timezone */
             timezone: string;
             /** Trust Threshold */
@@ -3739,6 +4170,52 @@ export interface components {
              * Format: uuid
              */
             venture_id: string;
+        };
+        /** VoiceOptionsOut */
+        VoiceOptionsOut: {
+            /** Engines */
+            engines: components["schemas"]["EngineOut"][];
+            /** Languages */
+            languages: components["schemas"]["LanguageOut"][];
+        };
+        /** VoiceSettings */
+        VoiceSettings: {
+            /**
+             * Auto Learn
+             * @default true
+             */
+            auto_learn: boolean;
+            /**
+             * Engine
+             * @default auto
+             * @enum {string}
+             */
+            engine: "auto" | "sarvam" | "whisper" | "local";
+            /**
+             * Hotkey
+             * @default ControlRight
+             */
+            hotkey: string;
+            /**
+             * Language
+             * @default auto
+             */
+            language: string;
+            /**
+             * Profanity Filter
+             * @default false
+             */
+            profanity_filter: boolean;
+            /**
+             * Remove Fillers
+             * @default true
+             */
+            remove_fillers: boolean;
+            /**
+             * Widget Enabled
+             * @default true
+             */
+            widget_enabled: boolean;
         };
         /** WebhookOut */
         WebhookOut: {
@@ -3832,6 +4309,13 @@ export interface components {
             /** Purpose */
             purpose: string;
         };
+        /** ImportOut */
+        kritvia_api__routers__kitchen__ImportOut: {
+            /** Errors */
+            errors: string[];
+            /** Upserted */
+            upserted: number;
+        };
         /** ConsentIn */
         kritvia_api__routers__truhome__ConsentIn: {
             /**
@@ -3842,6 +4326,11 @@ export interface components {
             channel: "web" | "email" | "paper" | "whatsapp" | "verbal";
             /** Notice Version */
             notice_version: string;
+        };
+        /** ImportOut */
+        kritvia_api__routers__voice__ImportOut: {
+            /** Imported */
+            imported: number;
         };
     };
     responses: never;
@@ -4221,6 +4710,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeAccessOut"];
+                };
+            };
+        };
+    };
+    clear_history_me_dictation_history_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    insights_me_dictation_insights_get: {
+        parameters: {
+            query?: {
+                venture_id?: string | null;
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_voice_settings_me_voice_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceSettings"];
+                };
+            };
+        };
+    };
+    put_voice_settings_me_voice_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6085,7 +6677,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ImportOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6188,7 +6780,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ImportOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6258,7 +6850,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ImportOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6363,7 +6955,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ImportOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6431,7 +7023,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ImportOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6499,7 +7091,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ImportOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -7589,6 +8181,279 @@ export interface operations {
             };
         };
     };
+    list_terms_ventures__venture_id__vocabulary_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                scope?: ("personal" | "shared") | null;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TermOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_term_ventures__venture_id__vocabulary_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TermIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TermOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_terms_ventures__venture_id__vocabulary_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["kritvia_api__routers__voice__ImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    learn_ventures__venture_id__vocabulary_learn_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LearnIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearnOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggestions_ventures__venture_id__vocabulary_suggestions_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_term_ventures__venture_id__vocabulary__term_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                term_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_term_ventures__venture_id__vocabulary__term_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                term_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TermPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TermOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dictate_endpoint_ventures__venture_id__voice_dictate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_dictate_endpoint_ventures__venture_id__voice_dictate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DictationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_configs_ventures__venture_id__workflow_configs_get: {
         parameters: {
             query?: never;
@@ -7652,6 +8517,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_options_voice_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOptionsOut"];
                 };
             };
         };

@@ -100,8 +100,10 @@ class RunContext:
     async def embed(self, texts: list[str], *, sensitive: bool = False) -> list[list[float]]:
         return await embed(self.services.router, self.call_ctx(), texts, sensitive=sensitive)
 
-    async def transcribe(self, audio: bytes, filename: str, *, sensitive: bool = False) -> Transcript:
-        return await transcribe(self.services.router, self.call_ctx(), audio, filename, sensitive=sensitive)
+    async def transcribe(self, audio: bytes, filename: str, *, sensitive: bool = False,
+                         hints_for=None, language: str | None = None) -> Transcript:
+        return await transcribe(self.services.router, self.call_ctx(), audio, filename, sensitive=sensitive,
+                                hints_for=hints_for, language=language)
 
     # --- tools --------------------------------------------------------------
     async def invoke(self, tool: str, args: dict[str, Any] | None = None, *,

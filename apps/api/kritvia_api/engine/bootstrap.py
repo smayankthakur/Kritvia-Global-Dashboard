@@ -19,7 +19,8 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
     from kritvia_api.engine.core import registry
     registry.validate_all()
 
-    router = router or ModelRouter(TierConfig.load(s.tiers_config_path), s.litellm_base_url, s.litellm_api_key)
+    router = router or ModelRouter(TierConfig.load(s.tiers_config_path), s.litellm_base_url, s.litellm_api_key,
+                                   sarvam_api_key=s.sarvam_api_key, sarvam_base_url=s.sarvam_base_url)
     if sandbox is None:
         sandbox = HttpSandbox(s.sandbox_url, s.sandbox_token) if s.sandbox_url else LocalSandbox(s.environment)
     google = google or GoogleClient(s.google_client_id, s.google_client_secret, s.google_redirect_uri)
