@@ -1781,7 +1781,8 @@ export interface paths {
         /**
          * Suggestions
          * @description Names from the knowledge graph not yet in the vocabulary — people, clients, vendors, products —
-         *     most connected first. Adding them with their usual mishearings fixes them everywhere.
+         *     most connected first. Role-restricted records (e.g. loan applicants) are never suggested: a
+         *     shared term is visible to everyone in the venture.
          */
         get: operations["suggestions_ventures__venture_id__vocabulary_suggestions_get"];
         put?: never;
@@ -4159,7 +4160,7 @@ export interface components {
             kind: string;
             /**
              * Speech People Hints
-             * @description Send people's names from the knowledge graph to hosted speech models as spelling hints (local models always get them)
+             * @description Send vocabulary and names from the knowledge graph to hosted speech models as spelling hints (local models always get them; role-restricted names never)
              * @default false
              */
             speech_people_hints: boolean;

@@ -5246,6 +5246,7 @@
           },
           "sounds_like": {
             "items": {
+              "maxLength": 64,
               "type": "string"
             },
             "maxItems": 20,
@@ -5345,6 +5346,7 @@
             "anyOf": [
               {
                 "items": {
+                  "maxLength": 64,
                   "type": "string"
                 },
                 "maxItems": 20,
@@ -6016,7 +6018,7 @@
           },
           "speech_people_hints": {
             "default": false,
-            "description": "Send people's names from the knowledge graph to hosted speech models as spelling hints (local models always get them)",
+            "description": "Send vocabulary and names from the knowledge graph to hosted speech models as spelling hints (local models always get them; role-restricted names never)",
             "title": "Speech People Hints",
             "type": "boolean"
           },
@@ -13293,7 +13295,7 @@
     },
     "/ventures/{venture_id}/vocabulary/suggestions": {
       "get": {
-        "description": "Names from the knowledge graph not yet in the vocabulary \u2014 people, clients, vendors, products \u2014\nmost connected first. Adding them with their usual mishearings fixes them everywhere.",
+        "description": "Names from the knowledge graph not yet in the vocabulary \u2014 people, clients, vendors, products \u2014\nmost connected first. Role-restricted records (e.g. loan applicants) are never suggested: a\nshared term is visible to everyone in the venture.",
         "operationId": "suggestions_ventures__venture_id__vocabulary_suggestions_get",
         "parameters": [
           {

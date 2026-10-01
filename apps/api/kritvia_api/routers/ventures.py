@@ -71,8 +71,8 @@ class VentureSettingsOut(BaseModel):
     trust_threshold: int
     timezone: str
     speech_people_hints: bool = Field(
-        default=False, description="Send people's names from the knowledge graph to hosted speech models as "
-                                   "spelling hints (local models always get them)")
+        default=False, description="Send vocabulary and names from the knowledge graph to hosted speech models "
+                                   "as spelling hints (local models always get them; role-restricted names never)")
 
 
 async def _require_admin(db, venture_id: uuid.UUID) -> None:

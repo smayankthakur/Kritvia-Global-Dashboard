@@ -8,13 +8,14 @@ In 'note' mode the text is also saved to the venture's knowledge base as a note.
 """
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Literal
+from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
@@ -165,7 +166,7 @@ async def dictate(*, venture_id: uuid.UUID, user_id: uuid.UUID, svc, data: bytes
             raise HTTPException(status.HTTP_403_FORBIDDEN, "saving notes needs write access to this venture")
         prefs = await _settings(conn, user_id)
         vocab = await speech.load_vocabulary(conn, venture_id)
-        hints, share_people = await speech.load_hints(conn, venture_id, vocab)
+        hints = await speech.load_hints(conn, venture_id, vocab)
 
     eng = engine or prefs.engine
     lang = language or prefs.language
@@ -178,13 +179,14 @@ async def dictate(*, venture_id: uuid.UUID, user_id: uuid.UUID, svc, data: bytes
             svc.router, CallContext(org_id=org, venture_id=venture_id, user_id=user_id, workflow="voice"),
             data, filename, sensitive=sensitive, language=lang, tier="dictation" if "dictation" in cfg.tiers
             else "speech", engine=eng,
-            hints_for=lambda d: hints.for_policy(cfg.is_private(d), share_people))
+            hints_for=lambda d: hints.for_policy(cfg.is_private(d)))
     except PolicyViolation as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     except RouterError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"speech model unavailable: {exc}") from None
 
-    cleaned, used = speech.clean_transcript(tr.text, speech.CleanupOptions(
+    # CPU work (a large vocabulary compiles once, then is cached) stays off the event loop
+    cleaned, used = await asyncio.to_thread(speech.clean_transcript, tr.text, speech.CleanupOptions(
         remove_fillers=prefs.remove_fillers, profanity_filter=prefs.profanity_filter, vocabulary=vocab))
     words = speech.word_count(cleaned)
     audio_ms = duration_ms if duration_ms is not None else int(
@@ -243,11 +245,14 @@ async def dictate_endpoint(
 
 # ---------------------------------------------------------------- vocabulary --
 Scope = Literal["personal", "shared"]
+Form64 = Annotated[str, StringConstraints(max_length=64)]
+MAX_PERSONAL_TERMS = 1000   # per person per venture
+MAX_SHARED_TERMS = 2000     # per venture
 
 
 class TermIn(BaseModel):
     term: str = Field(min_length=1, max_length=64)
-    sounds_like: list[str] = Field(default_factory=list, max_length=20)
+    sounds_like: list[Form64] = Field(default_factory=list, max_length=20)
     case_sensitive: bool = False
     scope: Scope = "personal"
 
@@ -276,7 +281,7 @@ def normalise_forms(forms: list[str]) -> list[str]:
 
 class TermPatch(BaseModel):
     term: str | None = Field(default=None, min_length=1, max_length=64)
-    sounds_like: list[str] | None = Field(default=None, max_length=20)
+    sounds_like: list[Form64] | None = Field(default=None, max_length=20)
     case_sensitive: bool | None = None
 
 
@@ -293,7 +298,8 @@ class TermOut(BaseModel):
 
 
 TERM_COLS = ("id, term, sounds_like, case_sensitive, CASE WHEN user_id IS NULL THEN 'shared' ELSE 'personal' END"
-             " AS scope, source, uses, created_at, updated_at")
+             " AS scope, source, coalesce((SELECT uses FROM vocabulary_usage u WHERE u.term_id = vocabulary_terms.id), 0)"
+             " AS uses, created_at, updated_at")
 
 
 @router.get("/ventures/{venture_id}/vocabulary", response_model=list[TermOut])
@@ -319,6 +325,17 @@ async def _upsert_term(db, venture_id: uuid.UUID, user_id: uuid.UUID, body: Term
         org, can_write = await _readable(db, venture_id)
         if not can_write:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "shared terms need write access to this venture")
+    n = (await db.execute(text(
+        "SELECT count(*) FROM vocabulary_terms WHERE venture_id = :v AND "
+        + ("user_id IS NULL" if owner is None else "user_id = :u")), {"v": venture_id, "u": owner})).scalar() or 0
+    cap = MAX_SHARED_TERMS if owner is None else MAX_PERSONAL_TERMS
+    if n >= cap:
+        exists = (await db.execute(text(
+            "SELECT 1 FROM vocabulary_terms WHERE venture_id = :v AND lower(btrim(term)) = lower(btrim(:t)) AND "
+            + ("user_id IS NULL" if owner is None else "user_id = :u")),
+            {"v": venture_id, "u": owner, "t": body.term})).first()
+        if not exists:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"vocabulary is full ({cap} terms) — remove unused ones first")
     try:
         async with db.begin_nested():
             row = (await db.execute(text(
@@ -448,11 +465,12 @@ class SuggestionOut(BaseModel):
 async def suggestions(venture_id: uuid.UUID, db: TenantDB,
                       limit: int = Query(default=30, ge=1, le=100)) -> list[SuggestionOut]:
     """Names from the knowledge graph not yet in the vocabulary — people, clients, vendors, products —
-    most connected first. Adding them with their usual mishearings fixes them everywhere."""
+    most connected first. Role-restricted records (e.g. loan applicants) are never suggested: a
+    shared term is visible to everyone in the venture."""
     await venture_org(db, venture_id)
     rows = (await db.execute(text(
         "SELECT e.name AS term, e.type, (SELECT count(*) FROM edges x WHERE x.src_id = e.id OR x.dst_id = e.id)"
-        " AS mentions FROM entities e WHERE e.venture_id = :v AND e.type <> 'other'"
+        " AS mentions FROM entities e WHERE e.venture_id = :v AND e.type <> 'other' AND e.access_roles IS NULL"
         " AND NOT EXISTS (SELECT 1 FROM vocabulary_terms t WHERE t.venture_id = e.venture_id"
         "   AND lower(btrim(t.term)) = lower(btrim(e.name)))"
         " AND length(e.name) BETWEEN 2 AND 64"

@@ -60,11 +60,21 @@ An adversarial review found seven issues exploitable through the API; each now h
 
 Also hardened: error text stored on runs never includes input values; emailed loan documents are accepted only from the applicant's address; access tokens die on password change or deactivation; the app role can no longer read password hashes; approval execution stamps and contents are immutable; approvals cannot be inserted pre-decided, with non-approving roles, or auto-approved when sensitive; only admins and the agent runtime can write connector credentials.
 
+## ADR-013 Voice: Scribe's dictation, Kritvia's memory (migration 0007)
+Dictation follows AIT-Scribe (MIT; ported pieces listed in `THIRD_PARTY_NOTICES.md`): push-to-talk with chord cancel, 200 ms tail capture, a stale-session guard, cleanup filters (caption cues, stuck loops, fillers; profanity opt-in), "sounds like" vocabulary, auto-learn from one-span corrections, a floating widget and a desktop companion that pastes and then restores the clipboard. What is Kritvia's own:
+
+* **One pipeline.** Web voice button, floating widget, hotkey, desktop app and meeting transcripts all go through `/voice/dictate` or the meeting workflow: same engine choice, vocabulary and filters. Settings are per user and follow you to every device.
+* **Engines are tiers.** `dictation` = Sarvam (saaras:v4, called natively with `SARVAM_API_KEY`, skipped when unset) → Whisper → local; `speech` (long meetings) leaves Sarvam out because its REST API takes short clips. The user's engine choice reorders the chain *after* the sensitive-data filter; `local` never falls back to the cloud. Sarvam is declared `may_train` until its terms are reviewed.
+* **Vocabulary is data, hints are a privacy decision.** Replacement (heard → term) runs on our side for every engine. Sending spelling hints to a *hosted* model is off by default (`speech_people_hints`); when on, hints exclude any term naming a role-restricted record (checked by a definer function, so even names the caller can't see are caught) and entities learned only from sensitive files. Suggestions never offer restricted names, because shared terms are visible to the whole venture.
+* **Metadata only.** `dictation_events` stores durations, word counts, engine and language — never text or audio — and is visible only to the dictating user. Usage counts live in an unaudited `vocabulary_usage` table so the audit log does not reveal who said which name.
+* **Desktop companion.** Electron (sandboxed pages, fixed IPC allow-list per window, CSP, no navigation); tokens stay in the main process, the refresh token is encrypted with the OS keychain or kept in memory. The auto-learn keystroke watcher holds keystrokes ≤ 8 s in memory and abandons on any shortcut, click or unknown key.
+
 ## Known limitations / next
 * Approval payloads and some kind-specific responses are `dict` in the OpenAPI schema (the web asserts shapes); tighten with typed models per action.
 * Weather signal for the kitchen is not wired (licence check pending).
 * PaddleOCR is supported when installed; the images ship Tesseract (eng+hin) because PaddleOCR ARM wheels are unreliable.
 * The web proxy's refresh de-duplication is per process — run one web instance, or add a shared lock.
 * Correction and nomination DPDP requests are tracked but executed manually.
+* Voice: the desktop auto-learn watcher follows US-layout typing; installers are unsigned until code-signing secrets are added; Linux global hotkeys need X11.
 * **Raw SQL as `kritvia_app` is fully trusted.** The request context (`app.user_id`) is a GUC the role can set, and the auth functions (`auth_lookup`, `auth_issue_refresh`) and worker routing functions are executable by it. The API never exposes raw SQL and every query is parameterised, but a future SQL-injection bug would be a full compromise. Phase 2: separate `kritvia_auth` and `kritvia_worker` roles, and a signed request context set through a SECURITY DEFINER setter.
 * A writer with raw SQL could insert a garbage `tenant_keys` version and break encryption for a venture (DoS, not disclosure); move DEK creation behind a definer function when the KMS provider lands.

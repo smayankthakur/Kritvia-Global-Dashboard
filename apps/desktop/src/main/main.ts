@@ -455,13 +455,27 @@ function snapshot() {
   };
 }
 
+/** Each channel answers only the window it belongs to (the pages share one preload script). */
+function fromSettings<A, R>(channel: string, fn: (arg: A) => R) {
+  ipcMain.handle(channel, (e, arg: A) => {
+    if (!settingsWin || settingsWin.isDestroyed() || e.sender !== settingsWin.webContents) throw new Error("not allowed");
+    return fn(arg);
+  });
+}
+
+function fromBubble<A>(channel: string, fn: (arg: A) => void) {
+  ipcMain.on(channel, (e, arg: A) => {
+    if (bubble && e.sender === bubble.webContents) fn(arg);
+  });
+}
+
 function registerIpc() {
-  ipcMain.handle("settings:get", () => snapshot());
-  ipcMain.handle("settings:refresh", async () => {
+  fromSettings("settings:get", () => snapshot());
+  fromSettings("settings:refresh", async () => {
     await loadAccount();
     return snapshot();
   });
-  ipcMain.handle("settings:login", async (_e, p: { server: string; webUrl?: string; email: string; password: string }) => {
+  fromSettings("settings:login", async (p: { server: string; webUrl?: string; email: string; password: string }) => {
     const server = normaliseServer(String(p.server ?? ""));
     const webUrl = p.webUrl ? normaliseServer(String(p.webUrl)) : "";
     if (client) await client.logout().catch(() => undefined);
@@ -471,7 +485,7 @@ function registerIpc() {
     await loadAccount();
     return snapshot();
   });
-  ipcMain.handle("settings:logout", async () => {
+  fromSettings("settings:logout", async () => {
     await client?.logout();
     me = null;
     ventures = [];
@@ -480,7 +494,7 @@ function registerIpc() {
     pushState();
     return snapshot();
   });
-  ipcMain.handle("settings:update", (_e, patch: Partial<typeof prefs.data>) => {
+  fromSettings("settings:update", (patch: Partial<typeof prefs.data>) => {
     const allowed: Partial<typeof prefs.data> = {};
     if (typeof patch.ventureId === "string" && ventures.some((v) => v.venture_id === patch.ventureId)) allowed.ventureId = patch.ventureId;
     if (patch.mode === "type" || patch.mode === "note") allowed.mode = patch.mode;
@@ -495,40 +509,40 @@ function registerIpc() {
     pushState();
     return snapshot();
   });
-  ipcMain.handle("settings:open-web", () => openWeb());
+  fromSettings("settings:open-web", () => openWeb());
 
   // bubble
-  ipcMain.on("bubble:interactive", (_e, on: boolean) => bubble?.setIgnoreMouseEvents(!on, { forward: true }));
+  fromBubble("bubble:interactive", (on: boolean) => bubble?.setIgnoreMouseEvents(!on, { forward: true }));
   let dragFrom: { x: number; y: number } | null = null;
-  ipcMain.on("bubble:drag-start", () => {
+  fromBubble("bubble:drag-start", () => {
     if (!bubble) return;
     const [x, y] = bubble.getPosition();
     dragFrom = { x: x!, y: y! };
   });
-  ipcMain.on("bubble:drag", (_e, d: { dx: number; dy: number }) => {
+  fromBubble("bubble:drag", (d: { dx: number; dy: number }) => {
     if (bubble && dragFrom && Number.isFinite(d?.dx) && Number.isFinite(d?.dy)) {
       bubble.setPosition(Math.round(dragFrom.x + d.dx), Math.round(dragFrom.y + d.dy));
     }
   });
-  ipcMain.on("bubble:drag-end", () => {
+  fromBubble("bubble:drag-end", () => {
     if (!bubble) return;
     const [x, y] = bubble.getPosition();
     prefs.update({ bubble: { x: x!, y: y! } });
     dragFrom = null;
   });
-  ipcMain.on("bubble:click", () => toggle());
-  ipcMain.on("bubble:mode", (_e, m: string) => (m === "type" || m === "note") && setMode(m));
-  ipcMain.on("bubble:hide", () => {
+  fromBubble("bubble:click", () => toggle());
+  fromBubble("bubble:mode", (m: string) => (m === "type" || m === "note") && setMode(m));
+  fromBubble("bubble:hide", () => {
     prefs.update({ showBubble: false });
     updateBubbleVisibility();
     refreshTray();
     notify("Kritvia Voice", `Widget hidden. Hold ${hotkeyLabel(hotkey())} to dictate, or show it again from the tray.`);
   });
-  ipcMain.on("learn:dismiss", () => {
+  fromBubble("learn:dismiss", () => {
     learnOffer = null;
     pushState();
   });
-  ipcMain.on("learn:save", async (_e, scope: string) => {
+  fromBubble("learn:save", async (scope: string) => {
     const c = learnOffer;
     const v = venture();
     learnOffer = null;

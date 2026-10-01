@@ -25,7 +25,8 @@ function loadPos(): Pos {
   } catch {
     /* default position */
   }
-  return { right: 24, bottom: 24 };
+  // bottom centre (Scribe's default) keeps clear of toasts, which stack bottom-right
+  return { right: Math.round((window.innerWidth - SIZE) / 2), bottom: 20 };
 }
 
 function clamp(p: Pos): Pos {

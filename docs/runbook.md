@@ -32,7 +32,7 @@ docker compose build sandbox-jobs
 docker compose --profile tunnel up -d            # add --profile speech for local whisper + diarization
 docker compose exec ollama ollama pull qwen2.5:7b-instruct
 docker compose exec ollama ollama pull bge-m3
-curl -s localhost:8000/readyz                     # {"status":"ok","migrations":5}
+curl -s localhost:8000/readyz                     # {"status":"ok","migrations":7}
 docker compose exec sandbox python -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8100/healthz').read())"  # network_isolated: true
 docker compose exec api python -m kritvia_api.cli bootstrap --email you@sitelytc.com --name "Mayank Thakur"
 ```
@@ -48,6 +48,7 @@ Smoke-test each tier once through LiteLLM (a failing free provider just falls ba
 | Truhome | Checklist per loan type (start from the template), **confirmed with the compliance advisor**; who holds `loan_officer` | Checklists; Settings → Members |
 | Kitchen | Dishes, ingredients, recipes (BOM), vendors + vendor items (pack sizes, prices), a stock count, 4–8 weeks of sales CSV | Reference data; Sales & stock |
 | All | Connect Google (testing mode OAuth app; add yourself as a test user), webhook for the website form, retention per data class | Settings |
+| All | Voice: `SARVAM_API_KEY` in `.env` for Hindi/Hinglish (restart api); shared vocabulary (client, product and staff names); decide whether hosted speech models may get spelling hints | `.env`; Voice → Vocabulary; Settings → General |
 
 Google OAuth app: Google Cloud console → OAuth consent screen "External, Testing", scopes gmail.readonly, gmail.send, calendar.events, drive.readonly; redirect URI `https://app.<domain>/api/oauth/google/callback`.
 
@@ -56,6 +57,12 @@ Google OAuth app: Google Cloud console → OAuth consent screen "External, Testi
 * Kitchen: 23:30 plan → 06:30 check (alerts in the audit log + worker log if missing/failed) → manager approves POs in the Inbox.
 * Inbox is the single place for decisions. Edits count against earned autonomy; clean approvals build it.
 * Dashboard: failed runs have a Retry button (resumes from the failed step's checkpoint).
+
+## 5a. Voice and the desktop companion
+
+* Dictation works in the web app as soon as the speech tier works. Each person picks engine, language, hotkey and filters in **Voice → Settings**; their statistics are under **Voice → Insights**.
+* Sarvam: create a key at sarvam.ai, put it in `SARVAM_API_KEY`, `docker compose up -d api worker`. Until then dictation silently uses Whisper. Review Sarvam's data terms before changing its `data_policy` in `infra/litellm/tiers.yaml` (that is what decides whether sensitive audio may go there).
+* Desktop app: run the **desktop** workflow (Actions → desktop → Run workflow) or push a tag `desktop-v1.0.0` to publish installers on the Releases page. Users sign in with the **API** address (`https://api.<domain>`). Add `CSC_LINK`/`CSC_KEY_PASSWORD` secrets to sign Windows/macOS builds.
 
 ## 6. Backups and restore drill
 

@@ -68,13 +68,15 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
         </Field>
         <div className="flex items-start justify-between gap-4 rounded-md border border-border p-3">
           <div>
-            <div className="text-sm font-medium">Send people&apos;s names to hosted speech models</div>
+            <div className="text-sm font-medium">Share vocabulary and names with hosted speech models</div>
             <p className="mt-0.5 text-xs text-subtle">
-              Names of people from this venture&apos;s knowledge help dictation and meeting transcripts spell them right. Off: only
-              local speech models get them. Restricted records (e.g. loan applicants) are never used either way.
+              Spelling hints (your vocabulary and names from this venture&apos;s knowledge) make dictation and meeting
+              transcripts more accurate. Off: only speech models on your own server get them, and hosted models still benefit
+              from the correction applied afterwards. Restricted records (e.g. loan applicants) and names found only in
+              sensitive files are never sent.
             </p>
           </div>
-          <Switch label="Send people's names to hosted speech models" checked={peopleHints} disabled={!canAdmin} onChange={setPeopleHints} />
+          <Switch label="Share vocabulary and names with hosted speech models" checked={peopleHints} disabled={!canAdmin} onChange={setPeopleHints} />
         </div>
         <Field label="Time zone">
           <Input value={q.data.timezone} disabled readOnly className="w-48" />

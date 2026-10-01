@@ -88,6 +88,8 @@ export function DpdpRequests({ ventureId, canAdmin }: { ventureId: string; canAd
     onSuccess: (r) => {
       toast.success("Request logged", `Due ${formatDate(r.due_at)}`);
       setF({ identifier: "", kind: "access", details: "" });
+      // show it at once, even if a list fetch that started before the insert lands afterwards
+      qc.setQueryData<Req[]>(["dpdp", ventureId], (old) => [r, ...(old ?? []).filter((x) => x.id !== r.id)]);
       void qc.invalidateQueries({ queryKey: ["dpdp", ventureId] });
     },
     onError: (e) => {

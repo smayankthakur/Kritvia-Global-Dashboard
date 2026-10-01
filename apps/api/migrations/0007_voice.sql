@@ -5,11 +5,15 @@
 --                    model mishears it ("sounds like"). Shared terms (user_id NULL) are
 --                    used for everyone in the venture, including meeting transcripts;
 --                    personal terms only for their owner's dictation.
+-- vocabulary_usage   how often each term fixed a transcript. Kept apart from the audited
+--                    terms table: per-dictation audit rows would tell every venture reader
+--                    who said which name, and when.
 -- voice_settings     one row per user: engine, language, filters, hotkey, widget.
 -- dictation_events   metadata of each dictation (duration, words, engine, language) for
 --                    the Insights page. Never the text or the audio.
--- venture_settings   + speech_people_hints: whether people's names from the knowledge
---                    graph may be sent to hosted speech models as spelling hints.
+-- venture_settings   + speech_people_hints: whether vocabulary and names from the knowledge
+--                    graph may be sent to hosted speech models as spelling hints (local
+--                    models always get them). Off by default.
 -- =============================================================================
 
 -- --------------------------------------------------------- vocabulary_terms --
@@ -23,7 +27,6 @@ CREATE TABLE vocabulary_terms (
                   CHECK (cardinality(sounds_like) <= 20),
   case_sensitive  boolean NOT NULL DEFAULT false,
   source          text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'auto_learn', 'import')),
-  uses            int NOT NULL DEFAULT 0,
   created_by      uuid REFERENCES users(id),
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),
@@ -52,17 +55,50 @@ CREATE POLICY vocabulary_personal_delete ON vocabulary_terms FOR DELETE
   USING (user_id = private.current_user_id()
          AND venture_id = ANY ((SELECT private.readable_ventures())::uuid[]));
 
--- Usage counter for any term the caller can see (dictation by viewers counts too).
+GRANT SELECT, INSERT, UPDATE, DELETE ON vocabulary_terms TO kritvia_app;
+
+-- ---------------------------------------------------------- vocabulary_usage --
+CREATE TABLE vocabulary_usage (
+  term_id       uuid PRIMARY KEY REFERENCES vocabulary_terms(id) ON DELETE CASCADE,
+  org_id        uuid NOT NULL,
+  venture_id    uuid NOT NULL,
+  uses          int NOT NULL DEFAULT 0,
+  last_used_at  timestamptz,
+  FOREIGN KEY (org_id, venture_id) REFERENCES ventures(org_id, id) ON DELETE CASCADE
+);
+ALTER TABLE vocabulary_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vocabulary_usage FORCE ROW LEVEL SECURITY;
+-- visible exactly when the term is (the subquery runs under vocabulary_terms' own RLS)
+CREATE POLICY vocabulary_usage_select ON vocabulary_usage FOR SELECT
+  USING (EXISTS (SELECT 1 FROM vocabulary_terms t WHERE t.id = term_id));
+INSERT INTO private.tenant_tables VALUES ('vocabulary_usage') ON CONFLICT DO NOTHING;
+GRANT SELECT ON vocabulary_usage TO kritvia_app;
+
+-- Count a use of terms the caller can see (dictation by viewers counts too). Not audited.
 CREATE FUNCTION public.vocabulary_touch(p_ids uuid[]) RETURNS void
 LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  UPDATE vocabulary_terms SET uses = uses + 1
-   WHERE id = ANY (p_ids)
-     AND venture_id = ANY (private.readable_ventures())
-     AND (user_id IS NULL OR user_id = private.current_user_id());
+  INSERT INTO vocabulary_usage AS u (term_id, org_id, venture_id, uses, last_used_at)
+  SELECT t.id, t.org_id, t.venture_id, 1, now() FROM vocabulary_terms t
+   WHERE t.id = ANY (p_ids)
+     AND t.venture_id = ANY (private.readable_ventures())
+     AND (t.user_id IS NULL OR t.user_id = private.current_user_id())
+  ON CONFLICT (term_id) DO UPDATE SET uses = u.uses + 1, last_used_at = now();
 $$;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON vocabulary_terms TO kritvia_app;
-GRANT EXECUTE ON FUNCTION public.vocabulary_touch(uuid[]) TO kritvia_app;
+-- Which of these terms may be sent to a speech model as spelling hints: none that name a
+-- role-restricted record (e.g. a loan applicant), whether or not the caller can see it.
+-- Server-side only; the answer is never shown to the caller.
+CREATE FUNCTION public.vocabulary_hint_filter(p_venture uuid, p_terms text[]) RETURNS text[]
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT coalesce(array_agg(x ORDER BY i), '{}') FROM unnest(p_terms) WITH ORDINALITY AS a(x, i)
+   WHERE p_venture = ANY (private.readable_ventures())
+     AND NOT EXISTS (SELECT 1 FROM entities e
+                      WHERE e.venture_id = p_venture AND e.access_roles IS NOT NULL
+                        AND (e.canonical = lower(btrim(x)) OR lower(e.name) = lower(btrim(x))))
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.vocabulary_touch(uuid[]), public.vocabulary_hint_filter(uuid, text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.vocabulary_touch(uuid[]), public.vocabulary_hint_filter(uuid, text[]) TO kritvia_app;
 
 -- ------------------------------------------------------------ voice_settings --
 CREATE TABLE voice_settings (

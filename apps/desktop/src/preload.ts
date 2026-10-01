@@ -3,7 +3,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
 const SEND = new Set(["bubble:interactive", "bubble:drag-start", "bubble:drag", "bubble:drag-end", "bubble:click",
-  "bubble:mode", "bubble:hide", "learn:save", "learn:dismiss", "rec:result", "rec:level"]);
+  "bubble:mode", "bubble:hide", "learn:save", "learn:dismiss", "rec:result"]);
 const INVOKE = new Set(["settings:get", "settings:login", "settings:logout", "settings:update", "settings:open-web",
   "settings:refresh"]);
 const LISTEN = new Set(["bubble:state", "rec:start", "rec:stop", "rec:cancel", "settings:changed"]);

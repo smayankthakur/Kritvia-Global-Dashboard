@@ -246,10 +246,12 @@ async def _post_with_fallback(  # shared fallback loop for embeddings and speech
                                 ct=usage.get("completion_tokens"))
             return parse(body, deployment), deployment
         status = "rate_limited" if resp.status_code == 429 else "error"
-        await router._meter(ctx, tier=tier, model=deployment, attempt=attempt, status=status,
-                            latency=latency, error=f"HTTP {resp.status_code}: {resp.text[:200]}")
-        failures.append(f"{deployment}: HTTP {resp.status_code}")
         native = router.config.provider(deployment) != "litellm"
+        # Native providers' error bodies can echo the request (e.g. keyterms with names): status only.
+        detail = f"HTTP {resp.status_code}" if native else f"HTTP {resp.status_code}: {resp.text[:200]}"
+        await router._meter(ctx, tier=tier, model=deployment, attempt=attempt, status=status,
+                            latency=latency, error=detail)
+        failures.append(f"{deployment}: HTTP {resp.status_code}")
         if resp.status_code not in RETRYABLE_STATUS and not (native and resp.status_code in NATIVE_FALLBACK_STATUS):
             break
     raise AllProvidersFailed(tier, failures)

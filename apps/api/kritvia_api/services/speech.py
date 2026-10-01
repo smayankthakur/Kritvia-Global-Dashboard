@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 import uuid
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -27,7 +28,11 @@ _B_AFTER = rf"(?![{_WORD}])"
 
 # ------------------------------------------------------------------ filters --
 # [BLANK_AUDIO], (dramatic music), *cough*: closed-caption artefacts Whisper emits on silence.
-_ANNOTATION = re.compile(r"\[[^\]\n]*\]|\([^)\n]*\)|\*[^*\n]+\*")
+# Parentheses are only treated as a cue when they hold a few plain words (no digits or symbols),
+# so dictated asides like "budget (3 lakh)" survive.
+_ANNOTATION = re.compile(r"\[[^\]\n]*\]|\*[^*\n]+\*|\((?:[A-Za-z]+[ '-]?){1,5}\)")
+# Supplementary private-use code points: never real dictation; used internally as placeholders.
+_PRIVATE_USE = re.compile("[\U000F0000-\U0010FFFF]")
 
 _FILLER = re.compile(rf"{_B_BEFORE}(?:uh+|um+|uhm+|er+|erm+){_B_AFTER},?", re.IGNORECASE)
 _DOUBLE_COMMA = re.compile(r",\s*,")
@@ -97,46 +102,98 @@ class VocabEntry:
     case_sensitive: bool = False
 
 
-def _phrase_re(phrase: str, case_sensitive: bool) -> re.Pattern[str]:
-    body = r"\s+".join(re.escape(p) for p in phrase.split())
-    return re.compile(rf"{_B_BEFORE}{body}{_B_AFTER}", 0 if case_sensitive else re.IGNORECASE)
+MAX_FORMS = 25_000  # forms per compiled vocabulary (the API caps terms well below this)
+
+
+def _trie_pattern(forms: list[str]) -> str:
+    """Regex alternation shaped as a trie, so matching cost doesn't grow with the vocabulary size.
+    A space in a form matches any run of whitespace."""
+    trie: dict = {}
+    for f in forms:
+        node = trie
+        for ch in f:
+            node = node.setdefault(ch, {})
+        node[""] = True
+
+    def emit(node: dict) -> str:
+        end = "" in node
+        branches = []
+        for ch in sorted((c for c in node if c), key=lambda c: -_depth(node[c])):
+            branches.append((r"\s+" if ch == " " else re.escape(ch)) + emit(node[ch]))
+        if not branches:
+            return ""
+        body = branches[0] if len(branches) == 1 else "(?:" + "|".join(branches) + ")"
+        return f"(?:{body})?" if end else body
+
+    return emit(trie)
+
+
+def _depth(node: dict) -> int:
+    return 1 + max((_depth(v) for k, v in node.items() if k), default=0)
+
+
+@dataclass(frozen=True)
+class _Compiled:
+    ci: re.Pattern[str] | None
+    ci_map: dict[str, VocabEntry]
+    cs: re.Pattern[str] | None
+    cs_map: dict[str, VocabEntry]
+
+
+def _norm(s: str) -> str:
+    return " ".join(s.split())
+
+
+@lru_cache(maxsize=64)
+def _compile(entries: tuple[VocabEntry, ...]) -> _Compiled:
+    ci_map: dict[str, VocabEntry] = {}
+    cs_map: dict[str, VocabEntry] = {}
+    n = 0
+    for e in entries:  # earlier entries win a clash (personal terms are loaded first)
+        term = _norm(e.term)
+        if not term:
+            continue
+        for f in (term, *(_norm(x) for x in e.sounds_like)):
+            if not f or n >= MAX_FORMS:
+                continue
+            n += 1
+            if e.case_sensitive and f == term:
+                cs_map.setdefault(f, e)
+            else:
+                ci_map.setdefault(f.lower(), e)
+    # the trie emits longest alternatives first, so "kreet via ai" wins over "kreet via"
+    ci = re.compile(f"{_B_BEFORE}{_trie_pattern(list(ci_map))}{_B_AFTER}", re.IGNORECASE) if ci_map else None
+    cs = re.compile(f"{_B_BEFORE}{_trie_pattern(list(cs_map))}{_B_AFTER}") if cs_map else None
+    return _Compiled(ci, ci_map, cs, cs_map)
 
 
 def apply_vocabulary(text_: str, entries: list[VocabEntry]) -> tuple[str, list[uuid.UUID]]:
     """Replace each misheard form with its term, and enforce the term's own spelling/casing.
-    Longer phrases first so "kreet via ai" wins over "kreet via". Returns (text, ids used)."""
+    One pass per case mode; replaced text is never re-matched. Returns (text, ids that changed text)."""
     if not text_ or not entries:
         return text_, []
-    rules: list[tuple[str, VocabEntry]] = []
-    for e in entries:
-        term = e.term.strip()
-        if not term:
-            continue
-        for s in e.sounds_like:
-            if s.strip() and s.strip().lower() != term.lower():
-                rules.append((s.strip(), e))
-        rules.append((term, e))  # casing / spacing of the term itself
-    rules.sort(key=lambda r: len(r[0]), reverse=True)
+    c = _compile(tuple(entries))
+    out = _PRIVATE_USE.sub("", text_)
     used: list[uuid.UUID] = []
-    out = text_
-    placeholders: dict[str, str] = {}
-    for i, (heard, e) in enumerate(rules):
-        term = e.term.strip()
-        pat = _phrase_re(heard, e.case_sensitive and heard == term)
-        token = chr(0xF0000 + i)  # private-use code point: later (shorter) rules cannot match it
-        changed = False
+    placeholders: list[str] = []
 
-        def _sub(m: re.Match[str], term: str = term, token: str = token) -> str:
-            nonlocal changed
-            changed = changed or m.group(0) != term
-            placeholders[token] = term
-            return token
-
-        out = pat.sub(_sub, out)
-        if changed and e.id and e.id not in used:
+    def replace(m: re.Match[str], table: dict[str, VocabEntry], fold: bool) -> str:
+        key = _norm(m.group(0))
+        e = table.get(key.lower() if fold else key)
+        if e is None:
+            return m.group(0)
+        term = _norm(e.term)
+        if m.group(0) != term and e.id and e.id not in used:
             used.append(e.id)
-    for token, term in placeholders.items():
-        out = out.replace(token, term)
+        placeholders.append(term)
+        return chr(0xF0000 + len(placeholders) - 1)
+
+    if c.cs:
+        out = c.cs.sub(lambda m: replace(m, c.cs_map, False), out)
+    if c.ci:
+        out = c.ci.sub(lambda m: replace(m, c.ci_map, True), out)
+    if placeholders:
+        out = _PRIVATE_USE.sub(lambda m: placeholders[ord(m.group(0)) - 0xF0000], out)
     return out, used
 
 
@@ -214,55 +271,83 @@ def clean_segments(segments: list[dict], opts: CleanupOptions) -> list[dict]:
 
 # ------------------------------------------------------------ DB helpers --
 async def load_vocabulary(conn: AsyncConnection, venture_id: uuid.UUID, *, personal: bool = True,
-                          limit: int = 500) -> list[VocabEntry]:
-    """Terms the current DB principal can see: shared ones, plus its own personal ones."""
+                          limit: int = 1000) -> list[VocabEntry]:
+    """Terms the current DB principal can see: its own personal ones first, then shared ones."""
     rows = (await conn.execute(text(
-        "SELECT id, term, sounds_like, case_sensitive FROM vocabulary_terms WHERE venture_id = :v"
-        + ("" if personal else " AND user_id IS NULL")
-        + " ORDER BY (user_id IS NULL), uses DESC, updated_at DESC LIMIT :n"),
+        "SELECT t.id, t.term, t.sounds_like, t.case_sensitive FROM vocabulary_terms t"
+        " LEFT JOIN vocabulary_usage u ON u.term_id = t.id WHERE t.venture_id = :v"
+        + ("" if personal else " AND t.user_id IS NULL")
+        + " ORDER BY (t.user_id IS NULL), coalesce(u.uses, 0) DESC, t.updated_at DESC LIMIT :n"),
         {"v": venture_id, "n": limit})).all()
     return [VocabEntry(r.id, r.term, tuple(r.sounds_like or ()), r.case_sensitive) for r in rows]
 
 
+HINT_LIMIT = 50
+
+
+def _dedupe(items: list[str], limit: int = HINT_LIMIT) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for t in items:
+        t = _norm(t)
+        if t and len(t) <= 64 and t.lower() not in seen:
+            seen.add(t.lower())
+            out.append(t)
+        if len(out) >= limit:
+            break
+    return out
+
+
 @dataclass
 class Hints:
-    """Spelling hints for the speech model. `public` may go to any provider; `people` (names of
-    persons from the knowledge graph) only to local/BYOK models unless the venture opted in."""
-    public: list[str] = field(default_factory=list)
-    people: list[str] = field(default_factory=list)
+    """Spelling hints for the speech model, per data policy.
 
-    def for_policy(self, local_ok: bool, share_people: bool, limit: int = 50) -> list[str]:
-        out: list[str] = []
-        seen: set[str] = set()
-        for t in self.public + (self.people if (local_ok or share_people) else []):
-            k = t.lower()
-            if k not in seen and 1 <= len(t) <= 64:
-                seen.add(k)
-                out.append(t)
-            if len(out) >= limit:
-                break
-        return out
+    local  — models on our own infrastructure: vocabulary + names from the knowledge graph.
+    cloud  — hosted models: empty unless the venture opted in (speech_people_hints); then the
+             vocabulary and knowledge-graph names that (a) don't name a role-restricted record and
+             (b) were never learned only from sensitive documents.
+    Role-restricted names (e.g. loan applicants) are never hints for anyone.
+    """
+    local: list[str] = field(default_factory=list)
+    cloud: list[str] = field(default_factory=list)
+
+    def for_policy(self, local_ok: bool) -> list[str]:
+        return _dedupe(self.local if local_ok else self.cloud)
 
 
-HINT_ENTITY_TYPES = ("company", "project", "product", "sku", "vendor", "place", "property")
+HINT_ENTITY_TYPES = ("person", "company", "project", "product", "sku", "vendor", "place", "property")
+
+_ENTITY_HINTS_SQL = (
+    "SELECT e.name,"
+    # learned from a sensitive document (via an edge or a fact citing one of its chunks)?
+    " EXISTS (SELECT 1 FROM edges x JOIN chunks c ON c.id = x.source_chunk_id JOIN documents d ON d.id = c.document_id"
+    "         WHERE (x.src_id = e.id OR x.dst_id = e.id) AND d.sensitive)"
+    " OR EXISTS (SELECT 1 FROM facts f JOIN chunks c ON c.id = f.source_chunk_id JOIN documents d ON d.id = c.document_id"
+    "         WHERE f.subject_id = e.id AND d.sensitive) AS from_sensitive,"
+    # ...and seen in at least one ordinary document?
+    " EXISTS (SELECT 1 FROM edges x JOIN chunks c ON c.id = x.source_chunk_id JOIN documents d ON d.id = c.document_id"
+    "         WHERE (x.src_id = e.id OR x.dst_id = e.id) AND NOT d.sensitive)"
+    " OR EXISTS (SELECT 1 FROM facts f JOIN chunks c ON c.id = f.source_chunk_id JOIN documents d ON d.id = c.document_id"
+    "         WHERE f.subject_id = e.id AND NOT d.sensitive) AS from_ordinary"
+    " FROM entities e WHERE e.venture_id = :v AND e.access_roles IS NULL AND e.type = ANY (:types)"
+    " ORDER BY (SELECT count(*) FROM edges x WHERE x.src_id = e.id OR x.dst_id = e.id) DESC, e.created_at DESC"
+    " LIMIT 80"
+)
 
 
-async def load_hints(conn: AsyncConnection, venture_id: uuid.UUID, vocab: list[VocabEntry]) -> tuple[Hints, bool]:
-    """Hints from the vocabulary and from unrestricted knowledge-graph entities (most connected first).
-    Role-restricted entities (e.g. loan applicants) are never used as hints."""
+async def load_hints(conn: AsyncConnection, venture_id: uuid.UUID, vocab: list[VocabEntry]) -> Hints:
     share = bool((await conn.execute(text(
         "SELECT coalesce((SELECT speech_people_hints FROM venture_settings WHERE venture_id = :v), false)"),
         {"v": venture_id})).scalar())
-    rows = (await conn.execute(text(
-        "SELECT e.name, e.type FROM entities e WHERE e.venture_id = :v AND e.access_roles IS NULL"
-        " AND e.type = ANY (:types)"
-        " ORDER BY (SELECT count(*) FROM edges x WHERE x.src_id = e.id OR x.dst_id = e.id) DESC,"
-        " e.created_at DESC LIMIT 80"),
-        {"v": venture_id, "types": list(HINT_ENTITY_TYPES) + ["person"]})).all()
-    hints = Hints(public=[v.term for v in vocab])
-    for r in rows:
-        (hints.people if r.type == "person" else hints.public).append(r.name)
-    return hints, share
+    terms = [v.term for v in vocab][:200]
+    safe_terms: list[str] = list((await conn.execute(
+        text("SELECT vocabulary_hint_filter(:v, CAST(:t AS text[]))"), {"v": venture_id, "t": terms})).scalar() or [])
+    rows = (await conn.execute(text(_ENTITY_HINTS_SQL), {"v": venture_id, "types": list(HINT_ENTITY_TYPES)})).all()
+    names = [r.name for r in rows]
+    hints = Hints(local=safe_terms + names)
+    if share:
+        hints.cloud = safe_terms + [r.name for r in rows if r.from_ordinary and not r.from_sensitive]
+    return hints
 
 
 def whisper_prompt(terms: list[str], max_chars: int = 600) -> str | None:

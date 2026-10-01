@@ -64,11 +64,24 @@ def test_auto_learn_diff():
 
 
 def test_hints_respect_data_policy():
-    h = speech.Hints(public=["Kritvia", "Acme Corp"], people=["Ravi Sharma"])
-    assert h.for_policy(local_ok=False, share_people=False) == ["Kritvia", "Acme Corp"]
-    assert h.for_policy(local_ok=True, share_people=False) == ["Kritvia", "Acme Corp", "Ravi Sharma"]
-    assert h.for_policy(local_ok=False, share_people=True)[-1] == "Ravi Sharma"
+    h = speech.Hints(local=["Kritvia", "Acme Corp", "Ravi Sharma", "kritvia"], cloud=[])
+    assert h.for_policy(local_ok=True) == ["Kritvia", "Acme Corp", "Ravi Sharma"]
+    assert h.for_policy(local_ok=False) == []
     assert speech.whisper_prompt(["Kritvia", "Sitelytc"]) == "Glossary: Kritvia, Sitelytc."
+
+
+def test_large_vocabulary_is_fast_and_safe():
+    import time
+    big = [speech.VocabEntry(uuid.uuid4(), f"Term{i}", tuple(f"form{i} x{j}" for j in range(20))) for i in range(1000)]
+    t0 = time.perf_counter()
+    for _ in range(20):
+        out, _ = speech.apply_vocabulary("please say form7 x3 and term99 " * 30, big)
+    assert time.perf_counter() - t0 < 3
+    assert out.startswith("please say Term7 and Term99")
+    # placeholder code points in the input can't be turned into terms
+    assert speech.apply_vocabulary("hello \U000F0000 kritvia", [speech.VocabEntry(None, "Kritvia")])[0] == "hello  Kritvia"
+    # dictated parentheses survive; caption cues don't
+    assert speech.strip_annotations("Budget (3 lakh) (dramatic music) ok") == "Budget (3 lakh) ok"
 
 
 def test_streak_counts_back_from_today_or_yesterday():
@@ -106,6 +119,7 @@ async def test_sarvam_first_for_hindi_with_keyterms_and_fallback(world, fake_llm
     mayank, v = world["mayank"], world["site"]
     await mayank.post(f"/ventures/{v}/vocabulary", json={"term": "Kritvia", "sounds_like": ["kreet via"],
                                                          "scope": "shared"})
+    await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": True})  # allow hints to hosted models
     fake_llm.transcript = {"text": "kreet via ka demo kal bhejna hai", "segments": []}
     r = await mayank.post(f"/ventures/{v}/voice/dictate", files=audio(),
                           data={"language": "hi", "duration_ms": "3000"})
@@ -125,6 +139,7 @@ async def test_sarvam_first_for_hindi_with_keyterms_and_fallback(world, fake_llm
     assert out["engine"] == "whisper" and out["deployment"] == "groq-whisper" and out["fallback"] is True
     assert [c["model"] for c in speech_calls()] == ["sarvam-saaras", "groq-whisper"]
     assert "Kritvia" in speech_calls()[-1]["prompt"]          # Whisper gets the glossary prompt
+    await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": False})
 
 
 async def test_without_sarvam_key_it_is_skipped(world, fake_llm):
@@ -147,41 +162,87 @@ async def test_local_engine_never_falls_back_to_cloud(world, fake_llm):
 
 
 # ------------------------------------------------------------ hints privacy --
-async def test_restricted_and_people_names_are_not_sent_to_hosted_models(world, fake_llm):
-    mayank, v = world["mayank"], world["site"]
+async def _entities(v: str, rows: list[tuple]) -> None:
     conn = await asyncpg.connect(ADMIN_DSN)
     try:
         org = await conn.fetchval("SELECT org_id FROM ventures WHERE id = $1", uuid.UUID(v))
-        await conn.executemany(
-            "INSERT INTO entities (org_id, venture_id, type, name, canonical, access_roles) VALUES ($1,$2,$3,$4,$5,$6)",
-            [(org, uuid.UUID(v), "company", "Zentrix Labs", "zentrix labs", None),
-             (org, uuid.UUID(v), "person", "Priyanka Venkatesh", "priyanka venkatesh", None),
-             (org, uuid.UUID(v), "person", "Ravi Restricted", "ravi restricted", ["loan_officer"])])
+        for etype, name, roles, sensitive in rows:
+            eid = await conn.fetchval(
+                "INSERT INTO entities (org_id, venture_id, type, name, canonical, access_roles)"
+                " VALUES ($1,$2,$3,$4,$5,$6) RETURNING id", org, uuid.UUID(v), etype, name, name.lower(), roles)
+            doc = await conn.fetchval(
+                "INSERT INTO documents (org_id, venture_id, title, kind, sha256, size_bytes, sensitive, status)"
+                " VALUES ($1,$2,$3,'note',$4,1,$5,'ready') RETURNING id",
+                org, uuid.UUID(v), f"src {name}", uuid.uuid4().hex, sensitive)
+            chunk = await conn.fetchval(
+                "INSERT INTO chunks (org_id, venture_id, document_id, ord, text_enc, char_count, access_roles, sensitive)"
+                " VALUES ($1,$2,$3,0,'\\x00',1,$4,$5) RETURNING id", org, uuid.UUID(v), doc, roles, sensitive)
+            await conn.execute(
+                "INSERT INTO facts (org_id, venture_id, kind, statement_enc, subject_id, source_chunk_id, access_roles)"
+                " VALUES ($1,$2,'fact','\\x00',$3,$4,$5)", org, uuid.UUID(v), eid, chunk, roles)
     finally:
         await conn.close()
+
+
+async def test_hints_never_leak_restricted_or_sensitive_names(world, fake_llm):
+    mayank, bob, v = world["mayank"], world["bob"], world["tru"]
+    await _entities(v, [("company", "Zentrix Labs", None, False),
+                        ("person", "Priyanka Venkatesh", None, False),
+                        ("company", "Quietcorp Holdings", None, True),          # only ever in a sensitive file
+                        ("person", "Applicant Secretname", ["loan_officer"], False)])
+    # the loan officer can see the restricted name, but it is never suggested (shared terms are public)
+    sug = [s["term"] for s in (await bob.get(f"/ventures/{v}/vocabulary/suggestions")).json()]
+    assert "Zentrix Labs" in sug and "Applicant Secretname" not in sug
+    # ...and typing it in as a term doesn't turn it into a hint
+    await bob.post(f"/ventures/{v}/vocabulary", json={"term": "Applicant Secretname", "scope": "shared"})
+    await bob.post(f"/ventures/{v}/vocabulary", json={"term": "Bob Private Client", "scope": "personal"})
     fake_llm.transcript = {"text": "call zentrix", "segments": []}
-    await mayank.post(f"/ventures/{v}/voice/dictate", files=audio(), data={"engine": "whisper"})
-    prompt = speech_calls()[-1]["prompt"]
-    assert "Zentrix Labs" in prompt
-    assert "Priyanka" not in prompt and "Ravi Restricted" not in prompt
 
-    # local models may see people's names; restricted names are never hints
+    # default: hosted models get no hints at all
+    await bob.post(f"/ventures/{v}/voice/dictate", files=audio(), data={"engine": "whisper"})
+    assert speech_calls()[-1]["prompt"] == ""
+    # local models get vocabulary and names, never restricted ones
     fake_llm.calls.clear()
-    await mayank.post(f"/ventures/{v}/voice/dictate", files=audio(), data={"engine": "local"})
-    prompt = speech_calls()[-1]["prompt"]
-    assert "Priyanka Venkatesh" in prompt and "Ravi Restricted" not in prompt
-
-    # the venture can opt in to sharing people's names with hosted models
+    await bob.post(f"/ventures/{v}/voice/dictate", files=audio(), data={"engine": "local"})
+    p = speech_calls()[-1]["prompt"]
+    assert all(x in p for x in ("Zentrix Labs", "Priyanka Venkatesh", "Bob Private Client", "Quietcorp"))
+    assert "Secretname" not in p
+    # opted in: hosted models get vocabulary + names, minus restricted and sensitive-only ones
     r = await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": True})
     assert r.json()["speech_people_hints"] is True
     fake_llm.calls.clear()
-    await mayank.post(f"/ventures/{v}/voice/dictate", files=audio(), data={"engine": "whisper"})
-    assert "Priyanka Venkatesh" in speech_calls()[-1]["prompt"]
+    await bob.post(f"/ventures/{v}/voice/dictate", files=audio(), data={"engine": "whisper"})
+    p = speech_calls()[-1]["prompt"]
+    assert "Zentrix Labs" in p and "Priyanka Venkatesh" in p and "Bob Private Client" in p
+    assert "Secretname" not in p and "Quietcorp" not in p
     await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": False})
 
-    # suggestions come from the graph, but only what the caller may see
-    sug = [s["term"] for s in (await mayank.get(f"/ventures/{v}/vocabulary/suggestions")).json()]
-    assert "Zentrix Labs" in sug and "Ravi Restricted" not in sug
+
+async def test_dictation_does_not_reveal_who_said_what(world, fake_llm):
+    alice, vera, v = world["alice"], world["vera"], world["site"]
+    t = (await alice.post(f"/ventures/{v}/vocabulary", json={"term": "Zorblax Deal", "sounds_like": ["zor blacks deal"],
+                                                             "scope": "shared"})).json()
+    fake_llm.transcript = {"text": "update the zor blacks deal", "segments": []}
+    out = (await alice.post(f"/ventures/{v}/voice/dictate", files=audio())).json()
+    assert out["text"] == "update the Zorblax Deal"
+    terms = {x["id"]: x for x in (await vera.get(f"/ventures/{v}/vocabulary")).json()}
+    assert terms[t["id"]]["uses"] == 1                       # the count is visible...
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        n = await conn.fetchval("SELECT count(*) FROM audit_log WHERE entity_table IN ('vocabulary_terms', 'vocabulary_usage')"
+                                " AND action LIKE '%update' AND entity_id = $1", t["id"])
+        u = await conn.fetchval("SELECT count(*) FROM audit_log WHERE entity_table = 'vocabulary_usage'")
+    finally:
+        await conn.close()
+    assert n == 0 and u == 0                                 # ...but not who used it, or when
+
+
+async def test_vocabulary_limits(world):
+    vera, v = world["vera"], world["site"]
+    r = await vera.post(f"/ventures/{v}/vocabulary", json={"term": "x", "sounds_like": ["y" * 65]})
+    assert r.status_code == 422
+    r = await vera.post(f"/ventures/{v}/vocabulary/import", json={"terms": [{"term": f"t{i}"} for i in range(501)]})
+    assert r.status_code == 422
 
 
 # ---------------------------------------------------------- vocabulary access --
@@ -303,7 +364,9 @@ async def test_meeting_transcript_uses_shared_vocabulary(world, fake_llm):
     fake_llm.transcript = {"text": "Uh, true home launch is Friday.", "language": "en",
                            "segments": [{"start": 0, "end": 4, "text": "Uh, true home launch is Friday."}]}
     fake_llm.on("meeting transcript", {"entities": [], "edges": [], "facts": []})
+    await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": True})
     r = await mayank.post(f"/ventures/{v}/meetings", files=audio(), data={"title": "Vocab standup"})
+    await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": False})
     run = (await mayank.get(f"/ventures/{v}/runs/{r.json()['run_id']}")).json()
     assert run["status"] == "completed", run
     assert "Truhome" in speech_calls()[-1]["prompt"]

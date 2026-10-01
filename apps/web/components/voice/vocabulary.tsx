@@ -253,7 +253,7 @@ export function VocabularyManager({ ventureId, canWrite }: { ventureId: string; 
       <Card>
         <CardHeader
           title="Vocabulary"
-          description="Names and terms Kritvia should always spell right — in dictation and (for shared terms) meeting transcripts. They are also sent to the speech model as spelling hints."
+          description="Names and terms Kritvia should always spell right — in dictation and (for shared terms) meeting transcripts."
           actions={
             <div className="flex gap-2">
               <Button size="sm" icon={<Upload className="h-3.5 w-3.5" />} onClick={() => setImporting(true)}>
@@ -365,7 +365,8 @@ export function VocabularyManager({ ventureId, canWrite }: { ventureId: string; 
             </ul>
           )}
           <Notice tone="info" className="mt-3">
-            Names of people are only sent to hosted speech models as hints if the venture allows it (Settings → General). Local models always use them.
+            Terms always fix transcripts after the fact. They are sent to hosted speech models as hints only if the venture allows
+            it (Settings → General); models on your own server always get them. Restricted names are never suggested or sent.
           </Notice>
         </div>
       </Card>

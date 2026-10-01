@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 
@@ -73,14 +74,14 @@ async def transcribe(ctx: RunContext, state: dict) -> Goto | Finish:
         audio = await ctx.crypto(conn).decrypt(ctx.venture_id, RAW_PURPOSE, doc.raw_enc)
         # Shared venture vocabulary: spelling hints for the model, then sounds-like replacement.
         vocab = await speech.load_vocabulary(conn, ctx.venture_id, personal=False)
-        hints, share_people = await speech.load_hints(conn, ctx.venture_id, vocab)
+        hints = await speech.load_hints(conn, ctx.venture_id, vocab)
     filename = doc.meta.get("filename", "meeting.webm")
     cfg = ctx.services.router.config
     tr = await ctx.transcribe(audio, filename, sensitive=doc.sensitive,
-                              hints_for=lambda d: hints.for_policy(cfg.is_private(d), share_people))
+                              hints_for=lambda d: hints.for_policy(cfg.is_private(d)))
     opts = speech.CleanupOptions(remove_fillers=True, profanity_filter=False, vocabulary=vocab)
-    tr.text, used = speech.clean_transcript(tr.text, opts)
-    tr.segments = speech.clean_segments(tr.segments, opts)
+    tr.text, used = await asyncio.to_thread(speech.clean_transcript, tr.text, opts)
+    tr.segments = await asyncio.to_thread(speech.clean_segments, tr.segments, opts)
     if used:
         ctx.note(f"vocabulary corrected {len(used)} term(s)")
     try:
