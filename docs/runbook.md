@@ -16,10 +16,9 @@
 ## 2. Configure
 
 ```bash
-cd /opt/kritvia && cp .env.example .env && chmod 600 .env
-# fill every blank; generate with: openssl rand -base64 32
-docker run --rm python:3.12-slim python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"  # MASTER_KEK_B64
+cd /opt/kritvia && bash scripts/make-env.sh app.<domain> api.<domain>
 ```
+This creates `.env` (mode 600) and generates every internal secret on the VM itself: database and queue passwords, `JWT_SECRET`, `MASTER_KEK_B64`, sandbox/diarization tokens and the LiteLLM key. It also sets the public URLs, then lists the keys only you can get (Groq, Gemini, OpenRouter, Sarvam, Cloudflare tunnel, Google OAuth, Hugging Face, backup target). Re-running it only fills values that are still empty.
 **Back up `MASTER_KEK_B64` offline (password manager + paper).** Without it every encrypted column and file is unrecoverable, backups included.
 
 Cloudflare: create a tunnel, route `app.<domain>` → `http://web:3000` and `api.<domain>` → `http://api:8000`, put the token in `CLOUDFLARE_TUNNEL_TOKEN`. Set `PUBLIC_WEB_URL`, `PUBLIC_API_URL`, `ALLOWED_ORIGINS`, `CLIENT_IP_HEADER=cf-connecting-ip`.
