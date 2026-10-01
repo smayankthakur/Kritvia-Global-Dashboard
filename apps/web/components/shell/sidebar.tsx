@@ -19,7 +19,7 @@ export function useInbox() {
   });
 }
 
-const COMMON = new Set(["runs", "knowledge", "meetings", "tasks", "trust", "compliance", "settings"]);
+const COMMON = new Set(["runs", "knowledge", "meetings", "voice", "tasks", "trust", "compliance", "settings"]);
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.href === "/") return pathname === "/";

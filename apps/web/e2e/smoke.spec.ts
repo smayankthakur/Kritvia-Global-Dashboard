@@ -331,6 +331,32 @@ test.describe.serial("Kritvia command center", () => {
     await expect(page).toHaveURL(/\/settings\?tab=connectors$/);
   });
 
+  test("voice: vocabulary, settings and the floating widget", async () => {
+    await page.goto(`/v/${ids["Sitelytc"]}/voice?tab=vocabulary`);
+    await page.getByRole("button", { name: "Add term" }).click();
+    await page.getByLabel("Correct spelling").fill("Sitelytc");
+    await page.getByLabel("Add a way it is misheard").fill("site lytic");
+    await page.keyboard.press("Enter");
+    await page.getByLabel("Who uses it").selectOption("shared");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "site lytic" })).toBeVisible();
+    await expect(page.getByText("Everyone")).toBeVisible();
+    await shot(page, "25a-voice-vocabulary", { mobile: false });
+
+    await page.getByRole("tab", { name: "Settings" }).click();
+    await page.getByRole("switch", { name: "Mask profanity" }).click();
+    await page.getByRole("button", { name: "Change push-to-talk key" }).click();
+    await page.keyboard.press("F8");
+    await expect(page.locator("kbd", { hasText: "F8" })).toBeVisible();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("Voice settings saved")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Dictate \(Type mode\)\. Hold F8/ })).toBeVisible();
+    await shot(page, "25b-voice-settings", { mobile: false });
+
+    await page.getByRole("tab", { name: "Insights" }).click();
+    await expect(page.getByText("No dictation yet")).toBeVisible();
+  });
+
   test("mobile navigation opens the sidebar sheet", async () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/");

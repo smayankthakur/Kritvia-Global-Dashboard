@@ -11,6 +11,8 @@ import { AskDialog } from "./ask-dialog";
 import { LogoMark } from "./logo";
 import { SidebarContent } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
+import { VoiceBubble } from "@/components/voice/voice-bubble";
+import { useVoice, VoiceProvider } from "@/components/voice/voice-provider";
 import { VoiceButton } from "./voice-button";
 
 function initials(name: string | undefined): string {
@@ -24,9 +26,29 @@ function initials(name: string | undefined): string {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <VoiceProvider>
+      <Shell>{children}</Shell>
+      <VoiceBubble />
+    </VoiceProvider>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
   const { me } = useAccess();
+  const { setAskHandler } = useVoice();
   const [menuOpen, setMenuOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
+  const [askSeed, setAskSeed] = useState<string | undefined>(undefined);
+
+  // "Ask" mode of the voice widget opens this dialog with the dictated question
+  useEffect(() => {
+    setAskHandler((q) => {
+      setAskSeed(q);
+      setAskOpen(true);
+    });
+    return () => setAskHandler(null);
+  }, [setAskHandler]);
   const [signingOut, setSigningOut] = useState(false);
   const pathname = usePathname();
   const qc = useQueryClient();
@@ -108,7 +130,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <AskDialog open={askOpen} onClose={() => setAskOpen(false)} />
+      <AskDialog
+        open={askOpen}
+        initialQuestion={askSeed}
+        onClose={() => {
+          setAskOpen(false);
+          setAskSeed(undefined);
+        }}
+      />
     </div>
   );
 }

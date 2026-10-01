@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, FormError, Input, Select } from "@/components/ui/field";
+import { Field, FormError, Input, Select, Switch } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
@@ -21,15 +21,17 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
   const q = useQuery({ queryKey: ["settings", ventureId], queryFn: () => unwrap(api.GET("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } } })) });
   const [kind, setKind] = useState<Kind>("general");
   const [threshold, setThreshold] = useState("30");
+  const [peopleHints, setPeopleHints] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     if (q.data) {
       setKind((KINDS as readonly string[]).includes(q.data.kind) ? (q.data.kind as Kind) : "general");
       setThreshold(String(q.data.trust_threshold));
+      setPeopleHints(Boolean(q.data.speech_people_hints));
     }
   }, [q.data]);
   const save = useMutation({
-    mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } }, body: { kind, trust_threshold: Number(threshold) } })),
+    mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } }, body: { kind, trust_threshold: Number(threshold), speech_people_hints: peopleHints } })),
     onSuccess: (d) => {
       qc.setQueryData(["settings", ventureId], d);
       void qc.invalidateQueries({ queryKey: accessKey });
@@ -64,6 +66,16 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
         >
           <Input inputMode="numeric" value={threshold} disabled={!canAdmin} onChange={(e) => setThreshold(e.target.value)} className="w-32" />
         </Field>
+        <div className="flex items-start justify-between gap-4 rounded-md border border-border p-3">
+          <div>
+            <div className="text-sm font-medium">Send people&apos;s names to hosted speech models</div>
+            <p className="mt-0.5 text-xs text-subtle">
+              Names of people from this venture&apos;s knowledge help dictation and meeting transcripts spell them right. Off: only
+              local speech models get them. Restricted records (e.g. loan applicants) are never used either way.
+            </p>
+          </div>
+          <Switch label="Send people's names to hosted speech models" checked={peopleHints} disabled={!canAdmin} onChange={setPeopleHints} />
+        </div>
         <Field label="Time zone">
           <Input value={q.data.timezone} disabled readOnly className="w-48" />
         </Field>

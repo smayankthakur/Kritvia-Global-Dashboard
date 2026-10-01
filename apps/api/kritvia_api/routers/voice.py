@@ -345,19 +345,19 @@ async def add_term(venture_id: uuid.UUID, body: TermIn, user_id: UserId, db: Ten
     return await _upsert_term(db, venture_id, user_id, body, "manual")
 
 
-class ImportIn(BaseModel):
+class VocabularyImportIn(BaseModel):
     terms: list[TermIn] = Field(min_length=1, max_length=500)
 
 
-class ImportOut(BaseModel):
+class VocabularyImportOut(BaseModel):
     imported: int
 
 
-@router.post("/ventures/{venture_id}/vocabulary/import", response_model=ImportOut)
-async def import_terms(venture_id: uuid.UUID, body: ImportIn, user_id: UserId, db: TenantDB) -> ImportOut:
+@router.post("/ventures/{venture_id}/vocabulary/import", response_model=VocabularyImportOut)
+async def import_terms(venture_id: uuid.UUID, body: VocabularyImportIn, user_id: UserId, db: TenantDB) -> VocabularyImportOut:
     for t in body.terms:
         await _upsert_term(db, venture_id, user_id, t, "import")
-    return ImportOut(imported=len(body.terms))
+    return VocabularyImportOut(imported=len(body.terms))
 
 
 @router.patch("/ventures/{venture_id}/vocabulary/{term_id}", response_model=TermOut)

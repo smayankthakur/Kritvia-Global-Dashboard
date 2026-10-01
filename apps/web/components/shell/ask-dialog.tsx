@@ -12,7 +12,7 @@ import { api, unwrap } from "@/lib/api";
 import { useAccess } from "@/lib/access";
 import { VoiceButton } from "./voice-button";
 
-export function AskDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AskDialog({ open, onClose, initialQuestion }: { open: boolean; onClose: () => void; initialQuestion?: string }) {
   const { org } = useAccess();
   const [q, setQ] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -24,6 +24,16 @@ export function AskDialog({ open, onClose }: { open: boolean; onClose: () => voi
   useEffect(() => {
     if (open) setTimeout(() => ref.current?.focus(), 30);
   }, [open]);
+
+  // a question dictated in the voice widget's Ask mode: fill it in and ask straight away
+  const { mutate } = ask;
+  useEffect(() => {
+    const seed = initialQuestion?.trim();
+    if (open && seed && seed.length >= 3 && org) {
+      setQ(seed);
+      mutate(seed);
+    }
+  }, [open, initialQuestion, org, mutate]);
 
   const submit = () => {
     const question = q.trim();

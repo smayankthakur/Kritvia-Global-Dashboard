@@ -3069,22 +3069,25 @@
         "title": "IdOut",
         "type": "object"
       },
-      "ImportIn": {
+      "ImportOut": {
         "properties": {
-          "terms": {
+          "errors": {
             "items": {
-              "$ref": "#/components/schemas/TermIn"
+              "type": "string"
             },
-            "maxItems": 500,
-            "minItems": 1,
-            "title": "Terms",
+            "title": "Errors",
             "type": "array"
+          },
+          "upserted": {
+            "title": "Upserted",
+            "type": "integer"
           }
         },
         "required": [
-          "terms"
+          "upserted",
+          "errors"
         ],
-        "title": "ImportIn",
+        "title": "ImportOut",
         "type": "object"
       },
       "IngestOut": {
@@ -6040,6 +6043,37 @@
         "title": "VentureSettingsOut",
         "type": "object"
       },
+      "VocabularyImportIn": {
+        "properties": {
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/TermIn"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "terms"
+        ],
+        "title": "VocabularyImportIn",
+        "type": "object"
+      },
+      "VocabularyImportOut": {
+        "properties": {
+          "imported": {
+            "title": "Imported",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported"
+        ],
+        "title": "VocabularyImportOut",
+        "type": "object"
+      },
       "VoiceOptionsOut": {
         "properties": {
           "engines": {
@@ -6306,27 +6340,6 @@
         "title": "ConsentIn",
         "type": "object"
       },
-      "kritvia_api__routers__kitchen__ImportOut": {
-        "properties": {
-          "errors": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Errors",
-            "type": "array"
-          },
-          "upserted": {
-            "title": "Upserted",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "upserted",
-          "errors"
-        ],
-        "title": "ImportOut",
-        "type": "object"
-      },
       "kritvia_api__routers__truhome__ConsentIn": {
         "properties": {
           "channel": {
@@ -6352,19 +6365,6 @@
           "notice_version"
         ],
         "title": "ConsentIn",
-        "type": "object"
-      },
-      "kritvia_api__routers__voice__ImportOut": {
-        "properties": {
-          "imported": {
-            "title": "Imported",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "imported"
-        ],
-        "title": "ImportOut",
         "type": "object"
       }
     },
@@ -10325,7 +10325,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
+                  "$ref": "#/components/schemas/ImportOut"
                 }
               }
             },
@@ -10502,7 +10502,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
+                  "$ref": "#/components/schemas/ImportOut"
                 }
               }
             },
@@ -10639,7 +10639,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
+                  "$ref": "#/components/schemas/ImportOut"
                 }
               }
             },
@@ -10819,7 +10819,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
+                  "$ref": "#/components/schemas/ImportOut"
                 }
               }
             },
@@ -10928,7 +10928,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
+                  "$ref": "#/components/schemas/ImportOut"
                 }
               }
             },
@@ -11037,7 +11037,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kritvia_api__routers__kitchen__ImportOut"
+                  "$ref": "#/components/schemas/ImportOut"
                 }
               }
             },
@@ -13193,7 +13193,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImportIn"
+                "$ref": "#/components/schemas/VocabularyImportIn"
               }
             }
           },
@@ -13204,7 +13204,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/kritvia_api__routers__voice__ImportOut"
+                  "$ref": "#/components/schemas/VocabularyImportOut"
                 }
               }
             },

@@ -3059,10 +3059,12 @@ export interface components {
              */
             id: string;
         };
-        /** ImportIn */
-        ImportIn: {
-            /** Terms */
-            terms: components["schemas"]["TermIn"][];
+        /** ImportOut */
+        ImportOut: {
+            /** Errors */
+            errors: string[];
+            /** Upserted */
+            upserted: number;
         };
         /** IngestOut */
         IngestOut: {
@@ -4171,6 +4173,16 @@ export interface components {
              */
             venture_id: string;
         };
+        /** VocabularyImportIn */
+        VocabularyImportIn: {
+            /** Terms */
+            terms: components["schemas"]["TermIn"][];
+        };
+        /** VocabularyImportOut */
+        VocabularyImportOut: {
+            /** Imported */
+            imported: number;
+        };
         /** VoiceOptionsOut */
         VoiceOptionsOut: {
             /** Engines */
@@ -4309,13 +4321,6 @@ export interface components {
             /** Purpose */
             purpose: string;
         };
-        /** ImportOut */
-        kritvia_api__routers__kitchen__ImportOut: {
-            /** Errors */
-            errors: string[];
-            /** Upserted */
-            upserted: number;
-        };
         /** ConsentIn */
         kritvia_api__routers__truhome__ConsentIn: {
             /**
@@ -4326,11 +4331,6 @@ export interface components {
             channel: "web" | "email" | "paper" | "whatsapp" | "verbal";
             /** Notice Version */
             notice_version: string;
-        };
-        /** ImportOut */
-        kritvia_api__routers__voice__ImportOut: {
-            /** Imported */
-            imported: number;
         };
     };
     responses: never;
@@ -6677,7 +6677,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
+                    "application/json": components["schemas"]["ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6780,7 +6780,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
+                    "application/json": components["schemas"]["ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6850,7 +6850,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
+                    "application/json": components["schemas"]["ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -6955,7 +6955,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
+                    "application/json": components["schemas"]["ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -7023,7 +7023,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
+                    "application/json": components["schemas"]["ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -7091,7 +7091,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["kritvia_api__routers__kitchen__ImportOut"];
+                    "application/json": components["schemas"]["ImportOut"];
                 };
             };
             /** @description Validation Error */
@@ -8261,7 +8261,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ImportIn"];
+                "application/json": components["schemas"]["VocabularyImportIn"];
             };
         };
         responses: {
@@ -8271,7 +8271,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["kritvia_api__routers__voice__ImportOut"];
+                    "application/json": components["schemas"]["VocabularyImportOut"];
                 };
             };
             /** @description Validation Error */

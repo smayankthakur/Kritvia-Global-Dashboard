@@ -91,8 +91,8 @@ export function useRecorder() {
   return { state, elapsed, error, supported, start, stop };
 }
 
-/** Insert text into an input/textarea so React's onChange fires. */
-export function insertText(el: HTMLInputElement | HTMLTextAreaElement, text: string): void {
+/** Insert text into an input/textarea so React's onChange fires. Returns the text around the insertion. */
+export function insertText(el: HTMLInputElement | HTMLTextAreaElement, text: string): { before: string; after: string } {
   const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
   const start = el.selectionStart ?? el.value.length;
@@ -110,4 +110,5 @@ export function insertText(el: HTMLInputElement | HTMLTextAreaElement, text: str
     /* some input types do not support selection */
   }
   el.focus();
+  return { before: before + sep, after };
 }

@@ -1,5 +1,6 @@
 import {
   Activity,
+  AudioLines,
   BookOpen,
   CalendarDays,
   ChefHat,
@@ -59,6 +60,7 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
     { label: "Runs", href: `${v}/runs`, icon: Activity },
     { label: "Knowledge", href: `${v}/knowledge`, icon: BookOpen },
     { label: "Meetings", href: `${v}/meetings`, icon: Mic },
+    { label: "Voice", href: `${v}/voice`, icon: AudioLines },
     { label: "Tasks", href: `${v}/tasks`, icon: ListChecks },
     { label: "Autonomy", href: `${v}/trust`, icon: Sparkles },
     { label: "Compliance", href: `${v}/compliance`, icon: ShieldCheck },
