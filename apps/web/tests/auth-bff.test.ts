@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { exchangeCredentials, logout } from "@/lib/bff/auth";
+import { exchangeCredentials, forwardAnonymous, logout } from "@/lib/bff/auth";
 
 const req = (path: string, body: unknown, headers: Record<string, string> = {}) =>
   new Request(`http://app.test${path}`, {
@@ -50,5 +50,27 @@ describe("auth route handlers", () => {
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toEqual({ refresh_token: "RT" });
     expect(res.headers.getSetCookie().every((c) => c.includes("Max-Age=0"))).toBe(true);
+  });
+});
+
+describe("email code routes", () => {
+  it("email/verify sets session cookies like login", async () => {
+    const f = vi.fn(async (url: string | URL | Request) => {
+      expect(String(url)).toMatch(/\/auth\/email\/verify$/);
+      return Response.json({ access_token: "AT", refresh_token: "RT", expires_in: 3600 });
+    });
+    const res = await exchangeCredentials(req("/api/auth/email/verify", { email: "a@b.in", code: "123456" }), "email/verify", f as unknown as typeof fetch);
+    expect(res.status).toBe(200);
+    expect(res.headers.getSetCookie().some((c) => c.startsWith("kv_at=AT;"))).toBe(true);
+  });
+
+  it("email/start forwards without tokens and refuses cross-site", async () => {
+    const f = vi.fn(async () => Response.json({ sent: true, expires_in: 600 }, { status: 202 }));
+    const ok = await forwardAnonymous(req("/api/auth/email/start", { email: "a@b.in" }), "auth/email/start", f as unknown as typeof fetch);
+    expect(ok.status).toBe(202);
+    expect(ok.headers.getSetCookie()).toHaveLength(0);
+    const bad = await forwardAnonymous(req("/api/auth/email/start", {}, { origin: "https://evil.example" }), "auth/email/start", f as unknown as typeof fetch);
+    expect(bad.status).toBe(403);
+    expect(f).toHaveBeenCalledTimes(1);
   });
 });

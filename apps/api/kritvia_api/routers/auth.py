@@ -6,17 +6,35 @@ and grouped in families: presenting a used token revokes the whole family
 per email.
 """
 import hashlib
+import hmac
 import secrets
+from datetime import UTC, datetime, timedelta
 
+import jwt
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
-from kritvia_api.deps import AnonDB, TenantDB, UserId
+from kritvia_api.deps import AnonDB, Svc, TenantDB, UserId
 from kritvia_api.ratelimit import client_ip, limiter
-from kritvia_api.schemas import LoginIn, MeOut, PasswordIn, RefreshIn, RegisterIn, TokenOut
+from kritvia_api.schemas import (
+    EmailStartIn,
+    EmailStartOut,
+    EmailVerifyIn,
+    GoogleSigninCompleteIn,
+    GoogleSigninStartIn,
+    LoginIn,
+    MeOut,
+    PasswordIn,
+    RefreshIn,
+    RegisterIn,
+    SigninUrlOut,
+    TokenOut,
+)
+from kritvia_api.services.google import GoogleError
+from kritvia_api.services.mailer import MailError, get_mailer
 from kritvia_api.security import hash_password, issue_access_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -46,6 +64,8 @@ async def _limit(request: Request, email: str | None = None) -> None:
 @router.post("/register", response_model=TokenOut, status_code=201)
 async def register(body: RegisterIn, db: AnonDB, request: Request) -> TokenOut:
     await _limit(request, body.email)
+    if not get_settings().signup_open:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "sign-up is closed on this server")
     try:
         async with db.begin_nested():
             uid = (await db.execute(
@@ -107,3 +127,107 @@ async def change_password(body: PasswordIn, user_id: UserId, db: TenantDB, reque
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "current password is wrong")
     await db.execute(text("SELECT auth_set_password(:h)"), {"h": hash_password(body.new_password)})
     return await _pair(db, user_id, request)
+
+
+# --- Email code sign-in (also how new people sign up: proving the address is the signup) --
+def _code_hash(email: str, code: str) -> str:
+    key = get_settings().jwt_secret.encode()
+    return hmac.new(key, f"email-code|{email.lower()}|{code}".encode(), hashlib.sha256).hexdigest()
+
+
+async def _signup_allowed(db, email: str) -> bool:
+    if get_settings().signup_open:
+        return True
+    return (await db.execute(text("SELECT 1 FROM auth_lookup(:e)"), {"e": email})).first() is not None
+
+
+@router.post("/email/start", response_model=EmailStartOut, status_code=202)
+async def email_start(body: EmailStartIn, db: AnonDB, request: Request) -> EmailStartOut:
+    """Emails a 6-digit sign-in code. The answer is the same whether or not the address has
+    an account, so this can't be used to find out who is registered."""
+    s = get_settings()
+    email = body.email.lower()
+    await _limit(request, email)
+    await limiter.hit(f"email-code:{email}", per_minute=3)
+    mailer = get_mailer()
+    if not mailer.can_deliver:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "email sign-in is not configured on this server")
+    if await _signup_allowed(db, email):
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        await db.execute(text("SELECT auth_code_issue(:e, :h, :m)"),
+                         {"e": email, "h": _code_hash(email, code), "m": s.email_code_minutes})
+        try:
+            await mailer.send(
+                email, f"{code} is your Kritvia sign-in code",
+                f"Your Kritvia sign-in code is {code}\n\n"
+                f"It works for {s.email_code_minutes} minutes, once. If you didn't ask for it, ignore this email.\n")
+        except MailError:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "could not send the email, try again shortly") from None
+    return EmailStartOut(expires_in=s.email_code_minutes * 60)
+
+
+@router.post("/email/verify", response_model=TokenOut)
+async def email_verify(body: EmailVerifyIn, request: Request) -> TokenOut:
+    email = body.email.lower()
+    await _limit(request, email)
+    # Own transaction: a wrong code must count as an attempt even though we answer 401.
+    async with tenant_tx(None) as db:
+        ok = (await db.execute(text("SELECT auth_code_consume(:e, :h)"),
+                               {"e": email, "h": _code_hash(email, body.code)})).scalar()
+    if not ok:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
+    async with tenant_tx(None) as db:
+        if not await _signup_allowed(db, email):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "sign-up is closed on this server")
+        uid = (await db.execute(text("SELECT auth_signin_email(:e, :n)"),
+                                {"e": email, "n": body.full_name.strip()})).scalar()
+        if uid is None:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "this account is disabled")
+        return await _pair(db, uid, request)
+
+
+# --- Sign in with Google ---------------------------------------------------------------
+def _signin_nonce_hash(nonce: str) -> str:
+    return hashlib.sha256(("google-signin|" + nonce).encode()).hexdigest()
+
+
+def _google(svc):
+    if svc.google is None or not svc.google.configured:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in is not configured on this server")
+    return svc.google
+
+
+@router.post("/google/start", response_model=SigninUrlOut)
+async def google_signin_start(body: GoogleSigninStartIn, request: Request, svc: Svc) -> SigninUrlOut:
+    await _limit(request)
+    google = _google(svc)
+    s = get_settings()
+    state = jwt.encode({"typ": "signin", "nh": _signin_nonce_hash(body.nonce),
+                        "exp": datetime.now(UTC) + timedelta(minutes=10)}, s.jwt_secret, algorithm=s.jwt_algorithm)
+    return SigninUrlOut(url=google.signin_url(state))
+
+
+@router.post("/google/complete", response_model=TokenOut)
+async def google_signin_complete(body: GoogleSigninCompleteIn, request: Request, svc: Svc) -> TokenOut:
+    """Called by the web app's OAuth callback with the code, the state and the nonce from its
+    httpOnly cookie, so a sign-in link started in another browser does not work here."""
+    await _limit(request)
+    s = get_settings()
+    try:
+        st = jwt.decode(body.state, s.jwt_secret, algorithms=[s.jwt_algorithm], options={"require": ["exp", "typ"]})
+    except jwt.PyJWTError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid or expired sign-in state") from None
+    if st.get("typ") != "signin" or not hmac.compare_digest(st.get("nh", ""), _signin_nonce_hash(body.nonce)):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "this Google sign-in was not started in this browser")
+    try:
+        who = await _google(svc).signin_identity(body.code)
+    except GoogleError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from None
+    async with tenant_tx(None) as db:
+        if not await _signup_allowed(db, who["email"]):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "sign-up is closed on this server")
+        uid = (await db.execute(text("SELECT auth_signin_google(:s, :e, :n)"),
+                                {"s": who["sub"], "e": who["email"], "n": who["name"]})).scalar()
+        if uid is None:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "this account is disabled or linked to another Google account")
+        return await _pair(db, uid, request)

@@ -21,7 +21,17 @@ export interface ProxyDeps {
   trustedOrigins?: string[];
 }
 
-const BLOCKED = new Set(["auth/login", "auth/register", "auth/refresh", "auth/logout"]);
+// Endpoints that return tokens (or bind a sign-in to this browser) go through their own
+// route handlers, which keep tokens in httpOnly cookies; never through the generic proxy.
+const BLOCKED = new Set([
+  "auth/login",
+  "auth/register",
+  "auth/refresh",
+  "auth/logout",
+  "auth/email/verify",
+  "auth/google/start",
+  "auth/google/complete",
+]);
 const FORWARD_REQUEST_HEADERS = ["content-type", "accept", "accept-language", "user-agent", "cf-connecting-ip", "x-request-id"];
 const DROP_RESPONSE_HEADERS = new Set([
   "set-cookie",

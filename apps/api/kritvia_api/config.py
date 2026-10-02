@@ -66,6 +66,17 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:3000/api/oauth/google/callback"  # the WEB app route
 
+    # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
+    signup_open: bool = True            # false: only existing accounts and invitees can sign in
+    email_code_minutes: int = 10
+    # System email for sign-in codes: smtp | log | memory (see services/mailer.py)
+    mail_transport: str = "log"
+    mail_from: str = "Kritvia <no-reply@sitelytc.com>"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+
     # Uploads
     max_upload_mb: int = 25
 

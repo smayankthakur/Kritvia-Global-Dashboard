@@ -24,6 +24,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/email/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email Start
+         * @description Emails a 6-digit sign-in code. The answer is the same whether or not the address has
+         *     an account, so this can't be used to find out who is registered.
+         */
+        post: operations["email_start_auth_email_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Verify */
+        post: operations["email_verify_auth_email_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Google Signin Complete
+         * @description Called by the web app's OAuth callback with the code, the state and the nonce from its
+         *     httpOnly cookie, so a sign-in link started in another browser does not work here.
+         */
+        post: operations["google_signin_complete_auth_google_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Google Signin Start */
+        post: operations["google_signin_start_auth_google_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -2823,6 +2899,43 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** EmailStartIn */
+        EmailStartIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
+        /** EmailStartOut */
+        EmailStartOut: {
+            /**
+             * Expires In
+             * @description seconds the code stays valid
+             */
+            expires_in: number;
+            /**
+             * Sent
+             * @default true
+             */
+            sent: boolean;
+        };
+        /** EmailVerifyIn */
+        EmailVerifyIn: {
+            /** Code */
+            code: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Full Name
+             * @description used only when this creates the account
+             * @default
+             */
+            full_name: string;
+        };
         /** EngineOut */
         EngineOut: {
             /** Available */
@@ -2978,6 +3091,23 @@ export interface components {
              * Format: uuid
              */
             venture_id: string;
+        };
+        /** GoogleSigninCompleteIn */
+        GoogleSigninCompleteIn: {
+            /** Code */
+            code: string;
+            /** Nonce */
+            nonce: string;
+            /** State */
+            state: string;
+        };
+        /** GoogleSigninStartIn */
+        GoogleSigninStartIn: {
+            /**
+             * Nonce
+             * @description random value the web app also keeps in an httpOnly cookie
+             */
+            nonce: string;
         };
         /** GoogleStartIn */
         GoogleStartIn: {
@@ -3815,6 +3945,11 @@ export interface components {
             /** Workflow */
             workflow: string;
         };
+        /** SigninUrlOut */
+        SigninUrlOut: {
+            /** Url */
+            url: string;
+        };
         /** StartedOut */
         StartedOut: {
             /**
@@ -4360,6 +4495,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_start_auth_email_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailStartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailStartOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_verify_auth_email_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerifyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_signin_complete_auth_google_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSigninCompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_signin_start_auth_google_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSigninStartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SigninUrlOut"];
                 };
             };
             /** @description Validation Error */

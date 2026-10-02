@@ -77,8 +77,8 @@ export const topNav: NavItem[] = [
 export const ownerNav: NavItem[] = [{ label: "Audit log", href: "/audit", icon: ScrollText }];
 
 export const KIND_LABEL: Record<VentureKind, string> = {
-  software: "Software studio",
-  finance: "Finance",
-  kitchen: "Cloud kitchen",
+  software: "Agency / services",
+  finance: "Loans & real estate",
+  kitchen: "Restaurant / kitchen",
   general: "General",
 };

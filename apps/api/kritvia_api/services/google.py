@@ -86,6 +86,31 @@ class GoogleClient:
         email = info.json().get("email") if info.status_code == 200 else None
         return {"refresh_token": tok["refresh_token"], "scope": tok.get("scope", ""), "email": email}
 
+    # --- Sign in with Google (identity only: no offline access, no Workspace scopes) ---
+    def signin_url(self, state: str) -> str:
+        return AUTH_URL + "?" + urlencode({
+            "client_id": self.client_id, "redirect_uri": self.redirect_uri, "response_type": "code",
+            "scope": "openid email profile", "state": state, "prompt": "select_account",
+        })
+
+    async def signin_identity(self, code: str) -> dict[str, Any]:
+        """Exchanges a sign-in code for the Google account's id, verified email and name."""
+        r = await self._http.post(TOKEN_URL, data={
+            "code": code, "client_id": self.client_id, "client_secret": self.client_secret,
+            "redirect_uri": self.redirect_uri, "grant_type": "authorization_code"})
+        if r.status_code != 200:
+            raise GoogleError(f"token exchange failed: HTTP {r.status_code}")
+        info = await self._http.get(USERINFO_URL,
+                                    headers={"Authorization": f"Bearer {r.json()['access_token']}"})
+        if info.status_code != 200:
+            raise GoogleError(f"could not read the Google profile: HTTP {info.status_code}")
+        p = info.json()
+        if not p.get("sub") or not p.get("email"):
+            raise GoogleError("Google did not return an account id and email")
+        if p.get("email_verified") is not True:
+            raise GoogleError("this Google account's email address is not verified")
+        return {"sub": str(p["sub"]), "email": str(p["email"]), "name": str(p.get("name") or "")}
+
     async def access_token(self, connector_id: uuid.UUID, refresh_token: str) -> str:
         cached = self._tokens.get(connector_id)
         if cached and cached[1] > time.time() + 60:

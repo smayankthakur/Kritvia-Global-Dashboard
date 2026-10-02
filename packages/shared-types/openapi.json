@@ -2467,6 +2467,66 @@
         "title": "EdgeOut",
         "type": "object"
       },
+      "EmailStartIn": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "EmailStartIn",
+        "type": "object"
+      },
+      "EmailStartOut": {
+        "properties": {
+          "expires_in": {
+            "description": "seconds the code stays valid",
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "sent": {
+            "default": true,
+            "title": "Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expires_in"
+        ],
+        "title": "EmailStartOut",
+        "type": "object"
+      },
+      "EmailVerifyIn": {
+        "properties": {
+          "code": {
+            "pattern": "^\\d{6}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "default": "",
+            "description": "used only when this creates the account",
+            "maxLength": 120,
+            "title": "Full Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "EmailVerifyIn",
+        "type": "object"
+      },
       "EngineOut": {
         "properties": {
           "available": {
@@ -2893,6 +2953,51 @@
           "scopes"
         ],
         "title": "GoogleCompleteOut",
+        "type": "object"
+      },
+      "GoogleSigninCompleteIn": {
+        "properties": {
+          "code": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 32,
+            "title": "Nonce",
+            "type": "string"
+          },
+          "state": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "state",
+          "nonce"
+        ],
+        "title": "GoogleSigninCompleteIn",
+        "type": "object"
+      },
+      "GoogleSigninStartIn": {
+        "properties": {
+          "nonce": {
+            "description": "random value the web app also keeps in an httpOnly cookie",
+            "maxLength": 128,
+            "minLength": 32,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "GoogleSigninStartIn",
         "type": "object"
       },
       "GoogleStartIn": {
@@ -5058,6 +5163,19 @@
         "title": "RunOut",
         "type": "object"
       },
+      "SigninUrlOut": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "SigninUrlOut",
+        "type": "object"
+      },
       "StartedOut": {
         "properties": {
           "run_id": {
@@ -6433,6 +6551,172 @@
         "summary": "Inbox",
         "tags": [
           "approvals"
+        ]
+      }
+    },
+    "/auth/email/start": {
+      "post": {
+        "description": "Emails a 6-digit sign-in code. The answer is the same whether or not the address has\nan account, so this can't be used to find out who is registered.",
+        "operationId": "email_start_auth_email_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailStartOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Email Start",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/email/verify": {
+      "post": {
+        "operationId": "email_verify_auth_email_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailVerifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Email Verify",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/google/complete": {
+      "post": {
+        "description": "Called by the web app's OAuth callback with the code, the state and the nonce from its\nhttpOnly cookie, so a sign-in link started in another browser does not work here.",
+        "operationId": "google_signin_complete_auth_google_complete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleSigninCompleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Google Signin Complete",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/google/start": {
+      "post": {
+        "operationId": "google_signin_start_auth_google_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleSigninStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SigninUrlOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Google Signin Start",
+        "tags": [
+          "auth"
         ]
       }
     },

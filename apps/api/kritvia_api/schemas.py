@@ -21,6 +21,36 @@ class LoginIn(BaseModel):
     password: str
 
 
+class EmailStartIn(BaseModel):
+    email: EmailStr
+
+
+class EmailStartOut(BaseModel):
+    sent: bool = True
+    expires_in: int = Field(description="seconds the code stays valid")
+
+
+class EmailVerifyIn(BaseModel):
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+    full_name: str = Field(default="", max_length=120, description="used only when this creates the account")
+
+
+class GoogleSigninStartIn(BaseModel):
+    nonce: str = Field(min_length=32, max_length=128,
+                       description="random value the web app also keeps in an httpOnly cookie")
+
+
+class GoogleSigninCompleteIn(BaseModel):
+    code: str = Field(min_length=1, max_length=2000)
+    state: str = Field(min_length=1, max_length=4000)
+    nonce: str = Field(min_length=32, max_length=128)
+
+
+class SigninUrlOut(BaseModel):
+    url: str
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
-import { Checkbox, Field, FormError, Input, Select } from "@/components/ui/field";
+import { Checkbox, Field, FormError, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { ErrorState } from "@/components/ui/states";
 import { ApiError, api, errorMessage, unwrap } from "@/lib/api";
@@ -18,26 +18,45 @@ import { KIND_LABEL } from "@/lib/nav";
 import { SLUG_RE, slugify } from "@/lib/slug";
 
 
-interface VentureDraft {
-  key: number;
-  include: boolean;
-  name: string;
-  slug: string;
-  kind: VentureKind;
-  slugTouched?: boolean;
-}
-
 interface CreatedVenture {
   id: string;
   name: string;
   kind: VentureKind;
 }
 
-const PRESETS: Omit<VentureDraft, "key">[] = [
-  { include: true, name: "Sitelytc", slug: "sitelytc", kind: "software" },
-  { include: true, name: "Truhome Finance", slug: "truhome-finance", kind: "finance" },
-  { include: true, name: "Cloud Kitchen", slug: "cloud-kitchen", kind: "kitchen" },
+/** Business templates: the kind decides which agents, workflows and screens a business gets. */
+export const TEMPLATES: { kind: VentureKind; title: string; example: string; gets: string }[] = [
+  {
+    kind: "software",
+    title: "Agency or services",
+    example: "Digital agency, consultancy, IT services",
+    gets: "Lead triage with draft proposals, meeting digests",
+  },
+  {
+    kind: "finance",
+    title: "Loans & real estate",
+    example: "Loan DSA, mortgage broker, property dealer",
+    gets: "Loan document checks and client follow-ups, meeting digests",
+  },
+  {
+    kind: "kitchen",
+    title: "Restaurant or cloud kitchen",
+    example: "Cloud kitchen, restaurant, caterer",
+    gets: "Nightly stock and purchase plan from the day's orders",
+  },
+  {
+    kind: "general",
+    title: "Something else",
+    example: "Retail, clinic, education, anything",
+    gets: "Memory, voice notes, approvals; add agents later",
+  },
 ];
+
+interface BusinessDraft {
+  key: number;
+  name: string;
+  kind: VentureKind | null;
+}
 
 const ROLE_OPTIONS: { role: string; label: string; hint: string }[] = [
   { role: "approver", label: "Approver", hint: "Approve agent drafts (emails, invites)" },
@@ -56,7 +75,7 @@ const DEFAULT_ROLES: Record<VentureKind, string[]> = {
 const DEFAULT_SCHEDULES: Record<string, string> = { kitchen_daily: "23:30" };
 
 function Steps({ step }: { step: number }) {
-  const labels = ["Organisation", "Ventures", "Roles & workflows"];
+  const labels = ["Your business", "Roles & workflows"];
   return (
     <ol className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-xs" aria-label="Setup progress">
       {labels.map((l, i) => (
@@ -81,18 +100,15 @@ export default function OnboardingPage() {
   const access = useAccessQuery();
   const qc = useQueryClient();
   const me = useQuery({ queryKey: meKey, queryFn: () => unwrap(api.GET("/auth/me")) });
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [step, setStep] = useState<0 | 1>(0);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedVenture[]>([]);
 
-  // Resume: an org without ventures continues at step 2.
+  // Resume: an org created earlier without businesses is reused.
   useEffect(() => {
     if (!access.data || orgId) return;
     const owned = access.data.orgs.find((o) => o.is_owner);
-    if (owned && !access.data.ventures.some((v) => v.org_id === owned.id)) {
-      setOrgId(owned.id);
-      setStep(1);
-    }
+    if (owned && !access.data.ventures.some((v) => v.org_id === owned.id)) setOrgId(owned.id);
   }, [access.data, orgId]);
 
   if (access.isPending) return <FullPageLoader label="Preparing setup" />;
@@ -116,24 +132,17 @@ export default function OnboardingPage() {
           <>
             <Steps step={step} />
             {step === 0 ? (
-              <OrgStep
-                onDone={(id) => {
-                  setOrgId(id);
-                  setStep(1);
-                }}
-              />
-            ) : null}
-            {step === 1 && orgId ? (
-              <VenturesStep
+              <BusinessStep
                 orgId={orgId}
+                onOrg={setOrgId}
                 onDone={(vs) => {
                   setCreated(vs);
-                  setStep(2);
+                  setStep(1);
                   void qc.invalidateQueries({ queryKey: accessKey });
                 }}
               />
             ) : null}
-            {step === 2 && orgId ? (
+            {step === 1 && orgId ? (
               <SetupStep
                 orgId={orgId}
                 email={me.data?.email ?? ""}
@@ -151,65 +160,146 @@ export default function OnboardingPage() {
   );
 }
 
-function OrgStep({ onDone }: { onDone: (id: string) => void }) {
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [touched, setTouched] = useState(false);
+function BusinessStep({
+  orgId,
+  onOrg,
+  onDone,
+}: {
+  orgId: string | null;
+  onOrg: (id: string) => void;
+  onDone: (v: CreatedVenture[]) => void;
+}) {
+  const [rows, setRows] = useState<BusinessDraft[]>([{ key: 0, name: "", kind: null }]);
+  const [group, setGroup] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<Record<number, string>>({});
+  const update = (key: number, patch: Partial<BusinessDraft>) =>
+    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const many = rows.length > 1;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = "Enter your organisation's name";
-    if (!SLUG_RE.test(slug)) errs.slug = "2–63 characters: lowercase letters, digits and hyphens";
+    const slugs = new Set<string>();
+    for (const r of rows) {
+      if (!r.name.trim()) errs[`${r.key}.name`] = "Enter the business name";
+      else if (!SLUG_RE.test(slugify(r.name))) errs[`${r.key}.name`] = "Use letters or digits in the name";
+      else if (slugs.has(slugify(r.name))) errs[`${r.key}.name`] = "Two businesses have the same name";
+      slugs.add(slugify(r.name));
+      if (!r.kind) errs[`${r.key}.kind`] = "Choose what kind of business this is";
+    }
+    if (many && !group.trim()) errs.group = "Name the group that owns these businesses";
     setErrors(errs);
     setFormError(null);
     if (Object.keys(errs).length) return;
     setBusy(true);
     try {
-      const out = await unwrap(api.POST("/orgs", { body: { name: name.trim(), slug } }));
-      onDone(out.id);
+      let org = orgId;
+      if (!org) {
+        const orgName = (many ? group : rows[0]!.name).trim();
+        org = await createOrg(orgName);
+        onOrg(org);
+      }
+      const ids = { ...done };
+      const out: CreatedVenture[] = [];
+      for (const r of rows) {
+        const kind = r.kind as VentureKind;
+        let id = ids[r.key];
+        if (!id) {
+          id = (
+            await unwrap(
+              api.POST("/orgs/{org_id}/ventures", {
+                params: { path: { org_id: org } },
+                body: { name: r.name.trim(), slug: slugify(r.name) },
+              }),
+            )
+          ).id;
+          ids[r.key] = id;
+          setDone({ ...ids });
+        }
+        await unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: id } }, body: { kind } }));
+        out.push({ id, name: r.name.trim(), kind });
+      }
+      onDone(out);
     } catch (err) {
       setBusy(false);
-      if (err instanceof ApiError && err.status === 409) setErrors({ slug: "This slug is taken — choose another" });
-      else if (err instanceof ApiError && Object.keys(err.fieldErrors).length) setErrors(err.fieldErrors);
-      else setFormError(errorMessage(err));
+      setFormError(
+        err instanceof ApiError && err.status === 409
+          ? "One of these names is already in use in your account. Change it slightly."
+          : errorMessage(err),
+      );
     }
   };
 
   return (
     <Card className="p-6">
-      <h1 className="text-lg font-semibold tracking-tight">Create your organisation</h1>
+      <h1 className="text-lg font-semibold tracking-tight">Tell us about your business</h1>
       <p className="mt-1 text-sm text-muted">
-        The organisation holds your ventures. Each venture is a hard data boundary — people only see the ventures they are
-        granted.
+        Kritvia sets up the right agents for your kind of business. Each business is kept completely separate, so you can
+        add more later.
       </p>
-      <form onSubmit={submit} noValidate className="mt-6 space-y-4">
+      <form onSubmit={submit} noValidate className="mt-6 space-y-6">
         <FormError message={formError} />
-        <Field label="Organisation name" error={errors.name} required>
-          <Input
-            value={name}
-            autoFocus
-            maxLength={120}
-            placeholder="Thakur Group"
-            onChange={(e) => {
-              setName(e.target.value);
-              if (!touched) setSlug(slugify(e.target.value));
-            }}
-          />
-        </Field>
-        <Field label="Slug" error={errors.slug} hint="Used in URLs and exports." required>
-          <Input
-            value={slug}
-            onChange={(e) => {
-              setTouched(true);
-              setSlug(e.target.value.toLowerCase());
-            }}
-          />
-        </Field>
-        <div className="flex justify-end">
+        {rows.map((r, i) => (
+          <fieldset key={r.key} className={cn("space-y-4", many && "rounded-lg border border-border p-4")}>
+            {many ? (
+              <div className="flex items-center justify-between">
+                <legend className="text-sm font-semibold">Business {i + 1}</legend>
+                {done[r.key] ? (
+                  <Badge tone="success">Created</Badge>
+                ) : i > 0 ? (
+                  <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Remove business" onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            <Field label="Business name" error={errors[`${r.key}.name`]} required>
+              <Input
+                value={r.name}
+                autoFocus={i === 0}
+                maxLength={120}
+                disabled={Boolean(done[r.key])}
+                placeholder="Sharma Digital"
+                onChange={(e) => update(r.key, { name: e.target.value })}
+              />
+            </Field>
+            <div role="radiogroup" aria-label="Kind of business" className="grid gap-2 sm:grid-cols-2">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.kind}
+                  type="button"
+                  role="radio"
+                  aria-checked={r.kind === t.kind}
+                  onClick={() => update(r.key, { kind: t.kind })}
+                  className={cn(
+                    "rounded-lg border p-3 text-left transition-colors",
+                    r.kind === t.kind ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:bg-surface-2",
+                  )}
+                >
+                  <span className="flex items-center justify-between text-sm font-medium">
+                    {t.title}
+                    {r.kind === t.kind ? <Check className="h-4 w-4 text-accent" /> : null}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-subtle">{t.example}</span>
+                  <span className="mt-2 block text-xs text-muted">{t.gets}</span>
+                </button>
+              ))}
+            </div>
+            {errors[`${r.key}.kind`] ? <p className="text-xs text-danger">{errors[`${r.key}.kind`]}</p> : null}
+          </fieldset>
+        ))}
+        {many && !orgId ? (
+          <Field label="Group name" error={errors.group} hint="The company or family group that owns these businesses." required>
+            <Input value={group} maxLength={120} placeholder="Sharma Group" onChange={(e) => setGroup(e.target.value)} />
+          </Field>
+        ) : null}
+        <div className="flex flex-wrap justify-between gap-2">
+          <Button icon={<Plus className="h-4 w-4" />} onClick={() => setRows((rs) => [...rs, { key: Date.now(), name: "", kind: null }])}>
+            I run another business
+          </Button>
           <Button type="submit" variant="primary" loading={busy}>
             Continue
           </Button>
@@ -219,119 +309,18 @@ function OrgStep({ onDone }: { onDone: (id: string) => void }) {
   );
 }
 
-function VenturesStep({ orgId, onDone }: { orgId: string; onDone: (v: CreatedVenture[]) => void }) {
-  const [rows, setRows] = useState<VentureDraft[]>(() => PRESETS.map((p, i) => ({ ...p, key: i })));
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<Record<number, string>>({});
-
-  const update = (key: number, patch: Partial<VentureDraft>) =>
-    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const chosen = rows.filter((r) => r.include);
-    const errs: Record<string, string> = {};
-    if (!chosen.length) setFormError("Choose at least one venture");
-    const slugs = new Set<string>();
-    for (const r of chosen) {
-      if (!r.name.trim()) errs[`${r.key}.name`] = "Required";
-      if (!SLUG_RE.test(r.slug)) errs[`${r.key}.slug`] = "Lowercase letters, digits, hyphens";
-      else if (slugs.has(r.slug)) errs[`${r.key}.slug`] = "Duplicate slug";
-      slugs.add(r.slug);
-    }
-    setErrors(errs);
-    if (Object.keys(errs).length || !chosen.length) return;
-    setFormError(null);
-    setBusy(true);
-    const out: CreatedVenture[] = [];
-    const ids = { ...done };
+/** Creates the organisation, adding a short suffix if the name's slug is taken. */
+async function createOrg(name: string): Promise<string> {
+  const base = slugify(name).slice(0, 55) || "org";
+  for (let i = 0; i < 4; i++) {
+    const slug = i === 0 ? base : `${base}-${Math.random().toString(36).slice(2, 6)}`;
     try {
-      for (const r of chosen) {
-        let id = ids[r.key];
-        if (!id) {
-          id = (await unwrap(api.POST("/orgs/{org_id}/ventures", { params: { path: { org_id: orgId } }, body: { name: r.name.trim(), slug: r.slug } }))).id;
-          ids[r.key] = id;
-          setDone({ ...ids });
-        }
-        await unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: id } }, body: { kind: r.kind } }));
-        out.push({ id, name: r.name.trim(), kind: r.kind });
-      }
-      onDone(out);
+      return (await unwrap(api.POST("/orgs", { body: { name, slug } }))).id;
     } catch (err) {
-      setBusy(false);
-      setFormError(err instanceof ApiError && err.status === 409 ? "A venture with one of these slugs already exists." : errorMessage(err));
+      if (!(err instanceof ApiError && err.status === 409)) throw err;
     }
-  };
-
-  return (
-    <Card className="p-6">
-      <h1 className="text-lg font-semibold tracking-tight">Add your ventures</h1>
-      <p className="mt-1 text-sm text-muted">
-        The kind decides which agents and screens a venture gets. You can rename or add ventures later.
-      </p>
-      <form onSubmit={submit} noValidate className="mt-6 space-y-4">
-        <FormError message={formError} />
-        <div className="space-y-3">
-          {rows.map((r) => (
-            <div key={r.key} className={cn("rounded-lg border p-3", r.include ? "border-border" : "border-dashed border-border opacity-70")}>
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <Checkbox
-                  label={r.name || "New venture"}
-                  checked={r.include}
-                  onChange={(e) => update(r.key, { include: e.target.checked })}
-                  disabled={Boolean(done[r.key])}
-                />
-                <div className="flex items-center gap-2">
-                  {done[r.key] ? <Badge tone="success">Created</Badge> : null}
-                  {r.key >= PRESETS.length && !done[r.key] ? (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Remove venture" onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-              {r.include ? (
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Name" error={errors[`${r.key}.name`]}>
-                    <Input
-                      value={r.name}
-                      disabled={Boolean(done[r.key])}
-                      onChange={(e) => update(r.key, { name: e.target.value, ...(r.slugTouched ? {} : { slug: slugify(e.target.value) }) })}
-                    />
-                  </Field>
-                  <Field label="Slug" error={errors[`${r.key}.slug`]}>
-                    <Input value={r.slug} disabled={Boolean(done[r.key])} onChange={(e) => update(r.key, { slug: e.target.value.toLowerCase(), slugTouched: true })} />
-                  </Field>
-                  <Field label="Kind">
-                    <Select value={r.kind} onChange={(e) => update(r.key, { kind: e.target.value as VentureKind })}>
-                      {(Object.keys(KIND_LABEL) as VentureKind[]).map((k) => (
-                        <option key={k} value={k}>
-                          {KIND_LABEL[k]}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap justify-between gap-2">
-          <Button
-            icon={<Plus className="h-4 w-4" />}
-            onClick={() => setRows((rs) => [...rs, { key: Date.now(), include: true, name: "", slug: "", kind: "general" }])}
-          >
-            Add another
-          </Button>
-          <Button type="submit" variant="primary" loading={busy}>
-            Create ventures
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
+  }
+  throw new Error("Couldn't find a free name for your organisation. Try a slightly different name.");
 }
 
 function SetupStep({

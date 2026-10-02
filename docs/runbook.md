@@ -111,3 +111,22 @@ It installs the AWS CLI, writes `/etc/cron.d/kritvia` (health watchdog every 5 m
 
 - Watchdog log: `sudo journalctl -t kritvia-health -n 50` · backup log: `/var/log/kritvia-backup.log`
 - Stage 2 gate (each workflow 10 consecutive days on real data): `sudo infra/scripts/dogfood-report.sh`
+
+## Sign-up: Google and email codes
+
+New people sign up at `/register` with **Sign up with Google** or an emailed 6-digit code; there is no
+password to set. Then a one-step setup asks for the business name and type (agency/services, loans &
+real estate, restaurant/kitchen, something else), which decides the agents and workflows it gets.
+
+- **Google sign-in** needs only `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and
+  `GOOGLE_REDIRECT_URI=https://app.<domain>/api/oauth/google/callback` (the same client and redirect URI as
+  the Gmail/Calendar connector). It asks Google for name and email only. While the Google app is in
+  "Testing", only the test users listed in Google Cloud can sign in; publish the app (basic scopes need
+  no review) before outside users sign up.
+- **Email codes** need an SMTP sender: set `MAIL_TRANSPORT=smtp` and `SMTP_*`. With `MAIL_TRANSPORT=log`
+  (the default) codes are not emailed but written to the API log — fine for the owner alone:
+  `sudo docker compose logs api | grep "sign-in code"`.
+- `SIGNUP_OPEN=false` closes sign-up: existing accounts still sign in, new addresses get no code.
+- Safety: codes are stored only as HMAC hashes, last 10 minutes, are single use and die after 5 wrong
+  tries. If someone registered an address with a password but never proved it, the real owner signing in
+  with a code or Google removes that password and ends its sessions.

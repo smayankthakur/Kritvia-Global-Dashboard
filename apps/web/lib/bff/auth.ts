@@ -16,9 +16,11 @@ function clientHeaders(req: Request): Record<string, string> {
 
 /** Exchange credentials with the API and turn the token pair into httpOnly cookies.
  * The browser only ever receives `{ ok: true }`. */
+export type CredentialEndpoint = "login" | "register" | "email/verify";
+
 export async function exchangeCredentials(
   req: Request,
-  endpoint: "login" | "register",
+  endpoint: CredentialEndpoint,
   doFetch: typeof fetch = fetch,
 ): Promise<Response> {
   if (!isSameOrigin(req)) return forbiddenOrigin();
@@ -69,4 +71,28 @@ export async function logout(req: Request, doFetch: typeof fetch = fetch): Promi
   const headers = new Headers({ "content-type": "application/json" });
   for (const c of clearSessionCookies()) headers.append("set-cookie", c);
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+}
+
+/** Forward an anonymous, token-free auth call (e.g. "send me a code") to the API. */
+export async function forwardAnonymous(
+  req: Request,
+  path: string,
+  doFetch: typeof fetch = fetch,
+): Promise<Response> {
+  if (!isSameOrigin(req)) return forbiddenOrigin();
+  let res: Response;
+  try {
+    res = await doFetch(`${apiUrl()}/${path}`, {
+      method: "POST",
+      headers: clientHeaders(req),
+      body: await req.text(),
+      cache: "no-store",
+    });
+  } catch {
+    return Response.json({ detail: "the Kritvia API is unreachable" }, { status: 502 });
+  }
+  const headers = new Headers({ "content-type": "application/json", "cache-control": "no-store" });
+  const retry = res.headers.get("retry-after");
+  if (retry) headers.set("retry-after", retry);
+  return new Response(await res.text(), { status: res.status, headers });
 }

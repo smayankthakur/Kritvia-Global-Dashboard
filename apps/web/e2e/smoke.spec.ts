@@ -51,21 +51,33 @@ test.describe.serial("Kritvia command center", () => {
 
   test("register and onboard an organisation with three ventures", async () => {
     await page.goto("/register");
-    await page.getByLabel("Full name").fill("Mayank Thakur");
-    await page.getByLabel("Work email").fill(email);
-    await page.getByLabel("Password").fill("short");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByText("Use at least 12 characters")).toBeVisible();
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(/\/onboarding/);
+    await expect(page.getByRole("button", { name: "Sign up with Google" })).toBeVisible();
+    await page.getByRole("button", { name: "Email me a code" }).click();
+    await expect(page.getByText("Enter your name")).toBeVisible();
+    await shot(page, "01b-register");
+    // An emailed code can't be read here, so the account is created through the password API.
+    const origin = new URL(page.url()).origin;
+    const reg = await page.request.post("/api/auth/register", {
+      data: { full_name: "Mayank Thakur", email, password },
+      headers: { origin },
+    });
+    expect(reg.ok()).toBeTruthy();
+    await page.goto("/onboarding");
 
-    await page.getByLabel("Organisation name").fill(`E2E Group ${suffix}`);
-    await expect(page.getByLabel("Slug")).toHaveValue(`e2e-group-${suffix}`);
+    await expect(page.getByRole("heading", { name: "Tell us about your business" })).toBeVisible();
     await page.getByRole("button", { name: "Continue" }).click();
-
-    await expect(page.getByRole("heading", { name: "Add your ventures" })).toBeVisible();
-    await page.getByRole("button", { name: "Create ventures" }).click();
+    await expect(page.getByText("Enter the business name")).toBeVisible();
+    await page.getByLabel("Business name").fill("Sitelytc");
+    await page.getByRole("radio", { name: /Agency or services/ }).click();
+    await page.getByRole("button", { name: "I run another business" }).click();
+    await page.getByLabel("Business name").nth(1).fill("Truhome Finance");
+    await page.getByRole("radio", { name: /Loans & real estate/ }).nth(1).click();
+    await page.getByRole("button", { name: "I run another business" }).click();
+    await page.getByLabel("Business name").nth(2).fill("Cloud Kitchen");
+    await page.getByRole("radio", { name: /Restaurant or cloud kitchen/ }).nth(2).click();
+    await page.getByLabel("Group name").fill(`E2E Group ${suffix}`);
+    await shot(page, "02a-onboarding-business");
+    await page.getByRole("button", { name: "Continue" }).click();
 
     await expect(page.getByRole("heading", { name: "Your roles and workflows" })).toBeVisible();
     await expect(page.getByText("Demand forecast & purchase orders")).toBeVisible();

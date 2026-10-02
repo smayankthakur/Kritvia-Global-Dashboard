@@ -30,6 +30,7 @@ os.environ["MASTER_KEK_B64"] = base64.b64encode(os.urandom(32)).decode()
 os.environ["JWT_SECRET"] = "test-secret-" + "x" * 40
 os.environ["DISPATCH_MODE"] = "inline"
 os.environ["MESSAGING_FALLBACK"] = "log"
+os.environ["MAIL_TRANSPORT"] = "memory"
 os.environ["AUTH_RATE_LIMIT_PER_MINUTE"] = "10000"
 os.environ["CLIENT_IP_HEADER"] = "cf-connecting-ip"
 
