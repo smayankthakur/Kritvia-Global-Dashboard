@@ -4,6 +4,7 @@ from __future__ import annotations
 import io
 import json
 import uuid
+from pathlib import Path
 from datetime import date
 
 import asyncpg
@@ -375,3 +376,12 @@ async def test_meeting_transcript_uses_shared_vocabulary(world, fake_llm):
     detail = (await mayank.get(f"/ventures/{v}/documents/{t['id']}")).json()
     body = json.dumps(detail)
     assert "Truhome launch is Friday." in body and "MayankOnly" not in body and "Uh," not in body
+
+
+def test_ancestor_tolerates_shallow_install(tmp_path):
+    """The Docker image installs the package at /app/kritvia_api — repo-relative paths must not crash."""
+    from kritvia_api.config import ancestor
+
+    f = tmp_path / "a" / "b.py"
+    assert ancestor(f, 1) == tmp_path
+    assert ancestor("/app/kritvia_api/config.py", 3) == Path("/")

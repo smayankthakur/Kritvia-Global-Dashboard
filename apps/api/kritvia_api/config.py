@@ -4,7 +4,16 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def ancestor(path: str | Path, n: int) -> Path:
+    """``parents[n]`` of *path*, or the filesystem root when the code is installed shallower than
+    the repo layout (e.g. /app/kritvia_api in the Docker image), instead of raising IndexError."""
+    parents = Path(path).resolve().parents
+    return parents[min(n, len(parents) - 1)]
+
+
+REPO_ROOT = ancestor(__file__, 3)
 
 
 class Settings(BaseSettings):

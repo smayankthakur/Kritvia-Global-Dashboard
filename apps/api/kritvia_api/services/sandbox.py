@@ -11,12 +11,13 @@ import json
 import os
 import resource
 import sys
-from pathlib import Path
 from typing import Any, Protocol
 
 import httpx
 
-JOBS_PATH = Path(__file__).resolve().parents[4] / "services" / "sandbox" / "jobs"
+from kritvia_api.config import ancestor
+
+JOBS_PATH = ancestor(__file__, 4) / "services" / "sandbox" / "jobs"
 ALLOWED = {"forecast", "bom", "echo", "net_probe"}
 
 
