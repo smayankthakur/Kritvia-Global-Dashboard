@@ -1,5 +1,13 @@
 # Kritvia runbook — Oracle ARM VM (dogfooding) and day-2 operations
 
+## 0. Quick path — one command
+
+Create the VM as in step 1 (Ampere A1, Ubuntu 24.04, SSH only), SSH in as `ubuntu`, then:
+```bash
+curl -fsSL https://raw.githubusercontent.com/smayankthakur/Kritvia-Global-Dashboard/main/scripts/server-setup.sh | bash -s -- <domain>
+```
+`scripts/server-setup.sh` does steps 1–3 below: Docker, gVisor, code in `/opt/kritvia`, `.env` with generated secrets, hidden prompts for the provider keys and the Cloudflare tunnel token, build, start, local models, health checks. Re-run it any time to update. Then do the Cloudflare hostnames and the `bootstrap` command it prints.
+
 ## 1. Provision the VM (once)
 
 1. Oracle Cloud Always Free: Ampere A1, 4 OCPU / 24 GB, Ubuntu 24.04 (arm64), 150+ GB boot volume.

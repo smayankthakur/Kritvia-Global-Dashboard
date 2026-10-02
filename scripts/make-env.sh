@@ -14,6 +14,8 @@ API_HOST="${2:-}"
 command -v openssl >/dev/null || { echo "openssl is required" >&2; exit 1; }
 [ -f .env ] || cp .env.example .env
 chmod 600 .env
+# docker compose substitutes ${VARS} from .env next to the compose file — point it at this one
+[ -e infra/.env ] || ln -s ../.env infra/.env
 
 get() { grep -E "^$1=" .env | head -1 | cut -d= -f2- | sed 's/[[:space:]]*#.*$//; s/[[:space:]]*$//'; }
 set_var() {  # set_var NAME VALUE  (replaces the line, keeps the rest of the file)
