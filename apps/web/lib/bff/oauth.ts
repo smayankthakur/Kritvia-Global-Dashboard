@@ -13,7 +13,7 @@
  * Sign in with Google uses the same redirect URI: start sets kv_signin instead, and the
  * callback tells the two apart by the state's "typ" claim (the API verifies the state).
  */
-import { forbiddenOrigin, isSameOrigin } from "./origin";
+import { forbiddenOrigin, isSameOrigin, requestHost } from "./origin";
 import { parseCookies, serializeCookie, sessionCookies, type TokenPair } from "./cookies";
 import { proxyRequest, type ProxyDeps } from "./proxy";
 
@@ -30,7 +30,9 @@ function randomNonce(): string {
 
 /** Build an internal same-origin request so proxyRequest adds auth, refreshes and passes the CSRF check. */
 function innerRequest(req: Request, method: string, body: unknown): Request {
-  const origin = new URL(req.url).origin;
+  // The public origin the browser used. Behind a tunnel or reverse proxy req.url carries the
+  // internal address (e.g. http://localhost:3000), which the proxy's CSRF check would refuse.
+  const origin = `${new URL(req.url).protocol}//${requestHost(req)}`;
   const headers = new Headers({ "content-type": "application/json", origin });
   for (const h of [
     "cookie",
@@ -55,6 +57,8 @@ export async function startGoogle(
   req: Request,
   deps: ProxyDeps,
 ): Promise<Response> {
+  // CSRF: the browser's own request must be same-origin; the inner request is built by us.
+  if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
   let ventureId = "";
   try {
     ventureId = String(

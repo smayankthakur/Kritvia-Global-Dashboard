@@ -133,3 +133,38 @@ describe("Sign in with Google BFF", () => {
     expect(stateType(null)).toBeNull();
   });
 });
+
+describe("Google OAuth behind a tunnel", () => {
+  it("start works when req.url is the internal address and Host is the public one", async () => {
+    const f = vi.fn(async () => Response.json({ url: "https://accounts.google.com/o/oauth2?x" }));
+    const req = new Request("http://localhost:3000/api/oauth/google/start", {
+      method: "POST",
+      headers: { origin: "https://app.sitelytc.com", host: "app.sitelytc.com", cookie: "kv_at=tok", "content-type": "application/json" },
+      body: JSON.stringify({ venture_id: V }),
+    });
+    const res = await startGoogle(req, deps(f as unknown as typeof fetch));
+    expect(res.status).toBe(200);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it("start refuses a cross-site post", async () => {
+    const f = vi.fn();
+    const req = new Request("http://localhost:3000/api/oauth/google/start", {
+      method: "POST",
+      headers: { origin: "https://evil.example", host: "app.sitelytc.com", cookie: "kv_at=tok" },
+      body: JSON.stringify({ venture_id: V }),
+    });
+    expect((await startGoogle(req, deps(f as unknown as typeof fetch))).status).toBe(403);
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("the connector callback (a GET with no Origin) reaches the API behind a tunnel", async () => {
+    const f = vi.fn(async () => Response.json({ venture_id: V }));
+    const req = new Request("http://localhost:3000/api/oauth/google/callback?code=c&state=s", {
+      headers: { host: "app.sitelytc.com", cookie: `kv_at=tok; ${OAUTH_COOKIE}=${"n".repeat(64)}` },
+    });
+    const res = await completeGoogle(req, deps(f as unknown as typeof fetch));
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(res.headers.get("location")).toContain("google=connected");
+  });
+});
