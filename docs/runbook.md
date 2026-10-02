@@ -99,3 +99,15 @@ Migrations are forward-only and checksummed: never edit an applied file — add 
 | Audit verify shows broken chain | `python -m kritvia_api.cli verify-audit --org <id>` with the owner DSN | treat as a security incident: record in the breach register, restore comparison from backup |
 | Suspected data breach | — | Compliance → Breach register (detected_at, severity, containment), notify board/principals per DPDP |
 | Lost KEK | — | unrecoverable by design; restore `.env` from your offline copy |
+
+## Operations: backups, alerts, Stage 2 gate (AWS)
+
+One-time AWS resources (already created for the production server): S3 bucket `kritvia-backups-<account>` (private, 30-day expiry), SNS topic `kritvia-alerts` (email subscription), IAM role + instance profile `kritvia-server` (S3 put/get/list on that bucket, SNS publish; no delete) attached to the instance. Then on the server:
+
+```bash
+cd /opt/kritvia && sudo bash infra/scripts/configure-aws-ops.sh
+```
+It installs the AWS CLI, writes `/etc/cron.d/kritvia` (health watchdog every 5 min, encrypted backup 02:15 IST), creates the backup key pair, takes a first backup, and sends a test alert. Save the printed private key offline and shred it from the server.
+
+- Watchdog log: `sudo journalctl -t kritvia-health -n 50` · backup log: `/var/log/kritvia-backup.log`
+- Stage 2 gate (each workflow 10 consecutive days on real data): `sudo infra/scripts/dogfood-report.sh`

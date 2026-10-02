@@ -122,12 +122,8 @@ say "Sandbox isolation check"
 $DOCKER compose exec -T sandbox python -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8100/healthz').read().decode())" \
   || echo "  sandbox health check failed — see: sudo docker compose -f $DIR/infra/docker-compose.yml logs sandbox"
 
-# nightly backups once the backup target is configured
-if [ -n "$(cd .. && get BACKUP_AGE_RECIPIENT)" ] && [ -n "$(cd .. && get BACKUP_RCLONE_REMOTE)" ]; then
-  ( crontab -l 2>/dev/null | grep -v kritvia/infra/scripts/backup.sh; \
-    echo "15 2 * * * $DIR/infra/scripts/backup.sh >> \$HOME/kritvia-backup.log 2>&1" ) | crontab -
-  echo "  nightly backup scheduled (02:15)"
-fi
+say "Health watchdog and backups"
+sudo bash "$DIR/infra/scripts/install-ops.sh" | sed 's/^/  /'
 
 cat <<EOF
 
