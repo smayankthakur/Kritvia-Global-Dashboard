@@ -46,7 +46,7 @@ if [ -z "$(get BACKUP_AGE_RECIPIENT)" ]; then
 else
   echo "  keeping the existing key (BACKUP_AGE_RECIPIENT already set)"
 fi
-put BACKUP_RCLONE_REMOTE ":s3,provider=AWS,env_auth=true,region=$REGION:$BUCKET"
+put BACKUP_RCLONE_REMOTE ":s3,provider=AWS,env_auth=true,no_check_bucket=true,region=$REGION:$BUCKET"
 put ALERT_SNS_TOPIC_ARN "$TOPIC"
 chmod 600 .env
 
@@ -55,7 +55,7 @@ bash infra/scripts/install-ops.sh | sed 's/^/  /'
 
 say "First backup now"
 bash infra/scripts/backup.sh
-rclone lsf ":s3,provider=AWS,env_auth=true,region=$REGION:$BUCKET" --include 'kritvia-*' | tail -2 | sed 's/^/  in S3: /'
+rclone lsf ":s3,provider=AWS,env_auth=true,no_check_bucket=true,region=$REGION:$BUCKET" --include 'kritvia-*' | tail -2 | sed 's/^/  in S3: /'
 
 say "Test alert"
 aws sns publish --region "$REGION" --topic-arn "$TOPIC" --subject "Kritvia alerts are working" \
