@@ -29,10 +29,16 @@ function randomNonce(): string {
 }
 
 /** Build an internal same-origin request so proxyRequest adds auth, refreshes and passes the CSRF check. */
+/** The origin the browser used. Behind a tunnel or reverse proxy req.url carries the internal
+ * address (e.g. http://0.0.0.0:3000), which must never reach a redirect or an Origin header. */
+export function publicOrigin(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const proto = fwd === "http" || fwd === "https" ? fwd : new URL(req.url).protocol.replace(":", "");
+  return `${proto}://${requestHost(req)}`;
+}
+
 function innerRequest(req: Request, method: string, body: unknown): Request {
-  // The public origin the browser used. Behind a tunnel or reverse proxy req.url carries the
-  // internal address (e.g. http://localhost:3000), which the proxy's CSRF check would refuse.
-  const origin = `${new URL(req.url).protocol}//${requestHost(req)}`;
+  const origin = publicOrigin(req);
   const headers = new Headers({ "content-type": "application/json", origin });
   for (const h of [
     "cookie",
@@ -158,7 +164,7 @@ async function completeSignin(req: Request, deps: ProxyDeps, code: string | null
     "set-cookie",
     serializeCookie(SIGNIN_COOKIE, "", { httpOnly: true, secure: deps.secureCookies, maxAge: 0, path: COOKIE_PATH }),
   );
-  let target = new URL("/login", url.origin);
+  let target = new URL("/login", publicOrigin(req));
   if (url.searchParams.get("error") || !code || !state) {
     target.searchParams.set("google", "denied");
   } else if (!nonce) {
@@ -178,7 +184,7 @@ async function completeSignin(req: Request, deps: ProxyDeps, code: string | null
     if (res?.ok) {
       const tokens = (await res.json()) as TokenPair;
       for (const c of sessionCookies(tokens, deps.secureCookies)) headers.append("set-cookie", c);
-      target = new URL("/", url.origin);
+      target = new URL("/", publicOrigin(req));
     } else {
       target.searchParams.set(
         "google",
@@ -201,7 +207,7 @@ export async function completeGoogle(
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const nonce = parseCookies(req.headers.get("cookie"))[OAUTH_COOKIE];
-  const back = new URL("/settings/connectors", url.origin);
+  const back = new URL("/settings/connectors", publicOrigin(req));
   const headers = new Headers({ "cache-control": "no-store" });
   headers.append(
     "set-cookie",

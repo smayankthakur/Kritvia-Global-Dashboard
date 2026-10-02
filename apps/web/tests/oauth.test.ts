@@ -168,3 +168,23 @@ describe("Google OAuth behind a tunnel", () => {
     expect(res.headers.get("location")).toContain("google=connected");
   });
 });
+
+describe("OAuth redirects behind a tunnel", () => {
+  it("send the browser back to the public host, never the container address", async () => {
+    const f = vi.fn(async () => Response.json({ venture_id: V }));
+    const req = new Request("http://0.0.0.0:3000/api/oauth/google/callback?code=c&state=s", {
+      headers: { host: "app.sitelytc.com", "x-forwarded-proto": "https", cookie: `kv_at=tok; ${OAUTH_COOKIE}=${"n".repeat(64)}` },
+    });
+    const res = await completeGoogle(req, deps(f as unknown as typeof fetch));
+    expect(res.headers.get("location")).toMatch(/^https:\/\/app\.sitelytc\.com\/settings\/connectors\?/);
+  });
+
+  it("sign-in lands on the public host too", async () => {
+    const f = vi.fn(async () => Response.json({ access_token: "AT", refresh_token: "RT", expires_in: 3600 }));
+    const req = new Request(`http://0.0.0.0:3000/api/oauth/google/callback?code=c&state=${signinState()}`, {
+      headers: { host: "app.sitelytc.com", "x-forwarded-proto": "https", cookie: `${SIGNIN_COOKIE}=${"n".repeat(64)}` },
+    });
+    const res = await completeGoogle(req, deps(f as unknown as typeof fetch));
+    expect(res.headers.get("location")).toBe("https://app.sitelytc.com/");
+  });
+});
