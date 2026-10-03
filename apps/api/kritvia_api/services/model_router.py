@@ -31,9 +31,10 @@ from sqlalchemy import text
 from kritvia_api.db.session import ActorType, tenant_tx
 
 RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504}
-# A provider rejecting OUR credentials (bad or expired key, suspended account) is that
-# provider's problem; the next deployment in the tier must still get its turn.
-PROVIDER_AUTH_STATUS = {401, 403}
+# A provider rejecting OUR credentials (bad or expired key, suspended account), or no longer
+# serving the configured model (404), is that provider's problem; the next deployment in the
+# tier must still get its turn.
+PROVIDER_AUTH_STATUS = {401, 403, 404}
 
 
 class RouterError(Exception):

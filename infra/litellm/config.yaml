@@ -3,11 +3,13 @@
 #
 # VERIFY BEFORE USE: provider model IDs and free-tier limits change often.
 model_list:
-  # --- Groq (free tier, hosted) ---
-  - model_name: groq-llama-70b
-    litellm_params: { model: groq/llama-3.3-70b-versatile, api_key: os.environ/GROQ_API_KEY }
-  - model_name: groq-llama-8b
-    litellm_params: { model: groq/llama-3.1-8b-instant, api_key: os.environ/GROQ_API_KEY }
+  # --- Groq (free tier, hosted). Deployment names are stable aliases used by tiers.yaml;
+  # the model behind each changes as Groq retires models (Llama 3.x went in 2026).
+  # Check what the key can use: curl https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_API_KEY"
+  - model_name: groq-llama-70b        # "large" slot
+    litellm_params: { model: groq/openai/gpt-oss-120b, api_key: os.environ/GROQ_API_KEY }
+  - model_name: groq-llama-8b         # "small, fast" slot
+    litellm_params: { model: groq/openai/gpt-oss-20b, api_key: os.environ/GROQ_API_KEY }
   - model_name: groq-whisper
     litellm_params: { model: groq/whisper-large-v3, api_key: os.environ/GROQ_API_KEY }
 
