@@ -87,6 +87,8 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
+    # Where Help-page messages are emailed (they are always stored too). Empty: stored only.
+    support_inbox: str = ""
 
     # Uploads
     max_upload_mb: int = 25

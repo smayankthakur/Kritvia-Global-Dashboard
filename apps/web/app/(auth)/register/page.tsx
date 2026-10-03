@@ -34,7 +34,15 @@ export default function RegisterPage() {
       <OrDivider />
       <EmailCodeForm askName onSignedIn={done} />
       <p className="mt-4 text-center text-xs text-subtle">
-        By continuing you agree to how Kritvia handles your data: nothing is sent on your behalf without your approval.
+        By continuing you agree to the{" "}
+        <Link href="/terms" className="underline hover:text-fg">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="underline hover:text-fg">
+          Privacy policy
+        </Link>
+        . Nothing is sent on your behalf without your approval.
       </p>
     </AuthCard>
   );

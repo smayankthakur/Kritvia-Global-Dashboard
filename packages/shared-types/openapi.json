@@ -5658,6 +5658,54 @@
         "title": "SuggestionOut",
         "type": "object"
       },
+      "SupportIn": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 5000,
+            "minLength": 5,
+            "title": "Message",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "topic": {
+            "default": "question",
+            "enum": [
+              "question",
+              "problem",
+              "billing",
+              "privacy",
+              "security",
+              "sales"
+            ],
+            "title": "Topic",
+            "type": "string"
+          },
+          "website": {
+            "default": "",
+            "description": "leave empty (spam trap)",
+            "maxLength": 200,
+            "title": "Website",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "message"
+        ],
+        "title": "SupportIn",
+        "type": "object"
+      },
       "SyncOut": {
         "properties": {
           "started": {
@@ -8975,6 +9023,49 @@
         "summary": "Razorpay Webhook",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/public/support": {
+      "post": {
+        "operationId": "contact_public_support_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Contact Public Support Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Contact",
+        "tags": [
+          "support"
         ]
       }
     },

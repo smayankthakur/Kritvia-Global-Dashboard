@@ -748,6 +748,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Contact */
+        post: operations["contact_public_support_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/upload/{token}": {
         parameters: {
             query?: never;
@@ -4291,6 +4308,30 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** SupportIn */
+        SupportIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Message */
+            message: string;
+            /** Name */
+            name: string;
+            /**
+             * Topic
+             * @default question
+             * @enum {string}
+             */
+            topic: "question" | "problem" | "billing" | "privacy" | "security" | "sales";
+            /**
+             * Website
+             * @description leave empty (spam trap)
+             * @default
+             */
+            website: string;
+        };
         /** SyncOut */
         SyncOut: {
             /** Started */
@@ -6185,6 +6226,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    contact_public_support_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

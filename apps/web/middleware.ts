@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/bff/cookies";
 import { buildCsp, makeNonce } from "@/lib/csp";
 
-const PUBLIC_PAGES = ["/login", "/register"];
+const PUBLIC_PAGES = ["/login", "/register", "/terms", "/privacy", "/security", "/help", "/status"];
 
 export function isPublicPath(pathname: string): boolean {
   return (
