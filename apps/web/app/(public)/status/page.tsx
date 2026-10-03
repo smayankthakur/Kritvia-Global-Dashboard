@@ -3,12 +3,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, CircleAlert, XCircle } from "lucide-react";
 import { PublicShell } from "@/components/public/doc-page";
+import { incidentLength, type Incident } from "@/lib/status";
 
 interface StatusOut {
   app: string;
   api: "operational" | "degraded" | "down";
   latency_ms: number | null;
   checked_at: string;
+  incidents?: Incident[];
+}
+
+const IST: Intl.DateTimeFormatOptions = { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
+
+function Incidents({ items }: { items: Incident[] }) {
+  if (items.length === 0) return <p className="mt-2 text-sm text-muted">No incidents in the last 90 days.</p>;
+  return (
+    <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+      {items.map((i) => (
+        <li key={i.started_at} className="px-4 py-3">
+          <p className="text-sm font-medium text-fg">{i.summary}</p>
+          <p className="mt-0.5 text-xs text-subtle">
+            {new Date(i.started_at).toLocaleString("en-IN", IST)} IST ·{" "}
+            {i.resolved_at ? `resolved after ${incidentLength(i)}` : `ongoing for ${incidentLength(i)}`}
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 const ROW: Record<string, { icon: typeof CheckCircle2; cls: string; text: string }> = {
@@ -54,7 +75,7 @@ export default function StatusPage() {
         alerts the team on any failure.
       </p>
       <h2 className="mt-10 text-lg font-semibold">Past incidents</h2>
-      <p className="mt-2 text-sm text-muted">No incidents reported.</p>
+      {q.data ? <Incidents items={q.data.incidents ?? []} /> : <p className="mt-2 text-sm text-muted">Loading…</p>}
     </PublicShell>
   );
 }

@@ -16,8 +16,15 @@ x-app-env: &app-env
   TIERS_CONFIG_PATH: /app/tiers.yaml
   SANDBOX_URL: http://sandbox:8100
 
+# Container logs rotate on disk; scripts/archive-logs.sh keeps a daily copy for one year (CERT-In: 180 days in India;
+# DPDP Rules 2025 r.6: one year). Rotation only bounds disk use between archives.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "50m", max-file: "4" }
+
 services:
   postgres:
+    logging: *logging
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
@@ -37,6 +44,7 @@ services:
       retries: 20
 
   valkey:
+    logging: *logging
     image: valkey/valkey:8-alpine
     restart: unless-stopped
     command: ["valkey-server", "--appendonly", "yes", "--requirepass", "${VALKEY_PASSWORD:?set in .env}"]
@@ -44,6 +52,7 @@ services:
       - valkeydata:/data
 
   ollama:
+    logging: *logging
     image: ollama/ollama:latest
     restart: unless-stopped
     volumes:
@@ -51,6 +60,7 @@ services:
     # First run: docker compose exec ollama ollama pull qwen2.5:7b-instruct && docker compose exec ollama ollama pull bge-m3
 
   litellm:
+    logging: *logging
     image: ghcr.io/berriai/litellm:main-stable
     restart: unless-stopped
     command: ["--config", "/app/config.yaml", "--port", "4000"]
@@ -63,6 +73,7 @@ services:
     depends_on: [ollama]
 
   migrate:
+    logging: *logging
     build: { context: .., dockerfile: apps/api/Dockerfile }
     command: ["python", "-m", "kritvia_api.db.migrate"]
     environment:
@@ -72,6 +83,7 @@ services:
     restart: "no"
 
   api:
+    logging: *logging
     build: { context: .., dockerfile: apps/api/Dockerfile }
     restart: unless-stopped
     env_file: ../.env
@@ -90,6 +102,7 @@ services:
       valkey: { condition: service_started }
 
   worker:
+    logging: *logging
     build: { context: .., dockerfile: apps/worker/Dockerfile }
     restart: unless-stopped
     env_file: ../.env
@@ -101,16 +114,21 @@ services:
       valkey: { condition: service_started }
 
   web:
+    logging: *logging
     build: { context: .., dockerfile: apps/web/Dockerfile }
     restart: unless-stopped
     environment:
       KRITVIA_API_URL: http://api:8000
       NODE_ENV: production
+      STATUS_DIR: /status
+    # Public incident history written by infra/scripts/healthcheck.sh, shown on /status.
+    volumes: ["/var/lib/kritvia/status:/status:ro"]
     ports: ["127.0.0.1:3000:3000"]
     depends_on: [api]
 
   # The ONLY service with the Docker socket. Internal network only, token-authenticated.
   sandbox:
+    logging: *logging
     build: { context: ../services/sandbox, dockerfile: runner/Dockerfile }
     restart: unless-stopped
     environment:
@@ -123,6 +141,7 @@ services:
 
   # Build-only: produces the image the sandbox runs jobs in (no network at runtime).
   sandbox-jobs:
+    logging: *logging
     build: { context: ../services/sandbox, dockerfile: jobs/Dockerfile }
     image: kritvia-sandbox-jobs:latest
     entrypoint: ["true"]
@@ -132,6 +151,7 @@ services:
   # Local speech-to-text for sensitive audio (tier 'speech' falls back to it).
   # Verify the arm64 tag before use.
   whisper:
+    logging: *logging
     profiles: ["speech"]
     image: ghcr.io/speaches-ai/speaches:latest-cpu
     restart: unless-stopped
@@ -140,6 +160,7 @@ services:
 
   # Speaker separation for meeting recordings (set DIARIZATION_URL=http://diarization:8200).
   diarization:
+    logging: *logging
     profiles: ["speech"]
     build: { context: ../services/diarization }
     restart: unless-stopped
@@ -150,6 +171,7 @@ services:
       - hfcache:/home/diar/.cache
 
   cloudflared:
+    logging: *logging
     profiles: ["tunnel"]
     image: cloudflare/cloudflared:latest
     restart: unless-stopped

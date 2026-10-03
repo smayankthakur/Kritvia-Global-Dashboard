@@ -2,7 +2,10 @@
 # Health watchdog, run by cron every 5 minutes as root (see install-ops.sh).
 #
 # Checks: API ready, web up, every service running, sandbox isolated, public URL through
-# the Cloudflare tunnel, disk space, and (once backups are configured) backup freshness.
+# the Cloudflare tunnel, disk space, (once backups are configured) backup freshness, and a
+# spike of application errors in the API and worker logs.
+# Outages users can see (API, web, public URL, a stopped service) are also recorded as public
+# incidents in $STATE_DIR/status/incidents.json, which the web app's /status page shows.
 # A stopped service is restarted. Email alerts go out through AWS SNS when
 # ALERT_SNS_TOPIC_ARN is set in .env (independent of Kritvia itself, so they still
 # arrive when Kritvia is down): on the first failure, every 6 hours while it lasts,
@@ -47,6 +50,51 @@ use=$(df --output=pcent / | tail -1 | tr -dc 0-9)
 if [ -n "${BACKUP_AGE_RECIPIENT:-}" ] && [ -n "${BACKUP_RCLONE_REMOTE:-}" ]; then
   last=$(stat -c %Y "$STATE_DIR/last-backup" 2>/dev/null || echo 0)
   [ $(( $(date +%s) - last )) -lt $(( 26 * 3600 )) ] || fails+=("no successful backup in the last 26 hours")
+fi
+
+# Application errors: a burst of tracebacks or ERROR lines in five minutes means something is
+# failing for users even when every health endpoint answers. Only the count goes in the alert.
+errs=$($DC logs --since 5m --no-color api worker 2>/dev/null | grep -cE 'Traceback \(most recent call last\)|\bERROR\b' || true)
+[ "${errs:-0}" -lt "${ERROR_ALERT_THRESHOLD:-10}" ] || fails+=("${errs} application errors in the last 5 minutes (api/worker logs)")
+
+# Public incidents for the status page (no internal detail: what users would have noticed, and when).
+public=()
+for f in "${fails[@]}"; do
+  case "$f" in
+    "API not ready"*) public+=("The API and agents were not responding") ;;
+    "web app"*) public+=("The web app was not responding") ;;
+    "public URL"*) public+=("Kritvia could not be reached from the internet") ;;
+    "service(s) were down"*) public+=("A service stopped and was restarted automatically") ;;
+  esac
+done
+mkdir -p "$STATE_DIR/status"; chmod 755 "$STATE_DIR/status"
+incident() {  # incident open "summary" | incident close
+  python3 - "$STATE_DIR/status/incidents.json" "$@" <<'PY'
+import json, os, sys, time
+path, action = sys.argv[1], sys.argv[2]
+now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+try:
+    items = json.load(open(path))
+except Exception:
+    items = []
+opened = [i for i in items if not i.get("resolved_at")]
+if action == "open" and not opened:
+    items.insert(0, {"started_at": now, "resolved_at": None, "summary": sys.argv[3]})
+elif action == "close":
+    for i in opened:
+        i["resolved_at"] = now
+cutoff = time.time() - 90 * 86400
+items = [i for i in items if time.mktime(time.strptime(i["started_at"], "%Y-%m-%dT%H:%M:%SZ")) >= cutoff][:50]
+tmp = path + ".tmp"
+json.dump(items, open(tmp, "w"), indent=1)
+os.chmod(tmp, 0o644)
+os.replace(tmp, path)
+PY
+}
+if [ ${#public[@]} -gt 0 ]; then
+  incident open "$(printf '%s; ' "${public[@]}" | sed 's/; $//')"
+else
+  incident close
 fi
 
 host=$(hostname)
