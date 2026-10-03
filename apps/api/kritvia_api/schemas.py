@@ -77,6 +77,12 @@ class MeOut(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
+    terms_version: str | None = Field(default=None, description="version of the Terms and Privacy Policy accepted")
+    terms_current: str = Field(description="the version in force; ask the person to accept it when they differ")
+
+
+class TermsIn(BaseModel):
+    version: str = Field(min_length=1, max_length=32)
 
 
 class OrgIn(BaseModel):

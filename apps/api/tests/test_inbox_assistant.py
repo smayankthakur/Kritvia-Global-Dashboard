@@ -228,3 +228,15 @@ async def test_whatsapp_connect_webhook_and_reply(shop, fake_llm, meta, client):
     other = await shop["mallory"].post(f"/ventures/{shop['m_ven']}/connectors/whatsapp",
                                        json={"phone_number_id": "1234567890", "access_token": "EAAB" + "y" * 40})
     assert other.status_code == 409
+
+
+async def test_message_with_an_id_number_stays_on_the_local_model(shop, fake_llm):
+    """The Privacy Policy promises messages carrying ID, card or account numbers never reach a hosted model."""
+    mayank, v = shop["mayank"], shop["shop"]
+    script_inbox(fake_llm)
+    fake_llm.calls.clear()
+    mail = {**SUPPORT_MAIL, "body": "Hi, my PAN is ABCPE1234F, how long does delivery to Pune take? Rahul"}
+    r = await mayank.post(f"/ventures/{v}/runs", json={"workflow": "inbox_assistant", "input": mail})
+    assert r.status_code == 201, r.text
+    chats = fake_llm.chat_calls("You sort the business's") + fake_llm.chat_calls("You answer the business's")
+    assert len(chats) == 2 and {c["model"] for c in chats} == {"ollama-qwen-7b"}

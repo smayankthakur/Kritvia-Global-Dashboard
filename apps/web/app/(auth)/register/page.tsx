@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { EmailCodeForm, GoogleButton, OrDivider } from "@/components/auth/sign-in";
 import { AuthCard } from "@/components/shell/auth-card";
-import { FormError } from "@/components/ui/field";
+import { Checkbox, FormError } from "@/components/ui/field";
 import { safeNext } from "@/lib/auth-client";
+import { markTermsIntent } from "@/lib/terms";
 
 export default function RegisterPage() {
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const done = () => {
     const next = new URLSearchParams(window.location.search).get("next");
     window.location.assign(next ? safeNext(next) : "/onboarding");
@@ -27,23 +29,41 @@ export default function RegisterPage() {
         </>
       }
     >
-      <FormError message={googleError} />
-      <div className={googleError ? "mt-4" : undefined}>
-        <GoogleButton label="Sign up with Google" onError={setGoogleError} />
-      </div>
-      <OrDivider />
-      <EmailCodeForm askName onSignedIn={done} />
-      <p className="mt-4 text-center text-xs text-subtle">
-        By continuing you agree to the{" "}
-        <Link href="/terms" className="underline hover:text-fg">
-          Terms
-        </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="underline hover:text-fg">
-          Privacy policy
-        </Link>
-        . Nothing is sent on your behalf without your approval.
-      </p>
+      <Checkbox
+        className="mb-4"
+        checked={agreed}
+        onChange={(e) => {
+          setAgreed(e.target.checked);
+          markTermsIntent(e.target.checked);
+        }}
+        label={
+          <>
+            I accept the{" "}
+            <Link href="/terms" target="_blank" className="text-accent underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" target="_blank" className="text-accent underline">
+              Privacy Policy
+            </Link>{" "}
+            for my business.
+          </>
+        }
+        hint="Nothing is sent on your behalf without your approval."
+      />
+      <fieldset disabled={!agreed} aria-describedby={agreed ? undefined : "terms-first"} className="min-w-0 disabled:opacity-60">
+        <FormError message={googleError} />
+        <div className={googleError ? "mt-4" : undefined}>
+          <GoogleButton label="Sign up with Google" onError={setGoogleError} />
+        </div>
+        <OrDivider />
+        <EmailCodeForm askName onSignedIn={done} />
+      </fieldset>
+      {agreed ? null : (
+        <p id="terms-first" className="mt-3 text-center text-xs text-subtle">
+          Tick the box above to sign up.
+        </p>
+      )}
     </AuthCard>
   );
 }

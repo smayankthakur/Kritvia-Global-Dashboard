@@ -35,6 +35,7 @@ from kritvia_api.schemas import (
     RefreshIn,
     RegisterIn,
     SigninUrlOut,
+    TermsIn,
     TokenOut,
 )
 from kritvia_api.services.google import GoogleError
@@ -113,11 +114,20 @@ async def logout(body: RefreshIn, db: AnonDB) -> None:
 @router.get("/me", response_model=MeOut)
 async def me(user_id: UserId, db: TenantDB) -> MeOut:
     row = (await db.execute(
-        text("SELECT id, email, full_name FROM users WHERE id = :u"), {"u": user_id}
+        text("SELECT id, email, full_name, terms_version FROM users WHERE id = :u"), {"u": user_id}
     )).first()
     if row is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "user no longer exists")
-    return MeOut(id=row.id, email=row.email, full_name=row.full_name)
+    return MeOut(id=row.id, email=row.email, full_name=row.full_name, terms_version=row.terms_version,
+                 terms_current=get_settings().terms_version)
+
+
+@router.post("/me/terms", status_code=204)
+async def accept_terms(body: TermsIn, user_id: UserId, db: TenantDB) -> None:
+    """Records that the caller accepted the Terms of Service and Privacy Policy now in force."""
+    if body.version != get_settings().terms_version:
+        raise HTTPException(status.HTTP_409_CONFLICT, "these terms have been replaced; reload to read the current ones")
+    await db.execute(text("SELECT public.accept_terms(:v)"), {"v": body.version})
 
 
 @router.post("/password", response_model=TokenOut)

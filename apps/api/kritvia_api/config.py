@@ -88,6 +88,7 @@ class Settings(BaseSettings):
 
     # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
     signup_open: bool = True            # false: only existing accounts and invitees can sign in
+    terms_version: str = "2026-10-03"   # Terms of Service + Privacy Policy in force; bump when they change
     email_code_minutes: int = 10
     # System email for sign-in codes: smtp | log | memory (see services/mailer.py)
     mail_transport: str = "log"

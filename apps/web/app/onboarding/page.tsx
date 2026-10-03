@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { TermsGate } from "@/components/legal/terms-gate";
 import { FullPageLoader } from "@/components/shell/gate";
 import { Logo } from "@/components/shell/logo";
 import { Badge } from "@/components/ui/badge";
@@ -175,6 +176,7 @@ export default function OnboardingPage() {
 
   return (
     <main id="main" className="min-h-dvh px-4 py-10">
+      <TermsGate />
       <div className="mx-auto w-full max-w-2xl">
         <Logo className="mb-8" />
         {alreadySetUp ? (

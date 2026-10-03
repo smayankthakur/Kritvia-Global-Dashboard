@@ -189,6 +189,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/me/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Terms
+         * @description Records that the caller accepted the Terms of Service and Privacy Policy now in force.
+         */
+        post: operations["accept_terms_auth_me_terms_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/password": {
         parameters: {
             query?: never;
@@ -4111,6 +4131,16 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Terms Current
+             * @description the version in force; ask the person to accept it when they differ
+             */
+            terms_current: string;
+            /**
+             * Terms Version
+             * @description version of the Terms and Privacy Policy accepted
+             */
+            terms_version?: string | null;
         };
         /** MeetingOut */
         MeetingOut: {
@@ -4866,6 +4896,11 @@ export interface components {
             sounds_like?: string[] | null;
             /** Term */
             term?: string | null;
+        };
+        /** TermsIn */
+        TermsIn: {
+            /** Version */
+            version: string;
         };
         /** TicketIn */
         TicketIn: {
@@ -5737,6 +5772,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    accept_terms_auth_me_terms_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TermsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

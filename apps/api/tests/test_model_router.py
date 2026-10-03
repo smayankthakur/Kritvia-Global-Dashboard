@@ -60,11 +60,11 @@ async def test_falls_back_on_rate_limit_and_meters_each_attempt(world):
     fake = FakeLiteLLM({"groq-llama-8b": 429})
     wf = f"fallback-{uuid.uuid4().hex[:6]}"
     res = await make_router(fake).chat(ctx(world, wf), tier="fast", messages=[{"role": "user", "content": "hi"}])
-    assert res.deployment == "openrouter-free" and res.attempts == 2
-    assert fake.calls == ["groq-llama-8b", "openrouter-free"]
+    assert res.deployment == "ollama-qwen-7b" and res.attempts == 2
+    assert fake.calls == ["groq-llama-8b", "ollama-qwen-7b"]
     rows = await metered(wf)
     assert [(r["provider_model"], r["status"]) for r in rows] == [
-        ("groq-llama-8b", "rate_limited"), ("openrouter-free", "ok")]
+        ("groq-llama-8b", "rate_limited"), ("ollama-qwen-7b", "ok")]
     assert rows[1]["prompt_tokens"] == 11
 
 
@@ -97,7 +97,7 @@ async def test_bad_provider_key_falls_through_to_next_deployment(world):
     """A wrong or expired API key (401) is one provider's problem, not the request's."""
     fake = FakeLiteLLM({"groq-llama-8b": 401})
     res = await make_router(fake).chat(ctx(world, "badkey"), tier="fast", messages=[{"role": "user", "content": "hi"}])
-    assert res.deployment == "openrouter-free" and fake.calls == ["groq-llama-8b", "openrouter-free"]
+    assert res.deployment == "ollama-qwen-7b" and fake.calls == ["groq-llama-8b", "ollama-qwen-7b"]
 
 
 async def test_all_providers_down(world):
@@ -128,3 +128,10 @@ async def test_model_calls_are_audited(world):
     finally:
         await conn.close()
     assert n > 0
+
+
+async def test_no_tier_routes_to_a_provider_that_may_train():
+    """The Privacy Policy promises no AI provider trains on customer data; every tier carries customer data."""
+    for tier, chain in CONFIG.tiers.items():
+        bad = [d for d in chain if CONFIG.policies[d] == "may_train"]
+        assert not bad, f"tier {tier} routes to {bad}"

@@ -4,7 +4,8 @@
 #   local        runs on our VM or the client's VPC; data never leaves
 #   byok_client  the client's own key/account (their contract, their terms)
 #   no_training  hosted, provider contractually does not train on inputs
-#   may_train    free tier whose terms may allow training -> NEVER sensitive data
+#   may_train    free tier whose terms may allow training -> never in any tier (the Privacy Policy promises
+#                that no provider trains on customer data; tests/test_tiers_policy.py enforces this)
 #
 # A request flagged sensitive may only reach deployments whose policy is listed
 # in sensitive_allowed. This is enforced in code, not left to workflow authors.
@@ -12,27 +13,30 @@
 sensitive_allowed: [local, byok_client]
 
 deployments:
-  groq-llama-70b:   { data_policy: may_train }
-  groq-llama-8b:    { data_policy: may_train }
-  groq-whisper:     { data_policy: may_train }
-  gemini-flash:     { data_policy: may_train }
+  # Groq: account-level Zero Data Retention must be ON (GroqCloud -> Data Controls); Groq does not train on API data.
+  groq-llama-70b:   { data_policy: no_training }
+  groq-llama-8b:    { data_policy: no_training }
+  groq-whisper:     { data_policy: no_training }
+  # Gemini: the key's Google Cloud project must have billing on (paid tier); the unpaid tier may train.
+  gemini-flash:     { data_policy: no_training }
+  # OpenRouter free models may log and train: declared, but kept out of every tier (customer data only flows here).
   openrouter-free:  { data_policy: may_train }
   ollama-qwen-7b:   { data_policy: local }
   ollama-bge-m3:    { data_policy: local }
   local-whisper:    { data_policy: local }
-  # Sarvam (Indian languages, Hinglish), called natively by the API with SARVAM_API_KEY; skipped when
-  # the key is empty. Declared may_train until you have reviewed Sarvam's data terms for your account;
-  # if you are satisfied they act as your processor, change it to byok_client to allow sensitive audio.
+  # Sarvam (Indian languages, Hinglish), called natively by the API with SARVAM_API_KEY. Its standard terms allow
+  # training on inputs, so it is out of the dictation chain. Re-add it (as no_training) only with a signed
+  # no-training agreement, and update the sub-processor list in the Privacy Policy first.
   sarvam-saaras:    { data_policy: may_train, provider: sarvam, model: "saaras:v4" }
 
 tiers:
-  fast:         [groq-llama-8b, openrouter-free, ollama-qwen-7b]
+  fast:         [groq-llama-8b, ollama-qwen-7b]
   extract:      [groq-llama-70b, ollama-qwen-7b]
-  reason:       [groq-llama-70b, openrouter-free, gemini-flash, ollama-qwen-7b]
+  reason:       [groq-llama-70b, gemini-flash, ollama-qwen-7b]
   long_context: [gemini-flash, groq-llama-70b]
   private:      [ollama-qwen-7b]
   embed:        [ollama-bge-m3]
   # Long recordings (meetings). Sarvam's REST API takes short clips only, so it is not in this chain.
   speech:       [groq-whisper, local-whisper]
-  # Dictation (voice input, desktop widget): short clips; Sarvam first for Indian languages and Hinglish.
-  dictation:    [sarvam-saaras, groq-whisper, local-whisper]
+  # Dictation (voice input, desktop widget): short clips.
+  dictation:    [groq-whisper, local-whisper]

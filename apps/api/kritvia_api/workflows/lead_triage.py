@@ -21,6 +21,7 @@ from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
+from kritvia_api.services import pii
 from kritvia_api.services.memory import canonical
 from kritvia_api.workflows.common import CURRENCY_IN_TEXT, fmt_inr, money, next_business_slot, parse_inr
 
@@ -96,8 +97,10 @@ async def extract(ctx: RunContext, state: dict) -> Goto | Finish:
     inp = state["input"]
     card = await _rate_card(ctx)
     codes = "\n".join(f"- {r['code']}: {r['name']} (per {r['unit']}) — {r['description']}" for r in card)
+    # An enquiry carrying an ID, card or account number never leaves the server.
+    held = pii.mask(f"{inp.get('subject') or ''}\n{inp.get('body') or ''}").sensitive
     ex = await ctx.llm_json(
-        tier="extract", schema=LeadExtract,
+        tier="private" if held else "extract", schema=LeadExtract, sensitive=held,
         system=(f"{await ctx.brief()}\nYou triage inbound inquiries for this business. "
                 "Map what they ask for onto the allowed rate card codes; never invent codes. "
                 "Mark marketing spam, SEO cold pitches and vendor solicitations as spam.\n"
@@ -110,7 +113,8 @@ async def extract(ctx: RunContext, state: dict) -> Goto | Finish:
         ctx.note("classified as spam; no lead created")
         return Finish("spam", update={"summary": {"spam": True}})
     budget = parse_inr(ex.budget_text)
-    return Goto("upsert_lead", update={"extract": ex.model_dump(), "budget_inr": str(budget) if budget else None},
+    return Goto("upsert_lead", update={"extract": ex.model_dump(), "budget_inr": str(budget) if budget else None,
+                                       "input_sensitive": held},
                 note=f"{len(ex.requirements)} requirements, {len(ex.scope)} scope items")
 
 
@@ -195,8 +199,9 @@ async def retrieve(ctx: RunContext, state: dict) -> Goto:
 async def score(ctx: RunContext, state: dict) -> Goto | Finish:
     ex, inp, cfg = state["extract"], state["input"], await _settings(ctx)
     try:
+        held = bool(state.get("input_sensitive"))
         fit = await ctx.llm_json(
-            tier="fast", schema=FitAssessment,
+            tier="private" if held else "fast", schema=FitAssessment, sensitive=held,
             system=(f"{await ctx.brief()}\nAssess how well this inquiry fits what the business offers "
                     "(its description and rate card)."),
             prompt=ex["summary"] + "\n" + "\n".join(ex["requirements"]))
@@ -315,7 +320,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
               f"you used. Sign off as {cfg.get('sender_name') or biz.sign_off}.")
     # Defence in depth: retrieval already excludes sensitive knowledge, but if any got
     # through, it stays on the local model and the draft is visible only to deciders.
-    sensitive = any(s.get("sensitive") for s in sources)
+    sensitive = bool(state.get("input_sensitive")) or any(s.get("sensitive") for s in sources)
     tier = "private" if sensitive else "reason"
     d = await ctx.llm_json(tier=tier, schema=ProposalDraft, system=system, prompt=prompt, sensitive=sensitive)
     if _stray_amounts(d.email_body + d.proposal):

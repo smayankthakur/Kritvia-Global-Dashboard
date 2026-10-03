@@ -15,10 +15,31 @@ async def test_export_has_profile_and_memberships(world):
     assert data["memberships"] and all("role" in m for m in data["memberships"])
 
 
-async def test_delete_account_closes_solo_org_and_anonymises(client):
+async def test_terms_acceptance_is_recorded(client):
+    from kritvia_api.config import get_settings
+    current = get_settings().terms_version
+    me = await make_actor(client, "terms")
+    assert (await me.get("/auth/me")).json()["terms_version"] is None
+    assert (await me.get("/auth/me")).json()["terms_current"] == current
+    assert (await me.post("/auth/me/terms", json={"version": "2001-01-01"})).status_code == 409
+    assert (await me.post("/auth/me/terms", json={"version": current})).status_code == 204
+    assert (await me.get("/auth/me")).json()["terms_version"] == current
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        assert await conn.fetchval("SELECT terms_accepted_at FROM users WHERE id = $1", me.id) is not None
+    finally:
+        await conn.close()
+
+
+async def test_delete_account_closes_solo_org_and_anonymises(client, monkeypatch):
+    from kritvia_api.config import get_settings
+    monkeypatch.setattr(get_settings(), "vapid_public_key", "BPUBLIC")
+    monkeypatch.setattr(get_settings(), "vapid_private_key", "private")
     solo = await make_actor(client, "solo")
     org = (await solo.post("/orgs", json={"name": "Solo Co", "slug": "solo-" + uuid.uuid4().hex[:8]})).json()["id"]
     await solo.post(f"/orgs/{org}/ventures", json={"name": "Shop", "slug": "shop"})
+    sub = {"endpoint": f"https://push.example.com/{uuid.uuid4().hex}", "keys": {"p256dh": "k", "auth": "a"}}
+    assert (await solo.post("/me/push", json=sub)).status_code == 201
     assert (await solo.post("/auth/me/delete", json={"confirm": "yes"})).status_code == 422
     r = await solo.post("/auth/me/delete", json={"confirm": "DELETE"})
     assert r.status_code == 200 and r.json()["organisations_closed"] == 1
@@ -30,10 +51,11 @@ async def test_delete_account_closes_solo_org_and_anonymises(client):
         u = await conn.fetchrow("SELECT email, full_name, is_active FROM users WHERE id = $1", solo.id)
         closed = await conn.fetchval("SELECT closed_at FROM organisations WHERE id = $1", uuid.UUID(org))
         members = await conn.fetchval("SELECT count(*) FROM memberships WHERE user_id = $1", solo.id)
+        pushes = await conn.fetchval("SELECT count(*) FROM push_subscriptions WHERE user_id = $1", solo.id)
     finally:
         await conn.close()
     assert u["email"].endswith("@deleted.invalid") and u["full_name"] == "Deleted user" and not u["is_active"]
-    assert closed is not None and members == 0
+    assert closed is not None and members == 0 and pushes == 0
     again = await client.post("/auth/register", json={"email": solo.email, "full_name": "New", "password": "a long password 9"})
     assert again.status_code == 201
 
@@ -59,3 +81,18 @@ async def test_closed_org_is_purged_after_grace_period(client):
         assert await conn.fetchval("SELECT count(*) FROM ventures WHERE org_id = $1", uuid.UUID(org)) == 0
     finally:
         await conn.close()
+
+
+async def test_support_messages_are_purged_after_two_years():
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        old = await conn.fetchval("INSERT INTO support_requests (name, email, topic, message, created_at) VALUES "
+                                  "('Old', 'old@example.com', 'question', 'an old question', now() - interval '731 days')"
+                                  " RETURNING id")
+        new = await conn.fetchval("INSERT INTO support_requests (name, email, topic, message) VALUES "
+                                  "('New', 'new@example.com', 'question', 'a new question') RETURNING id")
+        assert await conn.fetchval("SELECT private.purge_support(730)") >= 1
+        left = {r["id"] for r in await conn.fetch("SELECT id FROM support_requests WHERE id = ANY($1)", [old, new])}
+    finally:
+        await conn.close()
+    assert left == {new}

@@ -20,7 +20,7 @@ from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
-from kritvia_api.services import memory
+from kritvia_api.services import memory, pii
 
 wf = registry.register(Workflow(
     "inbox_assistant", title="Inbox assistant", start="classify",
@@ -64,8 +64,10 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
     channel = inp.get("channel") or "email"
     header = (f"Channel: {channel}\nFrom: {inp.get('from_name') or ''} <{_recipient(inp)}>\n"
               f"Subject: {inp.get('subject') or ''}\n\n")
+    # A message carrying an ID, card or account number never leaves the server.
+    held = pii.mask(header + (inp.get("body") or "")).sensitive
     c = await ctx.llm_json(
-        tier="extract", schema=Classification,
+        tier="private" if held else "extract", schema=Classification, sensitive=held,
         system=(f"{await ctx.brief()}\nYou sort the business's incoming messages. Categories: enquiry (a potential "
                 "customer asking about products, services or prices), support (an existing customer needing help), "
                 "payment (invoices, bills, payment confirmations), scheduling (meetings, visits, deliveries), "
@@ -107,7 +109,7 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
     if not c.needs_reply or not cfg.get("draft_replies", True) or not _recipient(inp):
         return Finish("filed", update={"summary": summary},
                       note=f"{c.category}; " + ("no reply needed" if not c.needs_reply else "replies are off"))
-    return Goto("retrieve", update={"classification": c.model_dump(), "summary": summary},
+    return Goto("retrieve", update={"classification": c.model_dump(), "summary": summary, "input_sensitive": held},
                 note=f"{c.category}, {c.urgency} urgency, reply needed")
 
 
@@ -144,7 +146,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
               f"Category: {c['category']}. Summary: {c['summary']}\n\nWhat the business knows (cite by number):\n{src_block}")
     if feedback:
         prompt += f"\n\nThe reviewer rejected the previous draft with this feedback — address it:\n{feedback}"
-    sensitive = any(s.get("sensitive") for s in sources)
+    sensitive = bool(state.get("input_sensitive")) or any(s.get("sensitive") for s in sources)
     r = await ctx.llm_json(tier="private" if sensitive else "reason", schema=Reply, system=system, prompt=prompt,
                            sensitive=sensitive)
     used = [s for s in sources if s["n"] in set(r.used_sources)]

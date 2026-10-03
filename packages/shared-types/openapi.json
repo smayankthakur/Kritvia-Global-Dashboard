@@ -4543,12 +4543,30 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "terms_current": {
+            "description": "the version in force; ask the person to accept it when they differ",
+            "title": "Terms Current",
+            "type": "string"
+          },
+          "terms_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "version of the Terms and Privacy Policy accepted",
+            "title": "Terms Version"
           }
         },
         "required": [
           "id",
           "email",
-          "full_name"
+          "full_name",
+          "terms_current"
         ],
         "title": "MeOut",
         "type": "object"
@@ -6429,6 +6447,21 @@
         "title": "TermPatch",
         "type": "object"
       },
+      "TermsIn": {
+        "properties": {
+          "version": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "TermsIn",
+        "type": "object"
+      },
       "TicketIn": {
         "properties": {
           "note": {
@@ -8244,6 +8277,46 @@
           }
         ],
         "summary": "Export My Data",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me/terms": {
+      "post": {
+        "description": "Records that the caller accepted the Terms of Service and Privacy Policy now in force.",
+        "operationId": "accept_terms_auth_me_terms_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept Terms",
         "tags": [
           "auth"
         ]

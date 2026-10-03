@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/shell/logo";
+import { Markdown } from "@/components/ui/markdown";
 
 export const COMPANY = "Sitelytc Digital Media Pvt. Ltd.";
 export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@sitelytc.com";
@@ -53,6 +54,21 @@ export function Doc({ title, updated, lead, children }: { title: string; updated
           {lead ? <p className="mt-4 text-base text-fg">{lead}</p> : null}
         </header>
         {children}
+      </article>
+    </PublicShell>
+  );
+}
+
+/** A legal page (Terms, Privacy) written as markdown, so the text matches the reviewed draft line for line. */
+export function LegalDoc({ title, updated, markdown }: { title: string; updated: string; markdown: string }) {
+  return (
+    <PublicShell>
+      <article className="text-[15px] text-muted [&_h2]:text-fg [&_strong]:text-fg">
+        <header className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
+          <p className="mt-1 text-sm text-subtle">Last updated {updated}</p>
+        </header>
+        <Markdown className="text-[15px] [&_td]:min-w-[8rem] [&_td]:[overflow-wrap:normal] [&_th]:min-w-[8rem] [&_th]:[overflow-wrap:normal]">{markdown}</Markdown>
       </article>
     </PublicShell>
   );

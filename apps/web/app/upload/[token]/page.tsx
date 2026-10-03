@@ -28,6 +28,12 @@ function Shell({ children }: { children: React.ReactNode }) {
         <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-subtle">
           <Lock className="h-3.5 w-3.5" aria-hidden /> Files are encrypted and seen only by your loan officer.
         </p>
+        <p className="mt-3 text-center text-xs leading-relaxed text-subtle">
+          Privacy notice: Truhome Finance collects these documents only to verify your loan application, and is responsible for
+          them under India&apos;s Digital Personal Data Protection Act, 2023. They are stored and processed in India by its software
+          provider, Kritvia, and are not used for any other purpose. To see, correct or delete your data, or withdraw consent, contact
+          your loan officer.
+        </p>
       </div>
     </main>
   );

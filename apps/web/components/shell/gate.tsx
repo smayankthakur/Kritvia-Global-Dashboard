@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { TermsGate } from "@/components/legal/terms-gate";
 import { ErrorState } from "@/components/ui/states";
 import { Spinner } from "@/components/ui/spinner";
 import { AccessProvider, useAccessQuery } from "@/lib/access";
@@ -39,6 +40,7 @@ export function AppGate({ children }: { children: ReactNode }) {
   return (
     <AccessProvider access={access.data}>
       <AppShell>{children}</AppShell>
+      <TermsGate />
     </AccessProvider>
   );
 }

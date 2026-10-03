@@ -96,7 +96,7 @@ def test_engine_choice_orders_candidates_and_policy_wins():
     from kritvia_api.config import get_settings
     cfg = TierConfig.load(get_settings().tiers_config_path)
     assert cfg.engine("sarvam-saaras") == "sarvam" and cfg.engine("local-whisper") == "local"
-    assert speech_candidates(cfg, "dictation", sensitive=False) == ["sarvam-saaras", "groq-whisper", "local-whisper"]
+    assert speech_candidates(cfg, "dictation", sensitive=False) == ["groq-whisper", "local-whisper"]
     assert speech_candidates(cfg, "dictation", sensitive=False, engine="whisper")[0] == "groq-whisper"
     assert speech_candidates(cfg, "dictation", sensitive=False, engine="local") == ["local-whisper"]
     # Sarvam does not do Spanish
@@ -116,29 +116,21 @@ def sarvam(services):
     services.router = old
 
 
-async def test_sarvam_first_for_hindi_with_keyterms_and_fallback(world, fake_llm, sarvam):
+async def test_sarvam_stays_out_of_dictation_even_with_a_key(world, fake_llm, sarvam):
+    """Sarvam's standard terms allow training on inputs, so it is not in any chain (see tiers.yaml)."""
     mayank, v = world["mayank"], world["site"]
     await mayank.post(f"/ventures/{v}/vocabulary", json={"term": "Kritvia", "sounds_like": ["kreet via"],
                                                          "scope": "shared"})
     await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": True})  # allow hints to hosted models
     fake_llm.transcript = {"text": "kreet via ka demo kal bhejna hai", "segments": []}
+    fake_llm.calls.clear()
     r = await mayank.post(f"/ventures/{v}/voice/dictate", files=audio(),
-                          data={"language": "hi", "duration_ms": "3000"})
+                          data={"language": "hi", "duration_ms": "3000", "engine": "sarvam"})
     assert r.status_code == 200, r.text
     out = r.json()
-    assert out["text"] == "Kritvia ka demo kal bhejna hai" and out["engine"] == "sarvam"
-    assert out["language"] == "hi" and out["vocabulary_applied"] == 1 and not out["fallback"]
-    call = speech_calls()[-1]
-    assert call["language"] == "hi-IN" and call["sarvam_model"] == "saaras:v4"
-    assert "Kritvia" in json.loads(call["keyterms"]) and call["api_key"] == "sk-sarvam-test"
-
-    # Sarvam down -> Whisper answers; the user asked for Sarvam, so the response says it fell back
-    fake_llm.fail["sarvam-saaras"] = 503
-    fake_llm.calls.clear()
-    r = await mayank.post(f"/ventures/{v}/voice/dictate", files=audio(), data={"engine": "sarvam"})
-    out = r.json()
-    assert out["engine"] == "whisper" and out["deployment"] == "groq-whisper" and out["fallback"] is True
-    assert [c["model"] for c in speech_calls()] == ["sarvam-saaras", "groq-whisper"]
+    assert out["text"] == "Kritvia ka demo kal bhejna hai" and out["deployment"] == "groq-whisper"
+    assert out["fallback"] is True                              # asked for Sarvam, got Whisper
+    assert [c["model"] for c in speech_calls()] == ["groq-whisper"]
     assert "Kritvia" in speech_calls()[-1]["prompt"]          # Whisper gets the glossary prompt
     await mayank.put(f"/ventures/{v}/settings", json={"speech_people_hints": False})
 

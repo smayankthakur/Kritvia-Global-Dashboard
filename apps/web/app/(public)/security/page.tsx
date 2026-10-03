@@ -31,6 +31,7 @@ export default function SecurityPage() {
         <li>All traffic is encrypted in transit (TLS through Cloudflare). The server has no open inbound ports.</li>
         <li>Documents, email bodies and connector tokens are encrypted at rest with a separate key per business (envelope encryption).</li>
         <li>Nightly backups are encrypted before they leave the server; the decryption key is held offline.</li>
+        <li>Your data is stored in India (Amazon Web Services, Mumbai). Kritvia uses no advertising or analytics trackers.</li>
       </ul>
       <h2>Where AI models run</h2>
       <ul>
@@ -38,8 +39,15 @@ export default function SecurityPage() {
           Sensitive data (identity documents, bank statements, anything marked sensitive) is processed only by a model running on
           Kritvia&apos;s own server. This rule is enforced in code for every request.
         </li>
-        <li>Other requests may use hosted models; personal identifiers are masked before text is stored for search.</li>
-        <li>Code written by agents runs in an isolated sandbox (gVisor) with no network access.</li>
+        <li>
+          Emails and WhatsApp messages that contain an Aadhaar, PAN, passport, bank-account or card number are treated the same way.
+          Aadhaar and card numbers are also masked, keeping only the last four digits, when documents are stored.
+        </li>
+        <li>
+          Other requests may use hosted models (Groq, Google Gemini) on terms under which the provider does not train on your data.
+          Search indexes and text recognition always run on our own server.
+        </li>
+        <li>Calculation jobs such as forecasts run in an isolated sandbox (gVisor) with no network access.</li>
       </ul>
       <h2>A record of everything</h2>
       <ul>

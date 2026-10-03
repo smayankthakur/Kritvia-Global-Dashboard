@@ -20,6 +20,7 @@ export function Dialog({
   size = "md",
   variant = "center",
   className,
+  dismissible = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -30,6 +31,8 @@ export function Dialog({
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "center" | "sheet-right" | "sheet-left";
   className?: string;
+  /** false: no close button, and Escape or a click outside does nothing (a required step). */
+  dismissible?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<Element | null>(null);
@@ -66,10 +69,10 @@ export function Dialog({
       aria-describedby={description ? `${uid}-desc` : undefined}
       onCancel={(e) => {
         e.preventDefault();
-        onClose();
+        if (dismissible) onClose();
       }}
       onClick={(e) => {
-        if (e.target === ref.current) onClose();
+        if (dismissible && e.target === ref.current) onClose();
       }}
       className={cn(
         "border border-border bg-surface p-0 text-fg shadow-pop backdrop:bg-transparent open:flex open:flex-col",
@@ -90,9 +93,11 @@ export function Dialog({
                 </p>
               ) : null}
             </div>
-            <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose} className="-mt-1 -mr-2 h-8 w-8">
-              <X className="h-4 w-4" />
-            </Button>
+            {dismissible ? (
+              <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose} className="-mt-1 -mr-2 h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            ) : null}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
           {footer ? (
