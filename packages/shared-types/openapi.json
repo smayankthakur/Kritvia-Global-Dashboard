@@ -3117,6 +3117,105 @@
         "title": "GrantOut",
         "type": "object"
       },
+      "GraphLink": {
+        "properties": {
+          "count": {
+            "description": "how many sources state this link",
+            "title": "Count",
+            "type": "integer"
+          },
+          "source": {
+            "format": "uuid",
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "format": "uuid",
+            "title": "Target",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "type",
+          "count"
+        ],
+        "title": "GraphLink",
+        "type": "object"
+      },
+      "GraphNode": {
+        "properties": {
+          "degree": {
+            "title": "Degree",
+            "type": "integer"
+          },
+          "facts": {
+            "title": "Facts",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "degree",
+          "facts"
+        ],
+        "title": "GraphNode",
+        "type": "object"
+      },
+      "GraphOut": {
+        "properties": {
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/GraphLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "total_entities": {
+            "title": "Total Entities",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "links",
+          "total_entities",
+          "truncated"
+        ],
+        "title": "GraphOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -10406,6 +10505,98 @@
           }
         ],
         "summary": "Update Fact",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/graph": {
+      "get": {
+        "description": "The knowledge graph for the mind map. Without `focus`: the best-connected entities\n(optionally matching `q`) and the links between them. With `focus`: that entity and\neverything within two links of it. RLS hides restricted entities and links.",
+        "operationId": "graph_ventures__venture_id__graph_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "focus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Focus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 120,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Graph",
         "tags": [
           "knowledge"
         ]

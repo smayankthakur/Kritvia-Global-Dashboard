@@ -392,6 +392,76 @@ async def get_entity(venture_id: uuid.UUID, entity_id: uuid.UUID, db: TenantDB, 
                            facts=await _facts(db, svc, facts))
 
 
+# ------------------------------------------------------------------ mind map --
+class GraphNode(BaseModel):
+    id: uuid.UUID
+    type: str
+    name: str
+    degree: int
+    facts: int
+
+
+class GraphLink(BaseModel):
+    source: uuid.UUID
+    target: uuid.UUID
+    type: str
+    count: int = Field(description="how many sources state this link")
+
+
+class GraphOut(BaseModel):
+    nodes: list[GraphNode]
+    links: list[GraphLink]
+    total_entities: int
+    truncated: bool
+
+
+@router.get("/ventures/{venture_id}/graph", response_model=GraphOut)
+async def graph(venture_id: uuid.UUID, db: TenantDB, focus: uuid.UUID | None = None,
+                q: str | None = None, limit: int = 120) -> GraphOut:
+    """The knowledge graph for the mind map. Without `focus`: the best-connected entities
+    (optionally matching `q`) and the links between them. With `focus`: that entity and
+    everything within two links of it. RLS hides restricted entities and links."""
+    await venture_org(db, venture_id)
+    lim = min(max(limit, 10), 300)
+    total = (await db.execute(text("SELECT count(*) FROM entities WHERE venture_id = :v"),
+                              {"v": venture_id})).scalar_one()
+    deg = ("(SELECT count(*) FROM edges x WHERE x.src_id = e.id OR x.dst_id = e.id)")
+    if focus is not None:
+        ids_sql = ("WITH h1 AS (SELECT CASE WHEN src_id = :f THEN dst_id ELSE src_id END AS id FROM edges"
+                   " WHERE venture_id = :v AND (src_id = :f OR dst_id = :f)),"
+                   " h2 AS (SELECT CASE WHEN x.src_id = h1.id THEN x.dst_id ELSE x.src_id END AS id FROM edges x"
+                   " JOIN h1 ON x.src_id = h1.id OR x.dst_id = h1.id WHERE x.venture_id = :v)"
+                   " SELECT :f AS id UNION SELECT id FROM h1 UNION SELECT id FROM h2")
+        params: dict[str, Any] = {"v": venture_id, "f": focus}
+        rows = (await db.execute(text(
+            f"SELECT e.id, e.type, e.name, {deg} AS degree,"
+            " (SELECT count(*) FROM facts f WHERE f.subject_id = e.id) AS facts"
+            f" FROM entities e WHERE e.venture_id = :v AND e.id IN ({ids_sql})"
+            f" ORDER BY (e.id = :f) DESC, {deg} DESC LIMIT :l"), {**params, "l": lim})).all()
+    else:
+        params = {"v": venture_id, "l": lim}
+        where = "e.venture_id = :v"
+        if q:
+            where += " AND e.canonical LIKE :q"
+            params["q"] = f"%{memory.canonical(q)}%"
+        rows = (await db.execute(text(
+            f"SELECT e.id, e.type, e.name, {deg} AS degree,"
+            " (SELECT count(*) FROM facts f WHERE f.subject_id = e.id) AS facts"
+            f" FROM entities e WHERE {where} ORDER BY {deg} DESC, e.name LIMIT :l"), params)).all()
+    nodes = [GraphNode(**r._mapping) for r in rows]
+    ids = [n.id for n in nodes]
+    links: list[GraphLink] = []
+    if ids:
+        lrows = (await db.execute(text(
+            "SELECT src_id AS source, dst_id AS target, type, count(*) AS count FROM edges"
+            " WHERE venture_id = :v AND src_id = ANY(:ids) AND dst_id = ANY(:ids) AND src_id <> dst_id"
+            " GROUP BY src_id, dst_id, type ORDER BY count(*) DESC LIMIT 1000"),
+            {"v": venture_id, "ids": ids})).all()
+        links = [GraphLink(**r._mapping) for r in lrows]
+    return GraphOut(nodes=nodes, links=links, total_entities=total,
+                    truncated=focus is None and not q and total > len(nodes))
+
+
 # ------------------------------------------------------------ voice & meetings --
 class TranscriptOut(BaseModel):
     text: str

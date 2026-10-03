@@ -1137,6 +1137,28 @@ export interface paths {
         patch: operations["update_fact_ventures__venture_id__facts__fact_id__patch"];
         trace?: never;
     };
+    "/ventures/{venture_id}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Graph
+         * @description The knowledge graph for the mind map. Without `focus`: the best-connected entities
+         *     (optionally matching `q`) and the links between them. With `focus`: that entity and
+         *     everything within two links of it. RLS hides restricted entities and links.
+         */
+        get: operations["graph_ventures__venture_id__graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/kitchen/accuracy": {
         parameters: {
             query?: never;
@@ -3164,6 +3186,53 @@ export interface components {
              * Format: uuid
              */
             venture_id: string;
+        };
+        /** GraphLink */
+        GraphLink: {
+            /**
+             * Count
+             * @description how many sources state this link
+             */
+            count: number;
+            /**
+             * Source
+             * Format: uuid
+             */
+            source: string;
+            /**
+             * Target
+             * Format: uuid
+             */
+            target: string;
+            /** Type */
+            type: string;
+        };
+        /** GraphNode */
+        GraphNode: {
+            /** Degree */
+            degree: number;
+            /** Facts */
+            facts: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+        };
+        /** GraphOut */
+        GraphOut: {
+            /** Links */
+            links: components["schemas"]["GraphLink"][];
+            /** Nodes */
+            nodes: components["schemas"]["GraphNode"][];
+            /** Total Entities */
+            total_entities: number;
+            /** Truncated */
+            truncated: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -6805,6 +6874,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    graph_ventures__venture_id__graph_get: {
+        parameters: {
+            query?: {
+                focus?: string | null;
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphOut"];
                 };
             };
             /** @description Validation Error */

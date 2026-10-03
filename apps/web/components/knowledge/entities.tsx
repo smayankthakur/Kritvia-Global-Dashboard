@@ -20,7 +20,7 @@ function useDebounced<T>(value: T, ms = 300): T {
   return v;
 }
 
-function EntityDetail({ ventureId, entityId, onOpen }: { ventureId: string; entityId: string; onOpen: (id: string, name: string) => void }) {
+export function EntityDetail({ ventureId, entityId, onOpen }: { ventureId: string; entityId: string; onOpen: (id: string, name: string) => void }) {
   const q = useQuery({
     queryKey: ["entities", ventureId, entityId],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/entities/{entity_id}", { params: { path: { venture_id: ventureId, entity_id: entityId } } })),

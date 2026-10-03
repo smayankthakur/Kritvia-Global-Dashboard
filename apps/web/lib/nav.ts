@@ -12,6 +12,7 @@ import {
   Landmark,
   ListChecks,
   Mic,
+  Network,
   Receipt,
   ScrollText,
   Settings,
@@ -59,6 +60,7 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
   const common: NavItem[] = [
     { label: "Runs", href: `${v}/runs`, icon: Activity },
     { label: "Knowledge", href: `${v}/knowledge`, icon: BookOpen },
+    { label: "Mind map", href: `${v}/map`, icon: Network },
     { label: "Meetings", href: `${v}/meetings`, icon: Mic },
     { label: "Voice", href: `${v}/voice`, icon: AudioLines },
     { label: "Tasks", href: `${v}/tasks`, icon: ListChecks },
