@@ -22,16 +22,23 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
   const [kind, setKind] = useState<Kind>("general");
   const [threshold, setThreshold] = useState("30");
   const [peopleHints, setPeopleHints] = useState(false);
+  const [profile, setProfile] = useState({ business_name: "", city: "", about: "", sign_off: "" });
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     if (q.data) {
       setKind((KINDS as readonly string[]).includes(q.data.kind) ? (q.data.kind as Kind) : "general");
       setThreshold(String(q.data.trust_threshold));
       setPeopleHints(Boolean(q.data.speech_people_hints));
+      setProfile({
+        business_name: q.data.business_name ?? "",
+        city: q.data.city ?? "",
+        about: q.data.about ?? "",
+        sign_off: q.data.sign_off ?? "",
+      });
     }
   }, [q.data]);
   const save = useMutation({
-    mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } }, body: { kind, trust_threshold: Number(threshold), speech_people_hints: peopleHints } })),
+    mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } }, body: { kind, trust_threshold: Number(threshold), speech_people_hints: peopleHints, ...profile } })),
     onSuccess: (d) => {
       qc.setQueryData(["settings", ventureId], d);
       void qc.invalidateQueries({ queryKey: accessKey });
@@ -78,6 +85,24 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
           </div>
           <Switch label="Share vocabulary and names with hosted speech models" checked={peopleHints} disabled={!canAdmin} onChange={setPeopleHints} />
         </div>
+        <fieldset className="space-y-3 rounded-md border border-border p-3">
+          <legend className="px-1 text-sm font-medium">Business profile</legend>
+          <p className="text-xs text-subtle">
+            Who the agents write as in proposals, emails and invites. Leave a field empty to use the default.
+          </p>
+          <Field label="Business name" hint="As your customers know it. Default: this venture's name.">
+            <Input value={profile.business_name} maxLength={120} disabled={!canAdmin} onChange={(e) => setProfile((p) => ({ ...p, business_name: e.target.value }))} />
+          </Field>
+          <Field label="City" hint="Used for local context, e.g. festival demand for a kitchen. Default: India.">
+            <Input value={profile.city} maxLength={80} disabled={!canAdmin} onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))} className="w-64" />
+          </Field>
+          <Field label="What you do" hint="One or two sentences the agents can rely on.">
+            <Input value={profile.about} maxLength={600} disabled={!canAdmin} placeholder="Websites and automation for clinics and schools" onChange={(e) => setProfile((p) => ({ ...p, about: e.target.value }))} />
+          </Field>
+          <Field label="Email sign-off" hint="Default: Team <business name>.">
+            <Input value={profile.sign_off} maxLength={120} disabled={!canAdmin} onChange={(e) => setProfile((p) => ({ ...p, sign_off: e.target.value }))} />
+          </Field>
+        </fieldset>
         <Field label="Time zone">
           <Input value={q.data.timezone} disabled readOnly className="w-48" />
         </Field>

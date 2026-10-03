@@ -212,10 +212,11 @@ async def adjust(ctx: RunContext, state: dict) -> Goto:
             reasons.append({"event": ev.name, "multiplier": str(m), "source": "configured"})
         else:
             try:
+                where = (await ctx.business()).where
                 imp = await ctx.llm_json(
                     tier="fast", schema=EventImpact,
                     system=("You estimate how an Indian calendar event changes food-delivery demand for a cloud "
-                            "kitchen in Delhi versus a normal day of the same weekday. Be conservative."),
+                            f"kitchen in {where} versus a normal day of the same weekday. Be conservative."),
                     prompt=f"Event on {target:%A %d %B %Y}: {ev.name}. {ev.note or ''}")
                 m = Decimal(str(round(min(MULT_MAX, max(MULT_MIN, imp.multiplier)), 2)))
                 reasons.append({"event": ev.name, "multiplier": str(m), "source": "model", "reason": imp.reason[:200]})

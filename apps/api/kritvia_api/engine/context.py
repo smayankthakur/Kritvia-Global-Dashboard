@@ -52,6 +52,22 @@ def set_services(s: Services | None) -> None:
     _services = s
 
 
+@dataclass(frozen=True)
+class Business:
+    name: str
+    city: str
+    about: str
+    sign_off: str
+
+    @property
+    def where(self) -> str:
+        return self.city or "India"
+
+    def describe(self) -> str:
+        """One line for a system prompt."""
+        return f"{self.name} ({self.where})" + (f": {self.about}" if self.about else "")
+
+
 @dataclass
 class RunContext:
     run_id: uuid.UUID
@@ -81,6 +97,18 @@ class RunContext:
                 text("SELECT settings FROM workflow_configs WHERE venture_id = :v AND workflow = :w"),
                 {"v": self.venture_id, "w": self.workflow})).first()
         return dict(row.settings) if row else {}
+
+    async def business(self) -> Business:
+        """Who the agents write as: the venture's business profile, with defaults."""
+        async with self.tx() as conn:
+            row = (await conn.execute(text(
+                "SELECT v.name, s.business_name, s.city, s.about, s.sign_off FROM ventures v"
+                " LEFT JOIN venture_settings s ON s.venture_id = v.id WHERE v.id = :v"),
+                {"v": self.venture_id})).first()
+        name = ((row.business_name or row.name) if row else "") or "our team"
+        return Business(name=name, city=(row.city if row else None) or "",
+                        about=(row.about if row else None) or "",
+                        sign_off=(row.sign_off if row else None) or f"Team {name}")
 
     # --- models -------------------------------------------------------------
     def call_ctx(self, agent: str | None = None) -> CallContext:

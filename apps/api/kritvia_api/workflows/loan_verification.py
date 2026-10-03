@@ -1,4 +1,4 @@
-"""Truhome Finance — Loan document verification.
+"""Loan document verification (loan DSAs, brokers and lenders; built first for Truhome Finance).
 
   load -> classify -> extract_fields -> check -> (complete | draft_followup
        -> [approval: gmail.send, loan_officer, sensitive] -> send_followup)
@@ -6,7 +6,7 @@
 Hard rules:
 * EVERY model call here uses tier 'private' with sensitive=True: the router
   refuses to send it anywhere but the local model.
-* Checklists and pass/fail rules are Truhome configuration evaluated by code.
+* Checklists and pass/fail rules are per-venture configuration evaluated by code.
   The agent flags; the loan officer decides.
 * Documents were OCR'd, PII-masked (Aadhaar/card numbers) and encrypted at
   upload; raw documents are visible only to the loan_officer role (DB policy).
@@ -331,14 +331,15 @@ async def draft_followup(ctx: RunContext, state: dict) -> Interrupt | Finish:
         ctx.note("applicant has no email on file; follow-up must be sent manually")
         return Finish("needs_info_manual")
     bullet = "\n".join(f"• {i}" for i in items)
+    biz = await ctx.business()
     greeting = await ctx.llm_text(
         tier="private", sensitive=True, max_tokens=200,
-        system=("Write a 2-sentence warm, professional opening for an email from Truhome Finance asking a home-loan "
+        system=(f"Write a 2-sentence warm, professional opening for an email from {biz.name} asking a loan "
                 "applicant for a few more documents. No list, no sign-off, no document names."),
         prompt=f"Applicant first name: {applicant.get('name', '').split(' ')[0] or 'there'}")
     body = (f"{greeting.strip()}\n\nTo continue with your application ({state['reference']}), we need:\n\n{bullet}\n\n"
             "You can reply to this email with the documents attached, or use the secure upload link your loan "
-            "officer shares.\n\nRegards,\nTruhome Finance")
+            f"officer shares.\n\nRegards,\n{biz.sign_off}")
     return Interrupt(
         ApprovalRequest(
             agent="loan_followup", action="gmail.send", key="followup_decision", sensitive=True,

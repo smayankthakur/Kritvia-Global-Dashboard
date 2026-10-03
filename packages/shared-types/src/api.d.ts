@@ -4280,8 +4280,16 @@ export interface components {
         };
         /** VentureSettingsIn */
         VentureSettingsIn: {
+            /** About */
+            about?: string | null;
+            /** Business Name */
+            business_name?: string | null;
+            /** City */
+            city?: string | null;
             /** Kind */
             kind?: ("general" | "software" | "finance" | "kitchen") | null;
+            /** Sign Off */
+            sign_off?: string | null;
             /** Speech People Hints */
             speech_people_hints?: boolean | null;
             /** Timezone */
@@ -4291,8 +4299,28 @@ export interface components {
         };
         /** VentureSettingsOut */
         VentureSettingsOut: {
+            /**
+             * About
+             * @default
+             */
+            about: string;
+            /**
+             * Business Name
+             * @default
+             */
+            business_name: string;
+            /**
+             * City
+             * @default
+             */
+            city: string;
             /** Kind */
             kind: string;
+            /**
+             * Sign Off
+             * @default
+             */
+            sign_off: string;
             /**
              * Speech People Hints
              * @description Send vocabulary and names from the knowledge graph to hosted speech models as spelling hints (local models always get them; role-restricted names never)

@@ -6071,6 +6071,42 @@
       },
       "VentureSettingsIn": {
         "properties": {
+          "about": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "About"
+          },
+          "business_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Name"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
           "kind": {
             "anyOf": [
               {
@@ -6087,6 +6123,18 @@
               }
             ],
             "title": "Kind"
+          },
+          "sign_off": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sign Off"
           },
           "speech_people_hints": {
             "anyOf": [
@@ -6130,8 +6178,28 @@
       },
       "VentureSettingsOut": {
         "properties": {
+          "about": {
+            "default": "",
+            "title": "About",
+            "type": "string"
+          },
+          "business_name": {
+            "default": "",
+            "title": "Business Name",
+            "type": "string"
+          },
+          "city": {
+            "default": "",
+            "title": "City",
+            "type": "string"
+          },
           "kind": {
             "title": "Kind",
+            "type": "string"
+          },
+          "sign_off": {
+            "default": "",
+            "title": "Sign Off",
             "type": "string"
           },
           "speech_people_hints": {

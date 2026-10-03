@@ -162,3 +162,22 @@ async def test_spam_is_dropped(site, fake_llm):
                                json={"from_email": "seo@spam.biz", "body": "We rank you #1 on Google"})).json()["run_id"]
     run = await _run(alice, v, run_id)
     assert run["outcome"] == "spam"
+
+
+async def test_agents_write_as_the_business_profile(site, fake_llm):
+    """No business names are hard-coded: the proposal writer and the invite use the venture's profile."""
+    mayank, v = site["mayank"], site["site"]
+    r = await mayank.put(f"/ventures/{v}/settings", json={"business_name": "Rao Digital", "city": "Pune",
+                                                          "about": "Websites for clinics", "sign_off": "Asha, Rao Digital"})
+    assert r.status_code == 200, r.text
+    got = r.json()
+    assert (got["business_name"], got["city"], got["sign_off"]) == ("Rao Digital", "Pune", "Asha, Rao Digital")
+    script_triage(fake_llm)
+    r = await site["alice"].post(f"/ventures/{v}/leads/inquiry", json={**INQUIRY, "from_email": "new@clinic.in"})
+    assert r.status_code == 202, r.text
+    system = fake_llm.chat_calls("proposal writer")[-1]["prompt"]
+    assert "Rao Digital (Pune): Websites for clinics" in system and "Asha, Rao Digital" in system
+    assert "Sitelytc" not in system
+    # "" clears back to the defaults (venture name, Team <name>)
+    r = await mayank.put(f"/ventures/{v}/settings", json={"business_name": "", "city": "", "about": "", "sign_off": ""})
+    assert r.json()["business_name"] == "" and r.json()["sign_off"] == ""
