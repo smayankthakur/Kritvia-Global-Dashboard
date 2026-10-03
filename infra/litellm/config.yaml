@@ -15,11 +15,11 @@ model_list:
 
   # --- Gemini (free tier; terms may allow training on inputs -> never sensitive) ---
   - model_name: gemini-flash
-    litellm_params: { model: gemini/gemini-2.5-flash, api_key: os.environ/GEMINI_API_KEY }
+    litellm_params: { model: gemini/gemini-3.5-flash, api_key: os.environ/GEMINI_API_KEY }
 
   # --- OpenRouter free models ---
   - model_name: openrouter-free
-    litellm_params: { model: openrouter/meta-llama/llama-3.3-70b-instruct:free, api_key: os.environ/OPENROUTER_API_KEY }
+    litellm_params: { model: openrouter/qwen/qwen3.8-27b:free, api_key: os.environ/OPENROUTER_API_KEY }
 
   # --- Local Ollama on the VM (the only 'private' destination at MVP) ---
   - model_name: ollama-qwen-7b
