@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/components/ui/cn";
 import { api, unwrap } from "@/lib/api";
 import { kindOf, useAccess } from "@/lib/access";
-import { ownerNav, topNav, ventureNav, type NavItem } from "@/lib/nav";
+import { accountNav, ownerNav, topNav, ventureNav, type NavItem } from "@/lib/nav";
 import { Logo } from "./logo";
 
 export const inboxKey = ["approvals", "inbox"] as const;
@@ -170,6 +170,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </div>
           </>
         ) : null}
+        <div className="mt-3 space-y-0.5 border-t border-border pt-3">
+          {accountNav.map((item) => (
+            <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+          ))}
+        </div>
       </nav>
     </div>
   );

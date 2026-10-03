@@ -4,7 +4,9 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from kritvia_api.deps import TenantDB
+from kritvia_api.deps import Svc, TenantDB
+from kritvia_api.plans import PLANS, PUBLIC_PLANS
+from kritvia_api.services.quota import org_usage, require_room
 from kritvia_api.errors import raise_for_db
 from kritvia_api.schemas import GrantIn, IdOut, MemberIn, OrgIn, VentureIn, VentureOut
 
@@ -39,7 +41,8 @@ async def list_orgs(db: TenantDB) -> list[IdOut]:
 
 
 @router.post("/{org_id}/ventures", response_model=IdOut, status_code=201)
-async def create_venture(org_id: uuid.UUID, body: VentureIn, db: TenantDB) -> IdOut:
+async def create_venture(org_id: uuid.UUID, body: VentureIn, db: TenantDB, svc: Svc) -> IdOut:
+    await require_room(db, org_id, "venture", svc.router.local_deployments())
     try:
         async with db.begin_nested():
             vid = (await db.execute(text("SELECT create_venture(:o, :n, :s)"),
@@ -91,3 +94,14 @@ async def revoke(org_id: uuid.UUID, grant_id: uuid.UUID, db: TenantDB) -> None:
             await db.execute(text("SELECT revoke_access(:g)"), {"g": grant_id})
     except DBAPIError as exc:
         raise_for_db(exc, "grant not found")
+
+
+@router.get("/{org_id}/plan", response_model=dict)
+async def get_plan(org_id: uuid.UUID, db: TenantDB, svc: Svc) -> dict:
+    """The organisation's plan, its limits and this month's usage."""
+    u = await org_usage(db, org_id, svc.router.local_deployments())
+    if u is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organisation not found")
+    renews = (await db.execute(text("SELECT renews_at FROM org_plans WHERE org_id = :o"), {"o": org_id})).scalar()
+    return {**u.as_dict(), "renews_at": renews.isoformat() if renews else None,
+            "available": [PLANS[c].as_dict() for c in PUBLIC_PLANS]}

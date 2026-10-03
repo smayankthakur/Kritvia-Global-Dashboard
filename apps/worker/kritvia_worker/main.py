@@ -123,7 +123,8 @@ async def reembed(ctx: dict) -> int:
 async def purge_expired(ctx: dict) -> int:
     async with tenant_tx(None, "system") as conn:
         n = (await conn.execute(text("SELECT private.purge_expired_documents(1000)"))).scalar()
-    log.info("retention purge removed %s document(s)", n)
+        orgs = (await conn.execute(text("SELECT private.purge_closed_orgs(30)"))).scalar()
+    log.info("retention purge removed %s document(s) and %s closed organisation(s)", n, orgs)
     return n or 0
 
 

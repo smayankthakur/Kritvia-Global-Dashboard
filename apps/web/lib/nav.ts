@@ -8,6 +8,8 @@ import {
   Database,
   FileText,
   Gauge,
+  CircleUser,
+  CreditCard,
   Inbox,
   Landmark,
   ListChecks,
@@ -76,7 +78,12 @@ export const topNav: NavItem[] = [
   { label: "Inbox", href: "/inbox", icon: Inbox },
 ];
 
-export const ownerNav: NavItem[] = [{ label: "Audit log", href: "/audit", icon: ScrollText }];
+export const ownerNav: NavItem[] = [
+  { label: "Plan & billing", href: "/billing", icon: CreditCard },
+  { label: "Audit log", href: "/audit", icon: ScrollText },
+];
+
+export const accountNav: NavItem[] = [{ label: "Your account", href: "/account", icon: CircleUser }];
 
 export const KIND_LABEL: Record<VentureKind, string> = {
   software: "Agency / services",

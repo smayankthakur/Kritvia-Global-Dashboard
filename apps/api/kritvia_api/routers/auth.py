@@ -8,16 +8,19 @@ per email.
 import hashlib
 import hmac
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import APIRouter, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import AnonDB, Svc, TenantDB, UserId
+from kritvia_api.errors import raise_for_db
 from kritvia_api.ratelimit import client_ip, limiter
 from kritvia_api.schemas import (
     EmailStartIn,
@@ -231,3 +234,51 @@ async def google_signin_complete(body: GoogleSigninCompleteIn, request: Request,
         if uid is None:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "this account is disabled or linked to another Google account")
         return await _pair(db, uid, request)
+
+
+# --- Your data (DPDP): export and deletion ----------------------------------------------
+async def _rows(db, sql: str, params: dict) -> list[dict]:
+    out = []
+    for r in (await db.execute(text(sql), params)).all():
+        out.append({k: (v.isoformat() if hasattr(v, "isoformat") else str(v) if isinstance(v, uuid.UUID) else v)
+                    for k, v in r._mapping.items()})
+    return out
+
+
+@router.get("/me/export")
+async def export_my_data(user_id: UserId, db: TenantDB) -> dict:
+    """Everything Kritvia holds about you as a person (not your organisation's business data,
+    which an owner exports per business)."""
+    u = {"u": user_id}
+    return {
+        "exported_at": datetime.now(UTC).isoformat(),
+        "profile": (await _rows(db, "SELECT id, email, full_name, created_at, email_verified_at"
+                                    " FROM users WHERE id = :u", u))[0],
+        "memberships": await _rows(db, "SELECT o.name AS organisation, v.name AS business, m.role, m.created_at"
+                                       " FROM memberships m JOIN organisations o ON o.id = m.org_id"
+                                       " LEFT JOIN ventures v ON v.id = m.venture_id WHERE m.user_id = :u", u),
+        "voice_settings": await _rows(db, "SELECT engine, language, remove_fillers, profanity_filter, auto_learn,"
+                                          " hotkey, widget_enabled FROM voice_settings WHERE user_id = :u", u),
+        "personal_vocabulary": await _rows(db, "SELECT term, sounds_like, created_at FROM vocabulary_terms"
+                                               " WHERE user_id = :u", u),
+        "dictation_stats": await _rows(db, "SELECT surface, mode, engine, language, created_at"
+                                           " FROM dictation_events WHERE user_id = :u ORDER BY created_at", u),
+        "approval_decisions": await _rows(db, "SELECT action, status, decided_at FROM approvals"
+                                              " WHERE decided_by = :u ORDER BY decided_at", u),
+    }
+
+
+class DeleteMeIn(BaseModel):
+    confirm: str = Field(description='type "DELETE"')
+
+
+@router.post("/me/delete", status_code=200)
+async def delete_my_account(body: DeleteMeIn, user_id: UserId, db: TenantDB) -> dict:
+    if body.confirm != "DELETE":
+        raise HTTPException(422, 'type DELETE to confirm')
+    try:
+        async with db.begin_nested():
+            closed = (await db.execute(text("SELECT delete_my_account('DELETE')"))).scalar_one()
+    except DBAPIError as exc:
+        raise_for_db(exc, "account not found")
+    return {"deleted": True, "organisations_closed": closed}

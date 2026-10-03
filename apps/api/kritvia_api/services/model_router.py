@@ -41,6 +41,10 @@ class PolicyViolation(RouterError):
     """Sensitive data would have been sent somewhere it is not allowed to go."""
 
 
+class QuotaExceeded(RouterError):
+    """The workspace used its plan's hosted-model allowance for this month."""
+
+
 class AllProvidersFailed(RouterError):
     def __init__(self, tier: str, attempts: list[str]) -> None:
         super().__init__(f"all deployments failed for tier '{tier}': {'; '.join(attempts)}")
@@ -132,10 +136,19 @@ class ModelRouter:
         # Native providers that LiteLLM does not front. The key never goes to LiteLLM.
         self.sarvam_api_key = sarvam_api_key
         self._sarvam = httpx.AsyncClient(base_url=sarvam_base_url, transport=transport, timeout=60.0)
+        from kritvia_api.services.quota import TokenGate
+        self.gate = TokenGate()
 
     async def aclose(self) -> None:
         await self._client.aclose()
         await self._sarvam.aclose()
+
+    def local_deployments(self) -> list[str]:
+        return [d for d, p in self.config.policies.items() if p == "local"]
+
+    async def _over_quota(self, ctx: CallContext) -> bool:
+        async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
+            return await self.gate.over_limit(conn, ctx.org_id, self.local_deployments())
 
     async def _meter(self, ctx: CallContext, **row: Any) -> None:
         async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
@@ -168,6 +181,14 @@ class ModelRouter:
             reason = "sensitive request: no deployment in tier is permitted for sensitive data"
             await self._meter(ctx, tier=tier, status="blocked", error=reason)
             raise PolicyViolation(f"tier '{tier}': {reason}; route sensitive work through tier 'private'")
+
+        if any(self.config.policies.get(d) != "local" for d in candidates) and await self._over_quota(ctx):
+            local = [d for d in candidates if self.config.policies.get(d) == "local"]
+            if not local:
+                await self._meter(ctx, tier=tier, status="blocked", error="monthly AI allowance used")
+                raise QuotaExceeded("this workspace has used its monthly AI allowance; upgrade the plan or wait "
+                                    "for next month (steps that can run on the local model still do)")
+            candidates = local
 
         failures: list[str] = []
         for attempt, deployment in enumerate(candidates, start=1):

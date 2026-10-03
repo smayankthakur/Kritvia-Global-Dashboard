@@ -19,10 +19,11 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.db.session import tenant_tx
-from kritvia_api.deps import Svc, TenantDB, UserId
+from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.runner import PAYLOAD_PURPOSE
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services.crypto import EnvelopeCrypto
+from kritvia_api.services.quota import org_usage
 
 router = APIRouter(tags=["approvals"])
 
@@ -224,8 +225,14 @@ class AutonomyIn(BaseModel):
 
 
 @router.post("/ventures/{venture_id}/trust/{agent}/{action}", response_model=list[TrustOut])
-async def set_autonomy(venture_id: uuid.UUID, agent: str, action: str, body: AutonomyIn, db: TenantDB
-                       ) -> list[TrustOut]:
+async def set_autonomy(venture_id: uuid.UUID, agent: str, action: str, body: AutonomyIn, db: TenantDB,
+                       svc: Svc) -> list[TrustOut]:
+    if body.auto_run:
+        org = await venture_org(db, venture_id)
+        u = await org_usage(db, org, svc.router.local_deployments())
+        if u is not None and not u.plan.autonomy:
+            raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                                f"on the {u.plan.name} plan agents always ask first; upgrade to let them act alone")
     try:
         async with db.begin_nested():
             await db.execute(text("SELECT set_autonomy(:v, :a, :t, :auto, :r)"),

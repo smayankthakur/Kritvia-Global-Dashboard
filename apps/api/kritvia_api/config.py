@@ -66,6 +66,17 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:3000/api/oauth/google/callback"  # the WEB app route
 
+    # Plan for organisations without one (see plans.py). Tests use "internal".
+    default_plan: str = "free"
+
+    # Billing (Razorpay subscriptions). Plans are created once in the Razorpay dashboard;
+    # their ids go here. Test-mode keys (rzp_test_...) work end to end without real money.
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
+    razorpay_webhook_secret: str = ""
+    razorpay_plan_starter: str = ""
+    razorpay_plan_pro: str = ""
+
     # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
     signup_open: bool = True            # false: only existing accounts and invitees can sign in
     email_code_minutes: int = 10

@@ -13,7 +13,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.config import get_settings
-from kritvia_api.deps import TenantDB, venture_org
+from kritvia_api.deps import Svc, TenantDB, venture_org
+from kritvia_api.services.quota import require_room
 from kritvia_api.errors import raise_for_db
 
 router = APIRouter(tags=["ventures"])
@@ -204,7 +205,8 @@ class InvitationOut(BaseModel):
 
 
 @router.post("/orgs/{org_id}/invitations", response_model=InvitationCreatedOut, status_code=201)
-async def invite(org_id: uuid.UUID, body: InvitationIn, db: TenantDB) -> InvitationCreatedOut:
+async def invite(org_id: uuid.UUID, body: InvitationIn, db: TenantDB, svc: Svc) -> InvitationCreatedOut:
+    await require_room(db, org_id, "member", svc.router.local_deployments())
     token = secrets.token_urlsafe(32)
     try:
         async with db.begin_nested():

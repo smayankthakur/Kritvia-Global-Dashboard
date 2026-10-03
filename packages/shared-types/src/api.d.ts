@@ -151,6 +151,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/me/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete My Account */
+        post: operations["delete_my_account_auth_me_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export My Data
+         * @description Everything Kritvia holds about you as a person (not your organisation's business data,
+         *     which an owner exports per business).
+         */
+        get: operations["export_my_data_auth_me_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/password": {
         parameters: {
             query?: never;
@@ -454,6 +492,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Billing */
+        get: operations["billing_orgs__org_id__billing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/billing/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel
+         * @description Cancels at the end of the paid period; the webhook moves the org back to Free then.
+         */
+        post: operations["cancel_orgs__org_id__billing_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/billing/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Profile */
+        put: operations["put_profile_orgs__org_id__billing_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/billing/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subscribe
+         * @description Creates a Razorpay subscription and returns its hosted payment page. The plan changes
+         *     only when Razorpay confirms the payment through the webhook.
+         */
+        post: operations["subscribe_orgs__org_id__billing_subscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/dashboard": {
         parameters: {
             query?: never;
@@ -576,6 +689,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan
+         * @description The organisation's plan, its limits and this month's usage.
+         */
+        get: operations["get_plan_orgs__org_id__plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/ventures": {
         parameters: {
             query?: never;
@@ -588,6 +721,27 @@ export interface paths {
         put?: never;
         /** Create Venture */
         post: operations["create_venture_orgs__org_id__ventures_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/billing/razorpay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Razorpay Webhook
+         * @description Razorpay → Kritvia. Verified with X-Razorpay-Signature (HMAC-SHA256 of the raw body with
+         *     the webhook secret); duplicates are ignored by event id.
+         */
+        post: operations["razorpay_webhook_public_billing_razorpay_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2288,6 +2442,52 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** BillingEvent */
+        BillingEvent: {
+            /** Amount Paise */
+            amount_paise: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Event */
+            event: string;
+            /** Invoice Url */
+            invoice_url: string | null;
+            /** Plan */
+            plan: string | null;
+        };
+        /** BillingOut */
+        BillingOut: {
+            /** Configured */
+            configured: boolean;
+            /** Events */
+            events: components["schemas"]["BillingEvent"][];
+            /** Key Id */
+            key_id: string | null;
+            profile: components["schemas"]["BillingProfile"] | null;
+            /** Subscription Id */
+            subscription_id: string | null;
+            /** Subscription Status */
+            subscription_status: string | null;
+        };
+        /** BillingProfile */
+        BillingProfile: {
+            /**
+             * Address
+             * @default
+             */
+            address: string;
+            /** Email */
+            email?: string | null;
+            /** Gstin */
+            gstin?: string | null;
+            /** Legal Name */
+            legal_name: string;
+            /** State Code */
+            state_code?: string | null;
+        };
         /** Body_dictate_endpoint_ventures__venture_id__voice_dictate_post */
         Body_dictate_endpoint_ventures__venture_id__voice_dictate_post: {
             /** Duration Ms */
@@ -2751,6 +2951,14 @@ export interface components {
             edited_payload?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** DeleteMeIn */
+        DeleteMeIn: {
+            /**
+             * Confirm
+             * @description type "DELETE"
+             */
+            confirm: string;
         };
         /** DictationOut */
         DictationOut: {
@@ -4059,6 +4267,21 @@ export interface components {
             /** Counts */
             counts: components["schemas"]["StockCount"][];
         };
+        /** SubscribeIn */
+        SubscribeIn: {
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "starter" | "pro";
+        };
+        /** SubscribeOut */
+        SubscribeOut: {
+            /** Checkout Url */
+            checkout_url: string;
+            /** Subscription Id */
+            subscription_id: string;
+        };
         /** SuggestionOut */
         SuggestionOut: {
             /** Mentions */
@@ -4821,6 +5044,63 @@ export interface operations {
             };
         };
     };
+    delete_my_account_auth_me_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteMeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_my_data_auth_me_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     change_password_auth_password_post: {
         parameters: {
             query?: never;
@@ -5335,6 +5615,140 @@ export interface operations {
             };
         };
     };
+    billing_orgs__org_id__billing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_orgs__org_id__billing_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_profile_orgs__org_id__billing_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingProfile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subscribe_orgs__org_id__billing_subscribe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscribeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscribeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dashboard_orgs__org_id__dashboard_get: {
         parameters: {
             query?: never;
@@ -5654,6 +6068,39 @@ export interface operations {
             };
         };
     };
+    get_plan_orgs__org_id__plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_ventures_orgs__org_id__ventures_get: {
         parameters: {
             query?: never;
@@ -5716,6 +6163,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    razorpay_webhook_public_billing_razorpay_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

@@ -20,7 +20,7 @@ from kritvia_api.engine.runner import start_run
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services import memory
 from kritvia_api.services.crypto import EnvelopeCrypto
-from kritvia_api.services.model_router import RouterError
+from kritvia_api.services.model_router import QuotaExceeded, RouterError
 from kritvia_api.services.textextract import ExtractionError
 
 router = APIRouter(tags=["knowledge"])
@@ -239,6 +239,8 @@ async def ask(venture_id: uuid.UUID, body: AskIn, user_id: UserId, svc: Svc) -> 
     actor, _ = await _actor(user_id, venture_id, svc)
     try:
         a = await memory.ask(actor, body.question)
+    except QuotaExceeded as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
     except RouterError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"model unavailable: {exc}") from None
     return AnswerOut(answer=a.answer, citations=[Citation(**c) for c in a.citations], supported=a.supported, tier=a.tier)
@@ -255,6 +257,8 @@ async def ask_org(org_id: uuid.UUID, body: AskIn, user_id: UserId, svc: Svc) -> 
     actor = memory.UserActor(user_id, org_id, ventures[0], svc.router, svc.keys)
     try:
         a = await memory.ask(actor, body.question, venture_ids=ventures)
+    except QuotaExceeded as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
     except RouterError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"model unavailable: {exc}") from None
     return AnswerOut(answer=a.answer, citations=[Citation(**c) for c in a.citations], supported=a.supported, tier=a.tier)
