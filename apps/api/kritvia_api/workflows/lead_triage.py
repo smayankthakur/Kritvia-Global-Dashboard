@@ -20,22 +20,28 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
-from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Workflow, registry
+from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
 from kritvia_api.services.memory import canonical
 from kritvia_api.workflows.common import CURRENCY_IN_TEXT, fmt_inr, money, next_business_slot, parse_inr
 
 wf = registry.register(Workflow(
-    "lead_triage", title="Inbound lead triage & proposal", start="extract", venture_kinds=("software", "general"),
-    description="Parses an inquiry, scores it, prices it from the rate card, drafts a cited proposal and a "
-                "discovery-call invite — both sent only after approval."))
+    "lead_triage", title="Lead triage & proposals", start="extract", venture_kinds=("software", "general"),
+    trigger="New enquiry by email, website form or WhatsApp",
+    description="Reads an enquiry, scores it, prices it from your rate card, drafts a proposal citing your past "
+                "work and proposes a call — nothing is sent until you approve.",
+    options=(
+        Option("draft_proposal", "Draft a proposal for each qualified enquiry", "boolean", True,
+               help="Off: the agent only scores the lead and files it in Leads."),
+        Option("book_call", "Propose a discovery call after the proposal", "boolean", True),
+        Option("gst_pct", "GST %", "number", 18, min=0, max=28),
+        Option("min_budget_inr", "Minimum budget worth pursuing (₹)", "number", 50000, min=0),
+        Option("meeting_hour_ist", "Call time (hour, IST)", "number", 11, min=8, max=20),
+        Option("meeting_minutes", "Call length (minutes)", "number", 30, min=15, max=120),
+        Option("dedupe_days", "Treat a repeat enquiry as the same lead within (days)", "number", 30, min=1, max=365),
+    )))
 
 DEFAULTS = {
-    "gst_pct": 18,
-    "dedupe_days": 30,
-    "min_budget_inr": 50000,
-    "source_weights": {"referral": 20, "webhook": 12, "email": 10, "manual": 8},
-    "meeting_hour_ist": 11,
-    "meeting_minutes": 30,
+    "source_weights": {"referral": 20, "webhook": 12, "email": 10, "manual": 8, "whatsapp": 10},
     # "sender_name": overrides the business profile's sign-off for proposals only
 }
 
@@ -92,8 +98,8 @@ async def extract(ctx: RunContext, state: dict) -> Goto | Finish:
     codes = "\n".join(f"- {r['code']}: {r['name']} (per {r['unit']}) — {r['description']}" for r in card)
     ex = await ctx.llm_json(
         tier="extract", schema=LeadExtract,
-        system=("You triage inbound inquiries for a digital studio (web development, AI automation, "
-                "cybersecurity). Map what they ask for onto the allowed rate card codes; never invent codes. "
+        system=(f"{await ctx.brief()}\nYou triage inbound inquiries for this business. "
+                "Map what they ask for onto the allowed rate card codes; never invent codes. "
                 "Mark marketing spam, SEO cold pitches and vendor solicitations as spam.\n"
                 f"Allowed rate card codes:\n{codes or '- (none configured)'}"),
         prompt=(f"From: {inp.get('from_name') or ''} <{inp.get('from_email') or ''}>\n"
@@ -186,13 +192,13 @@ async def retrieve(ctx: RunContext, state: dict) -> Goto:
 
 
 @wf.step("score", agent="lead_scoring")
-async def score(ctx: RunContext, state: dict) -> Goto:
+async def score(ctx: RunContext, state: dict) -> Goto | Finish:
     ex, inp, cfg = state["extract"], state["input"], await _settings(ctx)
     try:
         fit = await ctx.llm_json(
             tier="fast", schema=FitAssessment,
-            system=("Assess how well this inquiry fits a studio doing Next.js web builds, AI automation and "
-                    "cybersecurity (VAPT, compliance readiness)."),
+            system=(f"{await ctx.brief()}\nAssess how well this inquiry fits what the business offers "
+                    "(its description and rate card)."),
             prompt=ex["summary"] + "\n" + "\n".join(ex["requirements"]))
         fit_label, fit_reason = fit.fit, fit.reason[:200]
     except Exception:
@@ -234,9 +240,11 @@ async def score(ctx: RunContext, state: dict) -> Goto:
             " status = CASE WHEN status = 'new' AND :s >= 40 THEN 'qualified' ELSE status END, updated_at = now()"
             " WHERE id = :id"),
             {"s": total, "p": priority, "r": json.dumps(reasons), "id": uuid.UUID(state["lead_id"])})
-    return Goto("price", update={"score": total, "priority": priority, "fit_reason": fit_reason,
-                                 "summary": {**state.get("summary", {}), "score": total, "priority": priority}},
-                note=f"score {total} ({priority})")
+    update = {"score": total, "priority": priority, "fit_reason": fit_reason,
+              "summary": {**state.get("summary", {}), "score": total, "priority": priority}}
+    if not cfg.get("draft_proposal", True):
+        return Finish("scored", update=update, note=f"score {total} ({priority}); proposals are off for this business")
+    return Goto("price", update=update, note=f"score {total} ({priority})")
 
 
 @wf.step("price", agent="pricing")
@@ -301,7 +309,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
     if feedback:
         prompt += f"\nThe reviewer rejected the previous draft with this feedback — address it:\n{feedback}\n"
     biz = await ctx.business()
-    system = (f"You are the proposal writer for {biz.describe()}. Write clearly for an Indian SMB or enterprise "
+    system = (f"{await ctx.brief()}\nYou are the proposal writer. Write clearly for an Indian SMB or enterprise "
               "buyer. Do NOT write any prices, amounts or currency: a pricing table generated by the system is "
               "inserted after your text. Reuse wording from the sources where it fits and list the source numbers "
               f"you used. Sign off as {cfg.get('sender_name') or biz.sign_off}.")
@@ -381,7 +389,7 @@ async def send_proposal(ctx: RunContext, state: dict) -> Goto:
 async def invite(ctx: RunContext, state: dict) -> Interrupt | Finish:
     inp, ex, cfg = state["input"], state["extract"], await _settings(ctx)
     to = (inp.get("from_email") or "").strip()
-    if not to:
+    if not to or not cfg.get("book_call", True):
         return Finish("proposal_sent")
     start, end = next_business_slot(hour=int(cfg["meeting_hour_ist"]), minutes=int(cfg["meeting_minutes"]))
     who = ex.get("company") or ex.get("contact_name") or to

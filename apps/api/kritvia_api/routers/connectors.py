@@ -252,6 +252,112 @@ class HookOut(BaseModel):
     duplicate: bool = False
 
 
+# ----------------------------------------------------------------- whatsapp --
+class WhatsAppConnectIn(BaseModel):
+    phone_number_id: str = Field(min_length=5, max_length=40, pattern=r"^\d+$",
+                                 description="from Meta → WhatsApp → API setup")
+    access_token: str = Field(min_length=20, max_length=1000, description="permanent system-user token")
+
+
+class WhatsAppConnectOut(BaseModel):
+    connector_id: uuid.UUID
+    display_phone_number: str | None = None
+    verified_name: str | None = None
+    webhook_url: str
+    webhook_ready: bool = Field(description="false until WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN are set")
+
+
+@router.post("/ventures/{venture_id}/connectors/whatsapp", response_model=WhatsAppConnectOut, status_code=201)
+async def connect_whatsapp(venture_id: uuid.UUID, body: WhatsAppConnectIn, user_id: UserId, db: TenantDB,
+                           svc: Svc) -> WhatsAppConnectOut:
+    """Connect the venture's WhatsApp Business number. The token is checked against Meta
+    before it is stored (encrypted); it is never returned."""
+    org = await _require_admin(db, venture_id)
+    from kritvia_api.services.whatsapp import WhatsAppError
+    try:
+        info = await svc.whatsapp.check_number(body.phone_number_id, body.access_token)
+    except WhatsAppError as exc:
+        raise HTTPException(422, str(exc)) from None
+    display = info.get("display_phone_number")
+    try:
+        async with db.begin_nested():
+            cid = (await db.execute(text(
+                "INSERT INTO connectors (org_id, venture_id, provider, account_email, external_id, scopes, created_by)"
+                " VALUES (:o, :v, 'whatsapp', :d, :x, ARRAY['messages'], :u)"
+                " ON CONFLICT (venture_id, provider) DO UPDATE SET status = 'active', account_email = EXCLUDED.account_email,"
+                " external_id = EXCLUDED.external_id, last_error = NULL, updated_at = now() RETURNING id"),
+                {"o": org, "v": venture_id, "d": display, "x": body.phone_number_id, "u": user_id})).scalar_one()
+            enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, SECRET, body.access_token)
+            await db.execute(text(
+                "INSERT INTO connector_tokens (connector_id, org_id, venture_id, secret_enc) VALUES (:c, :o, :v, :s)"
+                " ON CONFLICT (connector_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, updated_at = now()"),
+                {"c": cid, "o": org, "v": venture_id, "s": enc})
+    except DBAPIError as exc:
+        if "connectors_provider_external_idx" in str(exc):
+            raise HTTPException(status.HTTP_409_CONFLICT, "this phone number is connected to another business") from None
+        raise_for_db(exc, "venture not found")
+    return WhatsAppConnectOut(connector_id=cid, display_phone_number=display, verified_name=info.get("verified_name"),
+                              webhook_url=f"{get_settings().public_api_url}/hooks/whatsapp",
+                              webhook_ready=svc.whatsapp.configured)
+
+
+@router.get("/hooks/whatsapp", response_model=None)
+async def whatsapp_verify(request: Request, svc: Svc):
+    """Meta's webhook verification handshake."""
+    q = request.query_params
+    if not svc.whatsapp.configured or q.get("hub.mode") != "subscribe" or \
+            not hmac.compare_digest(q.get("hub.verify_token", ""), svc.whatsapp.verify_token):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "verification failed")
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(q.get("hub.challenge", ""))
+
+
+class WhatsAppHookOut(BaseModel):
+    accepted: int
+    ignored: int = 0
+
+
+@router.post("/hooks/whatsapp", response_model=WhatsAppHookOut)
+async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
+    """Inbound WhatsApp messages → one inbox_assistant run each (deduped by message id).
+    Always answers 200 once the signature checks out, so Meta does not retry."""
+    from kritvia_api.services.whatsapp import parse_inbound, verify_signature
+    from kritvia_api.workflows.inbox import message_input
+    await limiter.hit(f"hook-ip:{client_ip(request)}", per_minute=600)
+    body = await request.body()
+    if len(body) > 256 * 1024:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "payload too large")
+    if not verify_signature(svc.whatsapp.app_secret, body, request.headers.get("X-Hub-Signature-256")):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad signature")
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        raise HTTPException(422, "body must be JSON") from None
+    accepted = ignored = 0
+    principals: dict[str, Any] = {}
+    for m in parse_inbound(payload if isinstance(payload, dict) else {}):
+        if m.phone_number_id not in principals:
+            async with tenant_tx(None, "system") as conn:
+                principals[m.phone_number_id] = (await conn.execute(
+                    text("SELECT * FROM private.whatsapp_principal(:p)"), {"p": m.phone_number_id})).first()
+        p = principals[m.phone_number_id]
+        if p is None:
+            ignored += 1
+            continue
+        try:
+            await start_run(svc, actor_user_id=p.run_as, actor_type="agent", venture_id=p.venture_id,
+                            workflow="inbox_assistant", trigger_kind="whatsapp", trigger_ref=m.message_id,
+                            dedupe=("whatsapp", m.message_id),
+                            title=f"WhatsApp: {(m.sender_name or m.sender)[:60]} — {m.text[:60]}",
+                            input=message_input(channel="whatsapp", from_name=m.sender_name, from_phone=m.sender,
+                                                subject=None, body=m.text, message_id=m.message_id))
+            accepted += 1
+        except DuplicateTrigger:
+            ignored += 1
+        except ValueError:   # workflow disabled or venture kind mismatch: ignore, don't make Meta retry
+            ignored += 1
+    return WhatsAppHookOut(accepted=accepted, ignored=ignored)
+
 @router.post("/hooks/{connector_id}", response_model=HookOut, status_code=202)
 async def inbound_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> HookOut:
     """Signed lead-form webhook.
@@ -293,9 +399,21 @@ async def inbound_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> H
     lead = lead_from_webhook(payload)
     if not (lead["body"] or lead["from_email"]):
         raise HTTPException(422, "payload has no message or email")
+    # Lead triage when the business runs it; otherwise the inbox assistant answers the form.
+    async with tenant_tx(p.run_as, "agent", "webhook") as conn:
+        on = {r.workflow for r in (await conn.execute(text(
+            "SELECT workflow FROM workflow_configs WHERE venture_id = :v AND enabled"
+            " AND workflow IN ('lead_triage', 'inbox_assistant')"), {"v": p.venture_id})).all()}
+    if "lead_triage" in on or "inbox_assistant" not in on:
+        workflow, inp = "lead_triage", lead
+    else:
+        from kritvia_api.workflows.inbox import message_input
+        workflow = "inbox_assistant"
+        inp = message_input(channel="email", from_name=lead.get("from_name"), from_email=lead.get("from_email"),
+                            subject=lead.get("subject"), body=lead["body"], message_id=None)
     try:
         run_id = await start_run(svc, actor_user_id=p.run_as, actor_type="agent", venture_id=p.venture_id,
-                                 workflow="lead_triage", input=lead, trigger_kind="webhook",
+                                 workflow=workflow, input=inp, trigger_kind="webhook",
                                  dedupe=("webhook", hashlib.sha256(body).hexdigest()),
                                  title=f"Web form: {lead.get('company') or lead.get('from_name') or 'lead'}")
     except DuplicateTrigger:

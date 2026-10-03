@@ -13,7 +13,7 @@ import { useVenture } from "@/lib/venture";
 
 const TABS = [
   { id: "general", label: "General" },
-  { id: "workflows", label: "Workflows" },
+  { id: "workflows", label: "Agents" },
   { id: "connectors", label: "Connectors" },
   { id: "members", label: "Members & access" },
   { id: "models", label: "Models & usage" },
@@ -27,7 +27,7 @@ function SettingsView() {
   const canAdmin = v.can_admin || v.is_owner;
   return (
     <>
-      <PageHeader eyebrow={v.venture_name} title="Settings" description="Venture configuration, workflows, connectors, people and models." />
+      <PageHeader eyebrow={v.venture_name} title="Settings" description="Business profile, agents, connectors, people and models." />
       <Tabs
         label="Settings"
         items={TABS.map((t) => ({ id: t.id, label: t.label }))}

@@ -1,7 +1,7 @@
 import { parseErrorBody, type ApiError } from "./api";
 
 /** POST credentials to the BFF (which sets httpOnly cookies). Throws ApiError on failure. */
-export type AuthEndpoint = "login" | "register" | "email/start" | "email/verify";
+export type AuthEndpoint = "login" | "register" | "email/start" | "email/verify" | "password/reset";
 
 export async function postAuth(endpoint: AuthEndpoint, body: Record<string, string>): Promise<void> {
   let res: Response;

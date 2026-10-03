@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderDown, Mail, RefreshCw, Trash2, Webhook } from "lucide-react";
-import { useState } from "react";
+import { BookOpenCheck, FolderDown, Mail, MessageCircle, RefreshCw, Trash2, Upload, Webhook } from "lucide-react";
+import { useRef, useState } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -12,8 +12,8 @@ import { Field, FormError, Input } from "@/components/ui/field";
 import { KeyValue, Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
-import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
-import { formatDateTime, formatRelative } from "@/lib/format";
+import { api, errorMessage, multipart, unwrap, type Schemas } from "@/lib/api";
+import { formatDateTime, formatINR, formatRelative } from "@/lib/format";
 
 type Connector = Schemas["ConnectorOut"];
 
@@ -86,6 +86,159 @@ function DriveImportDialog({ open, onClose, ventureId }: { open: boolean; onClos
   );
 }
 
+function WhatsAppDialog({ open, onClose, ventureId, onDone }: { open: boolean; onClose: () => void; ventureId: string; onDone: () => void }) {
+  const toast = useToast();
+  const [phoneId, setPhoneId] = useState("");
+  const [token, setToken] = useState("");
+  const [result, setResult] = useState<Schemas["WhatsAppConnectOut"] | null>(null);
+  const m = useMutation({
+    mutationFn: () =>
+      unwrap(api.POST("/ventures/{venture_id}/connectors/whatsapp", { params: { path: { venture_id: ventureId } }, body: { phone_number_id: phoneId.trim(), access_token: token.trim() } })),
+    onSuccess: (out) => {
+      setResult(out);
+      setToken("");
+      toast.success("WhatsApp connected", out.display_phone_number ?? undefined);
+      onDone();
+    },
+  });
+  const close = () => {
+    m.reset();
+    setResult(null);
+    setToken("");
+    onClose();
+  };
+  const valid = /^\d{5,40}$/.test(phoneId.trim()) && token.trim().length >= 20;
+  return (
+    <Dialog
+      open={open}
+      onClose={close}
+      size="lg"
+      title="Connect WhatsApp Business"
+      description="Customers message your business number; the inbox assistant drafts replies for approval."
+      footer={
+        result ? (
+          <Button variant="primary" onClick={close}>Done</Button>
+        ) : (
+          <>
+            <Button onClick={close}>Cancel</Button>
+            <Button variant="primary" loading={m.isPending} disabled={!valid} onClick={() => m.mutate()}>
+              Connect
+            </Button>
+          </>
+        )
+      }
+    >
+      {result ? (
+        <div className="space-y-4">
+          <Notice tone="success" title={`Connected ${result.display_phone_number ?? ""}`}>
+            {result.verified_name ? `Verified name: ${result.verified_name}. ` : null}The token was checked with Meta and stored encrypted.
+          </Notice>
+          <p className="text-sm text-muted">Last step, once per Meta app: in Meta for Developers → WhatsApp → Configuration, set the webhook to this URL and subscribe to <code className="font-mono">messages</code>.</p>
+          <CopyField label="Webhook URL" value={result.webhook_url} />
+          {!result.webhook_ready ? (
+            <Notice tone="warning">The server has no WhatsApp app secret yet, so Meta&apos;s webhook will be refused. Ask your administrator to set WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN.</Notice>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <FormError message={m.isError ? errorMessage(m.error) : null} />
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+            <li>In Meta Business Manager, add your business number to a WhatsApp Business app.</li>
+            <li>Create a system user with the <em>whatsapp_business_messaging</em> permission and generate a permanent token.</li>
+            <li>Paste the number&apos;s <strong>phone number id</strong> and that token below. Kritvia checks them with Meta before saving.</li>
+          </ol>
+          <Field label="Phone number id" hint="A long number from WhatsApp → API setup, not the phone number itself." required>
+            <Input value={phoneId} inputMode="numeric" placeholder="123456789012345" onChange={(e) => setPhoneId(e.target.value)} />
+          </Field>
+          <Field label="Permanent access token" hint="Stored encrypted; never shown again." required>
+            <Input type="password" value={token} autoComplete="off" onChange={(e) => setToken(e.target.value)} />
+          </Field>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+function TallyImportDialog({ open, onClose, ventureId, onDone }: { open: boolean; onClose: () => void; ventureId: string; onDone: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<Schemas["TallyImportOut"] | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const m = useMutation({
+    mutationFn: (f: File) =>
+      unwrap(
+        api.POST("/ventures/{venture_id}/connectors/tally/import", {
+          params: { path: { venture_id: ventureId } },
+          body: multipart<Schemas["Body_import_tally_ventures__venture_id__connectors_tally_import_post"]>({ file: f }),
+        }),
+      ),
+    onSuccess: (out) => {
+      setResult(out);
+      onDone();
+    },
+  });
+  const close = () => {
+    m.reset();
+    setResult(null);
+    setFile(null);
+    onClose();
+  };
+  const owed = result ? Object.entries(result.outstanding) : [];
+  return (
+    <Dialog
+      open={open}
+      onClose={close}
+      size="lg"
+      title="Import from Tally"
+      description="Export the Day Book (or a ledger) from Tally Prime as XML and upload it here. Re-importing an overlapping period is safe."
+      footer={
+        result ? (
+          <Button variant="primary" onClick={close}>Done</Button>
+        ) : (
+          <>
+            <Button onClick={close}>Cancel</Button>
+            <Button variant="primary" loading={m.isPending} disabled={!file} onClick={() => file && m.mutate(file)}>
+              Import
+            </Button>
+          </>
+        )
+      }
+    >
+      {result ? (
+        <div className="space-y-3">
+          <Notice tone="success" title={`${result.imported} vouchers imported, ${result.updated} updated`}>
+            {result.period_from} to {result.period_to}. A summary document was filed in Knowledge, so you can ask questions about it.
+          </Notice>
+          <KeyValue items={Object.entries(result.by_type).map(([k, v]) => [k, `${v.count} · ${formatINR(String(v.total))}`])} />
+          {owed.length ? (
+            <div>
+              <p className="mb-1 text-[13px] font-medium">Billed minus received in this period</p>
+              <ul className="text-sm text-muted">
+                {owed.slice(0, 8).map(([p, a]) => (
+                  <li key={p} className="flex justify-between gap-3"><span>{p}</span><span className="font-mono">{formatINR(a)}</span></li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <FormError message={m.isError ? errorMessage(m.error) : null} />
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+            <li>In Tally Prime: Display More Reports → Day Book, set the period, press <kbd>Alt+E</kbd> → Export.</li>
+            <li>Choose <strong>XML (Data Interchange)</strong> and save the file.</li>
+            <li>Upload it below. Only dates, parties, amounts and narrations are kept.</li>
+          </ol>
+          <input ref={input} type="file" accept=".xml,text/xml,application/xml" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          <div className="flex items-center gap-3">
+            <Button icon={<Upload className="h-4 w-4" />} onClick={() => input.current?.click()}>Choose XML file</Button>
+            <span className="text-sm text-muted">{file ? `${file.name} (${Math.round(file.size / 1024)} KB)` : "No file chosen"}</span>
+          </div>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
 export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -93,6 +246,8 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   const q = useQuery({ queryKey: key, queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors", { params: { path: { venture_id: ventureId } } })) });
   const [secret, setSecret] = useState<Schemas["WebhookOut"] | null>(null);
   const [drive, setDrive] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(false);
+  const [tally, setTally] = useState(false);
   const [removing, setRemoving] = useState<Connector | null>(null);
 
   const connect = useMutation({
@@ -141,6 +296,8 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   if (q.isError) return <ErrorState error={q.error} />;
   const google = q.data.find((c) => c.provider === "google");
   const hook = q.data.find((c) => c.provider === "webhook");
+  const wa = q.data.find((c) => c.provider === "whatsapp");
+  const tallyConn = q.data.find((c) => c.provider === "tally");
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -219,6 +376,66 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
         </div>
       </Card>
 
+      <Card>
+        <CardHeader
+          title={
+            <span className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-subtle" aria-hidden /> WhatsApp Business
+            </span>
+          }
+          description="Customer messages start the inbox assistant; approved replies go out from your number."
+          actions={wa ? <StatusBadge status={wa.status} /> : <Badge>not connected</Badge>}
+        />
+        <div className="space-y-4 p-4">
+          {wa ? (
+            <KeyValue
+              items={[
+                ["Number", wa.account_email ?? "—"],
+                ["Last error", wa.last_error ? <span className="text-danger">{wa.last_error}</span> : "none"],
+                ["Updated", formatRelative(wa.updated_at)],
+              ]}
+            />
+          ) : (
+            <p className="text-sm text-muted">Needs a WhatsApp Business (Meta Cloud API) number. Free-form replies are allowed within 24 hours of the customer&apos;s message.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button variant={wa ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => setWhatsapp(true)}>
+              {wa ? "Reconnect" : "Connect WhatsApp"}
+            </Button>
+            {wa ? (
+              <Button variant="ghost" className="text-danger" icon={<Trash2 className="h-4 w-4" />} disabled={!canAdmin} onClick={() => setRemoving(wa)}>
+                Disconnect
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </Card>
+      <Card>
+        <CardHeader
+          title={
+            <span className="flex items-center gap-2">
+              <BookOpenCheck className="h-4 w-4 text-subtle" aria-hidden /> Tally
+            </span>
+          }
+          description="Import a Tally XML export so Kritvia can answer questions about sales, purchases and who owes you."
+          actions={tallyConn ? <StatusBadge status={tallyConn.status} /> : <Badge>not imported</Badge>}
+        />
+        <div className="space-y-4 p-4">
+          {tallyConn ? (
+            <KeyValue items={[["Last import", tallyConn.cursor ?? "—"], ["Updated", formatRelative(tallyConn.updated_at)]]} />
+          ) : (
+            <p className="text-sm text-muted">Tally has no cloud API; a periodic export keeps Kritvia in step. Nothing is written back to Tally.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button variant={tallyConn ? "secondary" : "primary"} icon={<Upload className="h-4 w-4" />} disabled={!canAdmin} onClick={() => setTally(true)}>
+              {tallyConn ? "Import again" : "Import from Tally"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <WhatsAppDialog open={whatsapp} onClose={() => setWhatsapp(false)} ventureId={ventureId} onDone={() => void qc.invalidateQueries({ queryKey: key })} />
+      <TallyImportDialog open={tally} onClose={() => setTally(false)} ventureId={ventureId} onDone={() => void qc.invalidateQueries({ queryKey: key })} />
       <Dialog
         open={Boolean(secret)}
         onClose={() => setSecret(null)}
@@ -252,8 +469,14 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
         onClose={() => setRemoving(null)}
         onConfirm={() => removing && remove.mutate(removing.id)}
         loading={remove.isPending}
-        title={removing?.provider === "google" ? "Disconnect Google?" : "Remove webhook?"}
-        description={removing?.provider === "google" ? "Gmail polling and sending stop. Stored tokens are deleted." : "Submissions to the current URL will be refused."}
+        title={removing?.provider === "google" ? "Disconnect Google?" : removing?.provider === "whatsapp" ? "Disconnect WhatsApp?" : "Remove webhook?"}
+        description={
+          removing?.provider === "google"
+            ? "Gmail polling and sending stop. Stored tokens are deleted."
+            : removing?.provider === "whatsapp"
+              ? "Incoming WhatsApp messages will be ignored and the stored token deleted."
+              : "Submissions to the current URL will be refused."
+        }
         confirmLabel="Remove"
       />
     </div>

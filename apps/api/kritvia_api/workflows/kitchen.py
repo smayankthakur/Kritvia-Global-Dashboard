@@ -22,15 +22,20 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
-from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Workflow, registry
+from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
 from kritvia_api.services.memory import RAW_PURPOSE
 from kritvia_api.workflows.common import fmt_inr, name_similarity, parse_date, today_ist
 
 wf = registry.register(Workflow(
     "kitchen_daily", title="Demand forecast & purchase orders", start="ingest_reports",
-    venture_kinds=("kitchen", "general"), max_steps=120,
+    venture_kinds=("kitchen", "general"), max_steps=120, trigger="Every night at the scheduled time",
     description="Forecasts tomorrow's demand per dish, converts it to ingredients via recipes, subtracts stock and "
-                "drafts vendor POs for the kitchen manager's morning approval."))
+                "drafts vendor POs for the kitchen manager's morning approval.",
+    options=(
+        Option("safety_stock_pct", "Safety stock %", "number", 10, min=0, max=100),
+        Option("history_days", "Days of sales history to learn from", "number", 120, min=14, max=730),
+        Option("min_history_days", "Minimum days of history before forecasting", "number", 7, min=1, max=60),
+    )))
 
 DEFAULTS = {"history_days": 120, "safety_stock_pct": 10, "min_history_days": 7}
 MULT_MIN, MULT_MAX = 0.5, 2.0
@@ -339,8 +344,8 @@ async def narrate(ctx: RunContext, state: dict) -> Goto:
     try:
         story = await ctx.llm_text(
             tier="fast", max_tokens=250,
-            system=("Write 3-4 plain sentences for a cloud-kitchen manager explaining why tomorrow's plan differs "
-                    "from usual. Use ONLY the numbers given; do not calculate anything new."),
+            system=(f"{await ctx.brief()}\nWrite 3-4 plain sentences for the cloud-kitchen manager explaining why "
+                    "tomorrow's plan differs from usual. Use ONLY the numbers given; do not calculate anything new."),
             prompt="\n".join(facts))
     except Exception:
         story = ". ".join(f.rstrip(".") for f in facts) + "."

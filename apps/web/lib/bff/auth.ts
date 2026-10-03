@@ -16,7 +16,7 @@ function clientHeaders(req: Request): Record<string, string> {
 
 /** Exchange credentials with the API and turn the token pair into httpOnly cookies.
  * The browser only ever receives `{ ok: true }`. */
-export type CredentialEndpoint = "login" | "register" | "email/verify";
+export type CredentialEndpoint = "login" | "register" | "email/verify" | "password/reset";
 
 export async function exchangeCredentials(
   req: Request,

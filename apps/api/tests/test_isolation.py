@@ -81,8 +81,8 @@ async def test_owner_cross_venture_view_is_explicit_grant(world):
     conn = await asyncpg.connect(ADMIN_DSN)
     try:
         n = await conn.fetchval(
-            "SELECT count(*) FROM grants WHERE grantee_user_id = $1 AND reason = 'venture creator'",
-            mayank.id)
+            "SELECT count(*) FROM grants WHERE grantee_user_id = $1 AND reason = 'venture creator'"
+            " AND venture_id = ANY($2::uuid[])", mayank.id, [uuid.UUID(world["site"]), uuid.UUID(world["tru"])])
     finally:
         await conn.close()
     assert n == 2

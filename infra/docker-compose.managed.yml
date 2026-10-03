@@ -1,0 +1,34 @@
+# Managed-database overlay: Postgres (and optionally Valkey) live outside the VM, so the
+# app servers become stateless and a second one can join. Use it on top of the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.managed.yml --profile tunnel up -d --build
+#
+# .env must then carry the external URLs (see .env.example, "Managed database"):
+#   MANAGED_DATABASE_URL            postgresql+asyncpg://kritvia_app:...@<rds host>:5432/kritvia
+#   MANAGED_MIGRATION_DATABASE_URL  postgresql://kritvia_owner:...@<rds host>:5432/kritvia
+#   MANAGED_REDIS_URL               redis://:...@valkey:6379/0 (local) or an ElastiCache endpoint
+#   WORKER_REPLICAS                 how many worker processes to run on this VM (default 2)
+#
+# One-time move of the data: infra/scripts/migrate-to-managed-db.sh.
+# Backups: switch backup.sh to pg_dump against the external host (BACKUP_DATABASE_URL), or rely
+# on the provider's automated snapshots plus the nightly age-encrypted dump — keep both.
+services:
+  postgres:
+    profiles: ["local-db"]        # not started unless you ask for it
+
+  migrate:
+    environment:
+      MIGRATION_DATABASE_URL: ${MANAGED_MIGRATION_DATABASE_URL:?set in .env}
+    depends_on: !reset []
+
+  api:
+    environment:
+      DATABASE_URL: ${MANAGED_DATABASE_URL:?set in .env}
+      REDIS_URL: ${MANAGED_REDIS_URL:-redis://:${VALKEY_PASSWORD}@valkey:6379/0}
+
+  worker:
+    environment:
+      DATABASE_URL: ${MANAGED_DATABASE_URL:?set in .env}
+      REDIS_URL: ${MANAGED_REDIS_URL:-redis://:${VALKEY_PASSWORD}@valkey:6379/0}
+    deploy:
+      replicas: ${WORKER_REPLICAS:-2}

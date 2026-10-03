@@ -210,6 +210,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Password Reset
+         * @description Forgot password: the code from /email/start proves the address; the new password is
+         *     set, every other session is signed out, and the browser is signed in.
+         */
+        post: operations["password_reset_auth_password_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/refresh": {
         parameters: {
             query?: never;
@@ -297,6 +318,31 @@ export interface paths {
         get: operations["healthz_healthz_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whatsapp Verify
+         * @description Meta's webhook verification handshake.
+         */
+        get: operations["whatsapp_verify_hooks_whatsapp_get"];
+        put?: never;
+        /**
+         * Whatsapp Inbound
+         * @description Inbound WhatsApp messages → one inbox_assistant run each (deduped by message id).
+         *     Always answers 200 once the signature checks out, so Meta does not retry.
+         */
+        post: operations["whatsapp_inbound_hooks_whatsapp_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1055,6 +1101,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/connectors/tally/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Tally
+         * @description Upload a Tally XML export. Vouchers are upserted by GUID (re-importing an overlapping
+         *     period is safe) and a summary document is filed in Knowledge so answers cite it.
+         */
+        post: operations["import_tally_ventures__venture_id__connectors_tally_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/connectors/webhook": {
         parameters: {
             query?: never;
@@ -1069,6 +1136,27 @@ export interface paths {
          * @description Lead-form webhook. Rotates the secret if one already exists.
          */
         post: operations["create_webhook_ventures__venture_id__connectors_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Whatsapp
+         * @description Connect the venture's WhatsApp Business number. The token is checked against Meta
+         *     before it is stored (encrypted); it is never returned.
+         */
+        post: operations["connect_whatsapp_ventures__venture_id__connectors_whatsapp_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1892,6 +1980,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/sample-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sample Run
+         * @description Start a run on a made-up enquiry so a new business sees an approval within minutes.
+         *     Nothing is sent: the reply goes to the inbox for approval and the address is example.com.
+         */
+        post: operations["sample_run_ventures__venture_id__sample_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/settings": {
         parameters: {
             query?: never;
@@ -1903,6 +2012,23 @@ export interface paths {
         get: operations["get_settings__ventures__venture_id__settings_get"];
         /** Put Settings */
         put: operations["put_settings_ventures__venture_id__settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/tally": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_ventures__venture_id__tally_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2535,6 +2661,11 @@ export interface components {
         };
         /** Body_import_csv_ventures__venture_id__kitchen_import__entity__post */
         Body_import_csv_ventures__venture_id__kitchen_import__entity__post: {
+            /** File */
+            file: string;
+        };
+        /** Body_import_tally_ventures__venture_id__connectors_tally_import_post */
+        Body_import_tally_ventures__venture_id__connectors_tally_import_post: {
             /** File */
             file: string;
         };
@@ -3887,6 +4018,29 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** OptionOut */
+        OptionOut: {
+            /** Default */
+            default: unknown;
+            /**
+             * Help
+             * @default
+             */
+            help: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Max */
+            max?: number | null;
+            /** Min */
+            min?: number | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "boolean" | "number" | "text";
+        };
         /** OrgIn */
         OrgIn: {
             /** Name */
@@ -3908,10 +4062,38 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** PartyBalance */
+        PartyBalance: {
+            /** Billed Inr */
+            billed_inr: string;
+            /**
+             * Last Voucher
+             * Format: date
+             */
+            last_voucher: string;
+            /** Outstanding Inr */
+            outstanding_inr: string;
+            /** Party */
+            party: string;
+            /** Received Inr */
+            received_inr: string;
+        };
         /** PasswordIn */
         PasswordIn: {
             /** Current Password */
             current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /** PasswordResetIn */
+        PasswordResetIn: {
+            /** Code */
+            code: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
             /** New Password */
             new_password: string;
         };
@@ -4239,6 +4421,16 @@ export interface components {
             /** Workflow */
             workflow: string;
         };
+        /** SampleOut */
+        SampleOut: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Workflow */
+            workflow: string;
+        };
         /** SigninUrlOut */
         SigninUrlOut: {
             /** Url */
@@ -4338,6 +4530,52 @@ export interface components {
             started: {
                 [key: string]: number;
             };
+        };
+        /** TallyImportOut */
+        TallyImportOut: {
+            /** By Type */
+            by_type: {
+                [key: string]: {
+                    [key: string]: string | number;
+                };
+            };
+            /** Document Id */
+            document_id: string | null;
+            /** Imported */
+            imported: number;
+            /** Outstanding */
+            outstanding: {
+                [key: string]: string;
+            };
+            /**
+             * Period From
+             * Format: date
+             */
+            period_from: string;
+            /**
+             * Period To
+             * Format: date
+             */
+            period_to: string;
+            /** Updated */
+            updated: number;
+        };
+        /** TallyOverviewOut */
+        TallyOverviewOut: {
+            /** By Type */
+            by_type: {
+                [key: string]: unknown;
+            }[];
+            /** Period From */
+            period_from: string | null;
+            /** Period To */
+            period_to: string | null;
+            /** Receivables */
+            receivables: components["schemas"]["PartyBalance"][];
+            /** Recent */
+            recent: components["schemas"]["VoucherOut"][];
+            /** Vouchers */
+            vouchers: number;
         };
         /** TermIn */
         TermIn: {
@@ -4726,6 +4964,29 @@ export interface components {
              */
             widget_enabled: boolean;
         };
+        /** VoucherOut */
+        VoucherOut: {
+            /** Amount Inr */
+            amount_inr: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Narration */
+            narration: string | null;
+            /** Party */
+            party: string | null;
+            /**
+             * Voucher Date
+             * Format: date
+             */
+            voucher_date: string;
+            /** Voucher Number */
+            voucher_number: string | null;
+            /** Voucher Type */
+            voucher_type: string;
+        };
         /** WebhookOut */
         WebhookOut: {
             /**
@@ -4741,6 +5002,48 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** WhatsAppConnectIn */
+        WhatsAppConnectIn: {
+            /**
+             * Access Token
+             * @description permanent system-user token
+             */
+            access_token: string;
+            /**
+             * Phone Number Id
+             * @description from Meta → WhatsApp → API setup
+             */
+            phone_number_id: string;
+        };
+        /** WhatsAppConnectOut */
+        WhatsAppConnectOut: {
+            /**
+             * Connector Id
+             * Format: uuid
+             */
+            connector_id: string;
+            /** Display Phone Number */
+            display_phone_number?: string | null;
+            /** Verified Name */
+            verified_name?: string | null;
+            /**
+             * Webhook Ready
+             * @description false until WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN are set
+             */
+            webhook_ready: boolean;
+            /** Webhook Url */
+            webhook_url: string;
+        };
+        /** WhatsAppHookOut */
+        WhatsAppHookOut: {
+            /** Accepted */
+            accepted: number;
+            /**
+             * Ignored
+             * @default 0
+             */
+            ignored: number;
+        };
         /** WorkflowConfigIn */
         WorkflowConfigIn: {
             /**
@@ -4748,6 +5051,12 @@ export interface components {
              * @default true
              */
             enabled: boolean;
+            /**
+             * Instructions
+             * @description plain-language standing instructions the agent follows
+             * @default
+             */
+            instructions: string;
             /**
              * Schedule
              * @description daily run time, HH:MM IST
@@ -4765,6 +5074,12 @@ export interface components {
              * @default true
              */
             enabled: boolean;
+            /**
+             * Instructions
+             * @description plain-language standing instructions the agent follows
+             * @default
+             */
+            instructions: string;
             /**
              * Schedule
              * @description daily run time, HH:MM IST
@@ -4785,12 +5100,16 @@ export interface components {
             description: string;
             /** Name */
             name: string;
+            /** Options */
+            options: components["schemas"]["OptionOut"][];
             /** Steps */
             steps: {
                 [key: string]: string;
             }[];
             /** Title */
             title: string;
+            /** Trigger */
+            trigger: string;
             /** Venture Kinds */
             venture_kinds: string[];
         };
@@ -5175,6 +5494,39 @@ export interface operations {
             };
         };
     };
+    password_reset_auth_password_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     refresh_auth_refresh_post: {
         parameters: {
             query?: never;
@@ -5312,6 +5664,46 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    whatsapp_verify_hooks_whatsapp_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    whatsapp_inbound_hooks_whatsapp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppHookOut"];
                 };
             };
         };
@@ -6833,6 +7225,41 @@ export interface operations {
             };
         };
     };
+    import_tally_ventures__venture_id__connectors_tally_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_tally_ventures__venture_id__connectors_tally_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TallyImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_webhook_ventures__venture_id__connectors_webhook_post: {
         parameters: {
             query?: never;
@@ -6851,6 +7278,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_whatsapp_ventures__venture_id__connectors_whatsapp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectOut"];
                 };
             };
             /** @description Validation Error */
@@ -8924,6 +9386,37 @@ export interface operations {
             };
         };
     };
+    sample_run_ventures__venture_id__sample_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_settings__ventures__venture_id__settings_get: {
         parameters: {
             query?: never;
@@ -8977,6 +9470,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VentureSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_ventures__venture_id__tally_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TallyOverviewOut"];
                 };
             };
             /** @description Validation Error */

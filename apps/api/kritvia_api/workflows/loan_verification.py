@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
-from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Workflow, registry
+from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
 from kritvia_api.services.memory import TEXT_PURPOSE
 from kritvia_api.services.pii import PAN
 from kritvia_api.workflows.common import name_similarity, parse_date, today_ist
@@ -42,9 +42,13 @@ async def _authorize(conn, venture_id: uuid.UUID, inp: dict) -> None:
 
 wf = registry.register(Workflow(
     "loan_verification", title="Loan document verification", start="load", venture_kinds=("finance", "general"),
-    authorize_input=_authorize,
-    description="Classifies and extracts loan documents with the local model only, checks them against the "
-                "lending checklist and drafts a follow-up listing exactly what is missing or mismatched."))
+    authorize_input=_authorize, trigger="Documents uploaded or emailed for a loan application",
+    description="Classifies and extracts loan documents with the private model only, checks them against your "
+                "checklist and drafts a follow-up listing exactly what is missing or mismatched.",
+    options=(
+        Option("send_followup", "Draft a follow-up email to the applicant when documents are missing", "boolean", True,
+               help="Off: the agent records what is missing and stops; the loan officer follows up by hand."),
+    )))
 
 DOC_TYPES = ["pan_card", "aadhaar", "passport", "voter_id", "bank_statement", "salary_slip", "itr", "form16",
              "property_deed", "sale_agreement", "utility_bill", "photo", "other"]
@@ -327,6 +331,9 @@ async def draft_followup(ctx: RunContext, state: dict) -> Interrupt | Finish:
         docs = (await conn.execute(text("SELECT id, doc_type FROM loan_documents WHERE application_id = :a"),
                                    {"a": uuid.UUID(state["application_id"])})).all()
     items = followup_items(state["result"], {str(d.id): d.doc_type or "document" for d in docs})
+    if not (await ctx.settings()).get("send_followup", True):
+        ctx.note("follow-up emails are off for this business")
+        return Finish("needs_info_manual")
     if not applicant.get("email"):
         ctx.note("applicant has no email on file; follow-up must be sent manually")
         return Finish("needs_info_manual")
@@ -334,8 +341,8 @@ async def draft_followup(ctx: RunContext, state: dict) -> Interrupt | Finish:
     biz = await ctx.business()
     greeting = await ctx.llm_text(
         tier="private", sensitive=True, max_tokens=200,
-        system=(f"Write a 2-sentence warm, professional opening for an email from {biz.name} asking a loan "
-                "applicant for a few more documents. No list, no sign-off, no document names."),
+        system=(f"{await ctx.brief()}\nWrite a 2-sentence warm, professional opening for an email from {biz.name} "
+                "asking a loan applicant for a few more documents. No list, no sign-off, no document names."),
         prompt=f"Applicant first name: {applicant.get('name', '').split(' ')[0] or 'there'}")
     body = (f"{greeting.strip()}\n\nTo continue with your application ({state['reference']}), we need:\n\n{bullet}\n\n"
             "You can reply to this email with the documents attached, or use the secure upload link your loan "

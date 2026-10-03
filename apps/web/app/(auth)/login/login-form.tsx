@@ -49,6 +49,11 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
       <Button type="submit" variant="primary" className="w-full" loading={busy}>
         Sign in
       </Button>
+      <p className="text-center text-sm">
+        <Link href="/forgot" className="text-muted hover:text-fg">
+          Forgot your password?
+        </Link>
+      </p>
     </form>
   );
 }

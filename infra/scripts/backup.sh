@@ -14,8 +14,15 @@ set -a; source ../.env; set +a
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 DIR=/var/backups/kritvia; mkdir -p "$DIR"; chmod 700 "$DIR"
 OUT="$DIR/kritvia-$STAMP.dump.age"
-docker compose exec -T postgres pg_dump -U postgres -d kritvia -Fc --no-owner \
-  | age -r "$BACKUP_AGE_RECIPIENT" > "$OUT"
+# With a managed database, pg_dump runs over the network from the VM's postgres image, which stays
+# available as a tool even though its service is not started under the managed overlay.
+if [ -n "${MANAGED_MIGRATION_DATABASE_URL:-}" ]; then
+  docker compose -f docker-compose.yml run --rm --no-deps -T postgres pg_dump "$MANAGED_MIGRATION_DATABASE_URL" -Fc --no-owner \
+    | age -r "$BACKUP_AGE_RECIPIENT" > "$OUT"
+else
+  docker compose exec -T postgres pg_dump -U postgres -d kritvia -Fc --no-owner \
+    | age -r "$BACKUP_AGE_RECIPIENT" > "$OUT"
+fi
 [ -s "$OUT" ] || { echo "backup is empty"; exit 1; }
 sha256sum "$OUT" > "$OUT.sha256"
 # two separate commands: under set -e a failure inside "a && b" would not stop the script

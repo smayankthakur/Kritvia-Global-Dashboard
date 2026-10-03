@@ -81,6 +81,19 @@ class StepSpec:
     agent: str
 
 
+@dataclass(frozen=True)
+class Option:
+    """A setting a business can change from the Agents page without touching JSON.
+    `key` is the settings key; `default` is what the workflow uses when unset."""
+    key: str
+    label: str
+    type: Literal["boolean", "number", "text"]
+    default: Any
+    help: str = ""
+    min: float | None = None
+    max: float | None = None
+
+
 class WorkflowDefinitionError(Exception):
     pass
 
@@ -97,6 +110,8 @@ class Workflow:
         version: int = 1,
         max_steps: int = 60,
         authorize_input: Callable[[Any, uuid.UUID, dict[str, Any]], Awaitable[None]] | None = None,
+        options: tuple[Option, ...] = (),
+        trigger: str = "manual",
     ) -> None:
         """authorize_input(conn, venture_id, input) runs in the STARTING USER's RLS
         transaction and must raise LookupError if the input references records that
@@ -105,7 +120,11 @@ class Workflow:
         self.authorize_input = authorize_input
         self.name, self.title, self.start, self.description = name, title, start, description
         self.venture_kinds, self.version, self.max_steps = venture_kinds, version, max_steps
+        self.options, self.trigger = options, trigger   # trigger: what starts it, for the Agents page
         self.steps: dict[str, StepSpec] = {}
+
+    def defaults(self) -> dict[str, Any]:
+        return {o.key: o.default for o in self.options}
 
     def step(self, name: str, *, agent: str = "orchestrator") -> Callable[[StepFn], StepFn]:
         def register(fn: StepFn) -> StepFn:

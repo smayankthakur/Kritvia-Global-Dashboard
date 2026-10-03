@@ -31,6 +31,7 @@ async def _authorize(conn, venture_id: uuid.UUID, inp: dict) -> None:
 
 wf = registry.register(Workflow(
     "meeting_digest", title="Meeting digest", start="transcribe", authorize_input=_authorize,
+    trigger="A recording is uploaded on the Meetings page",
     description="Transcribes an uploaded recording, separates speakers and extracts decisions, owners and tasks "
                 "with timestamp citations."))
 

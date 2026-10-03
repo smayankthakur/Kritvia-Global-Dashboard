@@ -19,18 +19,32 @@ from kritvia_api.errors import raise_for_db
 router = APIRouter(tags=["workflows"])
 
 
+class OptionOut(BaseModel):
+    key: str
+    label: str
+    type: Literal["boolean", "number", "text"]
+    default: Any
+    help: str = ""
+    min: float | None = None
+    max: float | None = None
+
+
 class WorkflowOut(BaseModel):
     name: str
     title: str
     description: str
+    trigger: str
     venture_kinds: list[str]
     steps: list[dict[str, str]]
+    options: list[OptionOut]
 
 
 @router.get("/workflows", response_model=list[WorkflowOut])
 async def catalogue(_: UserId) -> list[WorkflowOut]:
-    return [WorkflowOut(name=w.name, title=w.title, description=w.description, venture_kinds=list(w.venture_kinds),
-                        steps=[{"name": s.name, "agent": s.agent} for s in w.steps.values()])
+    return [WorkflowOut(name=w.name, title=w.title, description=w.description, trigger=w.trigger,
+                        venture_kinds=list(w.venture_kinds),
+                        steps=[{"name": s.name, "agent": s.agent} for s in w.steps.values()],
+                        options=[OptionOut(**o.__dict__) for o in w.options])
             for w in registry.all()]
 
 
@@ -44,6 +58,8 @@ class WorkflowConfigIn(BaseModel):
     schedule: str | None = Field(default=None, pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$",
                                  description="daily run time, HH:MM IST")
     settings: dict[str, Any] = Field(default_factory=dict)
+    instructions: str = Field(default="", max_length=4000,
+                              description="plain-language standing instructions the agent follows")
 
 
 class WorkflowConfigOut(WorkflowConfigIn):
@@ -55,7 +71,8 @@ class WorkflowConfigOut(WorkflowConfigIn):
 async def list_configs(venture_id: uuid.UUID, db: TenantDB) -> list[WorkflowConfigOut]:
     await venture_org(db, venture_id)
     rows = (await db.execute(text(
-        "SELECT workflow, enabled, schedule, settings, updated_at FROM workflow_configs WHERE venture_id = :v"
+        "SELECT workflow, enabled, schedule, settings, instructions, updated_at FROM workflow_configs"
+        " WHERE venture_id = :v"
         " ORDER BY workflow"), {"v": venture_id})).all()
     return [WorkflowConfigOut(**r._mapping) for r in rows]
 
@@ -73,13 +90,14 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
     try:
         async with db.begin_nested():
             row = (await db.execute(text(
-                "INSERT INTO workflow_configs (org_id, venture_id, workflow, enabled, schedule, settings, updated_by)"
-                " VALUES (:o, :v, :w, :e, :s, CAST(:st AS jsonb), :u)"
+                "INSERT INTO workflow_configs (org_id, venture_id, workflow, enabled, schedule, settings,"
+                " instructions, updated_by) VALUES (:o, :v, :w, :e, :s, CAST(:st AS jsonb), :i, :u)"
                 " ON CONFLICT (venture_id, workflow) DO UPDATE SET enabled = EXCLUDED.enabled,"
-                " schedule = EXCLUDED.schedule, settings = EXCLUDED.settings, updated_by = EXCLUDED.updated_by,"
-                " updated_at = now() RETURNING workflow, enabled, schedule, settings, updated_at"),
+                " schedule = EXCLUDED.schedule, settings = EXCLUDED.settings, instructions = EXCLUDED.instructions,"
+                " updated_by = EXCLUDED.updated_by, updated_at = now()"
+                " RETURNING workflow, enabled, schedule, settings, instructions, updated_at"),
                 {"o": org, "v": venture_id, "w": workflow, "e": body.enabled, "s": body.schedule,
-                 "st": json.dumps(body.settings), "u": user_id})).first()
+                 "st": json.dumps(body.settings), "i": body.instructions.strip(), "u": user_id})).first()
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return WorkflowConfigOut(**row._mapping)
@@ -221,3 +239,42 @@ async def retry(venture_id: uuid.UUID, run_id: uuid.UUID, user_id: UserId, svc: 
     if not ok:
         raise HTTPException(status.HTTP_409_CONFLICT, "only failed runs can be retried")
     return await get_run_row(user_id, venture_id, run_id)
+
+
+SAMPLE_ENQUIRY = {
+    "from_name": "Priya Sharma", "from_email": "priya.sharma@example.com",
+    "subject": "Enquiry about your services",
+    "body": ("Hi, I found you online. We are a small company in Pune and want to know what you offer, roughly what "
+             "it costs and how soon you could start. Could you send details or suggest a time for a quick call?\n\n"
+             "Thanks,\nPriya"),
+}
+
+
+class SampleOut(BaseModel):
+    run_id: uuid.UUID
+    workflow: str
+
+
+@router.post("/ventures/{venture_id}/sample-run", response_model=SampleOut, status_code=201)
+async def sample_run(venture_id: uuid.UUID, user_id: UserId, svc: Svc, db: TenantDB) -> SampleOut:
+    """Start a run on a made-up enquiry so a new business sees an approval within minutes.
+    Nothing is sent: the reply goes to the inbox for approval and the address is example.com."""
+    await venture_org(db, venture_id)
+    on = {r.workflow for r in (await db.execute(text(
+        "SELECT workflow FROM workflow_configs WHERE venture_id = :v AND enabled"), {"v": venture_id})).all()}
+    if "inbox_assistant" in on:
+        from kritvia_api.workflows.inbox import message_input
+        workflow = "inbox_assistant"
+        inp = message_input(channel="email", message_id=f"sample-{uuid.uuid4().hex[:8]}", **SAMPLE_ENQUIRY)
+    elif "lead_triage" in on:
+        workflow, inp = "lead_triage", {"source": "manual", **SAMPLE_ENQUIRY}
+    else:
+        raise HTTPException(status.HTTP_409_CONFLICT, "turn on the Inbox assistant or Lead triage first")
+    try:
+        run_id = await start_run(svc, actor_user_id=user_id, venture_id=venture_id, workflow=workflow, input=inp,
+                                 title="Sample enquiry (try it)", trigger_kind="manual")
+    except LookupError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found") from None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    return SampleOut(run_id=run_id, workflow=workflow)

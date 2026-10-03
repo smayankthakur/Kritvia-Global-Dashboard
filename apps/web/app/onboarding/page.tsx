@@ -14,7 +14,6 @@ import { Notice } from "@/components/ui/page";
 import { ErrorState } from "@/components/ui/states";
 import { ApiError, api, errorMessage, unwrap } from "@/lib/api";
 import { accessKey, meKey, useAccessQuery, type VentureKind } from "@/lib/access";
-import { KIND_LABEL } from "@/lib/nav";
 import { SLUG_RE, slugify } from "@/lib/slug";
 
 
@@ -22,40 +21,98 @@ interface CreatedVenture {
   id: string;
   name: string;
   kind: VentureKind;
+  template: Template;
 }
 
-/** Business templates: the kind decides which agents, workflows and screens a business gets. */
-export const TEMPLATES: { kind: VentureKind; title: string; example: string; gets: string }[] = [
+/** Business templates: the kind decides which screens a business gets; the template decides
+ * which agents start switched on and what standing instructions they begin with. */
+export interface Template {
+  id: string;
+  kind: VentureKind;
+  title: string;
+  example: string;
+  gets: string;
+  /** Agents switched on at setup (others stay available on the Agents page). */
+  workflows: string[];
+  /** Starting instructions per agent; the owner edits them later. */
+  instructions?: Record<string, string>;
+}
+
+export const TEMPLATES: Template[] = [
   {
+    id: "agency",
     kind: "software",
     title: "Agency or services",
     example: "Digital agency, consultancy, IT services",
-    gets: "Lead triage with draft proposals, meeting digests",
+    gets: "Inbox assistant, lead triage with priced proposals, meeting digests",
+    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
   },
   {
+    id: "loans",
     kind: "finance",
     title: "Loans & real estate",
     example: "Loan DSA, mortgage broker, property dealer",
-    gets: "Loan document checks and client follow-ups, meeting digests",
+    gets: "Loan document checks and client follow-ups, inbox assistant, meeting digests",
+    workflows: ["inbox_assistant", "loan_verification", "meeting_digest"],
   },
   {
+    id: "kitchen",
     kind: "kitchen",
     title: "Restaurant or cloud kitchen",
     example: "Cloud kitchen, restaurant, caterer",
-    gets: "Nightly stock and purchase plan from the day's orders",
+    gets: "Nightly stock and purchase plan, inbox assistant for orders and queries",
+    workflows: ["inbox_assistant", "kitchen_daily", "meeting_digest"],
+    instructions: { inbox_assistant: "Customers ask about orders, menu and delivery. For order problems, ask for the order number and apologise once." },
   },
   {
+    id: "retail",
+    kind: "general",
+    title: "Shop or e-commerce",
+    example: "Retail store, D2C brand, wholesaler",
+    gets: "Inbox assistant for product, order and payment queries; lead triage for bulk enquiries",
+    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
+    instructions: { inbox_assistant: "Answer product, stock, delivery and return questions from what you know. For an order query, ask for the order number. Never promise a refund; say the team will confirm." },
+  },
+  {
+    id: "clinic",
+    kind: "general",
+    title: "Clinic, salon or local services",
+    example: "Clinic, salon, repair service, tutor",
+    gets: "Inbox assistant for appointments and questions, meeting digests",
+    workflows: ["inbox_assistant", "meeting_digest"],
+    instructions: { inbox_assistant: "Most messages are appointment requests. Offer the next two available slots from the calendar when you know them, otherwise ask for a preferred day and time. Never give medical or legal advice." },
+  },
+  {
+    id: "coaching",
+    kind: "general",
+    title: "Coaching or education",
+    example: "Coaching institute, online course, training company",
+    gets: "Lead triage for course enquiries with fees from your rate card, inbox assistant",
+    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
+    instructions: { lead_triage: "Enquiries are usually from students or parents. Mention batch timings and the free demo class." },
+  },
+  {
+    id: "freelancer",
+    kind: "general",
+    title: "Freelancer or consultant",
+    example: "Designer, developer, CA, architect",
+    gets: "Lead triage with proposals from your rate card, inbox assistant, meeting digests",
+    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
+  },
+  {
+    id: "other",
     kind: "general",
     title: "Something else",
-    example: "Retail, clinic, education, anything",
-    gets: "Memory, voice notes, approvals; add agents later",
+    example: "Any business with an inbox",
+    gets: "Inbox assistant, memory, voice notes, approvals; switch on more agents later",
+    workflows: ["inbox_assistant", "meeting_digest"],
   },
 ];
 
 interface BusinessDraft {
   key: number;
   name: string;
-  kind: VentureKind | null;
+  template: Template | null;
 }
 
 const ROLE_OPTIONS: { role: string; label: string; hint: string }[] = [
@@ -75,7 +132,7 @@ const DEFAULT_ROLES: Record<VentureKind, string[]> = {
 const DEFAULT_SCHEDULES: Record<string, string> = { kitchen_daily: "23:30" };
 
 function Steps({ step }: { step: number }) {
-  const labels = ["Your business", "Roles & workflows"];
+  const labels = ["Your business", "Roles & agents"];
   return (
     <ol className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-xs" aria-label="Setup progress">
       {labels.map((l, i) => (
@@ -147,8 +204,18 @@ export default function OnboardingPage() {
                 orgId={orgId}
                 email={me.data?.email ?? ""}
                 ventures={created}
-                onDone={async () => {
+                onDone={async (firstVentureId) => {
                   await qc.invalidateQueries({ queryKey: accessKey });
+                  // First useful result in minutes: start a sample enquiry and land on the run.
+                  if (firstVentureId) {
+                    try {
+                      const r = await unwrap(api.POST("/ventures/{venture_id}/sample-run", { params: { path: { venture_id: firstVentureId } } }));
+                      window.location.assign(`/v/${firstVentureId}/runs/${r.run_id}?welcome=1`);
+                      return;
+                    } catch {
+                      /* fall through to the dashboard */
+                    }
+                  }
                   window.location.assign("/");
                 }}
               />
@@ -169,7 +236,7 @@ function BusinessStep({
   onOrg: (id: string) => void;
   onDone: (v: CreatedVenture[]) => void;
 }) {
-  const [rows, setRows] = useState<BusinessDraft[]>([{ key: 0, name: "", kind: null }]);
+  const [rows, setRows] = useState<BusinessDraft[]>([{ key: 0, name: "", template: null }]);
   const [group, setGroup] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -188,7 +255,7 @@ function BusinessStep({
       else if (!SLUG_RE.test(slugify(r.name))) errs[`${r.key}.name`] = "Use letters or digits in the name";
       else if (slugs.has(slugify(r.name))) errs[`${r.key}.name`] = "Two businesses have the same name";
       slugs.add(slugify(r.name));
-      if (!r.kind) errs[`${r.key}.kind`] = "Choose what kind of business this is";
+      if (!r.template) errs[`${r.key}.kind`] = "Choose what kind of business this is";
     }
     if (many && !group.trim()) errs.group = "Name the group that owns these businesses";
     setErrors(errs);
@@ -205,7 +272,8 @@ function BusinessStep({
       const ids = { ...done };
       const out: CreatedVenture[] = [];
       for (const r of rows) {
-        const kind = r.kind as VentureKind;
+        const template = r.template as Template;
+        const kind = template.kind;
         let id = ids[r.key];
         if (!id) {
           id = (
@@ -219,8 +287,8 @@ function BusinessStep({
           ids[r.key] = id;
           setDone({ ...ids });
         }
-        await unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: id } }, body: { kind } }));
-        out.push({ id, name: r.name.trim(), kind });
+        await unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: id } }, body: { kind, business_name: r.name.trim() } }));
+        out.push({ id, name: r.name.trim(), kind, template });
       }
       onDone(out);
     } catch (err) {
@@ -269,19 +337,19 @@ function BusinessStep({
             <div role="radiogroup" aria-label="Kind of business" className="grid gap-2 sm:grid-cols-2">
               {TEMPLATES.map((t) => (
                 <button
-                  key={t.kind}
+                  key={t.id}
                   type="button"
                   role="radio"
-                  aria-checked={r.kind === t.kind}
-                  onClick={() => update(r.key, { kind: t.kind })}
+                  aria-checked={r.template?.id === t.id}
+                  onClick={() => update(r.key, { template: t })}
                   className={cn(
                     "rounded-lg border p-3 text-left transition-colors",
-                    r.kind === t.kind ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:bg-surface-2",
+                    r.template?.id === t.id ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:bg-surface-2",
                   )}
                 >
                   <span className="flex items-center justify-between text-sm font-medium">
                     {t.title}
-                    {r.kind === t.kind ? <Check className="h-4 w-4 text-accent" /> : null}
+                    {r.template?.id === t.id ? <Check className="h-4 w-4 text-accent" /> : null}
                   </span>
                   <span className="mt-0.5 block text-xs text-subtle">{t.example}</span>
                   <span className="mt-2 block text-xs text-muted">{t.gets}</span>
@@ -297,7 +365,7 @@ function BusinessStep({
           </Field>
         ) : null}
         <div className="flex flex-wrap justify-between gap-2">
-          <Button icon={<Plus className="h-4 w-4" />} onClick={() => setRows((rs) => [...rs, { key: Date.now(), name: "", kind: null }])}>
+          <Button icon={<Plus className="h-4 w-4" />} onClick={() => setRows((rs) => [...rs, { key: Date.now(), name: "", template: null }])}>
             I run another business
           </Button>
           <Button type="submit" variant="primary" loading={busy}>
@@ -332,7 +400,7 @@ function SetupStep({
   orgId: string;
   email: string;
   ventures: CreatedVenture[];
-  onDone: () => void | Promise<void>;
+  onDone: (firstVentureId?: string) => void | Promise<void>;
 }) {
   const catalogue = useQuery({ queryKey: ["workflows"], queryFn: () => unwrap(api.GET("/workflows")) });
   const [roles, setRoles] = useState<Record<string, string[]>>(() =>
@@ -350,7 +418,8 @@ function SetupStep({
     return out;
   }, [catalogue.data, ventures]);
 
-  const flowState = (vid: string, wf: string) => flows[vid]?.[wf] ?? { on: true, schedule: DEFAULT_SCHEDULES[wf] ?? "" };
+  const flowState = (vid: string, wf: string) =>
+    flows[vid]?.[wf] ?? { on: (ventures.find((v) => v.id === vid)?.template.workflows ?? []).includes(wf), schedule: DEFAULT_SCHEDULES[wf] ?? "" };
   const setFlow = (vid: string, wf: string, patch: Partial<{ on: boolean; schedule: string }>) =>
     setFlows((f) => ({ ...f, [vid]: { ...(f[vid] ?? {}), [wf]: { ...flowState(vid, wf), ...patch } } }));
 
@@ -375,7 +444,7 @@ function SetupStep({
           await unwrap(
             api.PUT("/ventures/{venture_id}/workflow-configs/{workflow}", {
               params: { path: { venture_id: v.id, workflow: w.name } },
-              body: { enabled: st.on, schedule: st.schedule || null, settings: {} },
+              body: { enabled: st.on, schedule: st.schedule || null, settings: {}, instructions: v.template.instructions?.[w.name] ?? "" },
             }),
           );
         } catch (e) {
@@ -385,12 +454,12 @@ function SetupStep({
     }
     setProblems(errs);
     setBusy(false);
-    if (!errs.length) await onDone();
+    if (!errs.length) await onDone(ventures[0]?.id);
   };
 
   return (
     <Card className="p-6">
-      <h1 className="text-lg font-semibold tracking-tight">Your roles and workflows</h1>
+      <h1 className="text-lg font-semibold tracking-tight">Your roles and agents</h1>
       <p className="mt-1 text-sm text-muted">
         As owner you can see everything, but some approvals need a specific role — for example loan follow-ups are
         sensitive and only a loan officer may approve them.
@@ -408,7 +477,7 @@ function SetupStep({
         {ventures.map((v) => (
           <fieldset key={v.id} className="rounded-lg border border-border p-4">
             <legend className="px-1 text-sm font-semibold">
-              {v.name} <span className="font-normal text-subtle">· {KIND_LABEL[v.kind]}</span>
+              {v.name} <span className="font-normal text-subtle">· {v.template.title}</span>
             </legend>
             <p className="mb-2 text-xs font-medium text-subtle">Add me as</p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -427,8 +496,8 @@ function SetupStep({
                 />
               ))}
             </div>
-            <p className="mt-4 mb-2 text-xs font-medium text-subtle">Enable workflows</p>
-            {catalogue.isPending ? <p className="text-sm text-subtle">Loading workflows…</p> : null}
+            <p className="mt-4 mb-2 text-xs font-medium text-subtle">Agents to switch on</p>
+            {catalogue.isPending ? <p className="text-sm text-subtle">Loading agents…</p> : null}
             <div className="space-y-2">
               {(available[v.id] ?? []).map((w) => {
                 const st = flowState(v.id, w.name);

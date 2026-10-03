@@ -192,3 +192,29 @@ async def test_google_signin_refuses_unverified_email_and_wrong_browser(client, 
 async def test_google_signin_unconfigured(client, services, monkeypatch):
     monkeypatch.setattr(services, "google", GoogleClient("", "", "http://test/cb"))
     assert (await client.post("/auth/google/start", json={"nonce": "n" * 40})).status_code == 503
+
+
+async def test_forgot_password_resets_and_signs_other_sessions_out(client):
+    email = _email()
+    r = await client.post("/auth/register", json={"email": email, "full_name": "Pat", "password": "old-password-123"})
+    assert r.status_code == 201, r.text
+    old_refresh = r.json()["refresh_token"]
+    # the code proves the address; a wrong code is refused
+    await client.post("/auth/email/start", json={"email": email})
+    code = _last_code(email)
+    bad = await client.post("/auth/password/reset", json={"email": email, "code": "000000" if code != "000000" else "111111",
+                                                          "new_password": "brand-new-password-9"})
+    assert bad.status_code == 401
+    ok = await client.post("/auth/password/reset", json={"email": email, "code": code, "new_password": "brand-new-password-9"})
+    assert ok.status_code == 200, ok.text
+    assert (await client.post("/auth/login", json={"email": email, "password": "old-password-123"})).status_code == 401
+    assert (await client.post("/auth/login", json={"email": email, "password": "brand-new-password-9"})).status_code == 200
+    # the earlier session is gone
+    assert (await client.post("/auth/refresh", json={"refresh_token": old_refresh})).status_code == 401
+    # codes are single use, and unknown addresses are not created by a reset
+    again = await client.post("/auth/password/reset", json={"email": email, "code": code, "new_password": "brand-new-password-9"})
+    assert again.status_code == 401
+    ghost = _email()
+    await client.post("/auth/email/start", json={"email": ghost})
+    r = await client.post("/auth/password/reset", json={"email": ghost, "code": _last_code(ghost), "new_password": "brand-new-password-9"})
+    assert r.status_code == 404

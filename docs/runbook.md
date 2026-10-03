@@ -89,6 +89,30 @@ Push to `main` → CI (API tests, web lint/types/tests/build, image builds, sand
 
 Migrations are forward-only and checksummed: never edit an applied file — add `0006_*.sql`.
 
+## 7a. Growing beyond one server
+
+The VM runs everything today. The first step out is a managed Postgres, which makes the app
+servers stateless; after that a second VM runs the same compose file against the same database.
+
+1. **Managed Postgres** (RDS in ap-south-1, Postgres 16, `db.t4g.small` or larger, private subnet,
+   security group allowing 5432 from the VM only, automated backups and deletion protection on).
+   Run `infra/postgres/managed-roles.sql` once as the master user: it creates the database, the
+   `kritvia_owner` / `kritvia_app` roles and the `vector` and `pgcrypto` extensions.
+2. Put `MANAGED_DATABASE_URL` and `MANAGED_MIGRATION_DATABASE_URL` in `/opt/kritvia/.env`
+   (see `.env.example`). Keep Valkey local unless you also want ElastiCache (`MANAGED_REDIS_URL`).
+3. `sudo infra/scripts/migrate-to-managed-db.sh` — stops api and worker, dumps, restores into the
+   managed instance (ownership to `kritvia_owner`, grants preserved), checks row counts, starts
+   the stack with `docker-compose.managed.yml`. Minutes of downtime; the old volume is untouched.
+4. From then on every compose command carries `-f docker-compose.yml -f docker-compose.managed.yml`
+   (`deploy.sh` adds it when `MANAGED_DATABASE_URL` is set). `WORKER_REPLICAS` scales workers;
+   arq coordinates through Valkey so two workers never run the same job.
+5. **Second VM**: same `server-setup.sh`, same `.env` (same `MASTER_KEK_B64` — the data keys are
+   wrapped with it), same compose overlay; put both behind the Cloudflare tunnel (two `cloudflared`
+   replicas on one tunnel) or a load balancer. Uploads live in Postgres, so nothing on local disk
+   needs sharing. The `migrate` service is idempotent; only one VM needs to run it per deploy.
+6. Backups: keep the nightly age-encrypted `pg_dump` (point `backup.sh` at the managed host) **and**
+   the provider's snapshots; the monthly restore drill stays mandatory.
+
 ## 8. Incidents
 
 | Symptom | Check | Fix |

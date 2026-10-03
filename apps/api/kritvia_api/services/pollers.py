@@ -3,7 +3,8 @@
 Runs as each venture's agent runtime (never as a human). What a venture polls
 for depends on the workflows it has enabled:
 
-  lead_triage       new inbox mail            -> one run per message (deduped by message id)
+  inbox_assistant   new inbox mail            -> one run per message; hands enquiries to lead_triage
+  lead_triage       new inbox mail            -> one run per message (only when inbox_assistant is off)
   kitchen_daily     aggregator report emails  -> CSV attachments stored as 'report' documents,
                                                  parsed by the 23:30 run
   loan_verification mail whose subject carries an application reference (TRU-...)
@@ -28,6 +29,7 @@ from kritvia_api.services.messaging import load_google
 log = logging.getLogger("kritvia.pollers")
 
 DEFAULT_QUERIES = {
+    "inbox_assistant": "in:inbox -category:promotions -category:social newer_than:2d",
     "lead_triage": "in:inbox -category:promotions -category:social -category:updates newer_than:2d",
     "kitchen_daily": "has:attachment (from:swiggy.in OR from:zomato.com OR subject:report) newer_than:3d",
     "loan_verification": "has:attachment subject:TRU- newer_than:7d",
@@ -71,6 +73,8 @@ async def poll_gmail_venture(services: Services, org_id: uuid.UUID, venture_id: 
     for wf, settings in configs.items():
         if wf not in DEFAULT_QUERIES or not settings.get("poll_gmail", True):
             continue
+        if wf == "lead_triage" and "inbox_assistant" in configs:
+            continue   # the inbox assistant reads the inbox and hands enquiries over
         query = settings.get("gmail_query") or DEFAULT_QUERIES[wf]
         ids = await google.list_message_ids(token, query, max_results=int(settings.get("poll_max", 20)))
         for mid in ids:
@@ -166,4 +170,19 @@ async def _loan_docs(ctx: RunContext, services: Services, token: str, msg) -> in
     return len(files)
 
 
-HANDLERS = {"lead_triage": _lead, "kitchen_daily": _kitchen_report, "loan_verification": _loan_docs}
+async def _inbox(ctx: RunContext, services: Services, token: str, msg) -> int:
+    from kritvia_api.workflows.inbox import message_input
+    try:
+        await start_run(services, actor_user_id=ctx.run_as, actor_type="agent", venture_id=ctx.venture_id,
+                        workflow="inbox_assistant", trigger_kind="email", trigger_ref=msg.id,
+                        dedupe=("gmail:inbox_assistant", msg.id), title=f"Email: {msg.subject[:120]}",
+                        input=message_input(channel="email", from_name=msg.sender, from_email=msg.sender_email,
+                                            subject=msg.subject, body=msg.body, message_id=msg.id,
+                                            thread_id=msg.thread_id))
+        return 1
+    except DuplicateTrigger:
+        return 0
+
+
+HANDLERS = {"inbox_assistant": _inbox, "lead_triage": _lead, "kitchen_daily": _kitchen_report,
+            "loan_verification": _loan_docs}

@@ -12,7 +12,8 @@ cd "$(dirname "$0")/.."
 set -a; source ../.env 2>/dev/null; set +a
 STATE_DIR=/var/lib/kritvia; mkdir -p "$STATE_DIR"
 STATE="$STATE_DIR/health.state"; LAST_ALERT="$STATE_DIR/health.alerted"
-DC="docker compose"
+DC="docker compose -f docker-compose.yml"
+[ -n "${MANAGED_DATABASE_URL:-}" ] && DC="$DC -f docker-compose.managed.yml"   # postgres lives elsewhere
 fails=()
 
 ok_http() { curl -fsS -m 10 -o /dev/null "$1"; }

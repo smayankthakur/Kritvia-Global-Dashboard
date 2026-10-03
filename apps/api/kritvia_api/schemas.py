@@ -30,6 +30,12 @@ class EmailStartOut(BaseModel):
     expires_in: int = Field(description="seconds the code stays valid")
 
 
+class PasswordResetIn(BaseModel):
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+    new_password: str = Field(min_length=12, max_length=256)
+
+
 class EmailVerifyIn(BaseModel):
     email: EmailStr
     code: str = Field(pattern=r"^\d{6}$")

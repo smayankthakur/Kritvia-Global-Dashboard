@@ -28,6 +28,11 @@ def build_tools() -> ToolRegistry:
             ctx, ok.id, to=p["to"], subject=p["subject"], body=p["body"], cc=p.get("cc"),
             thread_id=p.get("thread_id"), attachments=attachments)
 
+    @reg.tool("whatsapp.send", Capability.SEND, "Send a WhatsApp message from the venture's business number")
+    async def whatsapp_send(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        assert ok is not None
+        return await ctx.services.messaging.send_whatsapp(ctx, ok.id, to=p["to"], body=p["body"])
+
     @reg.tool("calendar.create_event", Capability.SEND, "Create a calendar event and invite attendees")
     async def calendar_create(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
         assert ok is not None

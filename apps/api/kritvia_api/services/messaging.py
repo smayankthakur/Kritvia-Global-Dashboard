@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import text
 
 from kritvia_api.services.google import SCOPES, GoogleClient
+from kritvia_api.services.whatsapp import WhatsAppClient, WhatsAppError, load_whatsapp
 
 if TYPE_CHECKING:
     from kritvia_api.engine.context import RunContext
@@ -48,10 +49,11 @@ async def load_google(ctx: RunContext, conn) -> GoogleConn | None:
 
 
 class Messaging:
-    def __init__(self, google: GoogleClient | None, fallback: str = "log") -> None:
+    def __init__(self, google: GoogleClient | None, fallback: str = "log",
+                 whatsapp: WhatsAppClient | None = None) -> None:
         if fallback not in ("log", "none"):
             raise ValueError("messaging fallback must be 'log' or 'none'")
-        self.google, self.fallback = google, fallback
+        self.google, self.fallback, self.whatsapp = google, fallback, whatsapp
 
     async def _google_token(self, ctx: RunContext, scope: str) -> tuple[str, GoogleConn] | None:
         if self.google is None or not self.google.configured:
@@ -118,3 +120,24 @@ class Messaging:
                                body=body, transport="log", status="logged")
             return {"transport": "log", "status": "logged"}
         raise MessagingError("no calendar connector for this venture (connect Google in Settings)")
+
+    async def send_whatsapp(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, body: str) -> dict[str, Any]:
+        if not to.strip():
+            raise MessagingError("recipient phone number is missing")
+        async with ctx.tx() as conn:
+            wa = await load_whatsapp(ctx, conn)
+        if wa and self.whatsapp is not None:
+            try:
+                mid = await self.whatsapp.send_text(wa, to=to, body=body)
+            except WhatsAppError as exc:
+                await self._record(ctx, approval_id, channel="whatsapp", recipient=to, subject=None, body=body,
+                                   transport="whatsapp", status="failed", error=str(exc)[:300])
+                raise MessagingError(str(exc)) from exc
+            await self._record(ctx, approval_id, channel="whatsapp", recipient=to, subject=None, body=body,
+                               transport="whatsapp", status="sent", provider_id=mid)
+            return {"transport": "whatsapp", "status": "sent", "message_id": mid}
+        if self.fallback == "log":
+            await self._record(ctx, approval_id, channel="whatsapp", recipient=to, subject=None, body=body,
+                               transport="log", status="logged")
+            return {"transport": "log", "status": "logged"}
+        raise MessagingError("no WhatsApp connector for this venture (connect WhatsApp in Settings)")

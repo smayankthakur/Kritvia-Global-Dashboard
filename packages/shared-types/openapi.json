@@ -1088,6 +1088,20 @@
         "title": "Body_import_csv_ventures__venture_id__kitchen_import__entity__post",
         "type": "object"
       },
+      "Body_import_tally_ventures__venture_id__connectors_tally_import_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_tally_ventures__venture_id__connectors_tally_import_post",
+        "type": "object"
+      },
       "Body_public_upload_public_upload__token__post": {
         "properties": {
           "files": {
@@ -4583,6 +4597,65 @@
         "title": "NoteIn",
         "type": "object"
       },
+      "OptionOut": {
+        "properties": {
+          "default": {
+            "title": "Default"
+          },
+          "help": {
+            "default": "",
+            "title": "Help",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "type": {
+            "enum": [
+              "boolean",
+              "number",
+              "text"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "type",
+          "default"
+        ],
+        "title": "OptionOut",
+        "type": "object"
+      },
       "OrgIn": {
         "properties": {
           "name": {
@@ -4633,6 +4706,43 @@
         "title": "OrgSummary",
         "type": "object"
       },
+      "PartyBalance": {
+        "properties": {
+          "billed_inr": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Billed Inr",
+            "type": "string"
+          },
+          "last_voucher": {
+            "format": "date",
+            "title": "Last Voucher",
+            "type": "string"
+          },
+          "outstanding_inr": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Outstanding Inr",
+            "type": "string"
+          },
+          "party": {
+            "title": "Party",
+            "type": "string"
+          },
+          "received_inr": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Received Inr",
+            "type": "string"
+          }
+        },
+        "required": [
+          "party",
+          "billed_inr",
+          "received_inr",
+          "outstanding_inr",
+          "last_voucher"
+        ],
+        "title": "PartyBalance",
+        "type": "object"
+      },
       "PasswordIn": {
         "properties": {
           "current_password": {
@@ -4651,6 +4761,33 @@
           "new_password"
         ],
         "title": "PasswordIn",
+        "type": "object"
+      },
+      "PasswordResetIn": {
+        "properties": {
+          "code": {
+            "pattern": "^\\d{6}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 256,
+            "minLength": 12,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "code",
+          "new_password"
+        ],
+        "title": "PasswordResetIn",
         "type": "object"
       },
       "PlanOut": {
@@ -5456,6 +5593,25 @@
         "title": "RunOut",
         "type": "object"
       },
+      "SampleOut": {
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "workflow": {
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "workflow"
+        ],
+        "title": "SampleOut",
+        "type": "object"
+      },
       "SigninUrlOut": {
         "properties": {
           "url": {
@@ -5720,6 +5876,139 @@
           "started"
         ],
         "title": "SyncOut",
+        "type": "object"
+      },
+      "TallyImportOut": {
+        "properties": {
+          "by_type": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "title": "By Type",
+            "type": "object"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "imported": {
+            "title": "Imported",
+            "type": "integer"
+          },
+          "outstanding": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Outstanding",
+            "type": "object"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "updated",
+          "period_from",
+          "period_to",
+          "document_id",
+          "by_type",
+          "outstanding"
+        ],
+        "title": "TallyImportOut",
+        "type": "object"
+      },
+      "TallyOverviewOut": {
+        "properties": {
+          "by_type": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "By Type",
+            "type": "array"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          },
+          "receivables": {
+            "items": {
+              "$ref": "#/components/schemas/PartyBalance"
+            },
+            "title": "Receivables",
+            "type": "array"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/VoucherOut"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "vouchers": {
+            "title": "Vouchers",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "vouchers",
+          "period_from",
+          "period_to",
+          "by_type",
+          "receivables",
+          "recent"
+        ],
+        "title": "TallyOverviewOut",
         "type": "object"
       },
       "TermIn": {
@@ -6710,6 +6999,73 @@
         "title": "VoiceSettings",
         "type": "object"
       },
+      "VoucherOut": {
+        "properties": {
+          "amount_inr": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount Inr",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "narration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narration"
+          },
+          "party": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party"
+          },
+          "voucher_date": {
+            "format": "date",
+            "title": "Voucher Date",
+            "type": "string"
+          },
+          "voucher_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voucher Number"
+          },
+          "voucher_type": {
+            "title": "Voucher Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "voucher_type",
+          "voucher_number",
+          "voucher_date",
+          "party",
+          "narration",
+          "amount_inr"
+        ],
+        "title": "VoucherOut",
+        "type": "object"
+      },
       "WebhookOut": {
         "properties": {
           "connector_id": {
@@ -6735,12 +7091,109 @@
         "title": "WebhookOut",
         "type": "object"
       },
+      "WhatsAppConnectIn": {
+        "properties": {
+          "access_token": {
+            "description": "permanent system-user token",
+            "maxLength": 1000,
+            "minLength": 20,
+            "title": "Access Token",
+            "type": "string"
+          },
+          "phone_number_id": {
+            "description": "from Meta \u2192 WhatsApp \u2192 API setup",
+            "maxLength": 40,
+            "minLength": 5,
+            "pattern": "^\\d+$",
+            "title": "Phone Number Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone_number_id",
+          "access_token"
+        ],
+        "title": "WhatsAppConnectIn",
+        "type": "object"
+      },
+      "WhatsAppConnectOut": {
+        "properties": {
+          "connector_id": {
+            "format": "uuid",
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "display_phone_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Phone Number"
+          },
+          "verified_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Name"
+          },
+          "webhook_ready": {
+            "description": "false until WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN are set",
+            "title": "Webhook Ready",
+            "type": "boolean"
+          },
+          "webhook_url": {
+            "title": "Webhook Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connector_id",
+          "webhook_url",
+          "webhook_ready"
+        ],
+        "title": "WhatsAppConnectOut",
+        "type": "object"
+      },
+      "WhatsAppHookOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "ignored": {
+            "default": 0,
+            "title": "Ignored",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "WhatsAppHookOut",
+        "type": "object"
+      },
       "WorkflowConfigIn": {
         "properties": {
           "enabled": {
             "default": true,
             "title": "Enabled",
             "type": "boolean"
+          },
+          "instructions": {
+            "default": "",
+            "description": "plain-language standing instructions the agent follows",
+            "maxLength": 4000,
+            "title": "Instructions",
+            "type": "string"
           },
           "schedule": {
             "anyOf": [
@@ -6770,6 +7223,13 @@
             "default": true,
             "title": "Enabled",
             "type": "boolean"
+          },
+          "instructions": {
+            "default": "",
+            "description": "plain-language standing instructions the agent follows",
+            "maxLength": 4000,
+            "title": "Instructions",
+            "type": "string"
           },
           "schedule": {
             "anyOf": [
@@ -6822,6 +7282,13 @@
             "title": "Name",
             "type": "string"
           },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/OptionOut"
+            },
+            "title": "Options",
+            "type": "array"
+          },
           "steps": {
             "items": {
               "additionalProperties": {
@@ -6836,6 +7303,10 @@
             "title": "Title",
             "type": "string"
           },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
           "venture_kinds": {
             "items": {
               "type": "string"
@@ -6848,8 +7319,10 @@
           "name",
           "title",
           "description",
+          "trigger",
           "venture_kinds",
-          "steps"
+          "steps",
+          "options"
         ],
         "title": "WorkflowOut",
         "type": "object"
@@ -7389,6 +7862,48 @@
         ]
       }
     },
+    "/auth/password/reset": {
+      "post": {
+        "description": "Forgot password: the code from /email/start proves the address; the new password is\nset, every other session is signed out, and the browser is signed in.",
+        "operationId": "password_reset_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Password Reset",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/refresh": {
       "post": {
         "operationId": "refresh_auth_refresh_post",
@@ -7565,6 +8080,46 @@
         "summary": "Healthz",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/hooks/whatsapp": {
+      "get": {
+        "description": "Meta's webhook verification handshake.",
+        "operationId": "whatsapp_verify_hooks_whatsapp_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Whatsapp Verify",
+        "tags": [
+          "connectors"
+        ]
+      },
+      "post": {
+        "description": "Inbound WhatsApp messages \u2192 one inbox_assistant run each (deduped by message id).\nAlways answers 200 once the signature checks out, so Meta does not retry.",
+        "operationId": "whatsapp_inbound_hooks_whatsapp_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppHookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Whatsapp Inbound",
+        "tags": [
+          "connectors"
         ]
       }
     },
@@ -10024,6 +10579,65 @@
         ]
       }
     },
+    "/ventures/{venture_id}/connectors/tally/import": {
+      "post": {
+        "description": "Upload a Tally XML export. Vouchers are upserted by GUID (re-importing an overlapping\nperiod is safe) and a summary document is filed in Knowledge so answers cite it.",
+        "operationId": "import_tally_ventures__venture_id__connectors_tally_import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_tally_ventures__venture_id__connectors_tally_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TallyImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Import Tally",
+        "tags": [
+          "tally"
+        ]
+      }
+    },
     "/ventures/{venture_id}/connectors/webhook": {
       "post": {
         "description": "Lead-form webhook. Rotates the secret if one already exists.",
@@ -10068,6 +10682,65 @@
           }
         ],
         "summary": "Create Webhook",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/whatsapp": {
+      "post": {
+        "description": "Connect the venture's WhatsApp Business number. The token is checked against Meta\nbefore it is stored (encrypted); it is never returned.",
+        "operationId": "connect_whatsapp_ventures__venture_id__connectors_whatsapp_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppConnectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppConnectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Whatsapp",
         "tags": [
           "connectors"
         ]
@@ -13904,6 +14577,55 @@
         ]
       }
     },
+    "/ventures/{venture_id}/sample-run": {
+      "post": {
+        "description": "Start a run on a made-up enquiry so a new business sees an approval within minutes.\nNothing is sent: the reply goes to the inbox for approval and the address is example.com.",
+        "operationId": "sample_run_ventures__venture_id__sample_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sample Run",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
     "/ventures/{venture_id}/settings": {
       "get": {
         "operationId": "get_settings__ventures__venture_id__settings_get",
@@ -14005,6 +14727,83 @@
         "summary": "Put Settings",
         "tags": [
           "ventures"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/tally": {
+      "get": {
+        "operationId": "overview_ventures__venture_id__tally_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TallyOverviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Overview",
+        "tags": [
+          "tally"
         ]
       }
     },

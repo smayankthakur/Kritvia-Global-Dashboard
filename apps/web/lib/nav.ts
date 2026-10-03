@@ -2,6 +2,7 @@ import {
   Activity,
   AudioLines,
   BookOpen,
+  Bot,
   CalendarDays,
   ChefHat,
   ClipboardCheck,
@@ -52,6 +53,8 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
     { label: "Sales & stock", href: `${v}/kitchen/sales`, icon: TrendingUp },
     { label: "Events", href: `${v}/kitchen/events`, icon: CalendarDays },
   ];
+  // A "general" business gets the leads screens (any business can run lead triage with a
+  // rate card); the loan and kitchen screens only make sense for those kinds.
   const domain =
     kind === "software"
       ? software
@@ -59,8 +62,9 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
         ? finance
         : kind === "kitchen"
           ? kitchen
-          : [...software, ...finance, ...kitchen];
+          : software;
   const common: NavItem[] = [
+    { label: "Agents", href: `${v}/agents`, icon: Bot },
     { label: "Runs", href: `${v}/runs`, icon: Activity },
     { label: "Knowledge", href: `${v}/knowledge`, icon: BookOpen },
     { label: "Mind map", href: `${v}/map`, icon: Network },

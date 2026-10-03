@@ -16,6 +16,26 @@ const ARTICLES: { q: string; a: string[] }[] = [
     "Open Settings → Connectors → Connect Google and approve access. Kritvia reads new inquiries, and sends emails or invites only after you approve each one.",
     "You can disconnect at any time from the same page, or from your Google account's security settings.",
   ]},
+  { q: "Teach the agents how you work", a: [
+    "Open Agents in a business. Each agent has an Instructions box: write in plain language — 'reply in Hinglish', 'we only take projects above ₹1 lakh', 'never promise delivery under 2 weeks'. It follows them on every run.",
+    "Switch optional steps on or off (draft proposals, book a call, draft replies) and use Try with a sample enquiry to see the result before anything real arrives.",
+  ]},
+  { q: "The inbox assistant (any business)", a: [
+    "Every new email or WhatsApp message is sorted (enquiry, support, payment, scheduling), filed in Knowledge so tasks are pulled out, and answered with a draft reply you approve.",
+    "If Lead triage is on, enquiries are handed to it so they are scored and priced instead of merely answered.",
+  ]},
+  { q: "WhatsApp Business", a: [
+    "Settings → Connectors → Connect WhatsApp needs a WhatsApp Business (Meta Cloud API) number: paste the phone number id and a permanent token; Kritvia checks them with Meta before saving.",
+    "Replies are free-form within 24 hours of the customer's last message. After that, WhatsApp requires an approved template, and Kritvia tells you instead of guessing.",
+  ]},
+  { q: "Tally", a: [
+    "Tally has no cloud API, so export: Day Book → Alt+E → XML, then Settings → Connectors → Import from Tally. Vouchers, totals by type and who still owes you become searchable, with a cited document in Knowledge.",
+    "Re-importing an overlapping period updates rather than duplicates. Nothing is written back to Tally.",
+  ]},
+  { q: "Forgot your password?", a: [
+    "On the sign-in page choose Forgot your password. We email a 6-digit code; enter it with a new password. Every other session is signed out.",
+    "If you signed up with Google or email codes you have no password — just keep signing in that way.",
+  ]},
   { q: "Approvals: nothing goes out without you", a: [
     "Drafts wait in your Inbox. Approve, edit then approve, or reject with a note so the agent redrafts.",
     "After many approvals without edits, an agent becomes eligible to act alone on that one action. You choose whether to allow it (paid plans).",

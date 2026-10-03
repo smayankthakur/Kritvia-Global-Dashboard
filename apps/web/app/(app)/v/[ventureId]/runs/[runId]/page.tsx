@@ -3,7 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Circle, CircleAlert, CircleDashed, Loader2, PauseCircle } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { CancelRunButton, RetryRunButton, workflowLabel } from "@/components/runs/run-actions";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -68,9 +69,10 @@ function Timeline({ steps }: { steps: Schemas["StepOut"][] }) {
   );
 }
 
-export default function RunDetailPage() {
+function RunDetailView() {
   const v = useVenture();
   const { runId } = useParams<{ runId: string }>();
+  const welcome = useSearchParams().get("welcome") === "1";
   const run = useQuery({
     queryKey: ["runs", v.id, "detail", runId],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/runs/{run_id}", { params: { path: { venture_id: v.id, run_id: runId } } })),
@@ -113,6 +115,16 @@ export default function RunDetailPage() {
           </>
         }
       />
+      {welcome ? (
+        <Notice tone="info" title="Your first agent run" className="mb-4">
+          This is a made-up enquiry so you can see how an agent works: each step below is its reasoning, and the draft reply lands in{" "}
+          <Link href="/inbox" className="text-accent hover:underline">
+            Inbox
+          </Link>{" "}
+          for you to approve, edit or reject. Nothing is sent to anyone. Next: connect Google or WhatsApp under Settings → Connectors, and tell the agents how
+          you work under <Link href={`/v/${v.id}/agents`} className="text-accent hover:underline">Agents</Link>.
+        </Notice>
+      ) : null}
       {r.error ? (
         <Notice tone="danger" title="This run failed" className="mb-4">
           <span className="font-mono text-xs break-words">{r.error}</span>
@@ -165,5 +177,13 @@ export default function RunDetailPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function RunDetailPage() {
+  return (
+    <Suspense>
+      <RunDetailView />
+    </Suspense>
   );
 }

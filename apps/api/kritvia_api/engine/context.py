@@ -32,6 +32,7 @@ class Services:
     sandbox: SandboxClient
     messaging: Messaging
     google: Any = None
+    whatsapp: Any = None
     worker_id: str = field(default_factory=lambda: f"w-{uuid.uuid4().hex[:8]}")
 
 
@@ -91,12 +92,33 @@ class RunContext:
         return EnvelopeCrypto(conn, self.services.keys)
 
     async def settings(self) -> dict[str, Any]:
-        """This workflow's venture-specific settings (workflow_configs.settings)."""
+        """This workflow's venture-specific settings (workflow_configs.settings) over the
+        workflow's declared option defaults."""
+        from kritvia_api.engine.core import registry
+        defaults = registry.get(self.workflow).defaults() if self.workflow in registry else {}
         async with self.tx() as conn:
             row = (await conn.execute(
                 text("SELECT settings FROM workflow_configs WHERE venture_id = :v AND workflow = :w"),
                 {"v": self.venture_id, "w": self.workflow})).first()
-        return dict(row.settings) if row else {}
+        return {**defaults, **(dict(row.settings) if row else {})}
+
+    async def instructions(self) -> str:
+        """Plain-language instructions the business wrote for this agent (may be empty)."""
+        async with self.tx() as conn:
+            row = (await conn.execute(
+                text("SELECT instructions FROM workflow_configs WHERE venture_id = :v AND workflow = :w"),
+                {"v": self.venture_id, "w": self.workflow})).first()
+        return (row.instructions if row else "") or ""
+
+    async def brief(self) -> str:
+        """System-prompt block every agent gets: who it works for and the owner's standing instructions."""
+        biz = await self.business()
+        lines = [f"You work for {biz.describe()}."]
+        instr = (await self.instructions()).strip()
+        if instr:
+            lines.append("Standing instructions from the business owner (follow them unless they conflict with "
+                         f"safety or the rules below):\n{instr}")
+        return "\n".join(lines)
 
     async def business(self) -> Business:
         """Who the agents write as: the venture's business profile, with defaults."""

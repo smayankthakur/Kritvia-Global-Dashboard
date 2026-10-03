@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:3000/api/oauth/google/callback"  # the WEB app route
 
+    # WhatsApp Business (Meta Cloud API). The app secret verifies webhook signatures; the
+    # verify token is what you type into Meta's webhook setup. Per-number tokens live in connectors.
+    whatsapp_app_secret: str = ""
+    whatsapp_verify_token: str = ""
+
     # Plan for organisations without one (see plans.py). Tests use "internal".
     default_plan: str = "free"
 

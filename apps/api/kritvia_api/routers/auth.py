@@ -31,6 +31,7 @@ from kritvia_api.schemas import (
     LoginIn,
     MeOut,
     PasswordIn,
+    PasswordResetIn,
     RefreshIn,
     RegisterIn,
     SigninUrlOut,
@@ -186,6 +187,25 @@ async def email_verify(body: EmailVerifyIn, request: Request) -> TokenOut:
                                 {"e": email, "n": body.full_name.strip()})).scalar()
         if uid is None:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "this account is disabled")
+        return await _pair(db, uid, request)
+
+
+@router.post("/password/reset", response_model=TokenOut)
+async def password_reset(body: PasswordResetIn, request: Request) -> TokenOut:
+    """Forgot password: the code from /email/start proves the address; the new password is
+    set, every other session is signed out, and the browser is signed in."""
+    email = body.email.lower()
+    await _limit(request, email)
+    async with tenant_tx(None) as db:
+        ok = (await db.execute(text("SELECT auth_code_consume(:e, :h)"),
+                               {"e": email, "h": _code_hash(email, body.code)})).scalar()
+    if not ok:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
+    async with tenant_tx(None) as db:
+        uid = (await db.execute(text("SELECT auth_password_reset(:e, :h)"),
+                                {"e": email, "h": hash_password(body.new_password)})).scalar()
+        if uid is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no account with that email")
         return await _pair(db, uid, request)
 
 

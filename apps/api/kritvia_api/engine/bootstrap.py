@@ -9,10 +9,12 @@ from kritvia_api.services.google import GoogleClient
 from kritvia_api.services.messaging import Messaging
 from kritvia_api.services.model_router import ModelRouter, TierConfig
 from kritvia_api.services.sandbox import HttpSandbox, LocalSandbox
+from kritvia_api.services.whatsapp import WhatsAppClient
 
 
 def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | None = None,
-                   sandbox=None, google: GoogleClient | None = None) -> Services:
+                   sandbox=None, google: GoogleClient | None = None,
+                   whatsapp: WhatsAppClient | None = None) -> Services:
     s = get_settings()
     from kritvia_api.tools import build_tools
     import kritvia_api.workflows  # noqa: F401  (registers workflows)
@@ -24,6 +26,7 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
     if sandbox is None:
         sandbox = HttpSandbox(s.sandbox_url, s.sandbox_token) if s.sandbox_url else LocalSandbox(s.environment)
     google = google or GoogleClient(s.google_client_id, s.google_client_secret, s.google_redirect_uri)
+    whatsapp = whatsapp or WhatsAppClient(s.whatsapp_app_secret, s.whatsapp_verify_token)
     mode = dispatch_mode or s.dispatch_mode
     dispatcher = ArqDispatcher(s.redis_url) if mode == "arq" else InlineDispatcher(wait=(mode == "inline"))
     services = Services(
@@ -32,8 +35,9 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
         tools=build_tools(),
         dispatcher=dispatcher,
         sandbox=sandbox,
-        messaging=Messaging(google, s.messaging_fallback),
+        messaging=Messaging(google, s.messaging_fallback, whatsapp),
         google=google,
+        whatsapp=whatsapp,
     )
     if isinstance(dispatcher, InlineDispatcher):
         dispatcher.services = services
