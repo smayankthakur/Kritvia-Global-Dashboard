@@ -31,6 +31,9 @@ from sqlalchemy import text
 from kritvia_api.db.session import ActorType, tenant_tx
 
 RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504}
+# A provider rejecting OUR credentials (bad or expired key, suspended account) is that
+# provider's problem; the next deployment in the tier must still get its turn.
+PROVIDER_AUTH_STATUS = {401, 403}
 
 
 class RouterError(Exception):
@@ -220,7 +223,7 @@ class ModelRouter:
             await self._meter(ctx, tier=tier, model=deployment, attempt=attempt, status=status,
                               latency=latency, error=f"HTTP {resp.status_code}: {resp.text[:200]}")
             failures.append(f"{deployment}: HTTP {resp.status_code}")
-            if resp.status_code not in RETRYABLE_STATUS:
+            if resp.status_code not in RETRYABLE_STATUS and resp.status_code not in PROVIDER_AUTH_STATUS:
                 break  # a malformed request will fail on every provider
 
         raise AllProvidersFailed(tier, failures)

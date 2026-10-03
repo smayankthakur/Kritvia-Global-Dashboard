@@ -93,6 +93,13 @@ async def test_request_errors_do_not_cascade(world):
     assert fake.calls == ["groq-llama-8b"]
 
 
+async def test_bad_provider_key_falls_through_to_next_deployment(world):
+    """A wrong or expired API key (401) is one provider's problem, not the request's."""
+    fake = FakeLiteLLM({"groq-llama-8b": 401})
+    res = await make_router(fake).chat(ctx(world, "badkey"), tier="fast", messages=[{"role": "user", "content": "hi"}])
+    assert res.deployment == "openrouter-free" and fake.calls == ["groq-llama-8b", "openrouter-free"]
+
+
 async def test_all_providers_down(world):
     fake = FakeLiteLLM({m: 503 for m in CONFIG.tiers["fast"]})
     with pytest.raises(AllProvidersFailed) as exc:
