@@ -17,6 +17,7 @@
     "@kritvia/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.90.0",
     "lucide-react": "^0.544.0",
+    "motion": "^12",
     "next": "15.5.26",
     "openapi-fetch": "^0.17.0",
     "react": "19.1.1",

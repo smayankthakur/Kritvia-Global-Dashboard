@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
+    # Web push for "a draft needs your yes" (VAPID keys; generate with scripts/vapid-keys.py). Empty = off.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:support@sitelytc.com"
     razorpay_plan_starter: str = ""
     razorpay_plan_pro: str = ""
 

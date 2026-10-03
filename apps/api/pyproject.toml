@@ -22,6 +22,7 @@ dependencies = [
   "pypdf>=4.3",
   "arq>=0.26",
   "defusedxml>=0.7",
+  "pywebpush>=2.0",
 ]
 
 [project.optional-dependencies]

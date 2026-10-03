@@ -44,9 +44,29 @@ class TokenGate:
     def __init__(self, ttl_s: float = 30.0) -> None:
         self.ttl = ttl_s
         self._cache: dict[uuid.UUID, tuple[float, bool]] = {}
+        self._agent_cache: dict[tuple[uuid.UUID, str], tuple[float, bool]] = {}
 
     def forget(self, org_id: uuid.UUID) -> None:
         self._cache.pop(org_id, None)
+
+    def forget_agent(self, venture_id: uuid.UUID, workflow: str | None = None) -> None:
+        """After an owner edits a budget on the board."""
+        for key in [k for k in self._agent_cache if k[0] == venture_id and (workflow is None or k[1] == workflow)]:
+            self._agent_cache.pop(key, None)
+
+    async def agent_over_budget(self, conn, venture_id: uuid.UUID, workflow: str, local: list[str]) -> bool:
+        """True when the owner set a monthly token budget for this agent and it is used up."""
+        key = (venture_id, workflow)
+        hit = self._agent_cache.get(key)
+        if hit and hit[0] > time.monotonic():
+            return hit[1]
+        row = (await conn.execute(
+            text("SELECT c.monthly_tokens, agent_usage(:v, :w, :l) AS used FROM workflow_configs c"
+                 " WHERE c.venture_id = :v AND c.workflow = :w"),
+            {"v": venture_id, "w": workflow, "l": local})).first()
+        over = bool(row and row.monthly_tokens is not None and int(row.used) >= int(row.monthly_tokens))
+        self._agent_cache[key] = (time.monotonic() + self.ttl, over)
+        return over
 
     async def over_limit(self, conn, org_id: uuid.UUID, local: list[str]) -> bool:
         hit = self._cache.get(org_id)

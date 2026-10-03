@@ -11,7 +11,9 @@ export const metadata: Metadata = {
   title: { default: `${APP_NAME} — AI Business OS`, template: `%s · ${APP_NAME}` },
   description: "Command center for Kritvia, the AI Business Operating System.",
   robots: { index: false, follow: false },
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: APP_NAME },
 };
 
 export const viewport: Viewport = {

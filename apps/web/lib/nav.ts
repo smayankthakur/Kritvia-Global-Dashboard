@@ -11,6 +11,7 @@ import {
   Gauge,
   LifeBuoy,
   CircleUser,
+  LayoutDashboard,
   CreditCard,
   Inbox,
   Landmark,
@@ -64,6 +65,7 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
           ? kitchen
           : software;
   const common: NavItem[] = [
+    { label: "Board", href: `${v}/board`, icon: LayoutDashboard },
     { label: "Agents", href: `${v}/agents`, icon: Bot },
     { label: "Runs", href: `${v}/runs`, icon: Activity },
     { label: "Knowledge", href: `${v}/knowledge`, icon: BookOpen },

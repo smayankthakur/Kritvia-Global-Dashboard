@@ -49,7 +49,7 @@ function withCsp(req: NextRequest, rewriteTo?: URL) {
 export const config = {
   matcher: [
     {
-      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt).*)",
+      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|manifest.webmanifest|sw.js|icons/).*)",
       missing: [{ type: "header", key: "next-router-prefetch" }],
     },
   ],

@@ -49,6 +49,10 @@ class QuotaExceeded(RouterError):
     """The workspace used its plan's hosted-model allowance for this month."""
 
 
+class AgentBudgetExceeded(QuotaExceeded):
+    """This agent (workflow) used the monthly token budget its owner set on the board."""
+
+
 class AllProvidersFailed(RouterError):
     def __init__(self, tier: str, attempts: list[str]) -> None:
         super().__init__(f"all deployments failed for tier '{tier}': {'; '.join(attempts)}")
@@ -109,6 +113,7 @@ class CallContext:
     actor_type: ActorType = "user"
     agent_id: str | None = None
     workflow: str | None = None
+    ticket_id: uuid.UUID | None = None
 
 
 @dataclass
@@ -150,24 +155,31 @@ class ModelRouter:
     def local_deployments(self) -> list[str]:
         return [d for d, p in self.config.policies.items() if p == "local"]
 
-    async def _over_quota(self, ctx: CallContext) -> bool:
+    async def _over_quota(self, ctx: CallContext) -> str | None:
+        """None, 'org' (plan allowance used) or 'agent' (the board budget for this workflow used)."""
         async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
-            return await self.gate.over_limit(conn, ctx.org_id, self.local_deployments())
+            local = self.local_deployments()
+            if ctx.workflow and await self.gate.agent_over_budget(conn, ctx.venture_id, ctx.workflow, local):
+                return "agent"
+            if await self.gate.over_limit(conn, ctx.org_id, local):
+                return "org"
+            return None
 
     async def _meter(self, ctx: CallContext, **row: Any) -> None:
         async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
             await conn.execute(
                 text(
                     "INSERT INTO model_calls (org_id, venture_id, workflow, tier, provider_model, attempt, status,"
-                    " prompt_tokens, completion_tokens, latency_ms, error)"
+                    " prompt_tokens, completion_tokens, latency_ms, error, agent_id, ticket_id, cost_usd)"
                     " VALUES (:org, :venture, :workflow, :tier, :model, :attempt, :status,"
-                    " :pt, :ct, :latency, :error)"
+                    " :pt, :ct, :latency, :error, :agent, :ticket, :cost)"
                 ),
                 {
                     "org": ctx.org_id, "venture": ctx.venture_id, "workflow": ctx.workflow,
                     "tier": row["tier"], "model": row.get("model"), "attempt": row.get("attempt", 1),
                     "status": row["status"], "pt": row.get("pt"), "ct": row.get("ct"),
                     "latency": row.get("latency"), "error": (row.get("error") or None) and row["error"][:500],
+                    "agent": ctx.agent_id, "ticket": ctx.ticket_id, "cost": row.get("cost"),
                 },
             )
 
@@ -186,7 +198,15 @@ class ModelRouter:
             await self._meter(ctx, tier=tier, status="blocked", error=reason)
             raise PolicyViolation(f"tier '{tier}': {reason}; route sensitive work through tier 'private'")
 
-        if any(self.config.policies.get(d) != "local" for d in candidates) and await self._over_quota(ctx):
+        over = None
+        if any(self.config.policies.get(d) != "local" for d in candidates):
+            over = await self._over_quota(ctx)
+        if over == "agent":
+            # The owner capped this agent on the board: pause it, local model or not.
+            await self._meter(ctx, tier=tier, status="blocked", error="agent budget used")
+            raise AgentBudgetExceeded(f"the {ctx.workflow} agent has used the monthly budget set on the "
+                                      "board; raise it or wait for next month")
+        if over:
             local = [d for d in candidates if self.config.policies.get(d) == "local"]
             if not local:
                 await self._meter(ctx, tier=tier, status="blocked", error="monthly AI allowance used")
@@ -214,7 +234,7 @@ class ModelRouter:
                 usage = body.get("usage") or {}
                 await self._meter(ctx, tier=tier, model=deployment, attempt=attempt, status="ok",
                                   latency=latency, pt=usage.get("prompt_tokens"),
-                                  ct=usage.get("completion_tokens"))
+                                  ct=usage.get("completion_tokens"), cost=_cost_header(resp))
                 return ChatResult(
                     content=body["choices"][0]["message"]["content"],
                     deployment=deployment, attempts=attempt, usage=usage,
@@ -228,6 +248,15 @@ class ModelRouter:
                 break  # a malformed request will fail on every provider
 
         raise AllProvidersFailed(tier, failures)
+
+
+def _cost_header(resp: httpx.Response) -> float | None:
+    """LiteLLM reports what the call cost in USD on every response; absent for local models."""
+    raw = resp.headers.get("x-litellm-response-cost")
+    try:
+        return float(raw) if raw not in (None, "") else None
+    except ValueError:
+        return None
 
 
 class _Skip(Exception):

@@ -44,6 +44,7 @@ export function CancelRunButton({ ventureId, runId }: { ventureId: string; runId
 }
 
 export const WORKFLOW_LABEL: Record<string, string> = {
+  inbox_assistant: "Inbox assistant",
   lead_triage: "Lead triage",
   loan_verification: "Loan verification",
   kitchen_daily: "Kitchen daily plan",

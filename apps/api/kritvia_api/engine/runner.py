@@ -15,6 +15,7 @@ Lifecycle:  queued -> running -> (waiting -> queued -> running)* -> completed | 
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -28,6 +29,8 @@ from kritvia_api.db.session import tenant_tx
 from kritvia_api.engine.context import RunContext, Services
 from kritvia_api.engine.core import Finish, Goto, Interrupt, registry
 from kritvia_api.services.crypto import EnvelopeCrypto
+from kritvia_api.services import push
+from kritvia_api.services.model_router import AgentBudgetExceeded
 
 log = logging.getLogger("kritvia.runner")
 
@@ -65,6 +68,7 @@ async def start_run(
     trigger_ref: str | None = None,
     dedupe: tuple[str, str] | None = None,
     dispatch: bool = True,
+    delegated_from: str | None = None,
 ) -> uuid.UUID:
     """Create a queued run. The caller needs write access to the venture (RLS).
 
@@ -109,6 +113,14 @@ async def start_run(
             {"id": run_id, "o": v.org_id, "v": venture_id, "w": workflow, "ver": wf.version,
              "t": (title or wf.title)[:200], "s": wf.start, "st": state_enc, "tk": trigger_kind,
              "tr": trigger_ref, "ra": v.run_as, "sb": actor_user_id if actor_type == "user" else None})
+        # The board card for this run. Role comes from the venture's agent config (default 'ops').
+        await conn.execute(
+            text("INSERT INTO tickets (org_id, venture_id, run_id, workflow, role, title, created_by, delegated_from)"
+                 " VALUES (:o, :v, :r, :w, coalesce((SELECT role FROM workflow_configs"
+                 " WHERE venture_id = :v AND workflow = :w), 'ops'), :t, :by, :df)"),
+            {"o": v.org_id, "v": venture_id, "r": run_id, "w": workflow, "t": (title or wf.title)[:200],
+             "by": actor_user_id if actor_type == "user" else None,
+             "df": delegated_from})
     if dispatch:
         await services.dispatcher.enqueue_run(run_id)
     return run_id
@@ -134,7 +146,8 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
             text("UPDATE workflow_runs SET status = 'running', lease_owner = :w,"
                  " lease_until = now() + :lease, updated_at = now(), error = NULL"
                  " WHERE id = :id AND (status = 'queued' OR (status = 'running' AND lease_until < now()))"
-                 " RETURNING org_id, venture_id, workflow, current_step, state_enc, step_count, trigger_kind"),
+                 " RETURNING org_id, venture_id, workflow, current_step, state_enc, step_count, trigger_kind,"
+                 " (SELECT id FROM tickets t WHERE t.run_id = workflow_runs.id) AS ticket_id"),
             {"id": run_id, "w": worker, "lease": LEASE})).first()
         if row is None:
             return None  # someone else holds it, or it is not runnable
@@ -143,7 +156,8 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
 
     wf = registry.get(row.workflow)
     ctx = RunContext(run_id=run_id, org_id=row.org_id, venture_id=row.venture_id, run_as=run_as,
-                     workflow=row.workflow, services=services, trigger_kind=row.trigger_kind)
+                     workflow=row.workflow, services=services, trigger_kind=row.trigger_kind,
+                     ticket_id=row.ticket_id)
     step_name, step_count = row.current_step, row.step_count
     limit = max_steps or wf.max_steps
 
@@ -204,6 +218,14 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
     except LeaseLost:
         log.warning("run %s: lease lost, abandoning", run_id)
         return None
+    except AgentBudgetExceeded as exc:
+        # Not a failure: the owner capped this agent. Park on the same step so a retry
+        # (or next month) picks it up where it stopped, and say so on the board.
+        log.info("run %s parked at %s: %s", run_id, step_name, exc)
+        state.setdefault("summary", {})["blocked"] = "budget"
+        await _park(ctx, state, step_name, step_count, ticket_status="blocked",
+                    ticket_note="Paused: this agent's monthly budget is used up")
+        return "waiting"
     except Exception as exc:
         log.exception("run %s failed at %s", run_id, step_name)
         await _fail(ctx, state, step_name, step_count, _err(exc))
@@ -246,13 +268,21 @@ async def _checkpoint(ctx: RunContext, state, step: str, step_count: int) -> Non
                             "sum": json.dumps(state.get("summary", {}), default=str)})
 
 
-async def _park(ctx: RunContext, state, resume_step: str, step_count: int) -> None:
+async def _park(ctx: RunContext, state, resume_step: str, step_count: int, *,
+                ticket_status: str = "waiting_approval", ticket_note: str | None = None) -> None:
     async with ctx.tx("runtime") as conn:
         await _write_state(ctx, conn, state,
                            "status = 'waiting', current_step = :s, step_count = :n, lease_owner = NULL,"
                            " lease_until = NULL, summary = CAST(:sum AS jsonb)",
                            {"s": resume_step, "n": step_count,
                             "sum": json.dumps(state.get("summary", {}), default=str)})
+        await _move_ticket(conn, ctx, ticket_status, ticket_note)
+
+
+async def _move_ticket(conn, ctx: RunContext, status: str, note: str | None = None) -> None:
+    if ctx.ticket_id is None:
+        return
+    await conn.execute(text("SELECT ticket_for_run(:r, :s, :n)"), {"r": ctx.run_id, "s": status, "n": note})
 
 
 async def _finish(ctx: RunContext, state, outcome: str, step_count: int, status: str) -> None:
@@ -262,6 +292,7 @@ async def _finish(ctx: RunContext, state, outcome: str, step_count: int, status:
                            " lease_until = NULL, finished_at = now(), summary = CAST(:sum AS jsonb)",
                            {"status": status, "o": outcome[:100], "n": step_count,
                             "sum": json.dumps(state.get("summary", {}), default=str)})
+        await _move_ticket(conn, ctx, "done", outcome[:100])
 
 
 async def _fail(ctx: RunContext, state, step: str, step_count: int, error: str) -> None:
@@ -271,6 +302,7 @@ async def _fail(ctx: RunContext, state, step: str, step_count: int, error: str) 
                                "status = 'failed', current_step = :s, step_count = :n, error = :e,"
                                " lease_owner = NULL, lease_until = NULL, finished_at = now()",
                                {"s": step, "n": step_count, "e": error})
+            await _move_ticket(conn, ctx, "blocked", error.split(": ", 1)[-1][:200])
     except LeaseLost:
         pass
 
@@ -317,7 +349,17 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
     else:
         state[PENDING] = {"approval_id": str(approval_id), "key": req.key, "resume": it.resume,
                           "on_reject": it.on_reject}
+        if push.enabled():
+            # Tell the people who can decide; never let a push problem touch the run.
+            asyncio.get_running_loop().create_task(_notify(approval_id, req.title, ctx.venture_id, req.agent))
     return auto
+
+
+async def _notify(approval_id: uuid.UUID, title: str, venture_id: uuid.UUID, agent: str) -> None:
+    try:
+        await push.notify_approval(approval_id, title=title, venture_id=venture_id, agent=agent)
+    except Exception:  # noqa: BLE001 - best effort by design
+        log.exception("push notification failed for approval %s", approval_id)
 
 
 async def _apply_decision(ctx: RunContext, state: dict) -> str | Finish | None:
@@ -355,17 +397,22 @@ async def cancel_run(user_id: uuid.UUID, run_id: uuid.UUID) -> bool:
         await conn.execute(
             text("UPDATE approvals SET status = 'cancelled' WHERE run_id = :id AND status = 'pending'"),
             {"id": run_id})
+        await conn.execute(text("SELECT ticket_for_run(:r, 'cancelled', NULL)"), {"r": run_id})
     return True
 
 
 async def retry_run(user_id: uuid.UUID, run_id: uuid.UUID, services: Services) -> bool:
-    """Re-queue a failed run from the step that failed (its checkpoint is intact)."""
+    """Re-queue a failed run from the step that failed (its checkpoint is intact), or a run
+    parked because its agent's budget was used up."""
     async with tenant_tx(user_id) as conn:
         res = await conn.execute(
             text("UPDATE workflow_runs SET status = 'queued', error = NULL, finished_at = NULL,"
-                 " updated_at = now() WHERE id = :id AND status = 'failed'"), {"id": run_id})
+                 " summary = summary - 'blocked', updated_at = now()"
+                 " WHERE id = :id AND (status = 'failed' OR (status = 'waiting' AND summary ? 'blocked'))"),
+            {"id": run_id})
         if res.rowcount == 0:
             return False
+        await conn.execute(text("SELECT ticket_for_run(:r, 'open', 'Retried')"), {"r": run_id})
     await services.dispatcher.enqueue_run(run_id)
     return True
 

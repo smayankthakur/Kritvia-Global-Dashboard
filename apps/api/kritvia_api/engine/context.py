@@ -80,6 +80,7 @@ class RunContext:
     trigger_kind: str = "manual"
     agent: str = "orchestrator"
     notes: list[str] = field(default_factory=list)
+    ticket_id: uuid.UUID | None = None
 
     # --- database -----------------------------------------------------------
     @asynccontextmanager
@@ -110,10 +111,23 @@ class RunContext:
                 {"v": self.venture_id, "w": self.workflow})).first()
         return (row.instructions if row else "") or ""
 
+    async def mission(self) -> str:
+        """The owner's current mission from the board (may be empty)."""
+        async with self.tx() as conn:
+            row = (await conn.execute(text(
+                "SELECT title, note FROM tickets WHERE venture_id = :v AND run_id IS NULL AND role = 'owner'"
+                " AND status = 'open' ORDER BY updated_at DESC LIMIT 1"), {"v": self.venture_id})).first()
+        if row is None:
+            return ""
+        return (row.title + (f" ({row.note})" if row.note else ""))[:800]
+
     async def brief(self) -> str:
         """System-prompt block every agent gets: who it works for and the owner's standing instructions."""
         biz = await self.business()
         lines = [f"You work for {biz.describe()}."]
+        mission = await self.mission()
+        if mission:
+            lines.append(f"This month's mission for the whole team: {mission}")
         instr = (await self.instructions()).strip()
         if instr:
             lines.append("Standing instructions from the business owner (follow them unless they conflict with "
@@ -135,7 +149,8 @@ class RunContext:
     # --- models -------------------------------------------------------------
     def call_ctx(self, agent: str | None = None) -> CallContext:
         return CallContext(org_id=self.org_id, venture_id=self.venture_id, user_id=self.run_as,
-                           actor_type="agent", agent_id=agent or self.agent, workflow=self.workflow)
+                           actor_type="agent", agent_id=agent or self.agent, workflow=self.workflow,
+                           ticket_id=self.ticket_id)
 
     async def llm_json(self, *, tier: str, system: str, prompt: str, schema: type[T],
                        sensitive: bool = False) -> T:

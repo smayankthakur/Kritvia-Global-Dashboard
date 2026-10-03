@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { PushToggle } from "@/components/notifications/push-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
@@ -44,6 +45,7 @@ export default function AccountPage() {
     <>
       <PageHeader title="Your account" description={me.data ? `${me.data.full_name} · ${me.data.email}` : undefined} />
       <div className="grid max-w-3xl gap-4">
+        <PushToggle />
         <Card>
           <CardHeader title="Download your data" description="Your profile, memberships, voice settings, personal vocabulary and approval history, as a JSON file." />
           <div className="p-4">
