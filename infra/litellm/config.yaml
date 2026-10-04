@@ -31,8 +31,6 @@ model_list:
     litellm_params: { model: mistral/mistral-large-latest, api_key: os.environ/MISTRAL_API_KEY }
   - model_name: openrouter-free
     litellm_params: { model: openrouter/qwen/qwen3.8-27b:free, api_key: os.environ/OPENROUTER_API_KEY }
-  - model_name: openrouter-big        # 1M context, for long documents
-    litellm_params: { model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free, api_key: os.environ/OPENROUTER_API_KEY }
 
   # --- Local Ollama on the VM (the only 'private' destination at MVP) ---
   - model_name: ollama-qwen-7b

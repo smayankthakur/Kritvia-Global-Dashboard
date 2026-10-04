@@ -27,8 +27,7 @@ FREE_FAMILIES = [
     {"key": "cloudflare", "label": "Cloudflare Workers AI", "deployments": ["cloudflare-llama-70b"], "trains": False},
     {"key": "gemini", "label": "Google Gemini (free tier)", "deployments": ["gemini-flash"], "trains": True},
     {"key": "mistral", "label": "Mistral (free tier)", "deployments": ["mistral-large"], "trains": True},
-    {"key": "openrouter", "label": "OpenRouter free models", "deployments": ["openrouter-free", "openrouter-big"],
-     "trains": True},
+    {"key": "openrouter", "label": "OpenRouter free models", "deployments": ["openrouter-free"], "trains": True},
     {"key": "local", "label": "Kritvia's own server", "deployments": ["ollama-qwen-7b"], "trains": False},
 ]
 

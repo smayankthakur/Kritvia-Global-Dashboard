@@ -35,7 +35,6 @@ deployments:
   gemini-flash:     { data_policy: may_train }        # AI Studio free key; billing on -> AI_NO_TRAINING_DEPLOYMENTS
   mistral-large:    { data_policy: may_train, requires_env: MISTRAL_API_KEY }   # opt-out in Mistral admin -> no_training
   openrouter-free:  { data_policy: may_train }
-  openrouter-big:   { data_policy: may_train }
   # Sarvam (Indian languages) is called natively by the API; its standard terms allow training, so it is
   # in no tier until there is a signed no-training agreement.
   sarvam-saaras:    { data_policy: may_train, provider: sarvam, model: "saaras:v4" }
@@ -49,7 +48,7 @@ tiers:
   fast:         [groq-llama-8b, cerebras-large, cloudflare-llama-70b, openrouter-free, gemini-flash, ollama-qwen-7b]
   extract:      [groq-llama-70b, cerebras-large, cloudflare-llama-70b, gemini-flash, mistral-large, openrouter-free, ollama-qwen-7b]
   reason:       [groq-llama-70b, cerebras-qwen, cerebras-large, gemini-flash, mistral-large, openrouter-free, cloudflare-llama-70b, ollama-qwen-7b]
-  long_context: [gemini-flash, openrouter-big, cerebras-qwen, groq-llama-70b, mistral-large]
+  long_context: [gemini-flash, openrouter-free, cerebras-qwen, groq-llama-70b, mistral-large]
   private:      [ollama-qwen-7b]
   embed:        [ollama-bge-m3]
   # Long recordings (meetings). Sarvam's REST API takes short clips only, so it is not in this chain.
