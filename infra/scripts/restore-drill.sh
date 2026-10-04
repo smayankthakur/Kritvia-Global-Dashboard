@@ -4,7 +4,7 @@
 #   AGE_IDENTITY=/path/to/offline/key.txt ./restore-drill.sh [backup-file]
 set -euo pipefail
 cd "$(dirname "$0")/.."
-set -a; source ../.env; set +a
+. scripts/load-env.sh; load_env ../.env
 : "${AGE_IDENTITY:?path to the offline age private key}"
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 if [ -n "${1:-}" ] && [ -f "$1" ]; then

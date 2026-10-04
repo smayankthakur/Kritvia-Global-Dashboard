@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../.."
 git fetch --quiet origin main && git reset --hard origin/main
 cd infra
 # With a managed database (.env has MANAGED_DATABASE_URL) the overlay is always applied.
-set -a; source ../.env; set +a
+. scripts/load-env.sh; load_env ../.env
 COMPOSE=(docker compose -f docker-compose.yml)
 [ -n "${MANAGED_DATABASE_URL:-}" ] && COMPOSE+=(-f docker-compose.managed.yml)
 "${COMPOSE[@]}" build --pull sandbox-jobs api worker web sandbox

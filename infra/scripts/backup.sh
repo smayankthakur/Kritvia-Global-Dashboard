@@ -9,7 +9,7 @@
 #   BACKUP_RCLONE_REMOTE=:s3,provider=AWS,env_auth=true,no_check_bucket=true,region=ap-south-1:<bucket>
 set -euo pipefail
 cd "$(dirname "$0")/.."
-set -a; source ../.env; set +a
+. scripts/load-env.sh; load_env ../.env
 : "${BACKUP_AGE_RECIPIENT:?set in .env}" "${BACKUP_RCLONE_REMOTE:?set in .env}"
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 DIR=/var/backups/kritvia; mkdir -p "$DIR"; chmod 700 "$DIR"

@@ -5,7 +5,7 @@
 # Run from cron too if you like; it prints nothing secret.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-set -a; source ../.env; set +a
+. scripts/load-env.sh; load_env ../.env
 models=$(grep -E '^\s+- model_name:' litellm/config.yaml | awk '{print $3}' | grep -vE 'whisper|bge')
 rc=0
 for m in $models; do

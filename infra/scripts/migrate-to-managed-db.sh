@@ -11,7 +11,7 @@
 # The old container data is left in place (volume pgdata) until you remove it yourself.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-set -a; source ../.env; set +a
+. scripts/load-env.sh; load_env ../.env
 : "${MANAGED_MIGRATION_DATABASE_URL:?set in .env}" "${MANAGED_DATABASE_URL:?set in .env}"
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 

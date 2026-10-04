@@ -12,7 +12,7 @@
 # and once on recovery. Everything is also written to syslog (tag: kritvia-health).
 set -uo pipefail
 cd "$(dirname "$0")/.."
-set -a; source ../.env 2>/dev/null; set +a
+. scripts/load-env.sh; load_env ../.env || true
 STATE_DIR=/var/lib/kritvia; mkdir -p "$STATE_DIR"
 STATE="$STATE_DIR/health.state"; LAST_ALERT="$STATE_DIR/health.alerted"
 DC="docker compose -f docker-compose.yml"

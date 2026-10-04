@@ -7,7 +7,7 @@
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "run with sudo"; exit 1; }
 DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-set -a; source "$DIR/.env"; set +a
+. "$DIR/infra/scripts/load-env.sh"; load_env "$DIR/.env"
 
 if ! command -v aws >/dev/null; then
   apt-get install -y -qq unzip >/dev/null
