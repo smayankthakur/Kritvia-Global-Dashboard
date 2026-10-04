@@ -83,7 +83,7 @@ export default function ProposalDetailPage() {
         }
       />
       <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Pricing" description="Computed from the rate card — never by the model." />
             <Table label="Line items">
@@ -131,7 +131,7 @@ export default function ProposalDetailPage() {
             <div className="p-4 sm:p-6">{p.content ? <Markdown>{p.content}</Markdown> : <p className="text-sm text-subtle">No content.</p>}</div>
           </Card>
         </div>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Sources cited" />
             {cites.length ? (
