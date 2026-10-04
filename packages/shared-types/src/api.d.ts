@@ -869,6 +869,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/notice/{venture_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Notice */
+        get: operations["public_notice_public_notice__venture_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/support": {
         parameters: {
             query?: never;
@@ -4230,6 +4247,26 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** NoticeOut */
+        NoticeOut: {
+            /** Business Name */
+            business_name: string;
+            /** City */
+            city: string;
+            /** Contact Email */
+            contact_email: string;
+            /** Contact Name */
+            contact_name: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Workflows */
+            workflows: string[];
+        };
         /** OptionOut */
         OptionOut: {
             /** Default */
@@ -5174,6 +5211,12 @@ export interface components {
             city?: string | null;
             /** Kind */
             kind?: ("general" | "software" | "finance" | "kitchen") | null;
+            /** Notice In Replies */
+            notice_in_replies?: boolean | null;
+            /** Privacy Contact Email */
+            privacy_contact_email?: string | null;
+            /** Privacy Contact Name */
+            privacy_contact_name?: string | null;
             /** Sign Off */
             sign_off?: string | null;
             /** Speech People Hints */
@@ -5202,6 +5245,26 @@ export interface components {
             city: string;
             /** Kind */
             kind: string;
+            /**
+             * Notice In Replies
+             * @default false
+             */
+            notice_in_replies: boolean;
+            /**
+             * Notice Url
+             * @description public privacy notice, once a privacy contact is set
+             */
+            notice_url?: string | null;
+            /**
+             * Privacy Contact Email
+             * @default
+             */
+            privacy_contact_email: string;
+            /**
+             * Privacy Contact Name
+             * @default
+             */
+            privacy_contact_name: string;
             /**
              * Sign Off
              * @default
@@ -7072,6 +7135,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    public_notice_public_notice__venture_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

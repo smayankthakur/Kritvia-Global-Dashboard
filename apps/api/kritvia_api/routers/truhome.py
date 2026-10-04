@@ -86,6 +86,9 @@ async def put_checklist(venture_id: uuid.UUID, loan_type: str, body: ChecklistIn
                         db: TenantDB) -> ChecklistOut:
     """Creates a new version; earlier versions stay for the audit trail of past decisions."""
     org = await venture_org(db, venture_id)
+    if not (await db.execute(text("SELECT private.can_admin_venture(:v) OR private.has_venture_role(:v, '{loan_officer}')"),
+                             {"v": venture_id})).scalar():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "only an admin or a loan officer can change checklists")
     if not (2 <= len(loan_type) <= 40) or not loan_type.replace("_", "").isalnum() or loan_type != loan_type.lower():
         raise HTTPException(422, "loan_type must be lower_snake_case")
     try:

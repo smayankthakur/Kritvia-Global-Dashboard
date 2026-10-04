@@ -85,6 +85,8 @@ async def register(body: RegisterIn, db: AnonDB, request: Request) -> TokenOut:
 @router.post("/login", response_model=TokenOut)
 async def login(body: LoginIn, db: AnonDB, request: Request) -> TokenOut:
     await _limit(request, body.email)
+    # A slow, steady password guesser still runs into an hourly cap per address.
+    await limiter.hit_window(f"login-hour:{body.email.lower()}", 30, 3600)
     row = (await db.execute(text("SELECT * FROM auth_lookup(:e)"), {"e": body.email})).first()
     ok = verify_password(body.password, row.password_hash if row else None)
     if not ok or row is None or not row.is_active:
@@ -163,6 +165,7 @@ async def email_start(body: EmailStartIn, db: AnonDB, request: Request) -> Email
     email = body.email.lower()
     await _limit(request, email)
     await limiter.hit(f"email-code:{email}", per_minute=3)
+    await limiter.hit_window(f"email-code-day:{email}", 20, 86400)   # no flooding an inbox with codes
     mailer = get_mailer()
     if not mailer.can_deliver:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "email sign-in is not configured on this server")
@@ -184,6 +187,8 @@ async def email_start(body: EmailStartIn, db: AnonDB, request: Request) -> Email
 async def email_verify(body: EmailVerifyIn, request: Request) -> TokenOut:
     email = body.email.lower()
     await _limit(request, email)
+    # Six digits are guessable at minute-rate limits over weeks; a daily cap per address stops that.
+    await limiter.hit_window(f"email-verify-day:{email}", 30, 86400)
     # Own transaction: a wrong code must count as an attempt even though we answer 401.
     async with tenant_tx(None) as db:
         ok = (await db.execute(text("SELECT auth_code_consume(:e, :h)"),

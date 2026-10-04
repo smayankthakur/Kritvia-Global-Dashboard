@@ -11,7 +11,7 @@ from test_inbox_assistant import SUPPORT_MAIL, script_inbox
 
 pytestmark = pytest.mark.asyncio
 
-SUB = {"endpoint": "https://push.example.com/send/abc", "keys": {"p256dh": "BNc-p256dh", "auth": "auth-secret"},
+SUB = {"endpoint": "https://fcm.googleapis.com/fcm/send/abc", "keys": {"p256dh": "BNc-p256dh", "auth": "auth-secret"},
        "user_agent": "Chrome on Android"}
 
 
@@ -29,7 +29,7 @@ async def test_subscribe_notify_unsubscribe(world, client, monkeypatch, fake_llm
     assert r.status_code == 201 and r.json() == {"enabled": True, "public_key": "BPUBLIC", "subscribed": 1}
     assert (await mayank.post("/me/push", json={**SUB, "endpoint": "http://insecure"})).status_code == 422
     # a viewer in the same org cannot decide, so is not told
-    assert (await world["vera"].post("/me/push", json={**SUB, "endpoint": "https://push.example.com/send/vera"})).status_code == 201
+    assert (await world["vera"].post("/me/push", json={**SUB, "endpoint": "https://fcm.googleapis.com/fcm/send/vera"})).status_code == 201
 
     await mayank.put(f"/ventures/{v}/workflow-configs/inbox_assistant", json={"enabled": True, "settings": {}})
     script_inbox(fake_llm)
@@ -46,4 +46,16 @@ async def test_subscribe_notify_unsubscribe(world, client, monkeypatch, fake_llm
     t = await mayank.post("/me/push/test")
     assert t.status_code == 202 and t.json() == {"sent": 1, "browsers": 1}
     assert (await mayank.post("/me/push/unsubscribe", json={"endpoint": SUB["endpoint"]})).json()["subscribed"] == 0
-    assert (await world["vera"].post("/me/push/unsubscribe", json={"endpoint": "https://push.example.com/send/vera"})).status_code == 200
+    assert (await world["vera"].post("/me/push/unsubscribe", json={"endpoint": "https://fcm.googleapis.com/fcm/send/vera"})).status_code == 200
+
+
+async def test_only_browser_push_services_are_accepted():
+    from kritvia_api.services.push import allowed_endpoint
+    assert allowed_endpoint("https://fcm.googleapis.com/fcm/send/abc")
+    assert allowed_endpoint("https://updates.push.services.mozilla.com/wpush/v2/x")
+    assert allowed_endpoint("https://wns2-pn1p.notify.windows.com/w/?token=x")
+    assert allowed_endpoint("https://web.push.apple.com/QJ")
+    for bad in ("http://fcm.googleapis.com/x", "https://api:8000/auth/me", "https://169.254.169.254/latest",
+                "https://evil.com/fcm.googleapis.com", "https://fcm.googleapis.com.evil.com/x",
+                "https://user@fcm.googleapis.com/x", "https://fcm.googleapis.com:8443/x", "https://notapush.apple.com.x/"):
+        assert not allowed_endpoint(bad), bad

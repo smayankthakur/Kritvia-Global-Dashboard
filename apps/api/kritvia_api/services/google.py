@@ -49,6 +49,16 @@ class GmailMessage:
     date: str
     body: str
     attachments: list[dict[str, Any]]
+    authenticated: bool = False   # Gmail's own check: the sender's domain signed it (DMARC, or DKIM + SPF)
+
+
+def sender_authenticated(auth_results: list[str]) -> bool:
+    """True when Gmail's Authentication-Results show the From domain really sent the message."""
+    for v in auth_results:
+        v = v.lower()
+        if "dmarc=pass" in v or ("dkim=pass" in v and "spf=pass" in v):
+            return True
+    return False
 
 
 class GoogleClient:
@@ -138,13 +148,16 @@ class GoogleClient:
 
     async def get_message(self, token: str, message_id: str) -> GmailMessage:
         m = await self._req("GET", f"{GMAIL}/messages/{message_id}", token, params={"format": "full"})
-        headers = {h["name"].lower(): h["value"] for h in m.get("payload", {}).get("headers", [])}
+        raw_headers = m.get("payload", {}).get("headers", [])
+        headers = {h["name"].lower(): h["value"] for h in raw_headers}
+        auth = [h["value"] for h in raw_headers if h["name"].lower() == "authentication-results"]
         body, attachments = _walk_parts(m.get("payload", {}))
         name, addr = parseaddr(headers.get("from", ""))
         return GmailMessage(id=m["id"], thread_id=m.get("threadId", ""), sender=name or addr,
                             sender_email=addr.lower(), to=headers.get("to", ""),
                             subject=headers.get("subject", ""), date=headers.get("date", ""),
-                            body=body or m.get("snippet", ""), attachments=attachments)
+                            body=body or m.get("snippet", ""), attachments=attachments,
+                            authenticated=sender_authenticated(auth))
 
     async def get_attachment(self, token: str, message_id: str, attachment_id: str) -> bytes:
         body = await self._req("GET", f"{GMAIL}/messages/{message_id}/attachments/{attachment_id}", token)

@@ -35,6 +35,9 @@ DEFAULT_QUERIES = {
     "loan_verification": "has:attachment subject:TRU- newer_than:7d",
 }
 REF = re.compile(r"\bTRU-\d{4}-\d{5}-[0-9A-F]{4}\b")
+# Sales reports are trusted only from the delivery apps' own domains, or from senders the business lists
+# (kitchen_daily setting "report_senders"), and only when Gmail confirms the sender really sent them.
+AGGREGATOR_DOMAINS = ("swiggy.in", "zomato.com")
 
 
 async def poll_gmail_all(services: Services) -> dict[str, int]:
@@ -119,7 +122,24 @@ async def _lead(ctx: RunContext, services: Services, token: str, msg) -> int:
         return 0
 
 
+async def _report_sender_ok(ctx: RunContext, msg) -> bool:
+    if not msg.authenticated:
+        return False
+    domain = msg.sender_email.rsplit("@", 1)[-1]
+    if any(domain == d or domain.endswith("." + d) for d in AGGREGATOR_DOMAINS):
+        return True
+    async with ctx.tx() as conn:
+        listed = (await conn.execute(text(
+            "SELECT settings->'report_senders' FROM workflow_configs WHERE venture_id = :v AND workflow = 'kitchen_daily'"),
+            {"v": ctx.venture_id})).scalar()
+    return isinstance(listed, list) and msg.sender_email in {str(x).lower() for x in listed}
+
+
 async def _kitchen_report(ctx: RunContext, services: Services, token: str, msg) -> int:
+    if not await _report_sender_ok(ctx, msg):
+        log.warning("ignoring a sales report from an unverified or unlisted sender")
+        await _mark(ctx, "gmail:kitchen_daily", msg.id)
+        return 0
     stored = 0
     for att in msg.attachments:
         if not att["filename"].lower().endswith(".csv") or att.get("size", 0) > 10_000_000:
@@ -155,6 +175,9 @@ async def _loan_docs(ctx: RunContext, services: Services, token: str, msg) -> in
         return 0
     if (applicant.get("email") or "").lower() != msg.sender_email:
         log.warning("ignoring documents for %s from a sender that is not the applicant", m.group(0))
+        return 0
+    if not msg.authenticated:   # a forged From: would otherwise slip identity papers into the file
+        log.warning("ignoring documents for %s: Gmail could not confirm the sender", m.group(0))
         return 0
     files: list[tuple[str, Any, bytes]] = []
     for att in msg.attachments[:10]:

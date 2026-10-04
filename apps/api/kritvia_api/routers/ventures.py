@@ -69,6 +69,11 @@ class VentureSettingsIn(BaseModel):
     city: str | None = Field(default=None, max_length=80)
     about: str | None = Field(default=None, max_length=600)
     sign_off: str | None = Field(default=None, max_length=120)
+    # The privacy notice this business gives its own customers (published at /n/<venture id>).
+    privacy_contact_name: str | None = Field(default=None, max_length=120)
+    privacy_contact_email: str | None = Field(default=None, max_length=200,
+                                              pattern=r"^$|^[^\s@]+@[^\s@]+\.[^\s@]+$")
+    notice_in_replies: bool | None = None
 
 
 class VentureSettingsOut(BaseModel):
@@ -83,6 +88,10 @@ class VentureSettingsOut(BaseModel):
     city: str = ""
     about: str = ""
     sign_off: str = ""
+    privacy_contact_name: str = ""
+    privacy_contact_email: str = ""
+    notice_in_replies: bool = False
+    notice_url: str | None = Field(default=None, description="public privacy notice, once a privacy contact is set")
 
 
 async def _require_admin(db, venture_id: uuid.UUID) -> None:
@@ -99,9 +108,17 @@ async def get_settings_(venture_id: uuid.UUID, db: TenantDB) -> VentureSettingsO
         " coalesce(timezone, 'Asia/Kolkata') AS timezone,"
         " coalesce(speech_people_hints, false) AS speech_people_hints,"
         " coalesce(business_name, '') AS business_name, coalesce(city, '') AS city,"
-        " coalesce(about, '') AS about, coalesce(sign_off, '') AS sign_off FROM (SELECT 1) x"
+        " coalesce(about, '') AS about, coalesce(sign_off, '') AS sign_off,"
+        " coalesce(privacy_contact_name, '') AS privacy_contact_name,"
+        " coalesce(privacy_contact_email, '') AS privacy_contact_email,"
+        " coalesce(notice_in_replies, false) AS notice_in_replies FROM (SELECT 1) x"
         " LEFT JOIN venture_settings s ON s.venture_id = :v"), {"v": venture_id})).first()
-    return VentureSettingsOut(venture_id=venture_id, **row._mapping)
+    url = notice_url(venture_id) if row.privacy_contact_email else None
+    return VentureSettingsOut(venture_id=venture_id, notice_url=url, **row._mapping)
+
+
+def notice_url(venture_id: uuid.UUID) -> str:
+    return f"{get_settings().public_web_url.rstrip('/')}/n/{venture_id}"
 
 
 @router.put("/ventures/{venture_id}/settings", response_model=VentureSettingsOut)
@@ -120,7 +137,10 @@ async def put_settings(venture_id: uuid.UUID, body: VentureSettingsIn, db: Tenan
                 " speech_people_hints = coalesce(:ph, venture_settings.speech_people_hints), updated_at = now()"),
                 {"o": org, "v": venture_id, "k": body.kind, "t": body.trust_threshold, "tz": body.timezone,
                  "ph": body.speech_people_hints})
-            for col in ("business_name", "city", "about", "sign_off"):
+            if body.notice_in_replies is not None:
+                await db.execute(text("UPDATE venture_settings SET notice_in_replies = :n, updated_at = now()"
+                                      " WHERE venture_id = :v"), {"n": body.notice_in_replies, "v": venture_id})
+            for col in ("business_name", "city", "about", "sign_off", "privacy_contact_name", "privacy_contact_email"):
                 val = getattr(body, col)
                 if val is not None:
                     await db.execute(text(f"UPDATE venture_settings SET {col} = NULLIF(btrim(:x), ''),"

@@ -31,6 +31,8 @@ const BLOCKED = new Set([
   "auth/email/verify",
   "auth/google/start",
   "auth/google/complete",
+  "auth/password",
+  "auth/password/reset",
 ]);
 const FORWARD_REQUEST_HEADERS = ["content-type", "accept", "accept-language", "user-agent", "cf-connecting-ip", "x-request-id"];
 const DROP_RESPONSE_HEADERS = new Set([
@@ -83,12 +85,53 @@ export function resetRefreshCache(): void {
   inflight.clear();
 }
 
+/**
+ * One decoded segment per path part. A segment that still holds "%", a slash, a backslash or a
+ * control character after decoding is refused: double encoding (auth%252Flogin) must not let a
+ * blocked endpoint through, since the API decodes once more.
+ */
+const MB = 1024 * 1024;
+
+/** Upload size ceiling per path: generous for signed-in uploads, tight for anonymous posts. */
+export function bodyLimit(path: string, isPublic: boolean, signedIn: boolean): number {
+  if (path.startsWith("public/upload/")) return 60 * MB;
+  if (isPublic) return 1 * MB;
+  return signedIn ? 60 * MB : 64 * 1024;
+}
+
+async function readCapped(req: Request, limit: number): Promise<ArrayBuffer | null> {
+  if (!req.body) return new ArrayBuffer(0);
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.byteLength;
+  }
+  return out.buffer;
+}
+
 export function normalisePath(segments: string[]): string | null {
   if (!segments.length) return null;
-  for (const s of segments) {
-    if (!s || s === "." || s === ".." || s.includes("/") || s.includes("\\")) return null;
+  const decoded: string[] = [];
+  for (const raw of segments) {
+    const s = decodeURIComponentSafe(raw);
+    if (!s || s === "." || s === ".." || /[\/\\%\u0000-\u001f\u007f]/.test(s)) return null;
+    decoded.push(s);
   }
-  return segments.map((s) => encodeURIComponent(decodeURIComponentSafe(s))).join("/");
+  return decoded.map((s) => encodeURIComponent(s)).join("/");
 }
 
 function decodeURIComponentSafe(s: string): string {
@@ -145,7 +188,16 @@ export async function proxyRequest(req: Request, segments: string[], deps: Proxy
   if (base["user-agent"]) refreshHeaders["user-agent"] = base["user-agent"];
   if (base["cf-connecting-ip"]) refreshHeaders["cf-connecting-ip"] = base["cf-connecting-ip"];
 
-  const body = method === "GET" || method === "HEAD" ? undefined : await req.arrayBuffer();
+  let body: ArrayBuffer | undefined;
+  if (method !== "GET" && method !== "HEAD") {
+    // Refuse oversized bodies before buffering them (the API enforces the same limits again).
+    const limit = bodyLimit(path, isPublic, !!(access || refresh));
+    const declared = Number(req.headers.get("content-length") ?? "NaN");
+    if (Number.isFinite(declared) && declared > limit) return json(413, "request body too large");
+    const read = await readCapped(req, limit);
+    if (!read) return json(413, "request body too large");
+    body = read;
+  }
   const url = `${deps.apiUrl}/${path}${new URL(req.url).search}`;
 
   let refreshed = false;

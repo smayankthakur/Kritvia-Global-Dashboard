@@ -31,8 +31,15 @@ export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Only allow same-site relative redirects after sign-in. */
 export function safeNext(next: string | null | undefined): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return "/";
-  return next;
+  if (!next || !next.startsWith("/") || /[\\\u0000-\u001f\u007f\s]/.test(next)) return "/";
+  try {
+    const base = "https://kritvia.invalid";
+    const u = new URL(next, base);
+    if (u.origin !== base) return "/";
+    return u.pathname + u.search + u.hash;
+  } catch {
+    return "/";
+  }
 }
 
 /** Starts "Sign in with Google": the BFF pins a nonce cookie, then we leave for Google. */

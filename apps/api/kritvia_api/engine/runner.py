@@ -328,8 +328,8 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
         trusted = bool((await conn.execute(
             text("SELECT auto_run FROM agent_trust WHERE venture_id = :v AND agent = :a AND action = :t"),
             {"v": ctx.venture_id, "a": req.agent, "t": req.action})).scalar())
-        # A sensitive draft is never auto-approved, whatever its history.
-        auto = trusted and not req.sensitive
+        # A sensitive draft, or one marked for review, is never auto-approved, whatever its history.
+        auto = trusted and not req.sensitive and not req.always_review
         payload_enc = await ctx.crypto(conn).encrypt(ctx.venture_id, PAYLOAD_PURPOSE,
                                                      json.dumps(req.payload, default=str))
         approval_id = (await conn.execute(

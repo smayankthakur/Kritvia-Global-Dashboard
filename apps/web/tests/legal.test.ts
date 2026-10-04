@@ -35,3 +35,17 @@ describe("status incidents", () => {
     expect(incidentLength({ ...base, resolved_at: null }, new Date("2026-10-03T11:00:00Z"))).toBe("1 h");
   });
 });
+
+describe("customer privacy notice", () => {
+  it("describes only what the switched-on agents do", async () => {
+    const { noticeItems, noticeText } = await import("@/lib/notice");
+    expect(noticeItems({ workflows: [] }, "en")).toHaveLength(1);
+    const loan = noticeItems({ workflows: ["loan_verification", "kitchen_daily"] }, "en");
+    expect(loan).toHaveLength(1);
+    expect(loan[0]!.local).toBe(true);
+    const d = { business_name: "Mehta Stores", city: "Pune", contact_name: "Ritu", contact_email: "p@m.in", kind: "general", workflows: ["inbox_assistant"], updated_at: "2026-10-04T00:00:00Z" };
+    expect(noticeText(d, "en").intro).toContain("Mehta Stores, Pune,");
+    expect(noticeText(d, "hi").title).toBe("गोपनीयता सूचना");
+    expect(noticeText(d, "hi").rights).toHaveLength(6);
+  });
+});

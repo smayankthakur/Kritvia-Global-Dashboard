@@ -3,11 +3,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicShell } from "@/components/public/doc-page";
 import { buttonClass } from "@/components/ui/button";
+import { INDEX, SITE_URL, share } from "@/lib/site";
+
+const TITLE = "Kritvia — AI agents for Indian businesses that draft; you approve";
+const DESCRIPTION =
+  "An inbox assistant, lead triage with priced proposals, loan document checks and a nightly kitchen plan — in Hindi, Hinglish or English. Nothing is sent without your approval.";
 
 export const metadata: Metadata = {
-  title: "Kritvia — AI agents for Indian businesses that draft; you approve",
-  description:
-    "An inbox assistant, lead triage with priced proposals, loan document checks and a nightly kitchen plan — in Hindi, Hinglish or English. Nothing is sent without your approval.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
+  robots: INDEX,
+  alternates: { canonical: "/" },
+  ...share(TITLE, DESCRIPTION, "/"),
+  keywords: ["AI agents", "business automation India", "WhatsApp automation", "lead management", "DPDP", "Hinglish AI"],
 };
 
 /** Only what is live today. Prices match the Plan & billing page (plans.py). */
@@ -55,9 +63,34 @@ const TRUST = [
   "Download your data or delete your account any time.",
 ];
 
+/** Structured data so search engines can show the product, its maker and its prices. */
+function JsonLd() {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Kritvia",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web, Windows, Android, iOS",
+    description: DESCRIPTION,
+    url: SITE_URL,
+    publisher: { "@type": "Organization", name: "Sitelytc Digital Media Private Limited", url: "https://sitelytc.com" },
+    offers: PLANS.map((p) => ({
+      "@type": "Offer",
+      name: p.name,
+      price: p.price.replace(/[^0-9]/g, "") || "0",
+      priceCurrency: "INR",
+    })),
+  };
+  // A data block, not a script: JSON.stringify output with "<" escaped cannot close the tag.
+  return (
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }} />
+  );
+}
+
 export default function WelcomePage() {
   return (
     <PublicShell>
+      <JsonLd />
       <section className="py-6 text-center sm:py-12">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-accent">For Indian SMBs · Hindi, Hinglish, English</p>
         <h1 className="mx-auto max-w-2xl text-3xl font-semibold tracking-tight text-fg sm:text-4xl">AI agents that do the work. You approve what goes out.</h1>

@@ -118,7 +118,9 @@ async def retrieve(ctx: RunContext, state: dict) -> Goto:
     c = state["classification"]
     try:
         found = await ctx.invoke("knowledge.search", {"query": c["summary"] + " " + (state["input"].get("body") or "")[:500],
-                                                      "k": 5, "kinds": ["upload", "drive", "note", "proposal", "email"]})
+                                                      "k": 5, "kinds": ["upload", "drive", "note", "proposal"]})
+        # Other people's emails are not a source for replies: an outsider could plant text that
+        # would then be repeated to every later customer.
         hits = found["hits"]
     except Exception as exc:
         ctx.note(f"retrieval unavailable ({type(exc).__name__})")
@@ -155,7 +157,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
         action, payload = "whatsapp.send", {"to": to, "body": r.body.strip()}
     else:
         subject = r.subject.strip() or ("Re: " + (inp.get("subject") or "your message"))
-        action, payload = "gmail.send", {"to": to, "subject": subject[:300], "body": r.body.strip(),
+        action, payload = "gmail.send", {"to": to, "subject": subject[:300], "body": biz.with_notice(r.body.strip()),
                                          "thread_id": inp.get("thread_id")}
     title = f"Reply to {inp.get('from_name') or to} ({c['category']})"
     summary = c["summary"][:200] + (" — the agent is not sure the sources answer this." if r.unsure else "")
@@ -163,7 +165,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
         summary += " Draws on: " + ", ".join(s["title"] for s in used)[:200]
     return Interrupt(
         ApprovalRequest(agent="inbox", action=action, key="reply_decision", title=title, summary=summary,
-                        payload=payload, required_roles=("approver", "venture_admin"), sensitive=sensitive),
+                        payload=payload, required_roles=("approver", "venture_admin"), sensitive=sensitive,
+                        # quoting a past proposal to an outside sender always needs a person
+                        always_review=any(s["kind"] == "proposal" for s in used)),
         resume="send", on_reject="rejected",
         update={"citations": [{"document_id": s["document_id"], "title": s["title"]} for s in used],
                 "redrafts": state.get("redrafts", 0)},

@@ -3,10 +3,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from kritvia_api.bodylimit import BodyLimitMiddleware
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import dispose_engine
 from kritvia_api.routers import (approvals, audit, auth, billing, board, compliance, connectors, dashboard, kitchen, knowledge, leads,
-                                 orgs, push, sitelytc, support, tally, truhome, ventures, voice, workflows)
+                                 notice, orgs, push, sitelytc, support, tally, truhome, ventures, voice, workflows)
 
 UNSAFE_DEFAULTS = ("dev-only-secret",)
 
@@ -24,6 +25,8 @@ def check_production_config() -> None:
         problems.append("SANDBOX_URL is not set (LocalSandbox has no network isolation)")
     if s.dispatch_mode != "arq":
         problems.append("DISPATCH_MODE must be 'arq' in production")
+    if s.mail_transport == "log" and s.signup_open:
+        problems.append("MAIL_TRANSPORT=log would write sign-in codes to the logs; use smtp, or set SIGNUP_OPEN=false")
     if problems:
         raise RuntimeError("refusing to start in production: " + "; ".join(problems))
 
@@ -61,10 +64,13 @@ def create_app() -> FastAPI:
             h.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
         return response
 
+    # Outermost: oversized bodies are refused before anything buffers or parses them.
+    app.add_middleware(BodyLimitMiddleware)
+
     for r in (auth.router, orgs.router, ventures.router, leads.router, audit.router, workflows.router,
               approvals.router, sitelytc.router, knowledge.router, truhome.router, kitchen.router,
               compliance.router, connectors.router, dashboard.router, voice.router, billing.router, support.router, tally.router,
-              board.router, push.router):
+              board.router, push.router, notice.router):
         app.include_router(r)
 
     @app.get("/healthz", tags=["ops"])

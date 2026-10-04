@@ -45,6 +45,9 @@ class ApprovalRequest:
     required_roles: tuple[str, ...] = ("approver", "venture_admin")
     sensitive: bool = False
     expires_in_hours: int | None = 72
+    # True: a person must look at this one even if the agent has earned autonomy for the action
+    # (for example a reply that quotes internal documents to an outside sender).
+    always_review: bool = False
 
 
 @dataclass

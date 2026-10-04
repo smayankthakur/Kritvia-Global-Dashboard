@@ -59,6 +59,13 @@ class Business:
     city: str
     about: str
     sign_off: str
+    notice_url: str | None = None   # set when the business links its privacy notice in email replies
+
+    def with_notice(self, body: str) -> str:
+        """An email body with the business's privacy notice linked at the foot (DPDP Act s.5)."""
+        if not self.notice_url:
+            return body
+        return f"{body.rstrip()}\n\n—\nHow {self.name} handles your information: {self.notice_url}"
 
     @property
     def where(self) -> str:
@@ -138,13 +145,18 @@ class RunContext:
         """Who the agents write as: the venture's business profile, with defaults."""
         async with self.tx() as conn:
             row = (await conn.execute(text(
-                "SELECT v.name, s.business_name, s.city, s.about, s.sign_off FROM ventures v"
+                "SELECT v.name, s.business_name, s.city, s.about, s.sign_off, s.privacy_contact_email,"
+                " s.notice_in_replies FROM ventures v"
                 " LEFT JOIN venture_settings s ON s.venture_id = v.id WHERE v.id = :v"),
                 {"v": self.venture_id})).first()
         name = ((row.business_name or row.name) if row else "") or "our team"
+        notice = None
+        if row is not None and row.privacy_contact_email and row.notice_in_replies:
+            from kritvia_api.routers.ventures import notice_url
+            notice = notice_url(self.venture_id)
         return Business(name=name, city=(row.city if row else None) or "",
                         about=(row.about if row else None) or "",
-                        sign_off=(row.sign_off if row else None) or f"Team {name}")
+                        sign_off=(row.sign_off if row else None) or f"Team {name}", notice_url=notice)
 
     # --- models -------------------------------------------------------------
     def call_ctx(self, agent: str | None = None) -> CallContext:

@@ -74,6 +74,7 @@ async def test_triage_pauses_prices_from_rate_card_and_resumes(site, fake_llm):
     # 150000 + 5*8000 + 60000 = 250000; GST 45000; total 295000. The invented code was dropped.
     assert "₹2,50,000.00" in body and "₹45,000.00" in body and "₹2,95,000.00" in body
     assert "made_up_code" not in body
+    assert "Internal reference" not in body      # other clients' prices never reach the customer
     # Alice is an operator: she can see the draft but not decide it
     alice_view = [a for a in (await alice.get("/approvals/inbox")).json() if a["run_id"] == run_id][0]
     assert alice_view["can_decide"] is False

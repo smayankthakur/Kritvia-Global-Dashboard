@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import { INDEX } from "@/lib/site";
 import { Doc, SUPPORT_EMAIL } from "@/components/public/doc-page";
 
-export const metadata: Metadata = { title: "Security" };
+export const metadata: Metadata = {
+  title: "Security",
+  description: "How Kritvia keeps business data safe: approvals before anything is sent, per-business encryption, data in India.",
+  robots: INDEX,
+  alternates: { canonical: "/security" },
+};
 
 export default function SecurityPage() {
   return (

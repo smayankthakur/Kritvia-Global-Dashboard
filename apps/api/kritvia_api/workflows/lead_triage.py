@@ -331,10 +331,11 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
             d.email_body = "\n".join(line for line in d.email_body.splitlines() if not _stray_amounts(line))
     used = [s for s in sources if s["n"] in set(d.used_sources)]
     proposal_md = f"{d.proposal.strip()}\n\n## Investment\n\n{pricing_table(p)}\n"
-    if p["reference"]:
-        proposal_md += (f"\n_Internal reference: {p['reference']['count']} similar past proposals ranged "
-                        f"{fmt_inr(p['reference']['min'])}–{fmt_inr(p['reference']['max'])}._\n")
-    body = f"{d.email_body.strip()}\n\n---\n\n{proposal_md}"
+    # Other clients' prices are for the reviewer only: they go in the approval summary, never in the email.
+    reference = (f" Internal reference: {p['reference']['count']} similar past proposals ranged "
+                 f"{fmt_inr(p['reference']['min'])}–{fmt_inr(p['reference']['max'])}."
+                 if p["reference"] else "")
+    body = (await ctx.business()).with_notice(f"{d.email_body.strip()}\n\n---\n\n{proposal_md}")
 
     async with ctx.tx() as conn:
         await conn.execute(text("UPDATE proposals SET status = 'superseded' WHERE lead_id = :l AND status = 'draft'"),
@@ -357,9 +358,10 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
             agent="proposal", action="gmail.send", key="proposal_decision",
             title=f"Send proposal to {ex.get('company') or ex.get('contact_name') or to}",
             summary=(f"Score {state['score']} ({state['priority']}). Estimate "
-                     f"{fmt_inr(p['total']) if p['lines'] else 'TBD'} incl. GST. Draws on: {cites}."),
+                     f"{fmt_inr(p['total']) if p['lines'] else 'TBD'} incl. GST. Draws on: {cites}.{reference}"),
             payload={"to": to, "subject": d.subject, "body": body, "thread_id": inp.get("thread_id")},
-            required_roles=("approver", "venture_admin"), sensitive=sensitive),
+            required_roles=("approver", "venture_admin"), sensitive=sensitive,
+            always_review=bool(used)),
         resume="send_proposal", on_reject="redraft",
         update={"proposal_id": str(prop_id), "redrafts": state.get("redrafts", 0)},
         note=f"proposal drafted citing {len(used)} source(s)")

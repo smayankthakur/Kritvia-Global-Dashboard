@@ -4757,6 +4757,53 @@
         "title": "NoteIn",
         "type": "object"
       },
+      "NoticeOut": {
+        "properties": {
+          "business_name": {
+            "title": "Business Name",
+            "type": "string"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "contact_email": {
+            "title": "Contact Email",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "workflows": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Workflows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "business_name",
+          "city",
+          "contact_name",
+          "contact_email",
+          "kind",
+          "workflows",
+          "updated_at"
+        ],
+        "title": "NoticeOut",
+        "type": "object"
+      },
       "OptionOut": {
         "properties": {
           "default": {
@@ -7256,6 +7303,42 @@
             ],
             "title": "Kind"
           },
+          "notice_in_replies": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice In Replies"
+          },
+          "privacy_contact_email": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "pattern": "^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Contact Email"
+          },
+          "privacy_contact_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Contact Name"
+          },
           "sign_off": {
             "anyOf": [
               {
@@ -7327,6 +7410,33 @@
           },
           "kind": {
             "title": "Kind",
+            "type": "string"
+          },
+          "notice_in_replies": {
+            "default": false,
+            "title": "Notice In Replies",
+            "type": "boolean"
+          },
+          "notice_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "public privacy notice, once a privacy contact is set",
+            "title": "Notice Url"
+          },
+          "privacy_contact_email": {
+            "default": "",
+            "title": "Privacy Contact Email",
+            "type": "string"
+          },
+          "privacy_contact_name": {
+            "default": "",
+            "title": "Privacy Contact Name",
             "type": "string"
           },
           "sign_off": {
@@ -10230,6 +10340,49 @@
         "summary": "Razorpay Webhook",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/public/notice/{venture_id}": {
+      "get": {
+        "operationId": "public_notice_public_notice__venture_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public Notice",
+        "tags": [
+          "public"
         ]
       }
     },

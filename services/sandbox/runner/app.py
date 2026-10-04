@@ -20,6 +20,7 @@ import hmac
 import json
 import os
 import time
+import uuid
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -41,9 +42,9 @@ class RunIn(BaseModel):
     cpus: float = Field(default=1.0, gt=0, le=2)
 
 
-def docker_argv(req: RunIn) -> list[str]:
+def docker_argv(req: RunIn, name: str | None = None) -> list[str]:
     return [
-        "docker", "run", "--rm", "-i",
+        "docker", "run", "--rm", "-i", "--name", name or f"kv-job-{uuid.uuid4().hex[:12]}",
         f"--runtime={RUNTIME}",
         "--network=none",
         "--read-only",
@@ -77,13 +78,17 @@ async def run(req: RunIn, authorization: str | None = Header(default=None)) -> d
     if len(data) > 20 * 1024 * 1024:
         raise HTTPException(413, "input too large")
     started = time.perf_counter()
+    name = f"kv-job-{uuid.uuid4().hex[:12]}"
     proc = await asyncio.create_subprocess_exec(
-        *docker_argv(req), stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+        *docker_argv(req, name), stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE)
     try:
         out, err = await asyncio.wait_for(proc.communicate(data), timeout=req.timeout_s + 15)
     except asyncio.TimeoutError:
-        proc.kill()
+        proc.kill()   # kills the docker CLI only; the container itself must be removed too
+        rm = await asyncio.create_subprocess_exec("docker", "rm", "-f", name, stdout=asyncio.subprocess.DEVNULL,
+                                                  stderr=asyncio.subprocess.DEVNULL)
+        await rm.wait()
         raise HTTPException(504, "job timed out") from None
     if proc.returncode != 0:
         raise HTTPException(500, f"job failed (exit {proc.returncode}): {err.decode()[-500:]}")
@@ -92,11 +97,20 @@ async def run(req: RunIn, authorization: str | None = Header(default=None)) -> d
     return {"output": json.loads(out), "duration_ms": int((time.perf_counter() - started) * 1000)}
 
 
+_last_probe: tuple[float, dict] | None = None
+
+
 @app.get("/healthz")
 async def healthz() -> dict:
-    """Proves isolation: the probe job must NOT reach the network."""
+    """Proves isolation: the probe job must NOT reach the network. The result is reused for a
+    minute, so hammering this unauthenticated endpoint cannot spawn containers."""
+    global _last_probe
+    if _last_probe and time.monotonic() - _last_probe[0] < 60:
+        return _last_probe[1]
     probe = await run(RunIn(job="net_probe", timeout_s=10), authorization=f"Bearer {TOKEN}")
     isolated = probe["output"].get("network") is False
     if not isolated:
         raise HTTPException(500, "SANDBOX NOT ISOLATED: probe reached the network")
-    return {"status": "ok", "network_isolated": True, "runtime": RUNTIME}
+    result = {"status": "ok", "network_isolated": True, "runtime": RUNTIME}
+    _last_probe = (time.monotonic(), result)
+    return result

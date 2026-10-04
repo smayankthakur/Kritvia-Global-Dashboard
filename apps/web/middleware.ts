@@ -8,6 +8,7 @@ export function isPublicPath(pathname: string): boolean {
   return (
     PUBLIC_PAGES.includes(pathname) ||
     pathname.startsWith("/upload/") ||
+    pathname.startsWith("/n/") ||
     pathname.startsWith("/api/")
   );
 }
@@ -49,7 +50,7 @@ function withCsp(req: NextRequest, rewriteTo?: URL) {
 export const config = {
   matcher: [
     {
-      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|manifest.webmanifest|sw.js|icons/).*)",
+      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml|opengraph-image|manifest.webmanifest|sw.js|icons/).*)",
       missing: [{ type: "header", key: "next-router-prefetch" }],
     },
   ],

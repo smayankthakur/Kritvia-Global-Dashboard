@@ -335,3 +335,28 @@ async def test_cli_bootstrap_is_idempotent():
     finally:
         await conn.close()
     assert roles == {"org_owner", "approver", "loan_officer", "kitchen_manager"} and sched == "23:30"
+
+
+def test_sender_authentication_comes_from_gmails_own_check():
+    from kritvia_api.services.google import sender_authenticated
+    assert sender_authenticated(["mx.google.com; dkim=pass header.i=@x.in; spf=pass smtp.mailfrom=x.in; dmarc=pass"])
+    assert sender_authenticated(["mx.google.com; dkim=pass header.i=@x.in; spf=pass smtp.mailfrom=x.in"])
+    assert not sender_authenticated(["mx.google.com; dkim=none; spf=softfail; dmarc=fail (p=NONE)"])
+    assert not sender_authenticated(["mx.google.com; spf=pass smtp.mailfrom=x.in"])
+    assert not sender_authenticated([])
+
+
+def test_docx_zip_bomb_is_refused_before_unpacking():
+    import io
+    import zipfile
+
+    from kritvia_api.services.textextract import ExtractionError, extract_text
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("word/document.xml", "<w:p>" + "a" * 5_000_000 + "</w:p>")   # 5 MB of one letter: ratio ~1000x
+    with pytest.raises(ExtractionError):
+        extract_text(buf.getvalue(), "bomb.docx")
+    ok = io.BytesIO()
+    with zipfile.ZipFile(ok, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("word/document.xml", "<w:p><w:t>Rate card for Mehta Stores</w:t></w:p>")
+    assert "Rate card" in extract_text(ok.getvalue(), "fine.docx").text

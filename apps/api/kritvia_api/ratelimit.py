@@ -39,22 +39,29 @@ class RateLimiter:
         return self._redis
 
     async def hit(self, key: str, per_minute: int) -> None:
-        window = int(time.time() // 60)
-        k = f"rl:{key}:{window}"
+        await self.hit_window(key, per_minute, 60)
+
+    async def hit_window(self, key: str, limit: int, seconds: int) -> None:
+        """Counts one request against `limit` per fixed window of `seconds`; 429 beyond it."""
+        window = int(time.time() // seconds)
+        k = f"rl:{key}:{seconds}:{window}"
         backend = await self._backend()
         if backend is not None:
             n = await backend.incr(k)
             if n == 1:
-                await backend.expire(k, 90)
+                await backend.expire(k, seconds + 30)
         else:
             w, n = self._mem.get(k, (window, 0))
             n += 1
             self._mem[k] = (window, n)
             if len(self._mem) > 50_000:  # drop old windows
-                self._mem = {kk: v for kk, v in self._mem.items() if v[0] >= window}
-        if n > per_minute:
-            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many requests, slow down",
-                                headers={"Retry-After": str(60 - int(time.time()) % 60)})
+                now = time.time()
+                self._mem = {kk: v for kk, v in self._mem.items() if (v[0] + 2) * int(kk.split(":")[-2]) > now}
+        if n > limit:
+            retry = seconds - int(time.time()) % seconds
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                                "too many attempts, try again later" if seconds > 60 else "too many requests, slow down",
+                                headers={"Retry-After": str(retry)})
 
 
 limiter = RateLimiter()

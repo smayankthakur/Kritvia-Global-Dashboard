@@ -2,8 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy";
 import { Field, FormError, Input, Select, Switch } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
@@ -23,6 +25,7 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
   const [threshold, setThreshold] = useState("30");
   const [peopleHints, setPeopleHints] = useState(false);
   const [profile, setProfile] = useState({ business_name: "", city: "", about: "", sign_off: "" });
+  const [notice, setNotice] = useState({ privacy_contact_name: "", privacy_contact_email: "", notice_in_replies: false });
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     if (q.data) {
@@ -35,10 +38,15 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
         about: q.data.about ?? "",
         sign_off: q.data.sign_off ?? "",
       });
+      setNotice({
+        privacy_contact_name: q.data.privacy_contact_name ?? "",
+        privacy_contact_email: q.data.privacy_contact_email ?? "",
+        notice_in_replies: Boolean(q.data.notice_in_replies),
+      });
     }
   }, [q.data]);
   const save = useMutation({
-    mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } }, body: { kind, trust_threshold: Number(threshold), speech_people_hints: peopleHints, ...profile } })),
+    mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } }, body: { kind, trust_threshold: Number(threshold), speech_people_hints: peopleHints, ...profile, ...notice } })),
     onSuccess: (d) => {
       qc.setQueryData(["settings", ventureId], d);
       void qc.invalidateQueries({ queryKey: accessKey });
@@ -50,7 +58,8 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
   if (q.isPending) return <SkeletonRows />;
   if (q.isError) return <ErrorState error={q.error} />;
   const t = Number(threshold);
-  const invalid = !Number.isInteger(t) || t < 5 || t > 1000;
+  const badEmail = notice.privacy_contact_email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notice.privacy_contact_email);
+  const invalid = !Number.isInteger(t) || t < 5 || t > 1000 || badEmail;
   return (
     <Card>
       <CardHeader title="Venture" description="The kind decides which agents and screens this venture gets." />
@@ -102,6 +111,40 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
           <Field label="Email sign-off" hint="Default: Team <business name>.">
             <Input value={profile.sign_off} maxLength={120} disabled={!canAdmin} onChange={(e) => setProfile((p) => ({ ...p, sign_off: e.target.value }))} />
           </Field>
+        </fieldset>
+        <fieldset className="space-y-3 rounded-md border border-border p-3">
+          <legend className="px-1 text-sm font-medium">Privacy notice for your customers</legend>
+          <p className="text-xs text-subtle">
+            India&apos;s DPDP Act asks you to tell customers what you collect, why, and whom to contact. Name a privacy contact and
+            Kritvia publishes a notice for this business in English and Hindi, based on the agents you have switched on.
+          </p>
+          <Field label="Privacy contact name" hint="The person who answers privacy questions, e.g. the owner.">
+            <Input value={notice.privacy_contact_name} maxLength={120} disabled={!canAdmin} onChange={(e) => setNotice((n) => ({ ...n, privacy_contact_name: e.target.value }))} />
+          </Field>
+          <Field label="Privacy contact email" hint="Shown on the notice. Leave empty to take the notice down." error={badEmail ? "That email looks wrong" : null}>
+            <Input type="email" value={notice.privacy_contact_email} maxLength={200} disabled={!canAdmin} onChange={(e) => setNotice((n) => ({ ...n, privacy_contact_email: e.target.value.trim() }))} />
+          </Field>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-sm font-medium">Link the notice at the foot of email replies</div>
+              <p className="mt-0.5 text-xs text-subtle">Drafted replies and proposals end with one line linking your notice.</p>
+            </div>
+            <Switch
+              label="Link the notice at the foot of email replies"
+              checked={notice.notice_in_replies}
+              disabled={!canAdmin || !notice.privacy_contact_email}
+              onChange={(v) => setNotice((n) => ({ ...n, notice_in_replies: v }))}
+            />
+          </div>
+          {q.data.notice_url ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-md bg-surface-2 px-3 py-2 text-xs">
+              <span className="min-w-0 truncate font-mono text-muted">{q.data.notice_url}</span>
+              <CopyButton value={q.data.notice_url} />
+              <a href={q.data.notice_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
+                Open <ExternalLink className="h-3 w-3" aria-hidden />
+              </a>
+            </div>
+          ) : null}
         </fieldset>
         <Field label="Time zone">
           <Input value={q.data.timezone} disabled readOnly className="w-48" />

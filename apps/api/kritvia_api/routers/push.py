@@ -37,7 +37,7 @@ async def config(user_id: UserId, db: TenantDB) -> PushConfigOut:
 async def subscribe(body: SubscriptionIn, user_id: UserId, db: TenantDB) -> PushConfigOut:
     if not push.enabled():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "notifications are not set up on this server")
-    if not body.endpoint.startswith("https://") or not {"p256dh", "auth"} <= set(body.keys):
+    if not push.allowed_endpoint(body.endpoint) or not {"p256dh", "auth"} <= set(body.keys):
         raise HTTPException(422, "that does not look like a browser push subscription")
     org = (await db.execute(text("SELECT org_id FROM memberships WHERE user_id = :u ORDER BY created_at LIMIT 1"),
                             {"u": user_id})).scalar()
@@ -74,5 +74,6 @@ async def test_push(user_id: UserId, db: TenantDB) -> dict:
     import asyncio
     ok = await asyncio.gather(*(asyncio.to_thread(
         push._send, r.endpoint, dict(r.keys), {"title": "Kritvia", "body": "Notifications are on.", "url": "/inbox",
-                                                "tag": f"test-{uuid.uuid4().hex[:6]}"}) for r in rows))
-    return {"sent": sum(1 for x in ok if x), "browsers": len(rows)}
+                                                "tag": f"test-{uuid.uuid4().hex[:6]}"}) for r in rows),
+        return_exceptions=True)
+    return {"sent": sum(1 for x in ok if x is True), "browsers": len(rows)}

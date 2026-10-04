@@ -33,6 +33,14 @@ async def _admin(db, venture_id: uuid.UUID) -> uuid.UUID:
     return org
 
 
+async def _admin_or_officer(db, venture_id: uuid.UUID) -> None:
+    """Consents gate lending, so only an admin or a loan officer may record or withdraw one."""
+    ok = (await db.execute(text("SELECT private.can_admin_venture(:v)"
+                                " OR private.has_venture_role(:v, '{loan_officer}')"), {"v": venture_id})).scalar()
+    if not ok:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "only an admin or a loan officer can change consents")
+
+
 # ---------------------------------------------------------------- consents --
 class ConsentIn(BaseModel):
     identifier: str = Field(min_length=3, max_length=200, description="email, phone or PAN of the data principal")
@@ -70,6 +78,7 @@ async def list_consents(venture_id: uuid.UUID, db: TenantDB, identifier: str | N
 async def record_consent(venture_id: uuid.UUID, body: ConsentIn, user_id: UserId, db: TenantDB,
                          svc: Svc) -> ConsentOut:
     org = await venture_org(db, venture_id)
+    await _admin_or_officer(db, venture_id)
     try:
         async with db.begin_nested():
             row = (await db.execute(text(
@@ -87,6 +96,8 @@ async def record_consent(venture_id: uuid.UUID, body: ConsentIn, user_id: UserId
 
 @router.post("/consents/{consent_id}/withdraw", response_model=ConsentOut)
 async def withdraw_consent(venture_id: uuid.UUID, consent_id: uuid.UUID, db: TenantDB) -> ConsentOut:
+    await venture_org(db, venture_id)
+    await _admin_or_officer(db, venture_id)
     try:
         async with db.begin_nested():
             row = (await db.execute(text(

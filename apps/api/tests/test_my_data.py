@@ -4,6 +4,7 @@ from __future__ import annotations
 import uuid
 
 import asyncpg
+import pytest
 
 from conftest import ADMIN_DSN, make_actor
 
@@ -38,7 +39,7 @@ async def test_delete_account_closes_solo_org_and_anonymises(client, monkeypatch
     solo = await make_actor(client, "solo")
     org = (await solo.post("/orgs", json={"name": "Solo Co", "slug": "solo-" + uuid.uuid4().hex[:8]})).json()["id"]
     await solo.post(f"/orgs/{org}/ventures", json={"name": "Shop", "slug": "shop"})
-    sub = {"endpoint": f"https://push.example.com/{uuid.uuid4().hex}", "keys": {"p256dh": "k", "auth": "a"}}
+    sub = {"endpoint": f"https://fcm.googleapis.com/fcm/send/{uuid.uuid4().hex}", "keys": {"p256dh": "k", "auth": "a"}}
     assert (await solo.post("/me/push", json=sub)).status_code == 201
     assert (await solo.post("/auth/me/delete", json={"confirm": "yes"})).status_code == 422
     r = await solo.post("/auth/me/delete", json={"confirm": "DELETE"})
@@ -96,3 +97,21 @@ async def test_support_messages_are_purged_after_two_years():
     finally:
         await conn.close()
     assert left == {new}
+
+
+async def test_closed_org_can_be_restored_for_a_new_owner_account(client):
+    owner = await make_actor(client, "restore-me")
+    org = (await owner.post("/orgs", json={"name": "Restore Co", "slug": "rs-" + uuid.uuid4().hex[:8]})).json()["id"]
+    assert (await owner.post("/auth/me/delete", json={"confirm": "DELETE"})).status_code == 200
+    again = await client.post("/auth/register", json={"email": owner.email, "full_name": "Back", "password": "a long password 9"})
+    assert again.status_code == 201
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        uid = await conn.fetchval("SELECT private.restore_org($1, $2)", uuid.UUID(org), owner.email.upper())
+        closed = await conn.fetchval("SELECT closed_at FROM organisations WHERE id = $1", uuid.UUID(org))
+        role = await conn.fetchval("SELECT role FROM memberships WHERE org_id = $1 AND user_id = $2", uuid.UUID(org), uid)
+        with pytest.raises(asyncpg.RaiseError):
+            await conn.fetchval("SELECT private.restore_org($1, $2)", uuid.UUID(org), owner.email)   # not closed now
+    finally:
+        await conn.close()
+    assert closed is None and role == "org_owner"
