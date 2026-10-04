@@ -23,6 +23,7 @@ from kritvia_api.engine.context import RunContext
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
 from kritvia_api.services import pii
 from kritvia_api.services.memory import canonical
+from kritvia_api.services.quota import plan_for_venture
 from kritvia_api.workflows.common import CURRENCY_IN_TEXT, fmt_inr, money, next_business_slot, parse_inr
 
 wf = registry.register(Workflow(
@@ -252,8 +253,26 @@ async def score(ctx: RunContext, state: dict) -> Goto | Finish:
     return Goto("price", update=update, note=f"score {total} ({priority})")
 
 
+async def _proposal_cap_reached(ctx: RunContext, lead_id: str | None) -> int | None:
+    """The plan's monthly proposal allowance (counted per lead, so redrafts are free) when it is used up."""
+    async with ctx.tx() as conn:
+        limit = (await plan_for_venture(conn, ctx.venture_id)).proposals_per_month
+        if limit is None:
+            return None
+        used = (await conn.execute(text(
+            "SELECT count(DISTINCT lead_id) FROM proposals WHERE venture_id = :v"
+            " AND (CAST(:l AS uuid) IS NULL OR lead_id <> CAST(:l AS uuid))"
+            " AND created_at >= date_trunc('month', now() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata'"),
+            {"v": ctx.venture_id, "l": lead_id})).scalar()
+    return limit if int(used or 0) >= limit else None
+
+
 @wf.step("price", agent="pricing")
-async def price(ctx: RunContext, state: dict) -> Goto:
+async def price(ctx: RunContext, state: dict) -> Goto | Finish:
+    cap = await _proposal_cap_reached(ctx, state.get("lead_id"))
+    if cap is not None:
+        return Finish("proposal_limit", note=f"this plan includes {cap} proposals a month and they are used up; "
+                                             "the lead is saved and scored. Upgrade to Starter for unlimited proposals")
     cfg = await _settings(ctx)
     card = {r["code"]: r for r in await _rate_card(ctx)}
     lines, subtotal = [], Decimal(0)
@@ -398,6 +417,9 @@ async def invite(ctx: RunContext, state: dict) -> Interrupt | Finish:
     to = (inp.get("from_email") or "").strip()
     if not to or not cfg.get("book_call", True):
         return Finish("proposal_sent")
+    async with ctx.tx() as conn:   # calendar invites need a plan with Google Calendar
+        if not (await plan_for_venture(conn, ctx.venture_id)).allows_integration("calendar"):
+            return Finish("proposal_sent")
     start, end = next_business_slot(hour=int(cfg["meeting_hour_ist"]), minutes=int(cfg["meeting_minutes"]))
     who = ex.get("company") or ex.get("contact_name") or to
     return Interrupt(

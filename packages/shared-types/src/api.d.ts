@@ -5015,10 +5015,16 @@ export interface components {
         /** SubscribeIn */
         SubscribeIn: {
             /**
+             * Period
+             * @default monthly
+             * @enum {string}
+             */
+            period: "monthly" | "annual";
+            /**
              * Plan
              * @enum {string}
              */
-            plan: "starter" | "pro";
+            plan: "starter" | "growth" | "scale";
         };
         /** SubscribeOut */
         SubscribeOut: {

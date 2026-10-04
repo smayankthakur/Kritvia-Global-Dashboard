@@ -31,6 +31,7 @@ from kritvia_api.engine.core import Finish, Goto, Interrupt, registry
 from kritvia_api.services.crypto import EnvelopeCrypto
 from kritvia_api.services import push
 from kritvia_api.services.model_router import AgentBudgetExceeded
+from kritvia_api.services.quota import require_agent
 
 log = logging.getLogger("kritvia.runner")
 
@@ -92,6 +93,7 @@ async def start_run(
             raise ValueError(f"workflow {workflow} does not apply to a {v.kind} venture")
         if not v.enabled:
             raise ValueError(f"workflow {workflow} is disabled for this venture")
+        await require_agent(conn, venture_id, workflow, v.kind)   # PlanRestricted when the plan lacks it
         if actor_type == "user" and wf.authorize_input is not None:
             await wf.authorize_input(conn, venture_id, input)
 

@@ -21,6 +21,7 @@ from kritvia_api.errors import raise_for_db
 from kritvia_api.services import memory
 from kritvia_api.services.crypto import EnvelopeCrypto
 from kritvia_api.services.model_router import QuotaExceeded, RouterError
+from kritvia_api.services.quota import require_storage
 from kritvia_api.services.textextract import ExtractionError
 
 router = APIRouter(tags=["knowledge"])
@@ -506,6 +507,7 @@ async def upload_meeting(venture_id: uuid.UUID, user_id: UserId, svc: Svc, file:
     doc_id = uuid.uuid4()
     async with tenant_tx(user_id) as conn:
         org = await venture_org(conn, venture_id)
+        await require_storage(conn, org, len(data), svc.router.local_deployments())
         try:
             async with conn.begin_nested():
                 raw = await EnvelopeCrypto(conn, svc.keys).encrypt(venture_id, memory.RAW_PURPOSE, data)

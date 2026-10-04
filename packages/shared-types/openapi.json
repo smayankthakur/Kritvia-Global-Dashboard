@@ -6356,10 +6356,20 @@
       },
       "SubscribeIn": {
         "properties": {
+          "period": {
+            "default": "monthly",
+            "enum": [
+              "monthly",
+              "annual"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
           "plan": {
             "enum": [
               "starter",
-              "pro"
+              "growth",
+              "scale"
             ],
             "title": "Plan",
             "type": "string"

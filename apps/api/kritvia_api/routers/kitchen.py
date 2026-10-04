@@ -21,6 +21,7 @@ from kritvia_api.errors import raise_for_db
 from kritvia_api.routers.knowledge import read_upload
 from kritvia_api.workflows.common import today_ist
 from kritvia_api.workflows.kitchen import dish_maps, parse_sales_csv, upsert_sales
+from kritvia_api.services.quota import PlanRestricted
 
 router = APIRouter(prefix="/ventures/{venture_id}/kitchen", tags=["kitchen"])
 
@@ -402,7 +403,7 @@ async def run_now(venture_id: uuid.UUID, body: KitchenRunIn, user_id: UserId, sv
     except LookupError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found") from None
     except ValueError as exc:
-        raise HTTPException(422, str(exc)) from None
+        raise HTTPException(402 if isinstance(exc, PlanRestricted) else 422, str(exc)) from None
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return StartedOut(run_id=run_id)

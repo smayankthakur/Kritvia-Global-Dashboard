@@ -8,7 +8,7 @@ import { cn } from "@/components/ui/cn";
 export function ApprovalPreview({ className }: { className?: string }) {
   return (
     <div aria-hidden className={cn("relative select-none", className)}>
-      <div className="absolute -inset-x-6 -top-6 -bottom-8 -z-10 rounded-[2rem] bg-[radial-gradient(closest-side,var(--accent-soft),transparent)] blur-2xl" />
+      <div className="absolute -inset-x-2 -top-6 -bottom-8 -z-10 rounded-[2rem] sm:-inset-x-6 bg-[radial-gradient(closest-side,var(--accent-soft),transparent)] blur-2xl" />
       <div className="kv-stagger space-y-3">
         <div className="flex items-center justify-between glass rounded-2xl border px-4 py-3">
           <div className="flex items-center gap-2.5">

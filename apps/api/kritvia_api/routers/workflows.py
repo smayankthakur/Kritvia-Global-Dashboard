@@ -15,6 +15,7 @@ from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.core import registry
 from kritvia_api.engine.runner import DuplicateTrigger, cancel_run, retry_run, start_run
 from kritvia_api.errors import raise_for_db
+from kritvia_api.services.quota import PlanRestricted, require_agent
 
 router = APIRouter(tags=["workflows"])
 
@@ -87,6 +88,13 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found")
     if len(json.dumps(body.settings)) > 20000:
         raise HTTPException(422, "settings too large")
+    if body.enabled:
+        kind = (await db.execute(text("SELECT coalesce(kind, 'general') FROM venture_settings WHERE venture_id = :v"),
+                                 {"v": venture_id})).scalar()
+        try:
+            await require_agent(db, venture_id, workflow, kind)
+        except PlanRestricted as exc:
+            raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
     try:
         async with db.begin_nested():
             row = (await db.execute(text(
@@ -142,7 +150,7 @@ async def start(venture_id: uuid.UUID, body: RunIn, user_id: UserId, svc: Svc) -
     except LookupError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found") from None
     except ValueError as exc:
-        raise HTTPException(422, str(exc)) from None
+        raise HTTPException(402 if isinstance(exc, PlanRestricted) else 422, str(exc)) from None
     except DuplicateTrigger:
         raise HTTPException(status.HTTP_409_CONFLICT, "already started") from None
     except DBAPIError as exc:
@@ -276,5 +284,5 @@ async def sample_run(venture_id: uuid.UUID, user_id: UserId, svc: Svc, db: Tenan
     except LookupError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found") from None
     except ValueError as exc:
-        raise HTTPException(422, str(exc)) from None
+        raise HTTPException(402 if isinstance(exc, PlanRestricted) else 422, str(exc)) from None
     return SampleOut(run_id=run_id, workflow=workflow)

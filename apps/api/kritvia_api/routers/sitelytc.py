@@ -16,6 +16,7 @@ from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.runner import start_run
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services.crypto import EnvelopeCrypto
+from kritvia_api.services.quota import PlanRestricted
 
 router = APIRouter(tags=["sitelytc"])
 
@@ -88,7 +89,7 @@ async def inquiry(venture_id: uuid.UUID, body: InquiryIn, user_id: UserId, svc: 
     except LookupError:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found") from None
     except ValueError as exc:
-        raise HTTPException(422, str(exc)) from None
+        raise HTTPException(402 if isinstance(exc, PlanRestricted) else 422, str(exc)) from None
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return StartedOut(run_id=run_id)

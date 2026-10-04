@@ -1,4 +1,5 @@
-"""Plan limits: hosted-model tokens per month, ventures and members per organisation."""
+"""Plan limits: hosted-model tokens per month, businesses, people and business memory per
+organisation, and which agents and integrations a plan includes."""
 from __future__ import annotations
 
 import time
@@ -9,7 +10,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import text
 
 from kritvia_api.config import get_settings
-from kritvia_api.plans import Plan, plan as plan_of
+from kritvia_api.plans import AGENT_NAMES, INTEGRATION_NAMES, Plan, plan as plan_of
 
 
 @dataclass
@@ -18,6 +19,7 @@ class Usage:
     tokens: int
     ventures: int
     members: int
+    storage: int = 0
 
     @property
     def tokens_left(self) -> int | None:
@@ -26,7 +28,7 @@ class Usage:
 
     def as_dict(self) -> dict:
         return {"plan": self.plan.as_dict(), "tokens": self.tokens, "tokens_left": self.tokens_left,
-                "ventures": self.ventures, "members": self.members}
+                "ventures": self.ventures, "members": self.members, "storage_bytes": self.storage}
 
 
 async def org_usage(conn, org_id: uuid.UUID, local: list[str]) -> Usage | None:
@@ -35,7 +37,7 @@ async def org_usage(conn, org_id: uuid.UUID, local: list[str]) -> Usage | None:
     if row is None:
         return None
     return Usage(plan_of(row.plan or get_settings().default_plan), int(row.tokens), int(row.ventures),
-                 int(row.members))
+                 int(row.members), int(row.storage))
 
 
 class TokenGate:
@@ -89,3 +91,47 @@ async def require_room(conn, org_id: uuid.UUID, what: str, local: list[str]) -> 
         noun = ("business" if lim == 1 else "businesses") if what == "venture" else ("person" if lim == 1 else "people")
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
                             f"the {u.plan.name} plan includes {lim} {noun}; upgrade to add more")
+
+
+class PlanRestricted(ValueError):
+    """The organisation's plan does not include this agent, integration or amount."""
+
+
+def _human_bytes(n: int) -> str:
+    return f"{n / 1024 ** 3:.1f} GB" if n >= 1024 ** 3 else f"{max(n, 0) / 1024 ** 2:.0f} MB"
+
+
+async def plan_for_venture(conn, venture_id: uuid.UUID) -> Plan:
+    code = (await conn.execute(text("SELECT venture_plan(:v)"), {"v": venture_id})).scalar()
+    return plan_of(code or get_settings().default_plan)
+
+
+def upgrade_hint(p: Plan) -> str:
+    return {"free": "Starter", "starter": "Growth", "growth": "Scale"}.get(p.code, "a bigger plan")
+
+
+async def require_agent(conn, venture_id: uuid.UUID, workflow: str, kind: str | None) -> None:
+    p = await plan_for_venture(conn, venture_id)
+    if not p.allows_agent(workflow, kind):
+        name = AGENT_NAMES.get(workflow, workflow)
+        raise PlanRestricted(f"the {p.name} plan doesn't include {name}; upgrade to {upgrade_hint(p)} to switch it on")
+
+
+async def require_integration(conn, venture_id: uuid.UUID, integration: str) -> None:
+    p = await plan_for_venture(conn, venture_id)
+    if not p.allows_integration(integration):
+        name = INTEGRATION_NAMES.get(integration, integration)
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                            f"the {p.name} plan doesn't include {name}; upgrade to {upgrade_hint(p)} to connect it")
+
+
+async def require_storage(conn, org_id: uuid.UUID, adding: int, local: list[str]) -> None:
+    """Refuses (402) a new document or recording that would take business memory past the plan."""
+    u = await org_usage(conn, org_id, local)
+    if u is None or u.plan.storage_bytes is None:
+        return
+    if u.storage + adding > u.plan.storage_bytes:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                            f"business memory is full on the {u.plan.name} plan ({_human_bytes(u.storage)} of "
+                            f"{_human_bytes(u.plan.storage_bytes)} used); delete documents or upgrade to "
+                            f"{upgrade_hint(u.plan)}")

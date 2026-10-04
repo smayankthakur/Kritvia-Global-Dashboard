@@ -17,6 +17,7 @@ from sqlalchemy import text
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import TenantDB
+from kritvia_api.plans import LEGACY, SELF_SERVE, plan as plan_of
 from kritvia_api.ratelimit import client_ip, limiter
 
 router = APIRouter(tags=["billing"])
@@ -25,8 +26,12 @@ transport: httpx.AsyncBaseTransport | None = None   # tests inject a mock
 
 
 def _plan_ids() -> dict[str, str]:
+    """{"starter": id, "starter_annual": id, "growth": ..., "scale_annual": ...} for the configured ones."""
     s = get_settings()
-    return {k: v for k, v in {"starter": s.razorpay_plan_starter, "pro": s.razorpay_plan_pro}.items() if v}
+    ids = {"starter": s.razorpay_plan_starter, "starter_annual": s.razorpay_plan_starter_annual,
+           "growth": s.razorpay_plan_growth or s.razorpay_plan_pro, "growth_annual": s.razorpay_plan_growth_annual,
+           "scale": s.razorpay_plan_scale, "scale_annual": s.razorpay_plan_scale_annual}
+    return {k: v for k, v in ids.items() if v}
 
 
 def _configured() -> bool:
@@ -110,7 +115,8 @@ async def put_profile(org_id: uuid.UUID, body: BillingProfile, db: TenantDB) -> 
 
 
 class SubscribeIn(BaseModel):
-    plan: Literal["starter", "pro"]
+    plan: Literal["starter", "growth", "scale"]
+    period: Literal["monthly", "annual"] = "monthly"
 
 
 class SubscribeOut(BaseModel):
@@ -125,15 +131,17 @@ async def subscribe(org_id: uuid.UUID, body: SubscribeIn, db: TenantDB) -> Subsc
     await _require_owner(db, org_id)
     if not _configured():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "payments are not set up on this server yet")
-    plan_id = _plan_ids().get(body.plan)
+    key = body.plan if body.period == "monthly" else f"{body.plan}_annual"
+    plan_id = _plan_ids().get(key)
     if not plan_id:
-        raise HTTPException(422, "this plan is not available for purchase")
+        raise HTTPException(422, f"the {body.period} {body.plan} plan is not available for purchase yet")
     prof = (await db.execute(text("SELECT legal_name, gstin, email FROM billing_profiles WHERE org_id = :o"),
                              {"o": org_id})).first()
-    notes = {"org_id": str(org_id), "plan": body.plan}
+    notes = {"org_id": str(org_id), "plan": body.plan, "period": body.period}
     if prof:
         notes.update({"legal_name": prof.legal_name[:200], "gstin": prof.gstin or ""})
-    sub = await _razorpay("POST", "/subscriptions", {"plan_id": plan_id, "total_count": 120, "quantity": 1,
+    count = 120 if body.period == "monthly" else 10      # ten years either way
+    sub = await _razorpay("POST", "/subscriptions", {"plan_id": plan_id, "total_count": count, "quantity": 1,
                                                       "customer_notify": 1, "notes": notes})
     return SubscribeOut(subscription_id=sub["id"], checkout_url=sub["short_url"])
 
@@ -181,13 +189,15 @@ async def razorpay_webhook(request: Request) -> dict:
         org_id = uuid.UUID(str(notes.get("org_id", "")))
     except ValueError:
         return {"ignored": "no organisation in notes"}
-    by_id = {v: k for k, v in _plan_ids().items()}
+    by_id = {v: k.removesuffix("_annual") for k, v in _plan_ids().items()}
     plan = None
     status_ = sub.get("status")
     if name.startswith("subscription."):
         paid = PLAN_FOR_STATUS.get(name.split(".", 1)[1])
         if paid is True:
-            plan = by_id.get(sub.get("plan_id", "")) or notes.get("plan")
+            plan = by_id.get(sub.get("plan_id", "")) or LEGACY.get(notes.get("plan", ""), notes.get("plan"))
+            if plan not in SELF_SERVE:
+                plan = None   # only plans sold through checkout change here; Enterprise is set by hand
         elif paid is False and name.split(".", 1)[1] in ("halted", "cancelled", "completed", "paused"):
             plan = "free"
     renews = datetime.fromtimestamp(sub["current_end"], UTC) if sub.get("current_end") else None
@@ -200,4 +210,8 @@ async def razorpay_webhook(request: Request) -> dict:
     if fresh and plan:
         from kritvia_api.engine.context import get_services
         get_services().router.gate.forget(org_id)
+        cap = plan_of(plan).autonomy_per_agent
+        if cap != 0:   # a smaller plan: switch off earned autonomy beyond what it allows
+            async with tenant_tx(None, "system") as conn:
+                await conn.execute(text("SELECT limit_autonomy(:o, :c)"), {"o": org_id, "c": cap or 0})
     return {"ok": True, "duplicate": not fresh}

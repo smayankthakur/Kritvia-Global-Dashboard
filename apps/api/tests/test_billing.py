@@ -19,7 +19,7 @@ SECRET = "whsec_test"
 def _configure(monkeypatch):
     s = get_settings()
     for k, v in {"razorpay_key_id": "rzp_test_x", "razorpay_key_secret": "sec", "razorpay_webhook_secret": SECRET,
-                 "razorpay_plan_starter": "plan_S", "razorpay_plan_pro": "plan_P", "default_plan": "free"}.items():
+                 "razorpay_plan_starter": "plan_S", "razorpay_plan_growth": "plan_P", "default_plan": "free"}.items():
         monkeypatch.setattr(s, k, v)
     seen = []
 
@@ -83,7 +83,7 @@ async def test_billing_is_owner_only(world, monkeypatch):
     _configure(monkeypatch)
     alice, org = world["alice"], world["org"]          # alice operates a venture, does not own the org
     assert (await alice.get(f"/orgs/{org}/billing")).status_code == 404
-    assert (await alice.post(f"/orgs/{org}/billing/subscribe", json={"plan": "pro"})).status_code == 404
+    assert (await alice.post(f"/orgs/{org}/billing/subscribe", json={"plan": "growth"})).status_code == 404
 
 
 async def test_webhook_cannot_downgrade_internal(client, monkeypatch, world):

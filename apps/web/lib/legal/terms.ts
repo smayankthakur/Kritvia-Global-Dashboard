@@ -29,7 +29,7 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 - **Agent:** a configured workflow in the Service that uses AI models to read Customer Data and propose or take actions.
 - **Approval:** the step in which a User reviews an Agent's proposed action and approves, edits or rejects it before it is carried out.
 - **User:** an individual you invite or permit to use the Service under your organisation, including your employees and contractors.
-- **Plan:** the subscription tier you choose (currently Free, Starter or Pro), with the limits shown on our pricing page and in the app.
+- **Plan:** the subscription tier you choose (currently Free, Starter, Growth, Scale or Enterprise), with the limits shown on our pricing page and in the app.
 - **DPDP Act:** the Digital Personal Data Protection Act, 2023 and the Digital Personal Data Protection Rules, 2025, as they come into force and as amended.
 
 ## 3. The Service
@@ -132,13 +132,17 @@ We may remove content or suspend access under clause 14 if we reasonably believe
 
 10.1 **Plans and prices.** Current Plans and prices are shown on our pricing page and in the app. At the date of these Terms they are:
 
-| Plan | Price per month (excluding GST) | Main limits |
+| Plan | Price (excluding GST) | Main limits |
 | --- | --- | --- |
-| Free | ₹0 | 1 business, 2 Users, 300,000 hosted-AI tokens; every Agent action needs Approval |
-| Starter | ₹1,999 | 3 businesses, 5 Users, 3 million hosted-AI tokens; per-Agent budgets |
-| Pro | ₹5,999 | 10 businesses, 20 Users, 15 million hosted-AI tokens; per-Agent budgets |
+| Free | ₹0 | 1 business, 2 Users, 300,000 hosted-AI tokens a month, 500 MB business memory, 10 proposals a month; every Agent action needs Approval |
+| Starter | ₹2,499 a month or ₹24,990 a year | 1 business, 5 Users, 3 million hosted-AI tokens a month, 10 GB business memory; each Agent may act without Approval on one kind of action |
+| Growth | ₹6,999 a month or ₹69,990 a year | 3 businesses, 15 Users, 15 million hosted-AI tokens a month, 50 GB business memory |
+| Scale | ₹14,999 a month or ₹1,49,990 a year | 10 businesses, 50 Users, 50 million hosted-AI tokens a month, 250 GB business memory |
+| Enterprise | From ₹29,999 a month, by order form | As agreed in the order form |
 
-10.2 **Billing.** Paid Plans are billed monthly in advance through our payment partner, Razorpay, and renew automatically each month until cancelled. You authorise recurring charges to the payment method you set up. We do not see or store full card or bank details.
+Extra hosted-AI usage can be bought in packs (5 million tokens for ₹1,499, 20 million for ₹4,999, 50 million for ₹9,999), usable in the calendar month of purchase.
+
+10.2 **Billing.** Paid Plans are billed monthly or yearly in advance, as you choose, through our payment partner, Razorpay, and renew automatically at the end of each period until cancelled. You authorise recurring charges to the payment method you set up. We do not see or store full card or bank details.
 
 10.3 **Taxes.** Prices exclude Goods and Services Tax, which we charge at the applicable rate (currently 18%) and show on a GST-compliant tax invoice. If you give us your GSTIN before payment, the invoice will carry it so that you can claim input tax credit. If you must deduct tax at source, you will send us the TDS certificate within the statutory time; otherwise you will pay the amount withheld.
 

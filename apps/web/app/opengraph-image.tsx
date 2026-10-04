@@ -51,7 +51,7 @@ export default function OpengraphImage() {
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 24, color: "#a8adc7" }}>
-          <div>Free to start · Starter Rs 1,999 a month</div>
+          <div>Free to start · Starter Rs 2,499 a month</div>
           <div>Data stored in India</div>
         </div>
       </div>

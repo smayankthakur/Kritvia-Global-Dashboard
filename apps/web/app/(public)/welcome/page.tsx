@@ -1,9 +1,11 @@
-import { ArrowRight, BookOpen, Check, Inbox, Landmark, Lock, Mic, Network, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Inbox, Landmark, Lock, Mic, Network, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ApprovalPreview } from "@/components/public/approval-preview";
+import { PublicPricing } from "@/components/public/pricing-table";
 import { PublicShell } from "@/components/public/doc-page";
 import { buttonClass } from "@/components/ui/button";
+import { PLAN_CARDS, TOKEN_PACKS, rupees } from "@/lib/pricing";
 import { INDEX, SITE_URL, share } from "@/lib/site";
 
 const TITLE = "Kritvia — AI agents for Indian businesses that draft; you approve";
@@ -50,11 +52,6 @@ const PLATFORM = [
   { icon: ShieldCheck, title: "Earned autonomy", text: "An agent acts alone on one action only after a long run of approvals without edits — and you can take it back." },
 ];
 
-const PLANS = [
-  { name: "Free", price: "₹0", lines: ["300k AI tokens a month", "1 business, 2 people", "Agents always ask before acting", "Memory, voice, mind map"] },
-  { name: "Starter", price: "₹1,999", lines: ["3M AI tokens a month", "3 businesses, 5 people", "Agents can earn the right to act alone", "Everything in Free"], featured: true },
-  { name: "Pro", price: "₹5,999", lines: ["15M AI tokens a month", "10 businesses, 20 people", "Agents can earn the right to act alone", "Everything in Starter"] },
-];
 
 const TRUST = [
   "Each business is sealed off in the database itself (row-level security).",
@@ -75,10 +72,10 @@ function JsonLd() {
     description: DESCRIPTION,
     url: SITE_URL,
     publisher: { "@type": "Organization", name: "Sitelytc Digital Media Private Limited", url: "https://sitelytc.com" },
-    offers: PLANS.map((p) => ({
+    offers: PLAN_CARDS.map((p) => ({
       "@type": "Offer",
       name: p.name,
-      price: p.price.replace(/[^0-9]/g, "") || "0",
+      price: String(p.price_inr),
       priceCurrency: "INR",
     })),
   };
@@ -196,36 +193,15 @@ export default function WelcomePage() {
         <SectionHead
           id="pricing"
           eyebrow="Pricing"
-          title="Simple monthly plans"
-          text="Prices per month, plus 18% GST. Paid through Razorpay; cancel any time and finish the month."
+          title="Plans that grow with your business"
+          text="Cheaper than a part-time operations assistant. Prices plus 18% GST; cancel any time and keep the month you paid for."
         />
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          {PLANS.map((p) => (
-            <div
-              key={p.name}
-              className={
-                "kv-lift glass glass-sheen flex flex-col rounded-2xl border p-6 " + (p.featured ? "border-accent ring-1 ring-accent" : "")
-              }
-            >
-              <h3 className="font-semibold text-fg">{p.name}</h3>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-fg tabular-nums">
-                {p.price}
-                <span className="ml-1 text-sm font-normal text-subtle">/month</span>
-              </p>
-              <ul className="mt-5 flex-1 space-y-2.5 text-sm text-muted">
-                {p.lines.map((l) => (
-                  <li key={l} className="flex gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
-                    {l}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/register" className={buttonClass(p.featured ? "primary" : "secondary", "md", "mt-6 w-full")}>
-                {p.name === "Free" ? "Start free" : "Get started"}
-              </Link>
-            </div>
-          ))}
+        <div className="mt-8">
+          <PublicPricing plans={PLAN_CARDS} />
         </div>
+        <p className="mt-4 text-center text-sm text-muted">
+          Need more AI in a busy month? Add {TOKEN_PACKS.map((t) => `${t.tokens / 1_000_000}M tokens for ${rupees(t.price_inr)}`).join(", ")}.
+        </p>
       </section>
 
       <section aria-labelledby="trust" className="py-12">

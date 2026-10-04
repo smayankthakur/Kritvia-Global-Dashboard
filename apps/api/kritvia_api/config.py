@@ -85,8 +85,14 @@ class Settings(BaseSettings):
     vapid_public_key: str = ""
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:support@sitelytc.com"
+    # Razorpay plan ids, one per plan and billing period (create them in the Razorpay dashboard).
     razorpay_plan_starter: str = ""
-    razorpay_plan_pro: str = ""
+    razorpay_plan_starter_annual: str = ""
+    razorpay_plan_growth: str = ""
+    razorpay_plan_growth_annual: str = ""
+    razorpay_plan_scale: str = ""
+    razorpay_plan_scale_annual: str = ""
+    razorpay_plan_pro: str = ""          # before 2026–27; used for Growth monthly when RAZORPAY_PLAN_GROWTH is unset
 
     # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
     signup_open: bool = True            # false: only existing accounts and invitees can sign in

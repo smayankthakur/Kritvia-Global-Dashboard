@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CreditCard, ExternalLink } from "lucide-react";
+import { CreditCard, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,13 @@ import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap } from "@/lib/api";
 import { useAccess } from "@/lib/access";
 import { formatDate, formatDateTime, formatINR } from "@/lib/format";
+import { PricingTable } from "@/components/public/pricing-table";
+import { rupees, type Period, type PlanCard } from "@/lib/pricing";
 
-interface PlanInfo {
-  code: string;
-  name: string;
-  price_inr: number;
-  monthly_tokens: number | null;
+interface PlanInfo extends PlanCard {
   max_ventures: number | null;
   max_members: number | null;
+  storage_bytes: number | null;
   autonomy: boolean;
 }
 interface PlanOut {
@@ -30,39 +29,37 @@ interface PlanOut {
   tokens_left: number | null;
   ventures: number;
   members: number;
+  storage_bytes: number;
   renews_at: string | null;
   available: PlanInfo[];
+  token_packs: { code: string; tokens: number; price_inr: number }[];
 }
+type SelfServe = "starter" | "growth" | "scale";
+const SELF_SERVE = ["starter", "growth", "scale"];
 
+const fmtBytes = (n: number) => (n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(n % 1024 ** 3 ? 1 : 0)} GB` : `${Math.round(n / 1024 ** 2)} MB`);
 const fmtTokens = (n: number) => (n < 1000 ? String(n) : n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M` : `${Math.round(n / 1000)}k`);
 
-function Meter({ label, used, limit, unit = "" }: { label: string; used: number; limit: number | null; unit?: string }) {
+function Meter({ label, used, limit, unit = "" }: { label: string; used: number; limit: number | null; unit?: "" | "tokens" | "bytes" }) {
+  const fmt = (n: number) => (unit === "tokens" ? fmtTokens(n) : unit === "bytes" ? fmtBytes(n) : String(n));
   const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   return (
     <div>
       <div className="mb-1 flex justify-between text-sm">
         <span className="font-medium">{label}</span>
         <span className="text-muted">
-          {unit === "tokens" ? fmtTokens(used) : used} {limit === null ? "· unlimited" : `of ${unit === "tokens" ? fmtTokens(limit) : limit}`}
+          {fmt(used)} {limit === null ? "· unlimited" : `of ${fmt(limit)}`}
         </span>
       </div>
       {limit !== null ? (
         <div className="h-2 overflow-hidden rounded-full bg-surface-3" role="meter" aria-valuenow={used} aria-valuemin={0} aria-valuemax={limit} aria-label={label}>
-          <div className={`h-full rounded-full ${unit === "tokens" && pct >= 90 ? "bg-danger" : unit === "tokens" && pct >= 70 ? "bg-warning" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+          <div className={`h-full rounded-full transition-[width] duration-500 ease-out ${unit && pct >= 90 ? "bg-danger" : unit && pct >= 70 ? "bg-warning" : "bg-accent"}`} style={{ width: `${pct}%` }} />
         </div>
       ) : null}
     </div>
   );
 }
 
-function features(p: PlanInfo): string[] {
-  return [
-    p.monthly_tokens === null ? "Unlimited AI" : `${fmtTokens(p.monthly_tokens)} AI tokens a month`,
-    p.max_ventures === null ? "Unlimited businesses" : `${p.max_ventures} business${p.max_ventures > 1 ? "es" : ""}`,
-    p.max_members === null ? "Unlimited people" : `${p.max_members} people`,
-    p.autonomy ? "Agents can earn the right to act alone" : "Agents always ask before acting",
-  ];
-}
 
 export default function BillingPage() {
   const { org, isOwner } = useAccess();
@@ -102,7 +99,7 @@ export default function BillingPage() {
     onError: (e) => setErr(errorMessage(e)),
   });
   const subscribe = useMutation({
-    mutationFn: (code: "starter" | "pro") => unwrap(api.POST("/orgs/{org_id}/billing/subscribe", { params: { path: { org_id: org!.id } }, body: { plan: code } })),
+    mutationFn: (v: { plan: SelfServe; period: Period }) => unwrap(api.POST("/orgs/{org_id}/billing/subscribe", { params: { path: { org_id: org!.id } }, body: v })),
     onSuccess: (d) => window.location.assign(d.checkout_url),
     onError: (e) => toast.error(errorMessage(e)),
   });
@@ -122,62 +119,71 @@ export default function BillingPage() {
 
   return (
     <>
-      <PageHeader eyebrow={org.name} title="Plan & billing" description="Your plan, this month's usage, and payments. Prices are per month, plus 18% GST." />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <PageHeader eyebrow={org.name} title="Plan & billing" description="Your plan, this month's usage, and payments. Prices plus 18% GST; pay monthly, or yearly and get two months free." />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader title={`${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : p.plan.code === "free" ? "Free forever" : undefined} />
           <div className="space-y-4 p-4">
             <Meter label="AI this month" used={p.tokens} limit={p.plan.monthly_tokens} unit="tokens" />
             <Meter label="Businesses" used={p.ventures} limit={p.plan.max_ventures} />
             <Meter label="People" used={p.members} limit={p.plan.max_members} />
+            <Meter label="Business memory" used={p.storage_bytes} limit={p.plan.storage_bytes} unit="bytes" />
             {p.tokens_left === 0 ? (
               <Notice tone="warning" title="AI allowance used">
-                Kritvia keeps working on your server&apos;s private model; steps that need a hosted model wait until next month or an upgrade.
+                Kritvia keeps working on your server&apos;s private model; steps that need a hosted model wait until next month, an extra usage pack or an upgrade.
               </Notice>
             ) : null}
             <p className="text-xs text-subtle">Only hosted models count. Private (local) model use is always free.</p>
           </div>
         </Card>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {p.available.map((a) => {
-            const current = a.code === p.plan.code;
-            return (
-              <Card key={a.code} className={`flex flex-col p-4 ${current ? "ring-2 ring-accent" : ""}`}>
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold">{a.name}</h2>
-                  {current ? <Badge tone="accent">Current</Badge> : null}
+        <Card>
+          <CardHeader title="Extra AI usage" description="For a busy month. A pack adds hosted-AI tokens for the month you buy it." />
+          <ul className="divide-y divide-border">
+            {p.token_packs.map((t) => (
+              <li key={t.code} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">+{fmtTokens(t.tokens)} tokens</p>
+                  <p className="text-xs text-subtle">{rupees(t.price_inr)} + GST</p>
                 </div>
-                <p className="mt-2 text-2xl font-semibold">
-                  {a.price_inr ? formatINR(a.price_inr, { whole: true }) : "₹0"}
-                  <span className="text-sm font-normal text-subtle">/month</span>
-                </p>
-                <ul className="mt-3 flex-1 space-y-1.5 text-sm text-muted">
-                  {features(a).map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                {a.code !== "free" && !current && p.plan.code !== "internal" ? (
-                  <Button
-                    variant="primary"
-                    className="mt-4"
-                    disabled={!isOwner || !billing.data?.configured}
-                    loading={subscribe.isPending && subscribe.variables === a.code}
-                    onClick={() => subscribe.mutate(a.code as "starter" | "pro")}
-                  >
-                    Upgrade
-                  </Button>
-                ) : null}
-              </Card>
-            );
-          })}
-        </div>
+                <Button size="sm" disabled title="Usage packs go on sale when online payments are live">
+                  Available soon
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
 
+      <section aria-labelledby="plans" className="mt-8">
+        <h2 id="plans" className="mb-4 text-lg font-semibold">
+          Plans
+        </h2>
+        <PricingTable
+          plans={p.available.filter((a) => a.code !== "enterprise")}
+          current={p.plan.code}
+          action={(a, period) => {
+            if (a.code === p.plan.code) return <Button className="w-full" disabled>Your plan</Button>;
+            if (p.plan.code === "internal") return <Button className="w-full" disabled>Included</Button>;
+            if (!SELF_SERVE.includes(a.code)) return null;
+            const live = Boolean(billing.data?.configured);
+            return (
+              <Button
+                variant={a.featured ? "primary" : "secondary"}
+                className="w-full"
+                disabled={!isOwner || !live}
+                title={live ? undefined : "Upgrades open when online payments are live"}
+                loading={subscribe.isPending && subscribe.variables?.plan === a.code}
+                onClick={() => subscribe.mutate({ plan: a.code as SelfServe, period })}
+              >
+                {live ? `Choose ${a.name}` : "Available soon"}
+              </Button>
+            );
+          }}
+        />
+      </section>
+
       {isOwner ? (
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-8 grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader title="Billing details" description="Shown on your GST invoices. Add your GSTIN to claim input tax credit." />
             <form

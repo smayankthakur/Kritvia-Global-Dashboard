@@ -30,6 +30,7 @@ from kritvia_api.db.session import tenant_tx
 from kritvia_api.services import llm, pii
 from kritvia_api.services.crypto import EnvelopeCrypto, KeyProvider
 from kritvia_api.services.model_router import CallContext, ModelRouter, RouterError, embed
+from kritvia_api.services.quota import require_storage
 from kritvia_api.services.textextract import extract_text
 
 CHUNK_CHARS = 1200
@@ -199,6 +200,8 @@ async def ingest(
             {"v": actor.venture_id, "h": sha, "k": kind})).first()
     if existing:
         return IngestResult(existing.id, True, 0, existing.sensitive, list(existing.pii_tags), True)
+    async with actor.tx() as conn:   # business memory is capped by the plan
+        await require_storage(conn, actor.org_id, len(raw), _router(actor).local_deployments())
 
     warnings: list[str] = []
     method = "provided"

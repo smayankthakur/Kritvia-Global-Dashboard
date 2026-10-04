@@ -27,6 +27,7 @@ from kritvia_api.services.crypto import EnvelopeCrypto
 from kritvia_api.services.google import GoogleError
 from kritvia_api.services.messaging import load_google
 from kritvia_api.workflows.lead_triage import lead_from_webhook
+from kritvia_api.services.quota import PlanRestricted, plan_for_venture, require_integration
 
 router = APIRouter(tags=["connectors"])
 SECRET = "connector.secret"
@@ -187,6 +188,7 @@ async def drive_import(venture_id: uuid.UUID, body: DriveImportIn, user_id: User
     """Pull Drive files (proposals, SOPs, templates) into the knowledge base."""
     async with tenant_tx(user_id) as db:
         org = await _require_admin(db, venture_id)
+        await require_integration(db, venture_id, "drive")
         run_as = (await db.execute(text("SELECT venture_service_account(:v)"), {"v": venture_id})).scalar_one()
     from kritvia_api.engine.context import RunContext
     ctx = RunContext(run_id=uuid.uuid4(), org_id=org, venture_id=venture_id, run_as=run_as, workflow="drive_import",
@@ -273,6 +275,7 @@ async def connect_whatsapp(venture_id: uuid.UUID, body: WhatsAppConnectIn, user_
     """Connect the venture's WhatsApp Business number. The token is checked against Meta
     before it is stored (encrypted); it is never returned."""
     org = await _require_admin(db, venture_id)
+    await require_integration(db, venture_id, "whatsapp")
     from kritvia_api.services.whatsapp import WhatsAppError
     try:
         info = await svc.whatsapp.check_number(body.phone_number_id, body.access_token)
@@ -317,6 +320,12 @@ class WhatsAppHookOut(BaseModel):
     ignored: int = 0
 
 
+async def _plan_allows(run_as: uuid.UUID, venture_id: uuid.UUID, integration: str) -> bool:
+    """After a downgrade, inbound messages on an integration the plan lacks are ignored."""
+    async with tenant_tx(run_as, "agent", "trigger") as conn:
+        return (await plan_for_venture(conn, venture_id)).allows_integration(integration)
+
+
 @router.post("/hooks/whatsapp", response_model=WhatsAppHookOut)
 async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
     """Inbound WhatsApp messages → one inbox_assistant run each (deduped by message id).
@@ -341,7 +350,7 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
                 principals[m.phone_number_id] = (await conn.execute(
                     text("SELECT * FROM private.whatsapp_principal(:p)"), {"p": m.phone_number_id})).first()
         p = principals[m.phone_number_id]
-        if p is None:
+        if p is None or not await _plan_allows(p.run_as, p.venture_id, "whatsapp"):
             ignored += 1
             continue
         try:
@@ -419,6 +428,6 @@ async def inbound_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> H
     except DuplicateTrigger:
         return HookOut(accepted=True, duplicate=True)
     except ValueError as exc:
-        raise HTTPException(422, str(exc)) from None
+        raise HTTPException(402 if isinstance(exc, PlanRestricted) else 422, str(exc)) from None
     return HookOut(accepted=True, run_id=run_id)
 

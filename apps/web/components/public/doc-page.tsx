@@ -20,7 +20,7 @@ const LINKS = [
 export function PublicShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   const width = wide ? "max-w-6xl" : "max-w-4xl";
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col overflow-x-clip">
       <header className="sticky top-3 z-30 px-3">
         <div className={`glass mx-auto flex h-14 ${width} items-center justify-between gap-3 rounded-2xl border px-3 sm:px-4`}>
           <Link href="/" aria-label="Kritvia home" className="rounded-md">

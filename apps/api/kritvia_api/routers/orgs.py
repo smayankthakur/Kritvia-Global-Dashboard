@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.deps import Svc, TenantDB
-from kritvia_api.plans import PLANS, PUBLIC_PLANS
+from kritvia_api.plans import PLANS, PUBLIC_PLANS, TOKEN_PACKS
 from kritvia_api.services.quota import org_usage, require_room
 from kritvia_api.errors import raise_for_db
 from kritvia_api.schemas import GrantIn, IdOut, MemberIn, OrgIn, VentureIn, VentureOut
@@ -187,4 +187,4 @@ async def get_plan(org_id: uuid.UUID, db: TenantDB, svc: Svc) -> dict:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organisation not found")
     renews = (await db.execute(text("SELECT renews_at FROM org_plans WHERE org_id = :o"), {"o": org_id})).scalar()
     return {**u.as_dict(), "renews_at": renews.isoformat() if renews else None,
-            "available": [PLANS[c].as_dict() for c in PUBLIC_PLANS]}
+            "available": [PLANS[c].as_dict() for c in PUBLIC_PLANS], "token_packs": list(TOKEN_PACKS)}

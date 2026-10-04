@@ -18,6 +18,7 @@ from kritvia_api.errors import raise_for_db
 from kritvia_api.routers.knowledge import read_upload
 from kritvia_api.services import memory
 from kritvia_api.services.tally import TallyParseError, parse_vouchers, render_document, summarise
+from kritvia_api.services.quota import require_integration
 
 router = APIRouter(tags=["tally"])
 
@@ -39,6 +40,8 @@ async def import_tally(venture_id: uuid.UUID, user_id: UserId, svc: Svc, file: U
     async with tenant_tx(user_id) as conn:
         org = await venture_org(conn, venture_id)
         can_write = (await conn.execute(text("SELECT private.can_admin_venture(:v)"), {"v": venture_id})).scalar()
+        if can_write:
+            await require_integration(conn, venture_id, "tally")
         biz = (await conn.execute(text("SELECT coalesce(s.business_name, v.name) FROM ventures v"
                                        " LEFT JOIN venture_settings s ON s.venture_id = v.id WHERE v.id = :v"),
                                   {"v": venture_id})).scalar()

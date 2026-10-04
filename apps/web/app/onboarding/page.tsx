@@ -15,6 +15,7 @@ import { Notice } from "@/components/ui/page";
 import { ErrorState } from "@/components/ui/states";
 import { ApiError, api, errorMessage, unwrap } from "@/lib/api";
 import { accessKey, meKey, useAccessQuery, type VentureKind } from "@/lib/access";
+import { agentAllowed } from "@/lib/pricing";
 import { SLUG_RE, slugify } from "@/lib/slug";
 
 
@@ -413,6 +414,11 @@ function SetupStep({
   onDone: (firstVentureId?: string) => void | Promise<void>;
 }) {
   const catalogue = useQuery({ queryKey: ["workflows"], queryFn: () => unwrap(api.GET("/workflows")) });
+  const planQ = useQuery({
+    queryKey: ["plan", orgId],
+    queryFn: async () => (await unwrap(api.GET("/orgs/{org_id}/plan", { params: { path: { org_id: orgId } } }))) as unknown as { plan: { name: string; agents: string } },
+  });
+  const allowed = (wf: string, kind: string) => agentAllowed(planQ.data?.plan.agents, wf, kind);
   const [roles, setRoles] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(ventures.map((v) => [v.id, DEFAULT_ROLES[v.kind]])),
   );
@@ -428,8 +434,12 @@ function SetupStep({
     return out;
   }, [catalogue.data, ventures]);
 
-  const flowState = (vid: string, wf: string) =>
-    flows[vid]?.[wf] ?? { on: (ventures.find((v) => v.id === vid)?.template.workflows ?? []).includes(wf), schedule: DEFAULT_SCHEDULES[wf] ?? "" };
+  const flowState = (vid: string, wf: string) => {
+    const v = ventures.find((x) => x.id === vid);
+    const fallback = { on: (v?.template.workflows ?? []).includes(wf) && allowed(wf, v?.kind ?? "general"), schedule: DEFAULT_SCHEDULES[wf] ?? "" };
+    const st = flows[vid]?.[wf] ?? fallback;
+    return allowed(wf, v?.kind ?? "general") ? st : { ...st, on: false };
+  };
   const setFlow = (vid: string, wf: string, patch: Partial<{ on: boolean; schedule: string }>) =>
     setFlows((f) => ({ ...f, [vid]: { ...(f[vid] ?? {}), [wf]: { ...flowState(vid, wf), ...patch } } }));
 
@@ -511,9 +521,17 @@ function SetupStep({
             <div className="space-y-2">
               {(available[v.id] ?? []).map((w) => {
                 const st = flowState(v.id, w.name);
+                const ok = allowed(w.name, v.kind);
                 return (
                   <div key={w.name} className="flex flex-wrap items-start justify-between gap-3">
-                    <Checkbox label={w.title} hint={w.description} checked={st.on} onChange={(e) => setFlow(v.id, w.name, { on: e.target.checked })} className="min-w-0 flex-1" />
+                    <Checkbox
+                      label={w.title}
+                      hint={ok ? w.description : `Not on the ${planQ.data?.plan.name ?? "current"} plan — included from ${v.kind === "finance" || v.kind === "kitchen" ? "Starter" : "Growth"}. Upgrade any time in Plan & billing.`}
+                      checked={st.on}
+                      disabled={!ok}
+                      onChange={(e) => setFlow(v.id, w.name, { on: e.target.checked })}
+                      className="min-w-0 flex-1"
+                    />
                     {w.name in DEFAULT_SCHEDULES ? (
                       <Field label="Daily at (IST)" className="w-32">
                         <Input type="time" value={st.schedule} onChange={(e) => setFlow(v.id, w.name, { schedule: e.target.value })} />
