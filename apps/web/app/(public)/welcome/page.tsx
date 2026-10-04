@@ -1,6 +1,7 @@
-import { BookOpen, Check, Inbox, Landmark, Mic, Network, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Check, Inbox, Landmark, Lock, Mic, Network, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ApprovalPreview } from "@/components/public/approval-preview";
 import { PublicShell } from "@/components/public/doc-page";
 import { buttonClass } from "@/components/ui/button";
 import { INDEX, SITE_URL, share } from "@/lib/site";
@@ -87,78 +88,131 @@ function JsonLd() {
   );
 }
 
+const STEPS = [
+  { title: "Pick your business type", text: "Software studio, finance, kitchen or general. The right agents start switched on." },
+  { title: "Connect what you use", text: "Gmail, Calendar, Drive, WhatsApp Business, your site's lead form or Tally exports." },
+  { title: "Approve, edit or reject", text: "Agents draft; you decide. Nothing goes out until you say so." },
+];
+
+function SectionHead({ id, eyebrow, title, text }: { id: string; eyebrow: string; title: string; text?: string }) {
+  return (
+    <div className="max-w-2xl">
+      <p className="text-xs font-semibold tracking-wider text-accent uppercase">{eyebrow}</p>
+      <h2 id={id} className="mt-2 text-2xl font-semibold tracking-tight text-fg sm:text-[28px]">
+        {title}
+      </h2>
+      {text ? <p className="mt-2 text-[15px] text-muted">{text}</p> : null}
+    </div>
+  );
+}
+
 export default function WelcomePage() {
   return (
-    <PublicShell>
+    <PublicShell wide>
       <JsonLd />
-      <section className="py-6 text-center sm:py-12">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-accent">For Indian SMBs · Hindi, Hinglish, English</p>
-        <h1 className="mx-auto max-w-2xl text-3xl font-semibold tracking-tight text-fg sm:text-4xl">AI agents that do the work. You approve what goes out.</h1>
-        <p className="mx-auto mt-4 max-w-xl text-base text-muted">
-          Kritvia reads your inbox, drafts replies, proposals and follow-ups, and keeps a memory of your business with citations. Nothing is sent,
-          paid or changed without your approval.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link href="/register" className={buttonClass("primary", "md", "px-5")}>
-            Start free
-          </Link>
-          <Link href="/login" className={buttonClass("secondary", "md", "px-5")}>
-            Sign in
-          </Link>
+      <section className="relative isolate -mx-4 -mt-10 px-4 pt-12 pb-10 sm:pt-20 sm:pb-16">
+        <div className="kv-grid-bg pointer-events-none absolute inset-0 -z-10" aria-hidden />
+        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
+          <div className="kv-stagger text-center lg:text-left">
+            <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted shadow-card">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
+              For Indian SMBs · Hindi, Hinglish, English
+            </p>
+            <h1 className="mx-auto mt-5 max-w-xl text-4xl leading-[1.1] font-bold tracking-tight text-fg sm:text-5xl lg:mx-0">
+              AI agents that do the work. <span className="text-accent">You approve</span> what goes out.
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg lg:mx-0">
+              Kritvia reads your inbox, drafts replies, proposals and follow-ups, and keeps a memory of your business with citations. Nothing is
+              sent, paid or changed without your approval.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
+              <Link href="/register" className={buttonClass("primary", "md", "h-11 px-6 text-[15px]")}>
+                Start free <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+              <Link href="/login" className={buttonClass("secondary", "md", "h-11 px-6 text-[15px]")}>
+                Sign in
+              </Link>
+            </div>
+            <p className="mt-4 text-xs text-subtle">No card needed. Sign in with Google or an emailed code.</p>
+          </div>
+          <ApprovalPreview className="mx-auto w-full max-w-md lg:max-w-none" />
         </div>
-        <p className="mt-3 text-xs text-subtle">No card needed. Sign in with Google or an emailed code.</p>
       </section>
 
-      <section aria-labelledby="agents" className="py-8">
-        <h2 id="agents" className="text-xl font-semibold text-fg">
-          Agents you can switch on today
-        </h2>
-        <p className="mt-1 text-sm text-muted">Pick your kind of business at sign-up; the right agents start switched on. Tell them how you work in plain language.</p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <section aria-labelledby="how" className="py-12">
+        <SectionHead id="how" eyebrow="How it works" title="Up and running in minutes" />
+        <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+          {STEPS.map((st, i) => (
+            <li key={st.title} className="relative rounded-xl border border-border bg-surface p-5 shadow-card">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-fg">{i + 1}</span>
+              <h3 className="mt-4 font-semibold text-fg">{st.title}</h3>
+              <p className="mt-1 text-sm text-muted">{st.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section aria-labelledby="agents" className="py-12">
+        <SectionHead
+          id="agents"
+          eyebrow="Agents"
+          title="Agents you can switch on today"
+          text="Pick your kind of business at sign-up; the right agents start switched on. Tell them how you work in plain language."
+        />
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {AGENTS.map((a) => (
-            <div key={a.title} className="rounded-xl border border-border bg-surface p-5">
-              <a.icon className="h-5 w-5 text-accent" aria-hidden />
-              <h3 className="mt-3 font-semibold text-fg">{a.title}</h3>
-              <p className="mt-1 text-sm text-muted">{a.text}</p>
+            <div key={a.title} className="kv-lift group rounded-xl border border-border bg-surface p-6 shadow-card">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent ring-1 ring-accent/15 transition-colors duration-200 group-hover:bg-accent group-hover:text-accent-fg">
+                <a.icon className="h-5 w-5" aria-hidden />
+              </span>
+              <h3 className="mt-4 text-[15px] font-semibold text-fg">{a.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{a.text}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section aria-labelledby="platform" className="py-8">
-        <h2 id="platform" className="text-xl font-semibold text-fg">
-          Built on a memory of your business
-        </h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <section aria-labelledby="platform" className="py-12">
+        <SectionHead id="platform" eyebrow="Platform" title="Built on a memory of your business" />
+        <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
           {PLATFORM.map((a) => (
-            <div key={a.title} className="flex gap-3">
-              <a.icon className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden />
+            <div key={a.title} className="flex gap-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-accent shadow-card">
+                <a.icon className="h-[18px] w-[18px]" aria-hidden />
+              </span>
               <div>
                 <h3 className="font-semibold text-fg">{a.title}</h3>
-                <p className="mt-1 text-sm text-muted">{a.text}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{a.text}</p>
               </div>
             </div>
           ))}
         </div>
-        <p className="mt-5 text-sm text-muted">
+        <p className="mt-8 rounded-lg border border-dashed border-border-strong px-4 py-3 text-sm text-muted">
           Connects to Google Workspace (Gmail, Calendar, Drive), WhatsApp Business, your website&apos;s lead form and Tally exports.
         </p>
       </section>
 
-      <section aria-labelledby="pricing" className="py-8">
-        <h2 id="pricing" className="text-xl font-semibold text-fg">
-          Simple monthly plans
-        </h2>
-        <p className="mt-1 text-sm text-muted">Prices per month, plus 18% GST. Paid through Razorpay; cancel any time and finish the month.</p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+      <section aria-labelledby="pricing" className="py-12">
+        <SectionHead
+          id="pricing"
+          eyebrow="Pricing"
+          title="Simple monthly plans"
+          text="Prices per month, plus 18% GST. Paid through Razorpay; cancel any time and finish the month."
+        />
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {PLANS.map((p) => (
-            <div key={p.name} className={"rounded-xl border bg-surface p-5 " + (p.featured ? "border-accent ring-1 ring-accent" : "border-border")}>
+            <div
+              key={p.name}
+              className={
+                "kv-lift flex flex-col rounded-xl border bg-surface p-6 shadow-card " + (p.featured ? "border-accent ring-1 ring-accent" : "border-border")
+              }
+            >
               <h3 className="font-semibold text-fg">{p.name}</h3>
-              <p className="mt-1 text-2xl font-semibold text-fg">
+              <p className="mt-2 text-3xl font-bold tracking-tight text-fg tabular-nums">
                 {p.price}
-                <span className="text-sm font-normal text-subtle">/month</span>
+                <span className="ml-1 text-sm font-normal text-subtle">/month</span>
               </p>
-              <ul className="mt-4 space-y-2 text-sm text-muted">
+              <ul className="mt-5 flex-1 space-y-2.5 text-sm text-muted">
                 {p.lines.map((l) => (
                   <li key={l} className="flex gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
@@ -166,39 +220,54 @@ export default function WelcomePage() {
                   </li>
                 ))}
               </ul>
+              <Link href="/register" className={buttonClass(p.featured ? "primary" : "secondary", "md", "mt-6 w-full")}>
+                {p.name === "Free" ? "Start free" : "Get started"}
+              </Link>
             </div>
           ))}
         </div>
       </section>
 
-      <section aria-labelledby="trust" className="py-8">
-        <h2 id="trust" className="text-xl font-semibold text-fg">
-          Your data stays yours
-        </h2>
-        <ul className="mt-4 space-y-2 text-sm text-muted">
-          {TRUST.map((t) => (
-            <li key={t} className="flex gap-2">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
-              {t}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 text-sm">
-          <Link href="/security" className="text-accent hover:underline">
-            How Kritvia keeps your business safe
-          </Link>
-          {" · "}
-          <Link href="/privacy" className="text-accent hover:underline">
-            Privacy policy (DPDP)
-          </Link>
-        </p>
+      <section aria-labelledby="trust" className="py-12">
+        <div className="grid gap-8 rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-10 lg:grid-cols-[1fr_1.3fr]">
+          <div>
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-success-soft text-success">
+              <Lock className="h-5 w-5" aria-hidden />
+            </span>
+            <h2 id="trust" className="mt-4 text-2xl font-semibold tracking-tight text-fg">
+              Your data stays yours
+            </h2>
+            <p className="mt-4 flex flex-col gap-1 text-sm">
+              <Link href="/security" className="font-medium text-accent hover:underline">
+                How Kritvia keeps your business safe
+              </Link>
+              <Link href="/privacy" className="font-medium text-accent hover:underline">
+                Privacy policy (DPDP)
+              </Link>
+            </p>
+          </div>
+          <ul className="space-y-3 text-sm text-muted">
+            {TRUST.map((t) => (
+              <li key={t} className="flex gap-3">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface-2 p-6 text-center">
-        <h2 className="text-lg font-semibold text-fg">See a first result in minutes</h2>
-        <p className="mt-1 text-sm text-muted">Sign up, pick your business type, and watch an agent handle a sample enquiry before you connect anything.</p>
-        <Link href="/register" className={buttonClass("primary", "md", "mt-4")}>
-          Create your account
+      <section className="relative mt-4 mb-2 overflow-hidden rounded-2xl bg-[#0f172a] px-6 py-12 text-center text-white sm:py-16">
+        <div className="kv-grid-bg pointer-events-none absolute inset-0 opacity-60 [--grid-line:rgb(255_255_255/0.06)]" aria-hidden />
+        <h2 className="relative text-2xl font-semibold tracking-tight sm:text-3xl">See a first result in minutes</h2>
+        <p className="relative mx-auto mt-3 max-w-xl text-[15px] text-slate-300">
+          Sign up, pick your business type, and watch an agent handle a sample enquiry before you connect anything.
+        </p>
+        <Link
+          href="/register"
+          className="relative mt-7 inline-flex h-11 items-center gap-1.5 rounded-md bg-white px-6 text-[15px] font-medium text-slate-900 shadow-card transition-[background-color,transform] duration-150 hover:bg-slate-100 active:scale-[0.98] motion-reduce:active:scale-100"
+        >
+          Create your account <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
       </section>
     </PublicShell>

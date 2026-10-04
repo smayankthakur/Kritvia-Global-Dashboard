@@ -240,7 +240,7 @@ export default function DashboardPage() {
               <Stat label="Ventures" value={q.data.ventures.length} />
             </StatGrid>
           </Card>
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="kv-stagger grid gap-4 xl:grid-cols-2">
             {q.data.ventures.map((c) => (
               <VentureCardView key={c.venture_id} card={c} />
             ))}

@@ -75,7 +75,8 @@ export function Dialog({
         if (dismissible && e.target === ref.current) onClose();
       }}
       className={cn(
-        "border border-border bg-surface p-0 text-fg shadow-pop backdrop:bg-transparent open:flex open:flex-col",
+        "border border-border bg-surface p-0 text-fg shadow-pop open:flex open:flex-col",
+        variant === "center" ? "open:animate-scale-in" : variant === "sheet-right" ? "open:animate-slide-in-right" : "open:animate-slide-in-left",
         layout,
         className,
       )}

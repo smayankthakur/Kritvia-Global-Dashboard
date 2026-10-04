@@ -8,7 +8,7 @@ import { Button } from "./button";
 import { cn } from "./cn";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-md bg-surface-3/70", className)} aria-hidden />;
+  return <div className={cn("kv-shimmer rounded-md", className)} aria-hidden />;
 }
 
 export function SkeletonRows({ rows = 5, className }: { rows?: number; className?: string }) {
@@ -35,9 +35,9 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", className)}>
+    <div className={cn("flex animate-fade-up flex-col items-center justify-center px-6 py-12 text-center", className)}>
       {Icon ? (
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-subtle">
+        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent ring-1 ring-accent/15">
           <Icon className="h-5 w-5" aria-hidden />
         </div>
       ) : null}
@@ -64,7 +64,7 @@ export function ErrorState({ error, onRetry, className }: { error: unknown; onRe
       ? "It may have been removed, or your role doesn't include it. Access is enforced per venture."
       : errorMessage(error);
   return (
-    <div role="alert" className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", className)}>
+    <div role="alert" className={cn("flex animate-fade-up flex-col items-center justify-center px-6 py-12 text-center", className)}>
       <div
         className={cn(
           "mb-3 flex h-10 w-10 items-center justify-center rounded-full",

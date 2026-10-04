@@ -7,16 +7,18 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outl
 export type ButtonSize = "sm" | "md" | "icon";
 
 const base =
-  "inline-flex items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap transition-colors " +
+  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap select-none " +
+  "transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out " +
+  "active:scale-[0.98] motion-reduce:active:scale-100 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
-  "disabled:pointer-events-none disabled:opacity-50 select-none";
+  "disabled:pointer-events-none disabled:opacity-50";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-accent-fg hover:bg-accent-hover shadow-card",
-  secondary: "bg-surface text-fg border border-border hover:bg-surface-2 shadow-card",
+  primary: "bg-accent text-accent-fg hover:bg-accent-hover shadow-card hover:shadow-hover",
+  secondary: "bg-surface text-fg border border-border hover:bg-surface-2 hover:border-border-strong shadow-card",
   outline: "border border-border-strong text-fg hover:bg-surface-2",
   ghost: "text-muted hover:text-fg hover:bg-surface-2",
-  danger: "bg-danger text-white hover:opacity-90 shadow-card",
+  danger: "bg-danger text-on-danger hover:opacity-90 shadow-card",
 };
 
 const sizes: Record<ButtonSize, string> = {

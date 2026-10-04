@@ -19,7 +19,7 @@ export function Stat({
       <dt className="text-xs leading-snug font-medium text-subtle">{label}</dt>
       <dd
         className={cn(
-          "mt-1 text-xl font-semibold tabular-nums tracking-tight",
+          "mt-1 animate-fade-up text-xl font-semibold tabular-nums tracking-tight",
           tone === "danger" && "text-danger",
           tone === "warning" && "text-warning",
           tone === "success" && "text-success",

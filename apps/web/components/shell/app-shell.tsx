@@ -88,7 +88,7 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </Sheet>
 
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-surface/85 px-3 backdrop-blur sm:px-5">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-surface/80 px-3 backdrop-blur-md backdrop-saturate-150 sm:px-5">
         <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}>
           <Menu className="h-5 w-5" />
         </Button>
@@ -96,10 +96,10 @@ function Shell({ children }: { children: ReactNode }) {
         <button
           type="button"
           onClick={() => setAskOpen(true)}
-          className="ml-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface-2/70 px-3 text-left text-sm text-subtle transition-colors hover:border-border-strong hover:text-muted sm:max-w-md"
+          className="group ml-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-surface-2/70 px-3 text-left text-sm text-subtle transition-[border-color,color,background-color,box-shadow] duration-150 hover:border-border-strong hover:bg-surface hover:text-muted hover:shadow-card sm:max-w-md"
           aria-label="Ask Kritvia (Command K)"
         >
-          <Search className="h-4 w-4 shrink-0" aria-hidden />
+          <Search className="h-4 w-4 shrink-0 transition-colors duration-150 group-hover:text-accent" aria-hidden />
           <span className="truncate">Ask anything across ventures…</span>
           <kbd className="ml-auto hidden rounded border border-border bg-surface px-1.5 font-sans text-[11px] text-subtle sm:inline">
             ⌘K
@@ -110,7 +110,7 @@ function Shell({ children }: { children: ReactNode }) {
           <ThemeToggle />
           <div className="ml-1 hidden items-center gap-2 border-l border-border pl-3 sm:flex">
             <span
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent-soft-fg"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent-soft-fg ring-1 ring-accent/20"
               aria-hidden
             >
               {initials(me?.full_name)}

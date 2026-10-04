@@ -2,23 +2,26 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens. Neutral slate greys, one accent (indigo); status colours only for status. */
+/*
+ * Design tokens ("Trust & Authority", from the UI/UX Pro Max design system):
+ * slate neutrals, one blue accent, status colours only for status. No gradients on UI chrome.
+ */
 :root {
-  --bg: #f6f7f9;
+  --bg: #f8fafc;
   --surface: #ffffff;
-  --surface-2: #f1f3f6;
-  --surface-3: #e8ebf0;
-  --border: #e2e5ea;
-  --border-strong: #cbd1da;
+  --surface-2: #f1f5f9;
+  --surface-3: #e8edf3;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
   --fg: #0f172a;
   --fg-muted: #475569;
   --fg-subtle: #64748b;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
   --accent-fg: #ffffff;
-  --accent-soft: #eef2ff;
-  --accent-soft-fg: #3730a3;
-  --ring: #6366f1;
+  --accent-soft: #eff6ff;
+  --accent-soft-fg: #1e40af;
+  --ring: #3b82f6;
   --success: #15803d;
   --success-soft: #dcfce7;
   --success-fg: #166534;
@@ -28,32 +31,35 @@
   --danger: #dc2626;
   --danger-soft: #fee2e2;
   --danger-fg: #991b1b;
+  --on-danger: #ffffff;
   --info: #0369a1;
   --info-soft: #e0f2fe;
   --info-fg: #075985;
   --diff-add: #e6f6ea;
   --diff-del: #fdecec;
-  --shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
-  --shadow-lg: 0 10px 30px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.06);
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.05);
+  --shadow-hover: 0 8px 20px -8px rgb(15 23 42 / 0.16), 0 2px 4px rgb(15 23 42 / 0.05);
+  --shadow-lg: 0 16px 40px -12px rgb(15 23 42 / 0.22), 0 4px 10px -4px rgb(15 23 42 / 0.08);
+  --grid-line: rgb(15 23 42 / 0.045);
   color-scheme: light;
 }
 
 .dark {
-  --bg: #0b0f17;
-  --surface: #111723;
-  --surface-2: #161d2b;
-  --surface-3: #1e2636;
-  --border: #242d3d;
-  --border-strong: #334055;
-  --fg: #e6eaf1;
-  --fg-muted: #a3adbd;
-  --fg-subtle: #8591a5;
-  --accent: #6d68f5;
-  --accent-hover: #827ef7;
-  --accent-fg: #ffffff;
-  --accent-soft: #1f1d4a;
-  --accent-soft-fg: #c7c5ff;
-  --ring: #8b87fa;
+  --bg: #0a0f1c;
+  --surface: #0f1626;
+  --surface-2: #151d30;
+  --surface-3: #1d273d;
+  --border: #222d44;
+  --border-strong: #334160;
+  --fg: #e7ecf4;
+  --fg-muted: #a6b1c4;
+  --fg-subtle: #8893a8;
+  --accent: #60a5fa;
+  --accent-hover: #93c5fd;
+  --accent-fg: #0a1020;
+  --accent-soft: #12213f;
+  --accent-soft-fg: #bfdbfe;
+  --ring: #60a5fa;
   --success: #22c55e;
   --success-soft: #0f2a1a;
   --success-fg: #86efac;
@@ -63,33 +69,36 @@
   --danger: #f87171;
   --danger-soft: #331414;
   --danger-fg: #fca5a5;
+  --on-danger: #1f0707;
   --info: #38bdf8;
   --info-soft: #0b2233;
   --info-fg: #7dd3fc;
   --diff-add: #10291a;
   --diff-del: #331719;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 10px 30px rgb(0 0 0 / 0.5);
+  --shadow-hover: 0 10px 24px -10px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.03);
+  --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+  --grid-line: rgb(255 255 255 / 0.035);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --bg: #0b0f17;
-    --surface: #111723;
-    --surface-2: #161d2b;
-    --surface-3: #1e2636;
-    --border: #242d3d;
-    --border-strong: #334055;
-    --fg: #e6eaf1;
-    --fg-muted: #a3adbd;
-    --fg-subtle: #8591a5;
-    --accent: #6d68f5;
-    --accent-hover: #827ef7;
-    --accent-fg: #ffffff;
-    --accent-soft: #1f1d4a;
-    --accent-soft-fg: #c7c5ff;
-    --ring: #8b87fa;
+    --bg: #0a0f1c;
+    --surface: #0f1626;
+    --surface-2: #151d30;
+    --surface-3: #1d273d;
+    --border: #222d44;
+    --border-strong: #334160;
+    --fg: #e7ecf4;
+    --fg-muted: #a6b1c4;
+    --fg-subtle: #8893a8;
+    --accent: #60a5fa;
+    --accent-hover: #93c5fd;
+    --accent-fg: #0a1020;
+    --accent-soft: #12213f;
+    --accent-soft-fg: #bfdbfe;
+    --ring: #60a5fa;
     --success: #22c55e;
     --success-soft: #0f2a1a;
     --success-fg: #86efac;
@@ -99,13 +108,16 @@
     --danger: #f87171;
     --danger-soft: #331414;
     --danger-fg: #fca5a5;
+    --on-danger: #1f0707;
     --info: #38bdf8;
     --info-soft: #0b2233;
     --info-fg: #7dd3fc;
     --diff-add: #10291a;
     --diff-del: #331719;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 10px 30px rgb(0 0 0 / 0.5);
+    --shadow-hover: 0 10px 24px -10px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.03);
+    --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+    --grid-line: rgb(255 255 255 / 0.035);
     color-scheme: dark;
   }
 }
@@ -135,22 +147,147 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-fg: var(--danger-fg);
+  --color-on-danger: var(--on-danger);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-info-fg: var(--info-fg);
   --color-diff-add: var(--diff-add);
   --color-diff-del: var(--diff-del);
   --shadow-card: var(--shadow);
+  --shadow-hover: var(--shadow-hover);
   --shadow-pop: var(--shadow-lg);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
-    sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
+    "Noto Sans Devanagari", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/*
+ * Motion: subtle and fast. Entrances 160–280 ms with an ease-out curve, nothing loops except
+ * loading indicators, and everything collapses to an instant change under prefers-reduced-motion.
+ * Entrances use fill-mode "backwards" so no transform lingers after they finish (a lingering
+ * transform would break position: sticky/fixed inside the animated element).
+ */
+@theme {
+  --ease-snappy: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade-in: kv-fade-in 180ms var(--ease-snappy) backwards;
+  --animate-fade-up: kv-fade-up 260ms var(--ease-snappy) backwards;
+  --animate-scale-in: kv-scale-in 200ms var(--ease-snappy) backwards;
+  --animate-slide-in-right: kv-slide-in-right 260ms var(--ease-snappy) backwards;
+  --animate-slide-in-left: kv-slide-in-left 260ms var(--ease-snappy) backwards;
+  --animate-toast-in: kv-toast-in 240ms var(--ease-snappy) backwards;
+}
+
+@keyframes kv-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes kv-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes kv-scale-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+}
+@keyframes kv-slide-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes kv-slide-in-left {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+@keyframes kv-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+@keyframes kv-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* Route content fades up on navigation (app/(app)/template.tsx). */
+.kv-page {
+  animation: kv-fade-up 240ms var(--ease-snappy) backwards;
+}
+
+/* Children enter one after another, 40 ms apart, capped so long lists never feel slow. */
+.kv-stagger > * {
+  animation: kv-fade-up 280ms var(--ease-snappy) backwards;
+}
+.kv-stagger > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.kv-stagger > :nth-child(3) {
+  animation-delay: 80ms;
+}
+.kv-stagger > :nth-child(4) {
+  animation-delay: 120ms;
+}
+.kv-stagger > :nth-child(5) {
+  animation-delay: 160ms;
+}
+.kv-stagger > :nth-child(6) {
+  animation-delay: 200ms;
+}
+.kv-stagger > :nth-child(n + 7) {
+  animation-delay: 240ms;
+}
+
+/* Loading placeholder: a soft sweep rather than a blink. */
+.kv-shimmer {
+  background-color: var(--surface-3);
+  background-image: linear-gradient(90deg, transparent 0%, var(--surface-2) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: kv-shimmer 1.6s ease-in-out infinite;
+}
+
+/* Faint grid behind the public hero and the sign-in card. */
+.kv-grid-bg {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* Interactive cards lift a little on hover (shadow and border only, so nothing shifts). */
+.kv-lift {
+  transition:
+    box-shadow 200ms var(--ease-snappy),
+    border-color 200ms var(--ease-snappy),
+    transform 200ms var(--ease-snappy);
+}
+.kv-lift:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--border-strong);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .kv-lift:hover {
+    transform: translateY(-1px);
+  }
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
   body {
     background: var(--bg);
@@ -158,7 +295,32 @@
     font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.5;
+    /* Plus Jakarta Sans has a narrow space (0.17em); open it up so words don't run together. */
+    word-spacing: 0.06em;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* Everything clickable shows a pointer (Tailwind 4 resets buttons to the default cursor). */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"],
+  [role="switch"]:not(:disabled),
+  summary,
+  select:not(:disabled),
+  label[for],
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled) {
+    cursor: pointer;
   }
   :focus-visible {
     outline: 2px solid var(--ring);
@@ -169,8 +331,11 @@
     color: var(--accent-soft-fg);
   }
   dialog::backdrop {
-    background: rgb(15 23 42 / 0.45);
-    backdrop-filter: blur(2px);
+    background: rgb(2 6 23 / 0.5);
+    backdrop-filter: blur(3px);
+  }
+  dialog[open]::backdrop {
+    animation: kv-fade-in 200ms ease-out;
   }
   input[type="date"],
   input[type="datetime-local"],
@@ -282,10 +447,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
+  html {
+    scroll-behavior: auto;
+  }
+  *:not(.animate-spin),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
 }

@@ -135,12 +135,13 @@ const DEFAULT_SCHEDULES: Record<string, string> = { kitchen_daily: "23:30" };
 function Steps({ step }: { step: number }) {
   const labels = ["Your business", "Roles & agents"];
   return (
-    <ol className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-xs" aria-label="Setup progress">
+    <div className="mb-6">
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs" aria-label="Setup progress">
       {labels.map((l, i) => (
         <li key={l} className="flex items-center gap-2" aria-current={i === step ? "step" : undefined}>
           <span
             className={cn(
-              "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold",
+              "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition-colors duration-300",
               i < step ? "bg-success text-white" : i === step ? "bg-accent text-accent-fg" : "bg-surface-3 text-subtle",
             )}
           >
@@ -150,7 +151,11 @@ function Steps({ step }: { step: number }) {
           {i < labels.length - 1 ? <span className="mx-1 hidden h-px w-6 bg-border sm:inline-block" aria-hidden /> : null}
         </li>
       ))}
-    </ol>
+      </ol>
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-surface-3" aria-hidden>
+        <div className="h-full rounded-full bg-accent transition-[width] duration-500 ease-out" style={{ width: `${((step + 1) / labels.length) * 100}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -175,9 +180,10 @@ export default function OnboardingPage() {
   const alreadySetUp = !orgId && access.data.ventures.length > 0 && step === 0;
 
   return (
-    <main id="main" className="min-h-dvh px-4 py-10">
+    <main id="main" className="relative isolate min-h-dvh px-4 py-10">
+      <div className="kv-grid-bg pointer-events-none absolute inset-x-0 top-0 -z-10 h-96" aria-hidden />
       <TermsGate />
-      <div className="mx-auto w-full max-w-2xl">
+      <div className="mx-auto w-full max-w-2xl animate-fade-up">
         <Logo className="mb-8" />
         {alreadySetUp ? (
           <Card className="p-6">
@@ -190,6 +196,7 @@ export default function OnboardingPage() {
         ) : (
           <>
             <Steps step={step} />
+            <div key={step} className="animate-fade-up">
             {step === 0 ? (
               <BusinessStep
                 orgId={orgId}
@@ -222,6 +229,7 @@ export default function OnboardingPage() {
                 }}
               />
             ) : null}
+            </div>
           </>
         )}
       </div>
@@ -345,8 +353,8 @@ function BusinessStep({
                   aria-checked={r.template?.id === t.id}
                   onClick={() => update(r.key, { template: t })}
                   className={cn(
-                    "rounded-lg border p-3 text-left transition-colors",
-                    r.template?.id === t.id ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:bg-surface-2",
+                    "rounded-lg border p-3 text-left transition-[border-color,background-color,box-shadow] duration-150",
+                    r.template?.id === t.id ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:border-border-strong hover:bg-surface-2 hover:shadow-card",
                   )}
                 >
                   <span className="flex items-center justify-between text-sm font-medium">

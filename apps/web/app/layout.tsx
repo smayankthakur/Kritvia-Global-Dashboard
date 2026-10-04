@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Providers } from "@/components/providers";
 import { THEME_COOKIE } from "@/lib/bff/cookies";
 import { SITE_URL, share } from "@/lib/site";
+import "@fontsource-variable/plus-jakarta-sans";
 import "./globals.css";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "Kritvia";
@@ -24,8 +25,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7f9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0f17" },
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0f1c" },
   ],
 };
 

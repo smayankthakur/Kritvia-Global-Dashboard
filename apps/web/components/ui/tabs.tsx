@@ -58,8 +58,8 @@ export function Tabs({
             onClick={() => onChange(t.id)}
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
-              "inline-flex h-9 items-center gap-1.5 border-b-2 px-3 text-sm font-medium whitespace-nowrap transition-colors",
-              selected ? "border-accent text-fg" : "border-transparent text-subtle hover:text-fg",
+              "inline-flex h-9 items-center gap-1.5 border-b-2 px-3 text-sm font-medium whitespace-nowrap transition-colors duration-150",
+              selected ? "border-accent text-fg" : "border-transparent text-subtle hover:border-border-strong hover:text-fg",
             )}
           >
             {t.label}

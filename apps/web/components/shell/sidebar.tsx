@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/components/ui/cn";
@@ -35,15 +36,29 @@ function NavLink({ item, pathname, badge, onNavigate }: { item: NavItem; pathnam
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] transition-colors",
-        active ? "bg-accent-soft font-medium text-accent-soft-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
+        "group relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] transition-colors duration-150",
+        active ? "font-medium text-accent-soft-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
       )}
     >
-      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-accent" : "text-subtle group-hover:text-muted")} aria-hidden />
-      <span className="truncate">{item.label}</span>
+      {active ? (
+        // The highlight glides to the newly selected item (disabled under reduced motion).
+        <motion.span
+          layoutId="nav-active"
+          className="absolute inset-0 rounded-md bg-accent-soft"
+          transition={{ type: "spring", stiffness: 520, damping: 42 }}
+          aria-hidden
+        >
+          <span className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-accent" />
+        </motion.span>
+      ) : null}
+      <Icon
+        className={cn("relative h-4 w-4 shrink-0 transition-colors duration-150", active ? "text-accent" : "text-subtle group-hover:text-muted")}
+        aria-hidden
+      />
+      <span className="relative truncate">{item.label}</span>
       {badge ? (
         <span
-          className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-[18px] font-semibold text-accent-fg tabular-nums"
+          className="relative ml-auto animate-scale-in rounded-full bg-accent px-1.5 text-[11px] leading-[18px] font-semibold text-accent-fg tabular-nums"
           aria-label={`${badge} pending`}
         >
           {badge > 99 ? "99+" : badge}
@@ -58,6 +73,15 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  // Separate groups so the desktop sidebar and the phone menu each animate their own highlight.
+  return (
+    <LayoutGroup id={onNavigate ? "nav-sheet" : "nav-aside"}>
+      <SidebarBody onNavigate={onNavigate} />
+    </LayoutGroup>
+  );
+}
+
+function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const { orgs, org, ventures, venture, setOrg, rememberVenture, isOwner } = useAccess();
   const pathname = usePathname() ?? "/";
   const router = useRouter();
@@ -99,7 +123,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 router.push("/");
                 onNavigate?.();
               }}
-              className="h-8 w-full rounded-md border border-border bg-surface px-2 text-[13px] font-medium"
+              className="kv-select h-8 w-full appearance-none rounded-md border border-border bg-surface pr-7 pl-2 text-[13px] font-medium transition-colors duration-150 hover:border-border-strong"
             >
               {orgs.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -129,7 +153,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               id="venture-switch"
               value={venture?.venture_id ?? ""}
               onChange={(e) => switchVenture(e.target.value)}
-              className="h-8 w-full rounded-md border border-border bg-surface px-2 text-[13px]"
+              className="kv-select h-8 w-full appearance-none rounded-md border border-border bg-surface pr-7 pl-2 text-[13px] transition-colors duration-150 hover:border-border-strong"
             >
               {ventures.map((v) => (
                 <option key={v.venture_id} value={v.venture_id}>

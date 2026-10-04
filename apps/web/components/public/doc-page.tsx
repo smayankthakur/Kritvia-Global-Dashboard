@@ -1,6 +1,8 @@
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/shell/logo";
+import { buttonClass } from "@/components/ui/button";
 import { Markdown } from "@/components/ui/markdown";
 
 export const COMPANY = "Sitelytc Digital Media Pvt. Ltd.";
@@ -15,31 +17,70 @@ const LINKS = [
   ["/status", "Status"],
 ] as const;
 
-export function PublicShell({ children }: { children: ReactNode }) {
+export function PublicShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
+  const width = wide ? "max-w-6xl" : "max-w-4xl";
   return (
-    <div className="min-h-dvh">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link href="/" aria-label="Kritvia home">
+    <div className="flex min-h-dvh flex-col">
+      <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-md backdrop-saturate-150">
+        <div className={`mx-auto flex h-14 ${width} items-center justify-between gap-3 px-4`}>
+          <Link href="/" aria-label="Kritvia home" className="rounded-md">
             <Logo />
           </Link>
-          <nav className="flex flex-wrap gap-4 text-sm text-muted" aria-label="Kritvia">
+          <nav className="hidden items-center gap-1 text-sm text-muted md:flex" aria-label="Kritvia">
             {LINKS.map(([href, label]) => (
-              <Link key={href} href={href} className="hover:text-fg">
+              <Link key={href} href={href} className="rounded-md px-2.5 py-1.5 transition-colors duration-150 hover:bg-surface-2 hover:text-fg">
                 {label}
               </Link>
             ))}
           </nav>
+          <div className="flex items-center gap-2">
+            <Link href="/login" className={buttonClass("ghost", "sm", "hidden sm:inline-flex")}>
+              Sign in
+            </Link>
+            <Link href="/register" className={buttonClass("primary", "sm")}>
+              Start free
+            </Link>
+            <details className="group relative md:hidden">
+              <summary
+                className="flex h-8 w-8 list-none items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-fg [&::-webkit-details-marker]:hidden"
+                aria-label="Menu"
+              >
+                <Menu className="h-4 w-4 group-open:hidden" aria-hidden />
+                <X className="hidden h-4 w-4 group-open:block" aria-hidden />
+              </summary>
+              <nav
+                aria-label="Kritvia"
+                className="absolute right-0 mt-2 w-48 animate-scale-in rounded-xl border border-border bg-surface p-1.5 text-sm shadow-pop"
+              >
+                {[["/login", "Sign in"] as const, ...LINKS].map(([href, label]) => (
+                  <Link key={href} href={href} className="block rounded-md px-3 py-2 text-muted transition-colors hover:bg-surface-2 hover:text-fg">
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+            </details>
+          </div>
         </div>
       </header>
-      <main id="main" className="mx-auto max-w-4xl px-4 py-10">
+      <main id="main" className={`mx-auto w-full flex-1 ${width} px-4 py-10`}>
         {children}
       </main>
-      <footer className="border-t border-border py-6 text-center text-xs text-subtle">
-        © {new Date().getFullYear()} {COMPANY} · CIN {CIN} · New Delhi, India ·{" "}
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-fg">
-          {SUPPORT_EMAIL}
-        </a>
+      <footer className="border-t border-border bg-surface">
+        <div className={`mx-auto flex ${width} flex-col gap-3 px-4 py-6 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between`}>
+          <p>
+            © {new Date().getFullYear()} {COMPANY} · CIN {CIN} · New Delhi, India
+          </p>
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-4 gap-y-1">
+            {LINKS.map(([href, label]) => (
+              <Link key={href} href={href} className="transition-colors hover:text-fg">
+                {label}
+              </Link>
+            ))}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="transition-colors hover:text-fg">
+              {SUPPORT_EMAIL}
+            </a>
+          </nav>
+        </div>
       </footer>
     </div>
   );
@@ -48,7 +89,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
 export function Doc({ title, updated, lead, children }: { title: string; updated?: string; lead?: ReactNode; children: ReactNode }) {
   return (
     <PublicShell>
-      <article className="space-y-6 text-[15px] leading-relaxed text-muted [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-fg [&_li]:ml-5 [&_li]:list-disc [&_strong]:text-fg">
+      <article className="animate-fade-up space-y-6 text-[15px] leading-relaxed text-muted [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-fg [&_li]:ml-5 [&_li]:list-disc [&_strong]:text-fg">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
           {updated ? <p className="mt-1 text-sm text-subtle">Last updated {updated}</p> : null}
@@ -64,7 +105,7 @@ export function Doc({ title, updated, lead, children }: { title: string; updated
 export function LegalDoc({ title, updated, markdown }: { title: string; updated: string; markdown: string }) {
   return (
     <PublicShell>
-      <article className="text-[15px] text-muted [&_h2]:text-fg [&_strong]:text-fg">
+      <article className="animate-fade-up text-[15px] text-muted [&_h2]:text-fg [&_strong]:text-fg">
         <header className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
           <p className="mt-1 text-sm text-subtle">Last updated {updated}</p>
