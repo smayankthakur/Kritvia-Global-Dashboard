@@ -78,7 +78,7 @@ function useFieldProps(props: { id?: string; "aria-describedby"?: string; requir
 }
 
 export const controlClass =
-  "w-full rounded-md border border-border bg-surface px-3 text-sm text-fg shadow-card placeholder:text-subtle " +
+  "w-full rounded-lg border border-border bg-surface-strong px-3 text-sm text-fg shadow-card placeholder:text-subtle " +
   "transition-[border-color,box-shadow] duration-150 hover:border-border-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30 " +
   "disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/25";
 

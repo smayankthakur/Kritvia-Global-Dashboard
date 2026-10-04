@@ -123,7 +123,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                 router.push("/");
                 onNavigate?.();
               }}
-              className="kv-select h-8 w-full appearance-none rounded-md border border-border bg-surface pr-7 pl-2 text-[13px] font-medium transition-colors duration-150 hover:border-border-strong"
+              className="kv-select h-8 w-full appearance-none rounded-lg border border-border bg-surface-strong pr-7 pl-2 text-[13px] font-medium transition-colors duration-150 hover:border-border-strong"
             >
               {orgs.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -153,7 +153,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               id="venture-switch"
               value={venture?.venture_id ?? ""}
               onChange={(e) => switchVenture(e.target.value)}
-              className="kv-select h-8 w-full appearance-none rounded-md border border-border bg-surface pr-7 pl-2 text-[13px] transition-colors duration-150 hover:border-border-strong"
+              className="kv-select h-8 w-full appearance-none rounded-lg border border-border bg-surface-strong pr-7 pl-2 text-[13px] transition-colors duration-150 hover:border-border-strong"
             >
               {ventures.map((v) => (
                 <option key={v.venture_id} value={v.venture_id}>

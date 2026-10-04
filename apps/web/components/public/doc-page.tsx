@@ -21,8 +21,8 @@ export function PublicShell({ children, wide }: { children: ReactNode; wide?: bo
   const width = wide ? "max-w-6xl" : "max-w-4xl";
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-md backdrop-saturate-150">
-        <div className={`mx-auto flex h-14 ${width} items-center justify-between gap-3 px-4`}>
+      <header className="sticky top-3 z-30 px-3">
+        <div className={`glass mx-auto flex h-14 ${width} items-center justify-between gap-3 rounded-2xl border px-3 sm:px-4`}>
           <Link href="/" aria-label="Kritvia home" className="rounded-md">
             <Logo />
           </Link>
@@ -50,7 +50,7 @@ export function PublicShell({ children, wide }: { children: ReactNode; wide?: bo
               </summary>
               <nav
                 aria-label="Kritvia"
-                className="absolute right-0 mt-2 w-48 animate-scale-in rounded-xl border border-border bg-surface p-1.5 text-sm shadow-pop"
+                className="glass-strong absolute right-0 mt-3 w-52 animate-scale-in rounded-2xl border p-1.5 text-sm"
               >
                 {[["/login", "Sign in"] as const, ...LINKS].map(([href, label]) => (
                   <Link key={href} href={href} className="block rounded-md px-3 py-2 text-muted transition-colors hover:bg-surface-2 hover:text-fg">
@@ -65,7 +65,7 @@ export function PublicShell({ children, wide }: { children: ReactNode; wide?: bo
       <main id="main" className={`mx-auto w-full flex-1 ${width} px-4 py-10`}>
         {children}
       </main>
-      <footer className="border-t border-border bg-surface">
+      <footer className="glass mt-6 border-t">
         <div className={`mx-auto flex ${width} flex-col gap-3 px-4 py-6 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between`}>
           <p>
             © {new Date().getFullYear()} {COMPANY} · CIN {CIN} · New Delhi, India

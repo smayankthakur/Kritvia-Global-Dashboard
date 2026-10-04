@@ -8,14 +8,17 @@ export type ButtonSize = "sm" | "md" | "icon";
 
 const base =
   "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap select-none " +
-  "transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out " +
+  "transition-[color,background-color,border-color,box-shadow,transform,filter] duration-150 ease-out " +
   "active:scale-[0.98] motion-reduce:active:scale-100 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring " +
   "disabled:pointer-events-none disabled:opacity-50";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-accent-fg hover:bg-accent-hover shadow-card hover:shadow-hover",
-  secondary: "bg-surface text-fg border border-border hover:bg-surface-2 hover:border-border-strong shadow-card",
+  primary:
+    "bg-[linear-gradient(180deg,var(--accent),var(--accent-2))] text-accent-fg shadow-[0_1px_0_rgb(255_255_255/0.25)_inset,0_6px_18px_-6px_var(--accent)] " +
+    "hover:brightness-110 hover:shadow-[0_1px_0_rgb(255_255_255/0.3)_inset,0_10px_24px_-8px_var(--accent)]",
+  secondary:
+    "bg-surface-strong text-fg border border-border backdrop-blur-md hover:bg-surface-solid hover:border-border-strong shadow-card",
   outline: "border border-border-strong text-fg hover:bg-surface-2",
   ghost: "text-muted hover:text-fg hover:bg-surface-2",
   danger: "bg-danger text-on-danger hover:opacity-90 shadow-card",

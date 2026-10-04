@@ -170,7 +170,7 @@ export function VoiceBubble() {
         <div
           role="dialog"
           aria-label="Remember this correction?"
-          className="w-72 rounded-lg border border-border bg-surface p-3 text-sm shadow-[var(--shadow-lg)]"
+          className="glass-strong w-72 rounded-xl border p-3 text-sm"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -207,7 +207,7 @@ export function VoiceBubble() {
         </div>
       ) : label ? (
         <div
-          className="max-w-[18rem] rounded-lg border border-border bg-surface/95 px-3 py-1.5 text-[13px] shadow-[var(--shadow-lg)] backdrop-blur"
+          className="glass-strong max-w-[18rem] rounded-xl border px-3 py-1.5 text-[13px]"
           role="status"
           aria-live="polite"
         >
@@ -221,7 +221,7 @@ export function VoiceBubble() {
       ) : null}
 
       {hover && !recording && v.phase !== "transcribing" && !v.learn ? (
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-surface p-1 shadow-[var(--shadow-lg)]" role="toolbar" aria-label="Dictation options">
+        <div className="glass-strong flex items-center gap-1 rounded-xl border p-1" role="toolbar" aria-label="Dictation options">
           {MODES.map((m) => {
             const Icon = m.icon;
             const active = v.mode === m.id;
@@ -285,7 +285,7 @@ export function VoiceBubble() {
           className={cn(
             "relative flex cursor-grab touch-none items-center justify-center rounded-full shadow-[var(--shadow-lg)] ring-2 transition-colors select-none active:cursor-grabbing",
             ringColor,
-            recording ? "bg-danger text-white" : "bg-surface text-fg hover:bg-surface-2",
+            recording ? "bg-danger text-white" : "glass-strong text-fg hover:text-accent",
           )}
           style={{ width: SIZE, height: SIZE }}
         >

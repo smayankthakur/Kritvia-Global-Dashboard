@@ -3,121 +3,156 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Design tokens ("Trust & Authority", from the UI/UX Pro Max design system):
- * slate neutrals, one blue accent, status colours only for status. No gradients on UI chrome.
+ * Design tokens — glassmorphism. A fixed "aurora" of soft colour fields sits behind the app;
+ * panels are frosted glass (translucent surface + backdrop blur + a light edge). Text colours are
+ * tuned for 4.5:1 on the frosted surfaces. Status colours only for status.
  */
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --surface-3: #e8edf3;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --fg: #0f172a;
-  --fg-muted: #475569;
-  --fg-subtle: #64748b;
+  --bg: #e8eef8;
+  --surface: rgb(255 255 255 / 0.62);
+  --surface-strong: rgb(255 255 255 / 0.84);
+  --surface-solid: #ffffff;
+  --surface-2: rgb(71 85 105 / 0.07);
+  --surface-3: rgb(71 85 105 / 0.14);
+  --border: rgb(15 23 42 / 0.1);
+  --border-strong: rgb(15 23 42 / 0.2);
+  --glass-edge: rgb(255 255 255 / 0.75);
+  --glass-highlight: rgb(255 255 255 / 0.85);
+  --glass-blur: 18px;
+  --fg: #0b1324;
+  --fg-muted: #3c4a5f;
+  --fg-subtle: #536176;
   --accent: #2563eb;
+  --accent-2: #1d4ed8;
   --accent-hover: #1d4ed8;
   --accent-fg: #ffffff;
-  --accent-soft: #eff6ff;
-  --accent-soft-fg: #1e40af;
+  --accent-soft: rgb(37 99 235 / 0.12);
+  --accent-soft-fg: #1e3a8a;
   --ring: #3b82f6;
   --success: #15803d;
-  --success-soft: #dcfce7;
-  --success-fg: #166534;
+  --success-soft: rgb(22 163 74 / 0.14);
+  --success-fg: #14532d;
   --warning: #b45309;
-  --warning-soft: #fef3c7;
-  --warning-fg: #92400e;
+  --warning-soft: rgb(217 119 6 / 0.16);
+  --warning-fg: #78350f;
   --danger: #dc2626;
-  --danger-soft: #fee2e2;
-  --danger-fg: #991b1b;
+  --danger-soft: rgb(220 38 38 / 0.12);
+  --danger-fg: #7f1d1d;
   --on-danger: #ffffff;
   --info: #0369a1;
-  --info-soft: #e0f2fe;
-  --info-fg: #075985;
-  --diff-add: #e6f6ea;
-  --diff-del: #fdecec;
-  --shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.05);
-  --shadow-hover: 0 8px 20px -8px rgb(15 23 42 / 0.16), 0 2px 4px rgb(15 23 42 / 0.05);
-  --shadow-lg: 0 16px 40px -12px rgb(15 23 42 / 0.22), 0 4px 10px -4px rgb(15 23 42 / 0.08);
-  --grid-line: rgb(15 23 42 / 0.045);
+  --info-soft: rgb(2 132 199 / 0.13);
+  --info-fg: #0c4a6e;
+  --diff-add: rgb(22 163 74 / 0.14);
+  --diff-del: rgb(220 38 38 / 0.12);
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(30 58 138 / 0.18);
+  --shadow-hover: 0 2px 4px rgb(15 23 42 / 0.05), 0 16px 36px -14px rgb(30 58 138 / 0.3);
+  --shadow-lg: 0 24px 60px -18px rgb(15 23 42 / 0.35), 0 6px 16px -8px rgb(15 23 42 / 0.12);
+  --grid-line: rgb(15 23 42 / 0.04);
+  --aurora:
+    radial-gradient(42rem 32rem at 8% -6%, rgb(96 165 250 / 0.55), transparent 70%),
+    radial-gradient(36rem 28rem at 96% 4%, rgb(103 232 249 / 0.5), transparent 70%),
+    radial-gradient(40rem 30rem at 78% 96%, rgb(129 140 248 / 0.38), transparent 70%),
+    radial-gradient(34rem 26rem at 4% 92%, rgb(94 234 212 / 0.4), transparent 70%),
+    radial-gradient(28rem 22rem at 50% 48%, rgb(253 186 116 / 0.22), transparent 70%);
   color-scheme: light;
 }
 
 .dark {
-  --bg: #0a0f1c;
-  --surface: #0f1626;
-  --surface-2: #151d30;
-  --surface-3: #1d273d;
-  --border: #222d44;
-  --border-strong: #334160;
-  --fg: #e7ecf4;
-  --fg-muted: #a6b1c4;
-  --fg-subtle: #8893a8;
+  --bg: #060a15;
+  --surface: rgb(15 23 42 / 0.52);
+  --surface-strong: rgb(13 20 37 / 0.86);
+  --surface-solid: #0e1526;
+  --surface-2: rgb(148 163 184 / 0.08);
+  --surface-3: rgb(148 163 184 / 0.15);
+  --border: rgb(255 255 255 / 0.09);
+  --border-strong: rgb(255 255 255 / 0.18);
+  --glass-edge: rgb(255 255 255 / 0.12);
+  --glass-highlight: rgb(255 255 255 / 0.08);
+  --glass-blur: 20px;
+  --fg: #eef2f8;
+  --fg-muted: #b3bdcd;
+  --fg-subtle: #94a0b4;
   --accent: #60a5fa;
+  --accent-2: #38bdf8;
   --accent-hover: #93c5fd;
-  --accent-fg: #0a1020;
-  --accent-soft: #12213f;
-  --accent-soft-fg: #bfdbfe;
+  --accent-fg: #06101f;
+  --accent-soft: rgb(96 165 250 / 0.16);
+  --accent-soft-fg: #cfe3ff;
   --ring: #60a5fa;
-  --success: #22c55e;
-  --success-soft: #0f2a1a;
-  --success-fg: #86efac;
-  --warning: #f59e0b;
-  --warning-soft: #2e2208;
-  --warning-fg: #fcd34d;
+  --success: #34d399;
+  --success-soft: rgb(52 211 153 / 0.14);
+  --success-fg: #a7f3d0;
+  --warning: #fbbf24;
+  --warning-soft: rgb(251 191 36 / 0.14);
+  --warning-fg: #fde68a;
   --danger: #f87171;
-  --danger-soft: #331414;
-  --danger-fg: #fca5a5;
+  --danger-soft: rgb(248 113 113 / 0.15);
+  --danger-fg: #fecaca;
   --on-danger: #1f0707;
   --info: #38bdf8;
-  --info-soft: #0b2233;
-  --info-fg: #7dd3fc;
-  --diff-add: #10291a;
-  --diff-del: #331719;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-hover: 0 10px 24px -10px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.03);
-  --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+  --info-soft: rgb(56 189 248 / 0.14);
+  --info-fg: #bae6fd;
+  --diff-add: rgb(52 211 153 / 0.14);
+  --diff-del: rgb(248 113 113 / 0.15);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+  --shadow-hover: 0 2px 4px rgb(0 0 0 / 0.3), 0 18px 40px -14px rgb(0 0 0 / 0.75);
+  --shadow-lg: 0 28px 70px -20px rgb(0 0 0 / 0.8);
   --grid-line: rgb(255 255 255 / 0.035);
+  --aurora:
+    radial-gradient(44rem 34rem at 6% -8%, rgb(37 99 235 / 0.55), transparent 70%),
+    radial-gradient(38rem 30rem at 98% 2%, rgb(8 145 178 / 0.45), transparent 70%),
+    radial-gradient(42rem 32rem at 80% 100%, rgb(79 70 229 / 0.38), transparent 70%),
+    radial-gradient(36rem 28rem at 0% 96%, rgb(13 148 136 / 0.36), transparent 70%);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --bg: #0a0f1c;
-    --surface: #0f1626;
-    --surface-2: #151d30;
-    --surface-3: #1d273d;
-    --border: #222d44;
-    --border-strong: #334160;
-    --fg: #e7ecf4;
-    --fg-muted: #a6b1c4;
-    --fg-subtle: #8893a8;
+    --bg: #060a15;
+    --surface: rgb(15 23 42 / 0.52);
+    --surface-strong: rgb(13 20 37 / 0.86);
+    --surface-solid: #0e1526;
+    --surface-2: rgb(148 163 184 / 0.08);
+    --surface-3: rgb(148 163 184 / 0.15);
+    --border: rgb(255 255 255 / 0.09);
+    --border-strong: rgb(255 255 255 / 0.18);
+    --glass-edge: rgb(255 255 255 / 0.12);
+    --glass-highlight: rgb(255 255 255 / 0.08);
+    --glass-blur: 20px;
+    --fg: #eef2f8;
+    --fg-muted: #b3bdcd;
+    --fg-subtle: #94a0b4;
     --accent: #60a5fa;
+    --accent-2: #38bdf8;
     --accent-hover: #93c5fd;
-    --accent-fg: #0a1020;
-    --accent-soft: #12213f;
-    --accent-soft-fg: #bfdbfe;
+    --accent-fg: #06101f;
+    --accent-soft: rgb(96 165 250 / 0.16);
+    --accent-soft-fg: #cfe3ff;
     --ring: #60a5fa;
-    --success: #22c55e;
-    --success-soft: #0f2a1a;
-    --success-fg: #86efac;
-    --warning: #f59e0b;
-    --warning-soft: #2e2208;
-    --warning-fg: #fcd34d;
+    --success: #34d399;
+    --success-soft: rgb(52 211 153 / 0.14);
+    --success-fg: #a7f3d0;
+    --warning: #fbbf24;
+    --warning-soft: rgb(251 191 36 / 0.14);
+    --warning-fg: #fde68a;
     --danger: #f87171;
-    --danger-soft: #331414;
-    --danger-fg: #fca5a5;
+    --danger-soft: rgb(248 113 113 / 0.15);
+    --danger-fg: #fecaca;
     --on-danger: #1f0707;
     --info: #38bdf8;
-    --info-soft: #0b2233;
-    --info-fg: #7dd3fc;
-    --diff-add: #10291a;
-    --diff-del: #331719;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-hover: 0 10px 24px -10px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.03);
-    --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+    --info-soft: rgb(56 189 248 / 0.14);
+    --info-fg: #bae6fd;
+    --diff-add: rgb(52 211 153 / 0.14);
+    --diff-del: rgb(248 113 113 / 0.15);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+    --shadow-hover: 0 2px 4px rgb(0 0 0 / 0.3), 0 18px 40px -14px rgb(0 0 0 / 0.75);
+    --shadow-lg: 0 28px 70px -20px rgb(0 0 0 / 0.8);
     --grid-line: rgb(255 255 255 / 0.035);
+    --aurora:
+      radial-gradient(44rem 34rem at 6% -8%, rgb(37 99 235 / 0.55), transparent 70%),
+      radial-gradient(38rem 30rem at 98% 2%, rgb(8 145 178 / 0.45), transparent 70%),
+      radial-gradient(42rem 32rem at 80% 100%, rgb(79 70 229 / 0.38), transparent 70%),
+      radial-gradient(36rem 28rem at 0% 96%, rgb(13 148 136 / 0.36), transparent 70%);
     color-scheme: dark;
   }
 }
@@ -125,6 +160,9 @@
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-solid: var(--surface-solid);
+  --color-accent-2: var(--accent-2);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
   --color-border: var(--border);
@@ -274,12 +312,76 @@
     transform 200ms var(--ease-snappy);
 }
 .kv-lift:hover {
-  box-shadow: var(--shadow-hover);
+  box-shadow:
+    var(--shadow-hover),
+    inset 0 1px 0 var(--glass-highlight);
   border-color: var(--border-strong);
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .kv-lift:hover {
     transform: translateY(-1px);
+  }
+}
+
+/* The colour field behind everything (rendered once, fixed, never animated). */
+.kv-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--aurora), var(--bg);
+}
+
+/*
+ * Frosted glass. In the components layer so utilities passed by callers (a border colour,
+ * a ring) still win. Falls back to solid surfaces where blur is unsupported or the visitor
+ * asks for less transparency.
+ */
+@layer components {
+  .glass,
+  .glass-strong {
+    background-color: var(--surface);
+    border-color: var(--glass-edge);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+    box-shadow:
+      var(--shadow),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+  .glass-strong {
+    background-color: var(--surface-strong);
+    box-shadow:
+      var(--shadow-lg),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+  /* A soft sheen across the top edge of glass panels. */
+  .glass-sheen {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.18), transparent 38%);
+  }
+  .dark .glass-sheen {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 38%);
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .glass-sheen {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 38%);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong {
+    background-color: var(--surface-solid);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --surface: var(--surface-solid);
+    --surface-strong: var(--surface-solid);
+  }
+  .glass,
+  .glass-strong {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
@@ -291,6 +393,7 @@
   }
   body {
     background: var(--bg);
+    min-height: 100dvh;
     color: var(--fg);
     font-family: var(--font-sans);
     font-size: 14px;
@@ -331,8 +434,9 @@
     color: var(--accent-soft-fg);
   }
   dialog::backdrop {
-    background: rgb(2 6 23 / 0.5);
-    backdrop-filter: blur(3px);
+    background: rgb(2 6 23 / 0.42);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
   }
   dialog[open]::backdrop {
     animation: kv-fade-in 200ms ease-out;

@@ -114,7 +114,7 @@ export default function WelcomePage() {
         <div className="kv-grid-bg pointer-events-none absolute inset-0 -z-10" aria-hidden />
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
           <div className="kv-stagger text-center lg:text-left">
-            <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted shadow-card">
+            <p className="inline-flex items-center gap-2 glass rounded-full border px-3 py-1 text-xs font-medium text-muted">
               <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
               For Indian SMBs · Hindi, Hinglish, English
             </p>
@@ -143,7 +143,7 @@ export default function WelcomePage() {
         <SectionHead id="how" eyebrow="How it works" title="Up and running in minutes" />
         <ol className="mt-8 grid gap-4 sm:grid-cols-3">
           {STEPS.map((st, i) => (
-            <li key={st.title} className="relative rounded-xl border border-border bg-surface p-5 shadow-card">
+            <li key={st.title} className="glass glass-sheen relative rounded-2xl border p-5">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-fg">{i + 1}</span>
               <h3 className="mt-4 font-semibold text-fg">{st.title}</h3>
               <p className="mt-1 text-sm text-muted">{st.text}</p>
@@ -161,7 +161,7 @@ export default function WelcomePage() {
         />
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {AGENTS.map((a) => (
-            <div key={a.title} className="kv-lift group rounded-xl border border-border bg-surface p-6 shadow-card">
+            <div key={a.title} className="kv-lift glass glass-sheen group rounded-2xl border p-6">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent ring-1 ring-accent/15 transition-colors duration-200 group-hover:bg-accent group-hover:text-accent-fg">
                 <a.icon className="h-5 w-5" aria-hidden />
               </span>
@@ -177,7 +177,7 @@ export default function WelcomePage() {
         <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
           {PLATFORM.map((a) => (
             <div key={a.title} className="flex gap-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-accent shadow-card">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center glass rounded-xl border text-accent">
                 <a.icon className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <div>
@@ -187,7 +187,7 @@ export default function WelcomePage() {
             </div>
           ))}
         </div>
-        <p className="mt-8 rounded-lg border border-dashed border-border-strong px-4 py-3 text-sm text-muted">
+        <p className="mt-8 glass rounded-2xl border px-4 py-3 text-sm text-muted">
           Connects to Google Workspace (Gmail, Calendar, Drive), WhatsApp Business, your website&apos;s lead form and Tally exports.
         </p>
       </section>
@@ -204,7 +204,7 @@ export default function WelcomePage() {
             <div
               key={p.name}
               className={
-                "kv-lift flex flex-col rounded-xl border bg-surface p-6 shadow-card " + (p.featured ? "border-accent ring-1 ring-accent" : "border-border")
+                "kv-lift glass glass-sheen flex flex-col rounded-2xl border p-6 " + (p.featured ? "border-accent ring-1 ring-accent" : "")
               }
             >
               <h3 className="font-semibold text-fg">{p.name}</h3>
@@ -229,7 +229,7 @@ export default function WelcomePage() {
       </section>
 
       <section aria-labelledby="trust" className="py-12">
-        <div className="grid gap-8 rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-10 lg:grid-cols-[1fr_1.3fr]">
+        <div className="glass glass-sheen grid gap-8 rounded-3xl border p-6 sm:p-10 lg:grid-cols-[1fr_1.3fr]">
           <div>
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-success-soft text-success">
               <Lock className="h-5 w-5" aria-hidden />
@@ -257,8 +257,8 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      <section className="relative mt-4 mb-2 overflow-hidden rounded-2xl bg-[#0f172a] px-6 py-12 text-center text-white sm:py-16">
-        <div className="kv-grid-bg pointer-events-none absolute inset-0 opacity-60 [--grid-line:rgb(255_255_255/0.06)]" aria-hidden />
+      <section className="relative isolate mt-4 mb-2 overflow-hidden rounded-3xl border border-white/10 bg-[#0b1324] px-6 py-12 text-center text-white sm:py-16">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(30rem_20rem_at_15%_0%,rgb(37_99_235/0.5),transparent_70%),radial-gradient(28rem_20rem_at_90%_100%,rgb(8_145_178/0.45),transparent_70%)]" aria-hidden />
         <h2 className="relative text-2xl font-semibold tracking-tight sm:text-3xl">See a first result in minutes</h2>
         <p className="relative mx-auto mt-3 max-w-xl text-[15px] text-slate-300">
           Sign up, pick your business type, and watch an agent handle a sample enquiry before you connect anything.

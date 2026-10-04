@@ -77,8 +77,8 @@ function Shell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-dvh lg:pl-60">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-border bg-surface lg:block" aria-label="Sidebar">
+    <div className="min-h-dvh lg:pl-[16.5rem]">
+      <aside className="glass glass-sheen fixed top-3 bottom-3 left-3 z-30 hidden w-60 overflow-hidden rounded-2xl border lg:block" aria-label="Sidebar">
         <SidebarContent />
       </aside>
 
@@ -88,7 +88,7 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </Sheet>
 
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-surface/80 px-3 backdrop-blur-md backdrop-saturate-150 sm:px-5">
+      <header className="glass sticky top-3 z-20 mx-3 mt-3 flex h-14 items-center gap-2 rounded-2xl border px-2.5 sm:mx-4 sm:px-4 lg:mr-4 lg:ml-0">
         <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}>
           <Menu className="h-5 w-5" />
         </Button>
@@ -96,12 +96,12 @@ function Shell({ children }: { children: ReactNode }) {
         <button
           type="button"
           onClick={() => setAskOpen(true)}
-          className="group ml-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-surface-2/70 px-3 text-left text-sm text-subtle transition-[border-color,color,background-color,box-shadow] duration-150 hover:border-border-strong hover:bg-surface hover:text-muted hover:shadow-card sm:max-w-md"
+          className="group ml-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-surface-2 px-3 text-left text-sm text-subtle transition-[border-color,color,background-color,box-shadow] duration-150 hover:border-border-strong hover:bg-surface-strong hover:text-muted hover:shadow-card sm:max-w-md"
           aria-label="Ask Kritvia (Command K)"
         >
           <Search className="h-4 w-4 shrink-0 transition-colors duration-150 group-hover:text-accent" aria-hidden />
           <span className="truncate">Ask anything across ventures…</span>
-          <kbd className="ml-auto hidden rounded border border-border bg-surface px-1.5 font-sans text-[11px] text-subtle sm:inline">
+          <kbd className="ml-auto hidden rounded border border-border bg-surface-strong px-1.5 font-sans text-[11px] text-subtle sm:inline">
             ⌘K
           </kbd>
         </button>

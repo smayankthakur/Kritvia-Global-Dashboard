@@ -55,7 +55,7 @@ export function Dialog({
   const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
   const layout =
     variant === "center"
-      ? cn("m-auto w-[calc(100vw-2rem)] rounded-xl max-h-[calc(100dvh-2rem)]", widths[size])
+      ? cn("m-auto w-[calc(100vw-2rem)] rounded-2xl max-h-[calc(100dvh-2rem)]", widths[size])
       : cn(
           "my-0 h-dvh max-h-dvh w-full rounded-none",
           variant === "sheet-right" ? "mr-0 ml-auto" : "ml-0 mr-auto",
@@ -75,7 +75,7 @@ export function Dialog({
         if (dismissible && e.target === ref.current) onClose();
       }}
       className={cn(
-        "border border-border bg-surface p-0 text-fg shadow-pop open:flex open:flex-col",
+        "glass-strong border p-0 text-fg open:flex open:flex-col",
         variant === "center" ? "open:animate-scale-in" : variant === "sheet-right" ? "open:animate-slide-in-right" : "open:animate-slide-in-left",
         layout,
         className,
@@ -102,7 +102,7 @@ export function Dialog({
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
           {footer ? (
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface-2/50 px-5 py-3">
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface-2 px-5 py-3">
               {footer}
             </div>
           ) : null}

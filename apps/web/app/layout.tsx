@@ -25,8 +25,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0f1c" },
+    { media: "(prefers-color-scheme: light)", color: "#e8eef8" },
+    { media: "(prefers-color-scheme: dark)", color: "#060a15" },
   ],
 };
 
@@ -36,6 +36,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="en-IN" className={cls} suppressHydrationWarning>
       <body>
+        <div className="kv-aurora" aria-hidden />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[70] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:shadow-pop"
