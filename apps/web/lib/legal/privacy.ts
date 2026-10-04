@@ -8,7 +8,7 @@ export const PRIVACY_UPDATED = "4 October 2026";
 
 export const PRIVACY_MD = `## 1. Who we are and what this policy covers
 
-Sitelytc Digital Media Private Limited, New Delhi, India (**Sitelytc**, **we**) provides Kritvia, a business operating system that stores a business's records and runs AI agents that draft work for the business to approve. This policy explains how we handle personal data in connection with Kritvia, its website app.sitelytc.com, its desktop and installable apps, and our support channels.
+Sitelytc Digital Media Private Limited (CIN U63121DL2025PTC453508), New Delhi, India (**Sitelytc**, **we**) provides Kritvia, a business operating system that stores a business's records and runs AI agents that draft work for the business to approve. This policy explains how we handle personal data in connection with Kritvia, its website app.sitelytc.com, its desktop and installable apps, and our support channels.
 
 We handle personal data in two different roles:
 

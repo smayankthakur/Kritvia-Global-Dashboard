@@ -4,6 +4,7 @@ import { Logo } from "@/components/shell/logo";
 import { Markdown } from "@/components/ui/markdown";
 
 export const COMPANY = "Sitelytc Digital Media Pvt. Ltd.";
+export const CIN = "U63121DL2025PTC453508";
 export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@sitelytc.com";
 
 const LINKS = [
@@ -35,7 +36,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-border py-6 text-center text-xs text-subtle">
-        © {new Date().getFullYear()} {COMPANY} · New Delhi, India ·{" "}
+        © {new Date().getFullYear()} {COMPANY} · CIN {CIN} · New Delhi, India ·{" "}
         <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-fg">
           {SUPPORT_EMAIL}
         </a>

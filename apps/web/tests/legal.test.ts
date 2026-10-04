@@ -19,6 +19,10 @@ describe("legal text", () => {
     for (const md of [PRIVACY_MD, TERMS_MD]) expect(md).not.toMatch(/\[(CIN|registered address)\]/);
   });
 
+  it("identifies the company by its CIN", () => {
+    for (const md of [PRIVACY_MD, TERMS_MD]) expect(md).toContain("CIN U63121DL2025PTC453508");
+  });
+
   it("names training providers only as an opt-in, never for Google data or sensitive records", () => {
     expect(PRIVACY_MD).not.toMatch(/Sarvam/);
     expect(PRIVACY_MD).toMatch(/Groq/);

@@ -50,7 +50,7 @@ function withCsp(req: NextRequest, rewriteTo?: URL) {
 export const config = {
   matcher: [
     {
-      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml|opengraph-image|manifest.webmanifest|sw.js|icons/).*)",
+      source: "/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml|opengraph-image|manifest.webmanifest|sw.js|icons/|google4106eb9b04d0c769.html).*)",
       missing: [{ type: "header", key: "next-router-prefetch" }],
     },
   ],

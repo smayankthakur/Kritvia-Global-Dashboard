@@ -9,7 +9,7 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 
 ## 1. Who these terms are between
 
-1.1 These Terms of Service (the **Terms**) are a binding agreement between **Sitelytc Digital Media Private Limited**, a company incorporated under the Companies Act, 2013, with its registered office in New Delhi, India (**Sitelytc**, **we**, **us**) and the business or other entity that creates a Kritvia organisation or buys a plan (the **Customer**, **you**).
+1.1 These Terms of Service (the **Terms**) are a binding agreement between **Sitelytc Digital Media Private Limited**, a company incorporated under the Companies Act, 2013 (CIN U63121DL2025PTC453508), with its registered office in New Delhi, India (**Sitelytc**, **we**, **us**) and the business or other entity that creates a Kritvia organisation or buys a plan (the **Customer**, **you**).
 
 1.2 The person who accepts these Terms confirms that they are at least 18 years old and have authority to bind the Customer. If they do not have that authority, they accept these Terms personally.
 
@@ -265,5 +265,5 @@ We may remove content or suspend access under clause 14 if we reasonably believe
 
 20.6 **Other terms.** If any provision is held invalid, the rest remains in force and the invalid provision is read down to the extent needed. A failure to enforce a right is not a waiver of it. The parties are independent contractors. No one other than the parties has rights under these Terms. Any purchase-order terms you issue do not apply.
 
-20.7 **Contact.** Sitelytc Digital Media Private Limited, New Delhi, India. Email: support@sitelytc.com. Grievance officer: see the [Privacy Policy](/privacy).
+20.7 **Contact.** Sitelytc Digital Media Private Limited (CIN U63121DL2025PTC453508), New Delhi, India. Email: support@sitelytc.com. Grievance officer: see the [Privacy Policy](/privacy).
 `;
