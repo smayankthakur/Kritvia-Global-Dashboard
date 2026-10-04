@@ -559,6 +559,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Setup */
+        get: operations["get_setup_orgs__org_id__ai_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/ai/keys/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Key
+         * @description Adds or replaces the organisation's key for one provider, after a one-line test call.
+         */
+        put: operations["put_key_orgs__org_id__ai_keys__provider__put"];
+        post?: never;
+        /** Delete Key */
+        delete: operations["delete_key_orgs__org_id__ai_keys__provider__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/ai/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Settings */
+        put: operations["put_settings_orgs__org_id__ai_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/ask": {
         parameters: {
             query?: never;
@@ -2540,6 +2595,24 @@ export interface components {
             /** Role */
             role?: ("front_desk" | "sales" | "accounts" | "ops") | null;
         };
+        /** AiSetupOut */
+        AiSetupOut: {
+            /** Allow Training Models */
+            allow_training_models: boolean;
+            /** Can Edit */
+            can_edit: boolean;
+            /** Free Models */
+            free_models: components["schemas"]["FreeModelOut"][];
+            /** Keys */
+            keys: components["schemas"]["KeyOut"][];
+            /** Providers */
+            providers: components["schemas"]["ProviderOut"][];
+            /**
+             * Ventures With Google
+             * @description businesses where training models stay off (Google connected)
+             */
+            ventures_with_google: number;
+        };
         /** AnswerOut */
         AnswerOut: {
             /** Answer */
@@ -3636,6 +3709,23 @@ export interface components {
             /** Unified */
             unified?: string | null;
         };
+        /** FreeModelOut */
+        FreeModelOut: {
+            /**
+             * Available
+             * @description this server has a key for it
+             */
+            available: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * May Train
+             * @description the provider may learn from what it receives (opt-in only)
+             */
+            may_train: boolean;
+        };
         /** GoogleCompleteIn */
         GoogleCompleteIn: {
             /** Code */
@@ -3952,6 +4042,35 @@ export interface components {
             /** Venture Id */
             venture_id: string | null;
         };
+        /** KeyIn */
+        KeyIn: {
+            /**
+             * Api Key
+             * @description omit to change only the model or order of a saved key
+             */
+            api_key?: string | null;
+            /** Model */
+            model: string;
+            /** Position */
+            position?: number | null;
+        };
+        /** KeyOut */
+        KeyOut: {
+            /** Hint */
+            hint: string;
+            /** Label */
+            label: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Ok At */
+            last_ok_at: string | null;
+            /** Model */
+            model: string;
+            /** Position */
+            position: number;
+            /** Provider */
+            provider: string;
+        };
         /** KitchenRunIn */
         KitchenRunIn: {
             /** Target Date */
@@ -4249,6 +4368,11 @@ export interface components {
         };
         /** NoticeOut */
         NoticeOut: {
+            /**
+             * Ai May Train
+             * @default false
+             */
+            ai_may_train: boolean;
             /** Business Name */
             business_name: string;
             /** City */
@@ -4425,6 +4549,17 @@ export interface components {
              * @enum {string}
              */
             status: "accepted" | "rejected";
+        };
+        /** ProviderOut */
+        ProviderOut: {
+            /** Example Model */
+            example_model: string;
+            /** Key */
+            key: string;
+            /** Keys Url */
+            keys_url: string;
+            /** Label */
+            label: string;
         };
         /** PublicUploadInfo */
         PublicUploadInfo: {
@@ -4713,6 +4848,11 @@ export interface components {
             run_id: string;
             /** Workflow */
             workflow: string;
+        };
+        /** SettingsIn */
+        SettingsIn: {
+            /** Allow Training Models */
+            allow_training_models: boolean;
         };
         /** SigninUrlOut */
         SigninUrlOut: {
@@ -6452,6 +6592,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_setup_orgs__org_id__ai_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSetupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_key_orgs__org_id__ai_keys__provider__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                provider: "openai" | "anthropic" | "gemini" | "groq" | "openrouter" | "mistral" | "cerebras";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSetupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_key_orgs__org_id__ai_keys__provider__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                provider: "openai" | "anthropic" | "gemini" | "groq" | "openrouter" | "mistral" | "cerebras";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSetupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_orgs__org_id__ai_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSetupOut"];
                 };
             };
             /** @description Validation Error */

@@ -1,10 +1,10 @@
 /**
- * Privacy Policy, version 2026-10-03. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Privacy Policy, version 2026-10-04. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Privacy Policy). Every factual statement here was checked against the code;
  * if routing, retention or providers change (infra/litellm/tiers.yaml, migrations, worker purges),
  * change this text too and bump terms_version in the API settings.
  */
-export const PRIVACY_UPDATED = "3 October 2026";
+export const PRIVACY_UPDATED = "4 October 2026";
 
 export const PRIVACY_MD = `## 1. Who we are and what this policy covers
 
@@ -42,17 +42,18 @@ We do not keep dictation audio. We keep the length, language and word count of e
 
 ## 3. How AI is used
 
-Kritvia uses AI models to read Customer Data and draft replies, summaries, proposals and extracted fields. Four rules govern this:
+Kritvia uses AI models to read Customer Data and draft replies, summaries, proposals and extracted fields. Five rules govern this:
 
 1. **Sensitive records stay on our servers.** A document or message marked sensitive, kept in a role-restricted area, uploaded as a loan document, or in which we detect an Aadhaar, PAN, passport, bank-account or card number, is processed only by AI models running on our own servers in India. Search indexes (embeddings) and text recognition (OCR) always run on our own servers.
-2. **Hosted providers do not train on your data.** Other tasks may go to the hosted AI providers listed in section 4, only on paid or zero-retention terms under which the provider does not use the content to train or improve its models and keeps it, if at all, only briefly for abuse monitoring.
-3. **A person approves before anything is sent.** Drafts wait for a person's approval before they leave Kritvia, unless the business has expressly allowed a specific agent to act on its own.
-4. **No automated decisions about you.** Kritvia does not make decisions with legal or similarly significant effects about individuals; the business makes them, and outputs are suggestions only.
+2. **By default, only models that do not train.** Other tasks go to the free hosted AI providers in section 4 whose terms do not let them use the content to train their models (they keep it, if at all, only briefly for abuse monitoring). A business's owner may also switch on free models whose providers may learn from the content they receive (Google Gemini free tier, OpenRouter free models, Mistral free tier). We never use those for sensitive records, or for a business that has connected Google Workspace. The business's privacy notice to its customers then says so.
+3. **A business may use its own AI provider.** If a business adds its own key for a provider such as OpenAI, Anthropic or Google, its ordinary tasks go to that provider under the business's own agreement with it. Sensitive records still stay on our servers.
+4. **A person approves before anything is sent.** Drafts wait for a person's approval before they leave Kritvia, unless the business has expressly allowed a specific agent to act on its own.
+5. **No automated decisions about you.** Kritvia does not make decisions with legal or similarly significant effects about individuals; the business makes them, and outputs are suggestions only.
 
 **Google user data.** If a business connects Google, Kritvia accesses Gmail (to read incoming mail and send replies the business approves), Google Calendar (to create events) and Google Drive (to import files the business chooses). Kritvia's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. The use of information received from Google Workspace APIs will adhere to the Google User Data Policy, including the Limited Use requirements. In particular:
 
 - we use Google user data only to provide the features the business switches on, which are visible in Kritvia;
-- we transfer it to others only as needed to provide those features (for example, to an AI provider in section 4 to draft a reply), for security, or to comply with law;
+- we transfer it to others only as needed to provide those features (for example, to an AI provider in section 4 that does not train on it, to draft a reply), for security, or to comply with law, and never to an AI model whose provider may train on it;
 - we do not use it for advertising, sell it, or use it to train generalised AI or machine-learning models;
 - our staff do not read it unless the business asks for support with specific items, it is needed to investigate security or abuse, or the law requires it.
 
@@ -65,9 +66,11 @@ We share personal data only with the service providers below, who process it on 
 | Provider | What they do for Kritvia | Data they receive | Where |
 | --- | --- | --- | --- |
 | Amazon Web Services | Hosting, database, encrypted backups, sending sign-in codes and support email (Amazon SES), system alerts | All data stored in Kritvia (encrypted backups cannot be read by AWS) | India (Mumbai) |
-| Cloudflare | Secure network connection between your browser and our servers | All traffic, encrypted in transit | Global network; nearest location to you |
-| Groq | Hosted AI models for drafting and extraction; meeting and dictation transcription | Text or audio of the specific task, never sensitive records; zero data retention | United States |
-| Google (Gemini API, paid service) | Hosted AI models for reasoning and long documents | Text of the specific task, never sensitive records; not used to train Google's models | United States and other Google locations |
+| Cloudflare | Secure network connection between your browser and our servers; Workers AI models for drafting (not used for training) | All traffic, encrypted in transit; text of specific tasks, never sensitive records | Global network; nearest location to you |
+| Groq | Hosted AI models for drafting and extraction; meeting and dictation transcription | Text or audio of the specific task, never sensitive records; not used for training | United States |
+| Cerebras | Hosted AI models for drafting and extraction | Text of the specific task, never sensitive records; not retained | United States |
+| Only if a business opts in: Google (Gemini free tier), OpenRouter free models, Mistral | Extra free AI capacity | Text of the specific task, never sensitive records and never Google Workspace data; may be used to improve the provider's models | United States, European Union and other provider locations |
+| The AI provider a business connects with its own key | Drafting for that business | Text of the specific task, never sensitive records; under the business's agreement with that provider | Where that provider operates |
 | Razorpay | Subscription payments | Billing name, GSTIN, email, plan; you enter card or UPI details directly with Razorpay | India |
 | Browser push services (Google, Apple, Mozilla, Microsoft) | Delivering notifications you switched on | An encrypted notification with the draft's title | Global |
 
@@ -75,7 +78,7 @@ We share personal data only with the service providers below, who process it on 
 
 **Other disclosures.** We may disclose personal data (a) where the law, a court order or a government agency with lawful authority requires it, after checking the request is valid and disclosing no more than required; (b) to protect the security of Kritvia, our customers or the public; or (c) to a buyer or successor if our business is reorganised or sold, who must honour this policy.
 
-**Transfers outside India.** Data is stored in India. Groq, Google and the push services may process the text of individual tasks outside India, as shown above. The DPDP Act permits this except to countries the Government of India restricts; we will stop any transfer to a restricted country. We will update this list, and notify business customers at least 15 days ahead, before adding a provider.
+**Transfers outside India.** Data is stored in India. The AI providers and push services above may process the text of individual tasks outside India, as shown. The DPDP Act permits this except to countries the Government of India restricts; we will stop any transfer to a restricted country. We will update this list, and notify business customers at least 15 days ahead, before adding a provider.
 
 ## 5. How long we keep data, and how we protect it
 

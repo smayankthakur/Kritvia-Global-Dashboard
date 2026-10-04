@@ -104,7 +104,8 @@ async def test_all_providers_down(world):
     fake = FakeLiteLLM({m: 503 for m in CONFIG.tiers["fast"]})
     with pytest.raises(AllProvidersFailed) as exc:
         await make_router(fake).chat(ctx(world, "down"), tier="fast", messages=[])
-    assert len(exc.value.attempts) == len(CONFIG.tiers["fast"])
+    # every deployment this server can use without opt-in was tried: no-training ones with a key, and local
+    assert exc.value.attempts == [f"{d}: HTTP 503" for d in ("groq-llama-8b", "ollama-qwen-7b")]
 
 
 async def test_private_tier_is_local_only_in_shipped_config():
@@ -130,8 +131,12 @@ async def test_model_calls_are_audited(world):
     assert n > 0
 
 
-async def test_no_tier_routes_to_a_provider_that_may_train():
-    """The Privacy Policy promises no AI provider trains on customer data; every tier carries customer data."""
-    for tier, chain in CONFIG.tiers.items():
-        bad = [d for d in chain if CONFIG.policies[d] == "may_train"]
-        assert not bad, f"tier {tier} routes to {bad}"
+async def test_training_models_are_never_first_and_never_private():
+    """Models that may train are opt-in per organisation (see test_ai_models.py); they never sit in the
+    private, embedding or speech tiers, never come before a no-training model, and sensitive data
+    only ever reaches our own server."""
+    assert CONFIG.sensitive_allowed == frozenset({"local"})
+    for tier in ("private", "embed", "speech", "dictation"):
+        assert all(CONFIG.policies[d] != "may_train" for d in CONFIG.tiers[tier]), tier
+    for tier in ("fast", "extract", "reason"):
+        assert CONFIG.policies[CONFIG.tiers[tier][0]] == "no_training", tier

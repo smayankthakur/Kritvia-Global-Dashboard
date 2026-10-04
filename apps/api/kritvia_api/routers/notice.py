@@ -26,6 +26,7 @@ class NoticeOut(BaseModel):
     kind: str
     workflows: list[str]
     updated_at: datetime
+    ai_may_train: bool = False   # the business opted in to free models whose providers may learn from content
 
 
 @router.get("/public/notice/{venture_id}", response_model=NoticeOut)
@@ -33,8 +34,9 @@ async def public_notice(venture_id: uuid.UUID, request: Request) -> NoticeOut:
     await limiter.hit(f"notice:{client_ip(request)}", per_minute=60)
     async with tenant_tx(None, "system") as conn:
         row = (await conn.execute(text("SELECT * FROM private.public_notice(:v)"), {"v": venture_id})).first()
+        may_train = (await conn.execute(text("SELECT private.notice_ai_may_train(:v)"), {"v": venture_id})).scalar()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no privacy notice published")
     return NoticeOut(business_name=row.business_name, city=row.city, contact_name=row.contact_name,
                      contact_email=row.contact_email, kind=row.kind, workflows=list(row.workflows or []),
-                     updated_at=row.updated_at)
+                     updated_at=row.updated_at, ai_may_train=bool(may_train))

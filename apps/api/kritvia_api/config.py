@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     master_kek_b64: str = ""
     master_kek_id: str = "local-v1"
 
+    # Deployments whose key no longer lets the provider train (billing on, opt-out set), comma-separated.
+    ai_no_training_deployments: str = ""
     litellm_base_url: str = "http://localhost:4000"
     litellm_api_key: str = "sk-local-dev"
     tiers_config_path: Path = REPO_ROOT / "infra" / "litellm" / "tiers.yaml"
@@ -88,7 +90,7 @@ class Settings(BaseSettings):
 
     # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
     signup_open: bool = True            # false: only existing accounts and invitees can sign in
-    terms_version: str = "2026-10-03"   # Terms of Service + Privacy Policy in force; bump when they change
+    terms_version: str = "2026-10-04"   # Terms of Service + Privacy Policy in force; bump when they change
     email_code_minutes: int = 10
     # System email for sign-in codes: smtp | log | memory (see services/mailer.py)
     mail_transport: str = "log"

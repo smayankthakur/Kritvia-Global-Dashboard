@@ -1,9 +1,9 @@
 /**
- * Terms of Service, version 2026-10-03. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Terms of Service, version 2026-10-04. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Terms of Service). Keep the two in step; when the text changes, bump
  * TERMS_VERSION in the API settings (terms_version) so everyone is asked to accept again.
  */
-export const TERMS_UPDATED = "3 October 2026";
+export const TERMS_UPDATED = "4 October 2026";
 
 export const TERMS_MD = `These Terms of Service are an agreement between your business and Sitelytc Digital Media Private Limited for the use of Kritvia. Please read them with our [Privacy Policy](/privacy).
 
@@ -58,7 +58,7 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 
 5.1 **Ownership.** As between you and us, you own all Customer Data, including Outputs. You grant us a limited, worldwide licence to host, copy, process, transmit and display Customer Data only as needed to provide, secure and support the Service for you, and as otherwise set out in clause 6.
 
-5.2 **No training, no sale.** We do not sell Customer Data. We do not use Customer Data to train, fine-tune or improve AI models, whether ours or anyone else's, except a model used only for your own organisation where you switch that feature on.
+5.2 **No training, no sale.** We do not sell Customer Data. We do not use Customer Data to train, fine-tune or improve AI models, whether ours or anyone else's. If you switch on free models that may learn from content (clause 7.5), those providers may use the content they receive under their own terms.
 
 5.3 **Your responsibilities.** You are responsible for the accuracy, quality and legality of Customer Data and for how you obtained it. You confirm that you have given every notice and obtained every consent (or have another lawful ground) that the DPDP Act and other applicable law require for you to put personal data into the Service, to have it processed as described in these Terms and our Privacy Policy, and to have Agents contact the people concerned.
 
@@ -96,9 +96,11 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 
 7.4 **No professional advice.** The Service does not give legal, tax, accounting, credit, lending, medical or investment advice. Loan-document checks, forecasts and similar features support, but do not replace, your own professional judgement and any verification the law or your regulator requires of you. You must not use Outputs as the sole basis for a decision that has legal or similarly significant effects on an individual.
 
-7.5 **Models and routing.** We choose which AI model handles each task, based on the task, your Plan and the sensitivity of the data. Documents marked or detected as sensitive are processed only by models running on our own servers. Other tasks may be processed by the hosted AI providers listed in the Privacy Policy, under terms that do not allow them to train on your data.
+7.5 **Models and routing.** We choose which AI model handles each task, based on the task, your Plan and the sensitivity of the data. Documents marked or detected as sensitive are processed only by models running on our own servers. By default, other tasks are processed by free hosted models whose providers do not train on the content (listed in the Privacy Policy). An owner may also switch on free models whose providers may learn from the content they receive. We never use those for sensitive records, or for a business with Google Workspace connected.
 
-7.6 **Usage meters.** The hosted-AI tokens, spend figures and budgets shown in the Service are estimates for managing usage. Billing is by Plan, not by those figures, unless your order form says otherwise.
+7.6 **Your own AI keys.** An owner may add the organisation's own API key for a supported AI provider. Agents then try that provider first for ordinary tasks. You are responsible for your agreement with that provider and for its charges; that provider is your service provider, not our sub-processor. We store the key encrypted, use it only for your organisation, never show it again, and stop using it if you remove it or the provider rejects it. Usage on your own key does not count against your Plan's hosted-AI allowance.
+
+7.7 **Usage meters.** The hosted-AI tokens, spend figures and budgets shown in the Service are estimates for managing usage. Billing is by Plan, not by those figures, unless your order form says otherwise.
 
 ## 8. Connected Services
 

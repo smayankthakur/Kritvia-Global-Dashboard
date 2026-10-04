@@ -4,36 +4,52 @@
 #   local        runs on our VM or the client's VPC; data never leaves
 #   byok_client  the client's own key/account (their contract, their terms)
 #   no_training  hosted, provider contractually does not train on inputs
-#   may_train    free tier whose terms may allow training -> never in any tier (the Privacy Policy promises
-#                that no provider trains on customer data; tests/test_tiers_policy.py enforces this)
+#   may_train    free tier whose terms may allow training. Used only when the organisation's owner
+#                switches on "free models that may learn from content", never for sensitive records,
+#                and never for a business with Google connected (Google's API rules). Enforced in
+#                the router (services/model_router.py); tests/test_model_router.py checks it.
+#
+# Each organisation may also add its own paid keys (Settings -> AI models); those calls go straight
+# to the provider, are tried first, and do not count against the plan allowance (services/byok.py).
+# requires_env: the deployment is skipped when this server has no key for that provider.
+# AI_NO_TRAINING_DEPLOYMENTS can upgrade a may_train deployment once its key is paid or opted out.
 #
 # A request flagged sensitive may only reach deployments whose policy is listed
 # in sensitive_allowed. This is enforced in code, not left to workflow authors.
 
-sensitive_allowed: [local, byok_client]
+sensitive_allowed: [local]
 
 deployments:
-  # Groq: account-level Zero Data Retention must be ON (GroqCloud -> Data Controls); Groq does not train on API data.
+  # --- Free and do not train on inputs ---------------------------------------------------------
+  # Groq free tier: no retention by default (turn on Zero Data Retention in GroqCloud to be sure).
   groq-llama-70b:   { data_policy: no_training }
   groq-llama-8b:    { data_policy: no_training }
   groq-whisper:     { data_policy: no_training }
-  # Gemini: the key's Google Cloud project must have billing on (paid tier); the unpaid tier may train.
-  gemini-flash:     { data_policy: no_training }
-  # OpenRouter free models may log and train: declared, but kept out of every tier (customer data only flows here).
+  # Cerebras free tier: no prompt or response retention on any tier.
+  cerebras-large:   { data_policy: no_training, requires_env: CEREBRAS_API_KEY }
+  cerebras-qwen:    { data_policy: no_training, requires_env: CEREBRAS_API_KEY }
+  # Cloudflare Workers AI free allocation: inputs and outputs are not used for training.
+  cloudflare-llama-70b: { data_policy: no_training, requires_env: CLOUDFLARE_API_KEY }
+
+  # --- Free but the provider may learn from inputs (opt-in per organisation) ---------------------
+  gemini-flash:     { data_policy: may_train }        # AI Studio free key; billing on -> AI_NO_TRAINING_DEPLOYMENTS
+  mistral-large:    { data_policy: may_train, requires_env: MISTRAL_API_KEY }   # opt-out in Mistral admin -> no_training
   openrouter-free:  { data_policy: may_train }
+  openrouter-big:   { data_policy: may_train }
+  # Sarvam (Indian languages) is called natively by the API; its standard terms allow training, so it is
+  # in no tier until there is a signed no-training agreement.
+  sarvam-saaras:    { data_policy: may_train, provider: sarvam, model: "saaras:v4" }
+
+  # --- Our own server ----------------------------------------------------------------------------
   ollama-qwen-7b:   { data_policy: local }
   ollama-bge-m3:    { data_policy: local }
   local-whisper:    { data_policy: local }
-  # Sarvam (Indian languages, Hinglish), called natively by the API with SARVAM_API_KEY. Its standard terms allow
-  # training on inputs, so it is out of the dictation chain. Re-add it (as no_training) only with a signed
-  # no-training agreement, and update the sub-processor list in the Privacy Policy first.
-  sarvam-saaras:    { data_policy: may_train, provider: sarvam, model: "saaras:v4" }
 
 tiers:
-  fast:         [groq-llama-8b, ollama-qwen-7b]
-  extract:      [groq-llama-70b, ollama-qwen-7b]
-  reason:       [groq-llama-70b, gemini-flash, ollama-qwen-7b]
-  long_context: [gemini-flash, groq-llama-70b]
+  fast:         [groq-llama-8b, cerebras-large, cloudflare-llama-70b, openrouter-free, gemini-flash, ollama-qwen-7b]
+  extract:      [groq-llama-70b, cerebras-large, cloudflare-llama-70b, gemini-flash, mistral-large, openrouter-free, ollama-qwen-7b]
+  reason:       [groq-llama-70b, cerebras-qwen, cerebras-large, gemini-flash, mistral-large, openrouter-free, cloudflare-llama-70b, ollama-qwen-7b]
+  long_context: [gemini-flash, openrouter-big, cerebras-qwen, groq-llama-70b, mistral-large]
   private:      [ollama-qwen-7b]
   embed:        [ollama-bge-m3]
   # Long recordings (meetings). Sarvam's REST API takes short clips only, so it is not in this chain.

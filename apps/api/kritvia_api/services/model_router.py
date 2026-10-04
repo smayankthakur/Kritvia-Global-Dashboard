@@ -17,6 +17,7 @@ Swapping a model is a config edit; no deploy of workflow code.
 """
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -81,6 +82,20 @@ class TierConfig:
         return cls(tiers=tiers, policies=policies, sensitive_allowed=frozenset(raw["sensitive_allowed"]),
                    meta=meta)
 
+    def with_policies(self, deployments: list[str], policy: str) -> TierConfig:
+        """Override data policies from the environment, e.g. a Gemini key with billing on is
+        no_training (AI_NO_TRAINING_DEPLOYMENTS=gemini-flash)."""
+        known = [d for d in deployments if d in self.policies]
+        if not known:
+            return self
+        return TierConfig(tiers=self.tiers, policies={**self.policies, **{d: policy for d in known}},
+                          sensitive_allowed=self.sensitive_allowed, meta=self.meta)
+
+    def available(self, deployment: str) -> bool:
+        """A deployment that needs a provider key this server does not have is skipped."""
+        need = self.meta.get(deployment, {}).get("requires_env")
+        return not need or bool(os.environ.get(str(need)))
+
     def provider(self, deployment: str) -> str:
         return str(self.meta.get(deployment, {}).get("provider", "litellm"))
 
@@ -117,6 +132,20 @@ class CallContext:
 
 
 @dataclass
+class Route:
+    """Per-venture routing facts: may free models that train be used, and the org's own keys."""
+    org_id: uuid.UUID | None
+    allow_training: bool
+    google_connected: bool
+    keys: list[tuple[str, str, bytes]]   # (provider, model, wrapped key), in the owner's order
+
+    @property
+    def training_ok(self) -> bool:
+        # Google's API rules forbid Workspace data reaching models that train on it.
+        return self.allow_training and not self.google_connected
+
+
+@dataclass
 class ChatResult:
     content: str
     deployment: str
@@ -147,13 +176,40 @@ class ModelRouter:
         self._sarvam = httpx.AsyncClient(base_url=sarvam_base_url, transport=transport, timeout=60.0)
         from kritvia_api.services.quota import TokenGate
         self.gate = TokenGate()
+        # The organisation's own keys go straight to the provider (fixed base URLs), never via LiteLLM.
+        self.keys = None   # KeyProvider; set by build_services
+        self._byok = httpx.AsyncClient(transport=transport, timeout=timeout_s)
+        self._routes: dict[uuid.UUID, tuple[float, Route]] = {}
 
     async def aclose(self) -> None:
         await self._client.aclose()
         await self._sarvam.aclose()
+        await self._byok.aclose()
 
     def local_deployments(self) -> list[str]:
-        return [d for d, p in self.config.policies.items() if p == "local"]
+        """Model labels that do not count against the plan's hosted-AI allowance: our own
+        servers, and calls on the organisation's own keys (the provider bills them)."""
+        from kritvia_api.services.byok import all_labels
+        return [d for d, p in self.config.policies.items() if p == "local"] + all_labels()
+
+    def forget_routes(self) -> None:
+        self._routes.clear()
+
+    async def _route(self, ctx: CallContext) -> Route:
+        hit = self._routes.get(ctx.venture_id)
+        if hit and time.monotonic() - hit[0] < 30:
+            return hit[1]
+        async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
+            rows = (await conn.execute(text("SELECT * FROM private.ai_route(:v)"), {"v": ctx.venture_id})).all()
+        if rows:
+            r0 = rows[0]
+            route = Route(org_id=r0.org_id, allow_training=bool(r0.allow_training),
+                          google_connected=bool(r0.google_connected),
+                          keys=[(r.provider, r.model, bytes(r.key_wrapped)) for r in rows if r.provider])
+        else:
+            route = Route(org_id=None, allow_training=False, google_connected=False, keys=[])
+        self._routes[ctx.venture_id] = (time.monotonic(), route)
+        return route
 
     async def _over_quota(self, ctx: CallContext) -> str | None:
         """None, 'org' (plan allowance used) or 'agent' (the board budget for this workflow used)."""
@@ -192,14 +248,27 @@ class ModelRouter:
         sensitive: bool = False,
         **params: Any,
     ) -> ChatResult:
+        from kritvia_api.services import byok
         candidates = self.config.candidates(tier, sensitive)
         if not candidates:
             reason = "sensitive request: no deployment in tier is permitted for sensitive data"
             await self._meter(ctx, tier=tier, status="blocked", error=reason)
             raise PolicyViolation(f"tier '{tier}': {reason}; route sensitive work through tier 'private'")
+        route = await self._route(ctx)
+        candidates = [d for d in candidates if self.config.available(d)
+                      and (self.config.policies.get(d) != "may_train" or route.training_ok)]
+        own = [] if sensitive or tier in byok.NO_BYOK_TIERS or self.keys is None else \
+            [byok.label(p) for p, _, _ in route.keys if p in byok.PROVIDERS]
+        candidates = own + candidates
+        if not candidates:
+            await self._meter(ctx, tier=tier, status="blocked", error="no model available for this tier")
+            raise AllProvidersFailed(tier, ["no model is configured for this tier"])
+
+        def hosted(d: str) -> bool:
+            return self.config.policies.get(d) != "local" and not d.startswith(byok.LABEL_PREFIX)
 
         over = None
-        if any(self.config.policies.get(d) != "local" for d in candidates):
+        if any(hosted(d) for d in candidates):
             over = await self._over_quota(ctx)
         if over == "agent":
             # The owner capped this agent on the board: pause it, local model or not.
@@ -207,7 +276,8 @@ class ModelRouter:
             raise AgentBudgetExceeded(f"the {ctx.workflow} agent has used the monthly budget set on the "
                                       "board; raise it or wait for next month")
         if over:
-            local = [d for d in candidates if self.config.policies.get(d) == "local"]
+            # The plan allowance covers hosted models only: the org's own keys and our servers still run.
+            local = [d for d in candidates if not hosted(d)]
             if not local:
                 await self._meter(ctx, tier=tier, status="blocked", error="monthly AI allowance used")
                 raise QuotaExceeded("this workspace has used its monthly AI allowance; upgrade the plan or wait "
@@ -218,9 +288,12 @@ class ModelRouter:
         for attempt, deployment in enumerate(candidates, start=1):
             started = time.perf_counter()
             try:
-                resp = await self._client.post(
-                    "/v1/chat/completions", json={"model": deployment, "messages": messages, **params}
-                )
+                if deployment.startswith(byok.LABEL_PREFIX):
+                    resp = await self._own_key_chat(route, deployment, messages, params)
+                else:
+                    resp = await self._client.post(
+                        "/v1/chat/completions", json={"model": deployment, "messages": messages, **params}
+                    )
             except httpx.TransportError as exc:  # timeouts, connection refused
                 latency = int((time.perf_counter() - started) * 1000)
                 await self._meter(ctx, tier=tier, model=deployment, attempt=attempt,
@@ -241,13 +314,32 @@ class ModelRouter:
                 )
 
             status = "rate_limited" if resp.status_code == 429 else "error"
+            own_key = deployment.startswith(byok.LABEL_PREFIX)
+            # A provider's error body for a customer key is not logged: it can echo account details.
+            detail = f"HTTP {resp.status_code}" if own_key else f"HTTP {resp.status_code}: {resp.text[:200]}"
             await self._meter(ctx, tier=tier, model=deployment, attempt=attempt, status=status,
-                              latency=latency, error=f"HTTP {resp.status_code}: {resp.text[:200]}")
+                              latency=latency, error=detail)
+            if own_key and resp.status_code in (401, 403) and route.org_id:
+                await self._key_rejected(route.org_id, deployment.removeprefix(byok.LABEL_PREFIX))
             failures.append(f"{deployment}: HTTP {resp.status_code}")
             if resp.status_code not in RETRYABLE_STATUS and resp.status_code not in PROVIDER_AUTH_STATUS:
                 break  # a malformed request will fail on every provider
 
         raise AllProvidersFailed(tier, failures)
+
+    async def _own_key_chat(self, route: Route, deployment: str, messages: list[dict[str, Any]],
+                            params: dict[str, Any]) -> httpx.Response:
+        from kritvia_api.services import byok
+        provider = deployment.removeprefix(byok.LABEL_PREFIX)
+        model, wrapped = next((m, w) for p, m, w in route.keys if p == provider)
+        api_key = byok.unwrap_key(self.keys, route.org_id, provider, wrapped)
+        return await byok.chat(self._byok, provider, api_key, model, messages, **params)
+
+    async def _key_rejected(self, org_id: uuid.UUID, provider: str) -> None:
+        async with tenant_tx(None, "system") as conn:
+            await conn.execute(text("SELECT private.ai_key_result(:o, :p, :e)"),
+                               {"o": org_id, "p": provider, "e": "the provider rejected this key"})
+        self.forget_routes()
 
 
 def _cost_header(resp: httpx.Response) -> float | None:

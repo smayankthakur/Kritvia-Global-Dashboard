@@ -13,6 +13,7 @@ export interface NoticeData {
   kind: string;
   workflows: string[];
   updated_at: string;
+  ai_may_train?: boolean;
 }
 
 interface Item {
@@ -100,6 +101,10 @@ const T = {
       "हम आपका डेटा उतने ही समय रखते हैं जितना ऊपर बताए उद्देश्य या कानून के लिए ज़रूरी है, फिर उसे हटा देते हैं।",
     ],
   },
+  trainingNote: {
+    en: "AI helps draft replies and summaries, but a person at our business approves what is sent to you. To keep costs low we also use free AI services, some of which may use the content they receive to improve their models; your identity, bank and loan records are never sent to them.",
+    hi: "AI जवाब और सारांश तैयार करने में मदद करता है, लेकिन आपको जो भेजा जाता है उसे हमारे व्यवसाय का कोई व्यक्ति मंज़ूर करता है। लागत कम रखने के लिए हम कुछ मुफ़्त AI सेवाओं का भी उपयोग करते हैं, जिनमें से कुछ प्राप्त सामग्री से अपने मॉडल सुधार सकती हैं; आपके पहचान, बैंक और लोन रिकॉर्ड उन्हें कभी नहीं भेजे जाते।",
+  },
   rightsH: { en: "Your rights", hi: "आपके अधिकार" },
   rights: {
     en: [
@@ -147,7 +152,7 @@ export function noticeText(d: NoticeData, lang: Lang) {
     items: noticeItems(d, lang),
     localNote: T.localNote[lang],
     howH: T.howH[lang],
-    how: T.how[lang],
+    how: d.ai_may_train ? T.how[lang].map((x, i) => (i === 1 ? T.trainingNote[lang] : x)) : T.how[lang],
     rightsH: T.rightsH[lang],
     rights: T.rights[lang],
     contactH: T.contactH[lang],

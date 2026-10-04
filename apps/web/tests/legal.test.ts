@@ -19,9 +19,11 @@ describe("legal text", () => {
     for (const md of [PRIVACY_MD, TERMS_MD]) expect(md).not.toMatch(/\[(CIN|registered address)\]/);
   });
 
-  it("names only providers that do not train on customer data", () => {
-    expect(PRIVACY_MD).not.toMatch(/OpenRouter|Sarvam/);
+  it("names training providers only as an opt-in, never for Google data or sensitive records", () => {
+    expect(PRIVACY_MD).not.toMatch(/Sarvam/);
     expect(PRIVACY_MD).toMatch(/Groq/);
+    expect(PRIVACY_MD).toMatch(/Only if a business opts in: Google \(Gemini free tier\), OpenRouter free models, Mistral/);
+    expect(PRIVACY_MD).toMatch(/never to an AI model whose provider may train on it/);
   });
 });
 
@@ -47,5 +49,14 @@ describe("customer privacy notice", () => {
     expect(noticeText(d, "en").intro).toContain("Mehta Stores, Pune,");
     expect(noticeText(d, "hi").title).toBe("गोपनीयता सूचना");
     expect(noticeText(d, "hi").rights).toHaveLength(6);
+  });
+});
+
+describe("customer notice and free models", () => {
+  it("says so when the business uses free models that may train", async () => {
+    const { noticeText } = await import("@/lib/notice");
+    const d = { business_name: "B", city: "", contact_name: "", contact_email: "a@b.in", kind: "general", workflows: [], updated_at: "2026-10-04T00:00:00Z" };
+    expect(noticeText(d, "en").how.join(" ")).toContain("do not use your data to train");
+    expect(noticeText({ ...d, ai_may_train: true }, "en").how.join(" ")).toContain("may use the content they receive");
   });
 });
