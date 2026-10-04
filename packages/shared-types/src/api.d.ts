@@ -903,6 +903,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/ventures/removed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Removed Ventures */
+        get: operations["removed_ventures_orgs__org_id__ventures_removed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/ventures/{venture_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Rename Venture
+         * @description Owners and business admins can rename a business.
+         */
+        patch: operations["rename_venture_orgs__org_id__ventures__venture_id__patch"];
+        trace?: never;
+    };
+    "/orgs/{org_id}/ventures/{venture_id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove Venture
+         * @description Owner only. Stops the business's agents and connectors and hides its data at once; it can be
+         *     restored for 30 days, after which its data is erased.
+         */
+        post: operations["remove_venture_orgs__org_id__ventures__venture_id__remove_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/ventures/{venture_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore Venture
+         * @description Owner only, within 30 days. Agents stay off and connectors must be reconnected.
+         */
+        post: operations["restore_venture_orgs__org_id__ventures__venture_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/billing/razorpay": {
         parameters: {
             query?: never;
@@ -4684,6 +4762,41 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** RemoveIn */
+        RemoveIn: {
+            /**
+             * Confirm
+             * @description the business name, typed again
+             */
+            confirm: string;
+        };
+        /** RemovedVentureOut */
+        RemovedVentureOut: {
+            /**
+             * Erase After
+             * Format: date-time
+             */
+            erase_after: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /**
+             * Removed At
+             * Format: date-time
+             */
+            removed_at: string;
+        };
+        /** RenameIn */
+        RenameIn: {
+            /** Name */
+            name: string;
+        };
         /** RetentionIn */
         RetentionIn: {
             /**
@@ -5319,6 +5432,8 @@ export interface components {
         };
         /** VentureIn */
         VentureIn: {
+            /** Kind */
+            kind?: ("general" | "software" | "finance" | "kitchen") | null;
             /** Name */
             name: string;
             /** Slug */
@@ -5331,6 +5446,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @default general
+             */
+            kind: string;
             /** Name */
             name: string;
             /**
@@ -7373,6 +7493,139 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    removed_ventures_orgs__org_id__ventures_removed_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovedVentureOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_venture_orgs__org_id__ventures__venture_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VentureOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_venture_orgs__org_id__ventures__venture_id__remove_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_venture_orgs__org_id__ventures__venture_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

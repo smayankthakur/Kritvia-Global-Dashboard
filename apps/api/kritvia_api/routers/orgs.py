@@ -1,6 +1,8 @@
 import uuid
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
@@ -46,7 +48,12 @@ async def create_venture(org_id: uuid.UUID, body: VentureIn, db: TenantDB, svc: 
     try:
         async with db.begin_nested():
             vid = (await db.execute(text("SELECT create_venture(:o, :n, :s)"),
-                                    {"o": org_id, "n": body.name, "s": body.slug})).scalar_one()
+                                    {"o": org_id, "n": body.name.strip(), "s": body.slug})).scalar_one()
+            if body.kind:
+                await db.execute(text(
+                    "INSERT INTO venture_settings (org_id, venture_id, kind, business_name) VALUES (:o, :v, :k, :n)"
+                    " ON CONFLICT (venture_id) DO UPDATE SET kind = EXCLUDED.kind"),
+                    {"o": org_id, "v": vid, "k": body.kind, "n": body.name.strip()})
     except DBAPIError as exc:
         raise_for_db(exc, "organisation not found")
     return IdOut(id=vid)
@@ -54,10 +61,86 @@ async def create_venture(org_id: uuid.UUID, body: VentureIn, db: TenantDB, svc: 
 
 @router.get("/{org_id}/ventures", response_model=list[VentureOut])
 async def list_ventures(org_id: uuid.UUID, db: TenantDB) -> list[VentureOut]:
-    rows = (await db.execute(
-        text("SELECT id, org_id, name, slug FROM ventures WHERE org_id = :o ORDER BY name"), {"o": org_id}
-    )).all()
+    rows = (await db.execute(text(
+        "SELECT v.id, v.org_id, v.name, v.slug, coalesce(s.kind, 'general') AS kind FROM ventures v"
+        " LEFT JOIN venture_settings s ON s.venture_id = v.id"
+        " WHERE v.org_id = :o AND v.removed_at IS NULL ORDER BY v.name"), {"o": org_id})).all()
     return [VentureOut.model_validate(r) for r in rows]
+
+
+# --- Renaming, removing and restoring a business ------------------------------------------------
+RESTORE_DAYS = 30
+
+
+class RenameIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+class RemoveIn(BaseModel):
+    confirm: str = Field(max_length=120, description="the business name, typed again")
+
+
+class RemovedVentureOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    kind: str
+    removed_at: datetime
+    erase_after: datetime
+
+
+async def _venture_in_org(db, org_id: uuid.UUID, venture_id: uuid.UUID) -> None:
+    found = (await db.execute(text("SELECT 1 FROM ventures WHERE id = :v AND org_id = :o"),
+                              {"v": venture_id, "o": org_id})).first()
+    if found is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "business not found")
+
+
+@router.patch("/{org_id}/ventures/{venture_id}", response_model=VentureOut)
+async def rename_venture(org_id: uuid.UUID, venture_id: uuid.UUID, body: RenameIn, db: TenantDB) -> VentureOut:
+    """Owners and business admins can rename a business."""
+    await _venture_in_org(db, org_id, venture_id)
+    try:
+        async with db.begin_nested():
+            await db.execute(text("SELECT rename_venture(:v, :n)"), {"v": venture_id, "n": body.name})
+    except DBAPIError as exc:
+        raise_for_db(exc, "business not found")
+    rows = [v for v in await list_ventures(org_id, db) if v.id == venture_id]
+    if not rows:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "business not found")
+    return rows[0]
+
+
+@router.post("/{org_id}/ventures/{venture_id}/remove", status_code=204)
+async def remove_venture(org_id: uuid.UUID, venture_id: uuid.UUID, body: RemoveIn, db: TenantDB, svc: Svc) -> None:
+    """Owner only. Stops the business's agents and connectors and hides its data at once; it can be
+    restored for 30 days, after which its data is erased."""
+    await _venture_in_org(db, org_id, venture_id)
+    try:
+        async with db.begin_nested():
+            await db.execute(text("SELECT remove_venture(:v, :c)"), {"v": venture_id, "c": body.confirm})
+    except DBAPIError as exc:
+        raise_for_db(exc, "business not found")
+    svc.router.forget_routes()
+
+
+@router.get("/{org_id}/ventures/removed", response_model=list[RemovedVentureOut])
+async def removed_ventures(org_id: uuid.UUID, db: TenantDB) -> list[RemovedVentureOut]:
+    rows = (await db.execute(text("SELECT * FROM removed_ventures(:o)"), {"o": org_id})).all()
+    return [RemovedVentureOut(id=r.id, name=r.name, kind=r.kind, removed_at=r.removed_at,
+                              erase_after=r.removed_at + timedelta(days=RESTORE_DAYS)) for r in rows]
+
+
+@router.post("/{org_id}/ventures/{venture_id}/restore", response_model=IdOut)
+async def restore_venture(org_id: uuid.UUID, venture_id: uuid.UUID, db: TenantDB, svc: Svc) -> IdOut:
+    """Owner only, within 30 days. Agents stay off and connectors must be reconnected."""
+    await _venture_in_org(db, org_id, venture_id)
+    await require_room(db, org_id, "venture", svc.router.local_deployments())
+    try:
+        async with db.begin_nested():
+            await db.execute(text("SELECT restore_venture(:v)"), {"v": venture_id})
+    except DBAPIError as exc:
+        raise_for_db(exc, "business not found")
+    return IdOut(id=venture_id)
 
 
 @router.post("/{org_id}/members", response_model=IdOut, status_code=201)

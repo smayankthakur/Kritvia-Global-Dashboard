@@ -93,6 +93,7 @@ class OrgIn(BaseModel):
 class VentureIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     slug: str = Slug
+    kind: Literal["general", "software", "finance", "kitchen"] | None = None
 
 
 class IdOut(BaseModel):
@@ -105,6 +106,7 @@ class VentureOut(BaseModel):
     org_id: uuid.UUID
     name: str
     slug: str
+    kind: str = "general"
 
 
 class MemberIn(BaseModel):

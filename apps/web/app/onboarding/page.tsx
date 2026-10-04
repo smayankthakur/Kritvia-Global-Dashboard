@@ -182,7 +182,7 @@ export default function OnboardingPage() {
         {alreadySetUp ? (
           <Card className="p-6">
             <h1 className="text-lg font-semibold">You&apos;re already set up</h1>
-            <p className="mt-1 text-sm text-muted">Your organisation and ventures exist. Add more ventures from the dashboard later.</p>
+            <p className="mt-1 text-sm text-muted">Your organisation and businesses exist. Add, rename or remove businesses under Businesses in the menu.</p>
             <Button variant="primary" className="mt-4" onClick={() => window.location.assign("/")}>
               Go to dashboard
             </Button>

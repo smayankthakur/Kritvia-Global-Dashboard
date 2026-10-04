@@ -250,7 +250,7 @@ async def ask(venture_id: uuid.UUID, body: AskIn, user_id: UserId, svc: Svc) -> 
 async def ask_org(org_id: uuid.UUID, body: AskIn, user_id: UserId, svc: Svc) -> AnswerOut:
     """Executive question across every venture of the org the caller can read (RLS decides which)."""
     async with tenant_tx(user_id) as conn:
-        ventures = [r.id for r in (await conn.execute(text("SELECT id FROM ventures WHERE org_id = :o ORDER BY name"),
+        ventures = [r.id for r in (await conn.execute(text("SELECT id FROM ventures WHERE org_id = :o AND removed_at IS NULL ORDER BY name"),
                                                       {"o": org_id})).all()]
     if not ventures:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organisation not found")

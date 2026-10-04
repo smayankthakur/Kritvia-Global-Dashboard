@@ -13,7 +13,7 @@ export const INDEXABLE = [
 ] as const;
 
 /** Signed-in areas and one-off links: never crawled. */
-export const PRIVATE_PREFIXES = ["/api/", "/v/", "/upload/", "/invite", "/onboarding", "/account", "/inbox", "/settings", "/audit", "/billing"];
+export const PRIVATE_PREFIXES = ["/api/", "/v/", "/upload/", "/invite", "/onboarding", "/account", "/inbox", "/settings", "/audit", "/billing", "/ai", "/businesses"];
 
 export const INDEX = { index: true, follow: true } as const;
 

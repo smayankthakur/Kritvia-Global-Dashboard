@@ -55,7 +55,7 @@ def services_dep() -> Services:
 async def venture_org(db: AsyncConnection, venture_id: uuid.UUID) -> uuid.UUID:
     """The venture's org id, or 404 if the caller cannot see the venture (RLS)."""
     from sqlalchemy import text
-    org = (await db.execute(text("SELECT org_id FROM ventures WHERE id = :v"), {"v": venture_id})).scalar()
+    org = (await db.execute(text("SELECT org_id FROM ventures WHERE id = :v AND removed_at IS NULL"), {"v": venture_id})).scalar()
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found")
     return org

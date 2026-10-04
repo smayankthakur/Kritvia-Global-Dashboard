@@ -124,9 +124,10 @@ async def purge_expired(ctx: dict) -> int:
     async with tenant_tx(None, "system") as conn:
         n = (await conn.execute(text("SELECT private.purge_expired_documents(1000)"))).scalar()
         orgs = (await conn.execute(text("SELECT private.purge_closed_orgs(30)"))).scalar()
+        ventures = (await conn.execute(text("SELECT private.purge_removed_ventures(30)"))).scalar()
         support = (await conn.execute(text("SELECT private.purge_support(730)"))).scalar()
-    log.info("retention purge removed %s document(s), %s closed organisation(s) and %s old support message(s)",
-             n, orgs, support)
+    log.info("retention purge removed %s document(s), %s closed organisation(s), %s removed business(es)"
+             " and %s old support message(s)", n, orgs, ventures, support)
     return n or 0
 
 

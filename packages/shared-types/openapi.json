@@ -5739,6 +5739,72 @@
         "title": "RegisterIn",
         "type": "object"
       },
+      "RemoveIn": {
+        "properties": {
+          "confirm": {
+            "description": "the business name, typed again",
+            "maxLength": 120,
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "RemoveIn",
+        "type": "object"
+      },
+      "RemovedVentureOut": {
+        "properties": {
+          "erase_after": {
+            "format": "date-time",
+            "title": "Erase After",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "removed_at": {
+            "format": "date-time",
+            "title": "Removed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "removed_at",
+          "erase_after"
+        ],
+        "title": "RemovedVentureOut",
+        "type": "object"
+      },
+      "RenameIn": {
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RenameIn",
+        "type": "object"
+      },
       "RetentionIn": {
         "properties": {
           "data_class": {
@@ -7424,6 +7490,23 @@
       },
       "VentureIn": {
         "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "general",
+                  "software",
+                  "finance",
+                  "kitchen"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
           "name": {
             "maxLength": 120,
             "minLength": 1,
@@ -7448,6 +7531,11 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "general",
+            "title": "Kind",
             "type": "string"
           },
           "name": {
@@ -10786,6 +10874,248 @@
           }
         ],
         "summary": "Create Venture",
+        "tags": [
+          "organisations"
+        ]
+      }
+    },
+    "/orgs/{org_id}/ventures/removed": {
+      "get": {
+        "operationId": "removed_ventures_orgs__org_id__ventures_removed_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RemovedVentureOut"
+                  },
+                  "title": "Response Removed Ventures Orgs  Org Id  Ventures Removed Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Removed Ventures",
+        "tags": [
+          "organisations"
+        ]
+      }
+    },
+    "/orgs/{org_id}/ventures/{venture_id}": {
+      "patch": {
+        "description": "Owners and business admins can rename a business.",
+        "operationId": "rename_venture_orgs__org_id__ventures__venture_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VentureOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rename Venture",
+        "tags": [
+          "organisations"
+        ]
+      }
+    },
+    "/orgs/{org_id}/ventures/{venture_id}/remove": {
+      "post": {
+        "description": "Owner only. Stops the business's agents and connectors and hides its data at once; it can be\nrestored for 30 days, after which its data is erased.",
+        "operationId": "remove_venture_orgs__org_id__ventures__venture_id__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Venture",
+        "tags": [
+          "organisations"
+        ]
+      }
+    },
+    "/orgs/{org_id}/ventures/{venture_id}/restore": {
+      "post": {
+        "description": "Owner only, within 30 days. Agents stay off and connectors must be reconnected.",
+        "operationId": "restore_venture_orgs__org_id__ventures__venture_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Venture",
         "tags": [
           "organisations"
         ]

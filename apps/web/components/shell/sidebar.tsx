@@ -115,9 +115,16 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         )}
         {ventures.length ? (
           <div>
-            <label htmlFor="venture-switch" className="mb-1 block px-1 text-[11px] font-medium text-subtle">
-              Venture
-            </label>
+            <div className="mb-1 flex items-center justify-between px-1">
+              <label htmlFor="venture-switch" className="block text-[11px] font-medium text-subtle">
+                Business
+              </label>
+              {org?.is_owner ? (
+                <Link href="/businesses" onClick={() => onNavigate?.()} className="text-[11px] text-accent hover:underline">
+                  Manage
+                </Link>
+              ) : null}
+            </div>
             <select
               id="venture-switch"
               value={venture?.venture_id ?? ""}

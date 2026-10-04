@@ -1,6 +1,7 @@
 import {
   Activity,
   BrainCircuit,
+  Building2,
   AudioLines,
   BookOpen,
   Bot,
@@ -87,6 +88,7 @@ export const topNav: NavItem[] = [
 ];
 
 export const ownerNav: NavItem[] = [
+  { label: "Businesses", href: "/businesses", icon: Building2 },
   { label: "Plan & billing", href: "/billing", icon: CreditCard },
   { label: "AI models", href: "/ai", icon: BrainCircuit },
   { label: "Audit log", href: "/audit", icon: ScrollText },
