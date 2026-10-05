@@ -6648,6 +6648,626 @@
         "title": "TallyOverviewOut",
         "type": "object"
       },
+      "TaskBoardDetail": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "cards": {
+            "default": 0,
+            "title": "Cards",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "lists": {
+            "items": {
+              "$ref": "#/components/schemas/TaskListOut"
+            },
+            "title": "Lists",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "position",
+          "is_default",
+          "lists",
+          "can_edit"
+        ],
+        "title": "TaskBoardDetail",
+        "type": "object"
+      },
+      "TaskBoardIn": {
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TaskBoardIn",
+        "type": "object"
+      },
+      "TaskBoardOut": {
+        "properties": {
+          "cards": {
+            "default": 0,
+            "title": "Cards",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "position",
+          "is_default"
+        ],
+        "title": "TaskBoardOut",
+        "type": "object"
+      },
+      "TaskBoardPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "title": "TaskBoardPatch",
+        "type": "object"
+      },
+      "TaskCardIn": {
+        "properties": {
+          "list_id": {
+            "format": "uuid",
+            "title": "List Id",
+            "type": "string"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "list_id",
+          "title"
+        ],
+        "title": "TaskCardIn",
+        "type": "object"
+      },
+      "TaskCardMove": {
+        "properties": {
+          "list_id": {
+            "format": "uuid",
+            "title": "List Id",
+            "type": "string"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "required": [
+          "list_id"
+        ],
+        "title": "TaskCardMove",
+        "type": "object"
+      },
+      "TaskCardOut": {
+        "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VenturePerson"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "board_id": {
+            "format": "uuid",
+            "title": "Board Id",
+            "type": "string"
+          },
+          "checklist": {
+            "items": {
+              "$ref": "#/components/schemas/TaskCheckItem"
+            },
+            "title": "Checklist",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/TaskLabel"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "list_id": {
+            "format": "uuid",
+            "title": "List Id",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "number"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskCardSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "board_id",
+          "list_id",
+          "title",
+          "description",
+          "checklist",
+          "labels",
+          "position",
+          "assignee",
+          "due_date",
+          "done_at",
+          "archived",
+          "source",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TaskCardOut",
+        "type": "object"
+      },
+      "TaskCardPatch": {
+        "properties": {
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "assignee_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Id"
+          },
+          "checklist": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TaskCheckItem"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist"
+          },
+          "clear_assignee": {
+            "default": false,
+            "title": "Clear Assignee",
+            "type": "boolean"
+          },
+          "clear_due_date": {
+            "default": false,
+            "title": "Clear Due Date",
+            "type": "boolean"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "labels": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TaskLabel"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labels"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "TaskCardPatch",
+        "type": "object"
+      },
+      "TaskCardSource": {
+        "properties": {
+          "chunk_id": {
+            "format": "uuid",
+            "title": "Chunk Id",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_title": {
+            "title": "Document Title",
+            "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "source_start_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Start S"
+          }
+        },
+        "required": [
+          "document_id",
+          "document_title",
+          "chunk_id",
+          "source_start_s",
+          "owner"
+        ],
+        "title": "TaskCardSource",
+        "type": "object"
+      },
+      "TaskCheckItem": {
+        "properties": {
+          "done": {
+            "default": false,
+            "title": "Done",
+            "type": "boolean"
+          },
+          "id": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "TaskCheckItem",
+        "type": "object"
+      },
+      "TaskLabel": {
+        "properties": {
+          "color": {
+            "enum": [
+              "green",
+              "yellow",
+              "orange",
+              "red",
+              "purple",
+              "blue",
+              "sky",
+              "gray"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "maxLength": 24,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "color"
+        ],
+        "title": "TaskLabel",
+        "type": "object"
+      },
+      "TaskListIn": {
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TaskListIn",
+        "type": "object"
+      },
+      "TaskListOut": {
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/TaskCardOut"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_done": {
+            "title": "Is Done",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "position",
+          "is_done",
+          "cards"
+        ],
+        "title": "TaskListOut",
+        "type": "object"
+      },
+      "TaskListPatch": {
+        "properties": {
+          "is_done": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Done"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "title": "TaskListPatch",
+        "type": "object"
+      },
       "TermIn": {
         "properties": {
           "case_sensitive": {
@@ -7569,6 +8189,30 @@
           "slug"
         ],
         "title": "VentureOut",
+        "type": "object"
+      },
+      "VenturePerson": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "full_name",
+          "email"
+        ],
+        "title": "VenturePerson",
         "type": "object"
       },
       "VentureSettingsIn": {
@@ -11856,6 +12500,366 @@
         ]
       }
     },
+    "/ventures/{venture_id}/boards": {
+      "get": {
+        "operationId": "list_boards_ventures__venture_id__boards_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaskBoardOut"
+                  },
+                  "title": "Response List Boards Ventures  Venture Id  Boards Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Boards",
+        "tags": [
+          "tasks"
+        ]
+      },
+      "post": {
+        "operationId": "create_board_ventures__venture_id__boards_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskBoardIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskBoardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Board",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/boards/{board_id}": {
+      "delete": {
+        "description": "Only a board without open cards; its archived cards move to the main board's archive.",
+        "operationId": "delete_board_ventures__venture_id__boards__board_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "board_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Board Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Board",
+        "tags": [
+          "tasks"
+        ]
+      },
+      "get": {
+        "operationId": "get_board_ventures__venture_id__boards__board_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "board_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Board Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Archived",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskBoardDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Board",
+        "tags": [
+          "tasks"
+        ]
+      },
+      "patch": {
+        "operationId": "update_board_ventures__venture_id__boards__board_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "board_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Board Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskBoardPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskBoardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Board",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/boards/{board_id}/lists": {
+      "post": {
+        "operationId": "create_list_ventures__venture_id__boards__board_id__lists_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "board_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Board Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskListIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create List",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/ventures/{venture_id}/breaches": {
       "get": {
         "operationId": "list_breaches_ventures__venture_id__breaches_get",
@@ -12029,6 +13033,201 @@
         "summary": "Update Breach",
         "tags": [
           "compliance"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/cards": {
+      "post": {
+        "operationId": "create_card_ventures__venture_id__cards_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCardIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Card",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/cards/{card_id}": {
+      "patch": {
+        "operationId": "update_card_ventures__venture_id__cards__card_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCardPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Card",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/cards/{card_id}/move": {
+      "post": {
+        "description": "Drag and drop: into any list on any board of the same business, at a position.",
+        "operationId": "move_card_ventures__venture_id__cards__card_id__move_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCardMove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Move Card",
+        "tags": [
+          "tasks"
         ]
       }
     },
@@ -15112,6 +16311,124 @@
         ]
       }
     },
+    "/ventures/{venture_id}/lists/{list_id}": {
+      "delete": {
+        "description": "Only a list without open cards; its archived cards are re-filed under another list.",
+        "operationId": "delete_list_ventures__venture_id__lists__list_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "list_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "List Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete List",
+        "tags": [
+          "tasks"
+        ]
+      },
+      "patch": {
+        "operationId": "update_list_ventures__venture_id__lists__list_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "list_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "List Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskListPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update List",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/ventures/{venture_id}/loan-applications": {
       "get": {
         "operationId": "list_applications_ventures__venture_id__loan_applications_get",
@@ -15611,6 +16928,59 @@
         "summary": "Add Note",
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/people": {
+      "get": {
+        "description": "Who cards on this business can be assigned to.",
+        "operationId": "people_ventures__venture_id__people_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VenturePerson"
+                  },
+                  "title": "Response People Ventures  Venture Id  People Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "People",
+        "tags": [
+          "tasks"
         ]
       }
     },

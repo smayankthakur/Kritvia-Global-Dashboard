@@ -1234,6 +1234,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/boards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Boards */
+        get: operations["list_boards_ventures__venture_id__boards_get"];
+        put?: never;
+        /** Create Board */
+        post: operations["create_board_ventures__venture_id__boards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/boards/{board_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Board */
+        get: operations["get_board_ventures__venture_id__boards__board_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Board
+         * @description Only a board without open cards; its archived cards move to the main board's archive.
+         */
+        delete: operations["delete_board_ventures__venture_id__boards__board_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Board */
+        patch: operations["update_board_ventures__venture_id__boards__board_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/boards/{board_id}/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create List */
+        post: operations["create_list_ventures__venture_id__boards__board_id__lists_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/breaches": {
         parameters: {
             query?: never;
@@ -1267,6 +1324,60 @@ export interface paths {
         head?: never;
         /** Update Breach */
         patch: operations["update_breach_ventures__venture_id__breaches__breach_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Card */
+        post: operations["create_card_ventures__venture_id__cards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/cards/{card_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Card */
+        patch: operations["update_card_ventures__venture_id__cards__card_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/cards/{card_id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move Card
+         * @description Drag and drop: into any list on any board of the same business, at a position.
+         */
+        post: operations["move_card_ventures__venture_id__cards__card_id__move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/ventures/{venture_id}/checklists": {
@@ -1974,6 +2085,27 @@ export interface paths {
         patch: operations["update_lead_ventures__venture_id__leads__lead_id__patch"];
         trace?: never;
     };
+    "/ventures/{venture_id}/lists/{list_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete List
+         * @description Only a list without open cards; its archived cards are re-filed under another list.
+         */
+        delete: operations["delete_list_ventures__venture_id__lists__list_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update List */
+        patch: operations["update_list_ventures__venture_id__lists__list_id__patch"];
+        trace?: never;
+    };
     "/ventures/{venture_id}/loan-applications": {
         parameters: {
             query?: never;
@@ -2088,6 +2220,26 @@ export interface paths {
         put?: never;
         /** Add Note */
         post: operations["add_note_ventures__venture_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * People
+         * @description Who cards on this business can be assigned to.
+         */
+        get: operations["people_ventures__venture_id__people_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5133,6 +5285,231 @@ export interface components {
             /** Vouchers */
             vouchers: number;
         };
+        /** TaskBoardDetail */
+        TaskBoardDetail: {
+            /** Can Edit */
+            can_edit: boolean;
+            /**
+             * Cards
+             * @default 0
+             */
+            cards: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Lists */
+            lists: components["schemas"]["TaskListOut"][];
+            /** Name */
+            name: string;
+            /** Position */
+            position: number;
+        };
+        /** TaskBoardIn */
+        TaskBoardIn: {
+            /** Name */
+            name: string;
+        };
+        /** TaskBoardOut */
+        TaskBoardOut: {
+            /**
+             * Cards
+             * @default 0
+             */
+            cards: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Name */
+            name: string;
+            /** Position */
+            position: number;
+        };
+        /** TaskBoardPatch */
+        TaskBoardPatch: {
+            /** Name */
+            name?: string | null;
+            /** Position */
+            position?: number | null;
+        };
+        /** TaskCardIn */
+        TaskCardIn: {
+            /**
+             * List Id
+             * Format: uuid
+             */
+            list_id: string;
+            /** Position */
+            position?: number | null;
+            /** Title */
+            title: string;
+        };
+        /** TaskCardMove */
+        TaskCardMove: {
+            /**
+             * List Id
+             * Format: uuid
+             */
+            list_id: string;
+            /** Position */
+            position?: number | null;
+        };
+        /** TaskCardOut */
+        TaskCardOut: {
+            /** Archived */
+            archived: boolean;
+            assignee: components["schemas"]["VenturePerson"] | null;
+            /**
+             * Board Id
+             * Format: uuid
+             */
+            board_id: string;
+            /** Checklist */
+            checklist: components["schemas"]["TaskCheckItem"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /** Done At */
+            done_at: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Labels */
+            labels: components["schemas"]["TaskLabel"][];
+            /**
+             * List Id
+             * Format: uuid
+             */
+            list_id: string;
+            /** Position */
+            position: number;
+            source: components["schemas"]["TaskCardSource"] | null;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TaskCardPatch */
+        TaskCardPatch: {
+            /** Archived */
+            archived?: boolean | null;
+            /** Assignee Id */
+            assignee_id?: string | null;
+            /** Checklist */
+            checklist?: components["schemas"]["TaskCheckItem"][] | null;
+            /**
+             * Clear Assignee
+             * @default false
+             */
+            clear_assignee: boolean;
+            /**
+             * Clear Due Date
+             * @default false
+             */
+            clear_due_date: boolean;
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Labels */
+            labels?: components["schemas"]["TaskLabel"][] | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** TaskCardSource */
+        TaskCardSource: {
+            /**
+             * Chunk Id
+             * Format: uuid
+             */
+            chunk_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Document Title */
+            document_title: string;
+            /** Owner */
+            owner: string | null;
+            /** Source Start S */
+            source_start_s: number | null;
+        };
+        /** TaskCheckItem */
+        TaskCheckItem: {
+            /**
+             * Done
+             * @default false
+             */
+            done: boolean;
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+        };
+        /** TaskLabel */
+        TaskLabel: {
+            /**
+             * Color
+             * @enum {string}
+             */
+            color: "green" | "yellow" | "orange" | "red" | "purple" | "blue" | "sky" | "gray";
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+        };
+        /** TaskListIn */
+        TaskListIn: {
+            /** Name */
+            name: string;
+            /** Position */
+            position?: number | null;
+        };
+        /** TaskListOut */
+        TaskListOut: {
+            /** Cards */
+            cards: components["schemas"]["TaskCardOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Done */
+            is_done: boolean;
+            /** Name */
+            name: string;
+            /** Position */
+            position: number;
+        };
+        /** TaskListPatch */
+        TaskListPatch: {
+            /** Is Done */
+            is_done?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Position */
+            position?: number | null;
+        };
         /** TermIn */
         TermIn: {
             /**
@@ -5466,6 +5843,18 @@ export interface components {
             org_id: string;
             /** Slug */
             slug: string;
+        };
+        /** VenturePerson */
+        VenturePerson: {
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /** VentureSettingsIn */
         VentureSettingsIn: {
@@ -8107,6 +8496,208 @@ export interface operations {
             };
         };
     };
+    list_boards_ventures__venture_id__boards_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskBoardOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_board_ventures__venture_id__boards_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskBoardIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskBoardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_board_ventures__venture_id__boards__board_id__get: {
+        parameters: {
+            query?: {
+                archived?: boolean;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+                board_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskBoardDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_board_ventures__venture_id__boards__board_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                board_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_board_ventures__venture_id__boards__board_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                board_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskBoardPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskBoardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_list_ventures__venture_id__boards__board_id__lists_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                board_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskListIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_breaches_ventures__venture_id__breaches_get: {
         parameters: {
             query?: never;
@@ -8196,6 +8787,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BreachOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_card_ventures__venture_id__cards_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCardIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_card_ventures__venture_id__cards__card_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCardPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    move_card_ventures__venture_id__cards__card_id__move_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCardMove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCardOut"];
                 };
             };
             /** @description Validation Error */
@@ -9896,6 +10594,72 @@ export interface operations {
             };
         };
     };
+    delete_list_ventures__venture_id__lists__list_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_list_ventures__venture_id__lists__list_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskListPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_applications_ventures__venture_id__loan_applications_get: {
         parameters: {
             query?: {
@@ -10157,6 +10921,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IngestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    people_ventures__venture_id__people_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VenturePerson"][];
                 };
             };
             /** @description Validation Error */
