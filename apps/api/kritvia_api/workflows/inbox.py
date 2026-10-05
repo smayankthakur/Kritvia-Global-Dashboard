@@ -21,6 +21,7 @@ from sqlalchemy import text
 from kritvia_api.engine.context import RunContext
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
 from kritvia_api.services import memory, pii
+from kritvia_api.workflows.common import CURRENCY_IN_TEXT
 
 wf = registry.register(Workflow(
     "inbox_assistant", title="Inbox assistant", start="classify",
@@ -64,6 +65,20 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
     channel = inp.get("channel") or "email"
     header = (f"Channel: {channel}\nFrom: {inp.get('from_name') or ''} <{_recipient(inp)}>\n"
               f"Subject: {inp.get('subject') or ''}\n\n")
+    # A reply from someone the Prospector wrote to stops their sequence; "stop" / "not interested"
+    # opts them out for good and gets no answer.
+    prospect = None
+    if inp.get("from_email") or inp.get("from_phone"):
+        from kritvia_api.workflows.prospector import match_reply, prospector_settings
+        async with ctx.tx() as conn:
+            hit = await match_reply(conn, ctx.venture_id, email=inp.get("from_email"), phone=inp.get("from_phone"),
+                                    thread_id=inp.get("thread_id"), body=inp.get("body") or "")
+            if hit:
+                pcfg = await prospector_settings(conn, ctx.venture_id)
+                prospect = {"lead_id": hit["lead_id"], "offer": str(pcfg.get("offer") or "")[:500]}
+        if hit and hit["opted_out"]:
+            return Finish("opted_out", update={"summary": {"prospect": True, "opted_out": True}},
+                          note="a prospect asked not to be contacted again; they won't be")
     # A message carrying an ID, card or account number never leaves the server.
     held = pii.mask(header + (inp.get("body") or "")).sensitive
     c = await ctx.llm_json(
@@ -74,7 +89,9 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
                 "update (FYI, newsletters, notifications), spam (cold pitches, marketing), other."),
         prompt=header + (inp.get("body") or "")[:12000])
     summary = {"category": c.category, "needs_reply": c.needs_reply, "language": c.language, "urgency": c.urgency}
-    if c.category == "spam":
+    if prospect:
+        summary["prospect"] = True
+    if c.category == "spam" and not prospect:
         return Finish("spam", update={"summary": summary}, note="spam; nothing filed")
 
     if cfg.get("file_in_memory", True) and (inp.get("body") or "").strip():
@@ -100,7 +117,8 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
                                          trigger_ref=inp.get("message_id"),
                                          dedupe=("inbox:handoff", inp["message_id"]) if inp.get("message_id") else None,
                                          title=f"Enquiry: {(inp.get('subject') or c.summary)[:120]}",
-                                         input={**inp, "source": channel})
+                                         input={**inp, "source": channel,
+                                                **({"lead_id": prospect["lead_id"]} if prospect else {})})
                 return Finish("handed_to_lead_triage", update={"summary": {**summary, "lead_run_id": str(run_id)}},
                               note="enquiry handed to Lead triage")
             except DuplicateTrigger:
@@ -109,7 +127,8 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
     if not c.needs_reply or not cfg.get("draft_replies", True) or not _recipient(inp):
         return Finish("filed", update={"summary": summary},
                       note=f"{c.category}; " + ("no reply needed" if not c.needs_reply else "replies are off"))
-    return Goto("retrieve", update={"classification": c.model_dump(), "summary": summary, "input_sensitive": held},
+    return Goto("retrieve", update={"classification": c.model_dump(), "summary": summary, "input_sensitive": held,
+                                    "prospect": prospect},
                 note=f"{c.category}, {c.urgency} urgency, reply needed")
 
 
@@ -143,6 +162,11 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
               "and come back, and set unsure=true. Never invent prices, dates or commitments. "
               f"Language: {lang}. " + ("Keep it short, no subject line." if channel == "whatsapp"
                                        else f"Plain-text email, sign off as {biz.sign_off}."))
+    prospect = state.get("prospect")
+    if prospect:
+        system += (" This person is replying to a message we sent them first, offering: "
+                   f"{prospect['offer'] or 'our services'}. Answer what they asked, keep it warm and brief, and "
+                   "suggest one easy next step (a short call or a sample). Quote no price that is not in that offer.")
     feedback = state.get("feedback")
     prompt = (f"Message from {inp.get('from_name') or _recipient(inp)}:\n{(inp.get('body') or '')[:6000]}\n\n"
               f"Category: {c['category']}. Summary: {c['summary']}\n\nWhat the business knows (cite by number):\n{src_block}")
@@ -159,15 +183,22 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt:
         subject = r.subject.strip() or ("Re: " + (inp.get("subject") or "your message"))
         action, payload = "gmail.send", {"to": to, "subject": subject[:300], "body": biz.with_notice(r.body.strip()),
                                          "thread_id": inp.get("thread_id")}
+    # A reply to a prospect is the Prospector's message: it goes out alone when the owner let the
+    # Prospector send without asking. One that is unsure or quotes a price the offer doesn't contain
+    # always waits for a person.
+    offered = set(m.group(0) for m in CURRENCY_IN_TEXT.finditer(prospect["offer"])) if prospect else set()
+    guessed = [m.group(0) for m in CURRENCY_IN_TEXT.finditer(r.body) if m.group(0) not in offered] if prospect else []
     title = f"Reply to {inp.get('from_name') or to} ({c['category']})"
     summary = c["summary"][:200] + (" — the agent is not sure the sources answer this." if r.unsure else "")
     if used:
         summary += " Draws on: " + ", ".join(s["title"] for s in used)[:200]
     return Interrupt(
-        ApprovalRequest(agent="inbox", action=action, key="reply_decision", title=title, summary=summary,
-                        payload=payload, required_roles=("approver", "venture_admin"), sensitive=sensitive,
+        ApprovalRequest(agent="prospector" if prospect else "inbox", action=action, key="reply_decision",
+                        title=title, summary=summary, payload=payload,
+                        required_roles=("approver", "venture_admin"), sensitive=sensitive,
                         # quoting a past proposal to an outside sender always needs a person
-                        always_review=any(s["kind"] == "proposal" for s in used)),
+                        always_review=any(s["kind"] == "proposal" for s in used)
+                        or bool(prospect and (r.unsure or guessed))),
         resume="send", on_reject="rejected",
         update={"citations": [{"document_id": s["document_id"], "title": s["title"]} for s in used],
                 "redrafts": state.get("redrafts", 0)},

@@ -4327,9 +4327,44 @@
             ],
             "title": "Last Run Id"
           },
+          "last_touch_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Touch At"
+          },
+          "last_touch_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Touch Channel"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "next_touch_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Touch At"
           },
           "notes": {
             "anyOf": [
@@ -4342,6 +4377,35 @@
             ],
             "title": "Notes"
           },
+          "opted_out_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opted Out At"
+          },
+          "outreach_draft": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WhatsApp message waiting for your one-tap send",
+            "title": "Outreach Draft"
+          },
+          "outreach_step": {
+            "default": 0,
+            "title": "Outreach Step",
+            "type": "integer"
+          },
           "phone": {
             "anyOf": [
               {
@@ -4353,6 +4417,50 @@
             ],
             "title": "Phone"
           },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "live from Google Maps (single lead, or list?live=true)"
+          },
+          "place_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Error"
+          },
+          "place_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Id"
+          },
+          "place_search": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Search"
+          },
           "priority": {
             "anyOf": [
               {
@@ -4363,6 +4471,18 @@
               }
             ],
             "title": "Priority"
+          },
+          "replied_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replied At"
           },
           "score": {
             "anyOf": [
@@ -4407,6 +4527,30 @@
             "format": "uuid",
             "title": "Venture Id",
             "type": "string"
+          },
+          "website_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "none | social | listing | own",
+            "title": "Website Kind"
+          },
+          "whatsapp_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "wa.me link that opens WhatsApp with the message",
+            "title": "Whatsapp Link"
           }
         },
         "required": [
@@ -4424,8 +4568,56 @@
         "title": "LeadOut",
         "type": "object"
       },
+      "LeadOutreachIn": {
+        "properties": {
+          "action": {
+            "enum": [
+              "whatsapp_sent",
+              "called",
+              "replied",
+              "skip",
+              "resume",
+              "opt_out"
+            ],
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "LeadOutreachIn",
+        "type": "object"
+      },
       "LeadPatch": {
         "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "e.g. a prospect's email you found; the Prospector emails them from then on",
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "e.g. a prospect's name as they gave it to you when they replied",
+            "title": "Name"
+          },
           "notes": {
             "anyOf": [
               {
@@ -4437,6 +4629,18 @@
               }
             ],
             "title": "Notes"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
           },
           "score": {
             "anyOf": [
@@ -4456,6 +4660,8 @@
               {
                 "enum": [
                   "new",
+                  "contacted",
+                  "replied",
                   "qualified",
                   "proposal",
                   "won",
@@ -5179,6 +5385,108 @@
           "new_password"
         ],
         "title": "PasswordResetIn",
+        "type": "object"
+      },
+      "PlaceOut": {
+        "description": "A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "maps_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maps Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "review_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Count"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PlaceOut",
         "type": "object"
       },
       "PlanOut": {
@@ -16166,6 +16474,7 @@
     },
     "/ventures/{venture_id}/leads": {
       "get": {
+        "description": "`live=true` also names prospects from Google Maps (one lookup each, the first LIVE_LIST_MAX).",
         "operationId": "list_leads_ventures__venture_id__leads_get",
         "parameters": [
           {
@@ -16186,6 +16495,16 @@
               "default": 50,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "live",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Live",
+              "type": "boolean"
             }
           }
         ],
@@ -16509,6 +16828,75 @@
           }
         ],
         "summary": "Update Lead",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/leads/{lead_id}/outreach": {
+      "post": {
+        "description": "What the owner did about a prospect: sent the WhatsApp message, called them, skipped this message,\npicked the sequence up again, or opted them out at their request.",
+        "operationId": "lead_outreach_ventures__venture_id__leads__lead_id__outreach_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lead Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadOutreachIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lead Outreach",
         "tags": [
           "leads"
         ]

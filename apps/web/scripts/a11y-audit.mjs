@@ -17,7 +17,9 @@ const BASE = process.env.BASE ?? "http://localhost:3000";
 const session = process.env.SESSION ? JSON.parse(fs.readFileSync(process.env.SESSION, "utf8")) : null;
 const PUBLIC = ["/welcome", "/login", "/register", "/help", "/status", "/security", "/privacy", "/terms", "/cookies", "/refunds", "/privacy-request"];
 const APP = session
-  ? ["/", "/inbox", `/v/${session.site}/tasks`, `/v/${session.site}/leads`, `/v/${session.site}/knowledge`, `/v/${session.site}/settings`, "/billing", "/account", "/businesses"]
+  ? ["/", "/inbox", `/v/${session.site}/tasks`, `/v/${session.site}/leads`, `/v/${session.site}/agents`, `/v/${session.site}/knowledge`, `/v/${session.site}/settings`, "/billing", "/account", "/businesses",
+     // a lead open in the drawer (e.g. a prospect with its WhatsApp message), when the session names one
+     ...(session.lead ? [`/v/${session.site}/leads?lead=${session.lead}`] : [])]
   : [];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const VIEWS = [

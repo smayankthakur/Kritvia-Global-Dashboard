@@ -2073,7 +2073,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Leads */
+        /**
+         * List Leads
+         * @description `live=true` also names prospects from Google Maps (one lookup each, the first LIVE_LIST_MAX).
+         */
         get: operations["list_leads_ventures__venture_id__leads_get"];
         put?: never;
         /** Create Lead */
@@ -2121,6 +2124,27 @@ export interface paths {
         head?: never;
         /** Update Lead */
         patch: operations["update_lead_ventures__venture_id__leads__lead_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/leads/{lead_id}/outreach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lead Outreach
+         * @description What the owner did about a prospect: sent the WhatsApp message, called them, skipped this message,
+         *     picked the sequence up again, or opted them out at their request.
+         */
+        post: operations["lead_outreach_ventures__venture_id__leads__lead_id__outreach_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/ventures/{venture_id}/lists/{list_id}": {
@@ -4402,14 +4426,42 @@ export interface components {
             last_inquiry_at?: string | null;
             /** Last Run Id */
             last_run_id?: string | null;
+            /** Last Touch At */
+            last_touch_at?: string | null;
+            /** Last Touch Channel */
+            last_touch_channel?: string | null;
             /** Name */
             name: string;
+            /** Next Touch At */
+            next_touch_at?: string | null;
             /** Notes */
             notes: string | null;
+            /** Opted Out At */
+            opted_out_at?: string | null;
+            /**
+             * Outreach Draft
+             * @description WhatsApp message waiting for your one-tap send
+             */
+            outreach_draft?: string | null;
+            /**
+             * Outreach Step
+             * @default 0
+             */
+            outreach_step: number;
             /** Phone */
             phone?: string | null;
+            /** @description live from Google Maps (single lead, or list?live=true) */
+            place?: components["schemas"]["PlaceOut"] | null;
+            /** Place Error */
+            place_error?: string | null;
+            /** Place Id */
+            place_id?: string | null;
+            /** Place Search */
+            place_search?: string | null;
             /** Priority */
             priority?: string | null;
+            /** Replied At */
+            replied_at?: string | null;
             /** Score */
             score: number | null;
             /**
@@ -4430,15 +4482,45 @@ export interface components {
              * Format: uuid
              */
             venture_id: string;
+            /**
+             * Website Kind
+             * @description none | social | listing | own
+             */
+            website_kind?: string | null;
+            /**
+             * Whatsapp Link
+             * @description wa.me link that opens WhatsApp with the message
+             */
+            whatsapp_link?: string | null;
+        };
+        /** LeadOutreachIn */
+        LeadOutreachIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "whatsapp_sent" | "called" | "replied" | "skip" | "resume" | "opt_out";
         };
         /** LeadPatch */
         LeadPatch: {
+            /**
+             * Email
+             * @description e.g. a prospect's email you found; the Prospector emails them from then on
+             */
+            email?: string | null;
+            /**
+             * Name
+             * @description e.g. a prospect's name as they gave it to you when they replied
+             */
+            name?: string | null;
             /** Notes */
             notes?: string | null;
+            /** Phone */
+            phone?: string | null;
             /** Score */
             score?: number | null;
             /** Status */
-            status?: ("new" | "qualified" | "proposal" | "won" | "lost" | "archived") | null;
+            status?: ("new" | "contacted" | "replied" | "qualified" | "proposal" | "won" | "lost" | "archived") | null;
         };
         /**
          * LearnIn
@@ -4737,6 +4819,30 @@ export interface components {
             email: string;
             /** New Password */
             new_password: string;
+        };
+        /**
+         * PlaceOut
+         * @description A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).
+         */
+        PlaceOut: {
+            /** Address */
+            address?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Maps Url */
+            maps_url?: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Rating */
+            rating?: number | null;
+            /** Review Count */
+            review_count?: number | null;
+            /** Status */
+            status?: string | null;
+            /** Website */
+            website?: string | null;
         };
         /** PlanOut */
         PlanOut: {
@@ -10568,6 +10674,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                live?: boolean;
             };
             header?: never;
             path: {
@@ -10742,6 +10849,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LeadPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lead_outreach_ventures__venture_id__leads__lead_id__outreach_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                lead_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadOutreachIn"];
             };
         };
         responses: {

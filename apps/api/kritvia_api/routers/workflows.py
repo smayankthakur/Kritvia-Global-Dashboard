@@ -15,7 +15,7 @@ from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.core import registry
 from kritvia_api.engine.runner import DuplicateTrigger, cancel_run, retry_run, start_run
 from kritvia_api.errors import raise_for_db
-from kritvia_api.services.quota import PlanRestricted, require_agent
+from kritvia_api.services.quota import PlanRestricted, plan_for_venture, require_agent
 
 router = APIRouter(tags=["workflows"])
 
@@ -106,6 +106,13 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
                 " RETURNING workflow, enabled, schedule, settings, instructions, updated_at"),
                 {"o": org, "v": venture_id, "w": workflow, "e": body.enabled, "s": body.schedule,
                  "st": json.dumps(body.settings), "i": body.instructions.strip(), "u": user_id})).first()
+        if workflow == "prospector":
+            # "Send without asking" grants the Prospector's trust, on plans where agents may act alone.
+            want = bool(body.enabled and body.settings.get("send_without_asking", True))
+            if want:
+                want = (await plan_for_venture(db, venture_id)).autonomy
+            async with db.begin_nested():
+                await db.execute(text("SELECT set_prospector_autonomy(:v, :a)"), {"v": venture_id, "a": want})
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return WorkflowConfigOut(**row._mapping)

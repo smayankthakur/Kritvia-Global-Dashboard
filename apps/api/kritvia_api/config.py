@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:3000/api/oauth/google/callback"  # the WEB app route
+    # Google Places API (New), used by the Prospector agent to find businesses on Maps. A server key
+    # from Google Cloud (Places API (New) enabled, restricted to this server's IP). Empty: the
+    # Prospector says it is not set up instead of searching.
+    google_places_api_key: str = ""
+    # Most new prospects any one venture may take from Maps in a day (cost and reputation guard).
+    prospector_daily_cap: int = 25
 
     # WhatsApp Business (Meta Cloud API). The app secret verifies webhook signatures; the
     # verify token is what you type into Meta's webhook setup. Per-number tokens live in connectors.

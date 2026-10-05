@@ -19,10 +19,11 @@ import { EMAIL_RE } from "@/lib/auth-client";
 import { displayValue } from "@/lib/diff";
 import { formatDateTime, formatINR, formatRelative, titleCase } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
+import { ProspectPanel, leadName, outreachState } from "@/components/leads/prospect-panel";
 
 type Lead = Schemas["LeadOut"];
 type LeadStatus = NonNullable<Schemas["LeadPatch"]["status"]>;
-const LEAD_STATUSES = enumValues<LeadStatus>()("new", "qualified", "proposal", "won", "lost", "archived");
+const LEAD_STATUSES = enumValues<LeadStatus>()("new", "contacted", "replied", "qualified", "proposal", "won", "lost", "archived");
 type Source = NonNullable<Schemas["InquiryIn"]["source"]>;
 const SOURCES = enumValues<Source>()("manual", "referral", "email", "webhook");
 
@@ -178,7 +179,7 @@ function LeadDrawer({ lead, ventureId, onClose }: { lead: Lead | null; ventureId
   const reasons = (lead?.score_reasons ?? []) as { factor?: string; points?: number; detail?: string }[];
   const details = (lead?.details ?? {}) as Record<string, unknown>;
   return (
-    <Sheet open={Boolean(lead)} onClose={onClose} title={lead?.name ?? "Lead"} description={lead?.company ?? lead?.email ?? undefined} size="lg">
+    <Sheet open={Boolean(lead)} onClose={onClose} title={lead ? leadName(lead) : "Lead"} description={lead?.company ?? lead?.email ?? undefined} size="lg">
       {lead ? (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -187,6 +188,7 @@ function LeadDrawer({ lead, ventureId, onClose }: { lead: Lead | null; ventureId
             <Badge>{lead.source}</Badge>
             {lead.inquiry_count && lead.inquiry_count > 1 ? <Badge tone="info">{lead.inquiry_count} inquiries</Badge> : null}
           </div>
+          {lead.source === "prospector" ? <ProspectPanel lead={lead} ventureId={ventureId} /> : null}
           <KeyValue
             items={[
               ["Email", lead.email ?? "—"],
@@ -283,10 +285,15 @@ function LeadsView() {
   const [open, setOpen] = useState(false);
   const leads = useQuery({
     queryKey: ["leads", v.id],
-    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/leads", { params: { path: { venture_id: v.id }, query: { limit: 200 } } })),
+    // live: prospects are named from Google Maps on the fly (only their place ID is stored)
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/leads", { params: { path: { venture_id: v.id }, query: { limit: 200, live: true } } })),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const selectedId = params.get("lead");
   const selected = leads.data?.find((l) => l.id === selectedId) ?? null;
+  const [readyOnly, setReadyOnly] = useState(false);
+  const ready = (leads.data ?? []).filter((l) => l.outreach_draft && !l.opted_out_at);
   const select = (id: string | null) => router.replace(id ? `/v/${v.id}/leads?lead=${id}` : `/v/${v.id}/leads`, { scroll: false });
 
   return (
@@ -294,13 +301,25 @@ function LeadsView() {
       <PageHeader
         eyebrow={v.venture_name}
         title="Leads"
-        description="Inbound inquiries, scored and priced by the triage agent."
+        description="Inbound inquiries scored by the triage agent, and businesses the Prospector found for you."
         actions={
           <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)}>
             New inquiry
           </Button>
         }
       />
+      {ready.length ? (
+        <Notice tone="warning" className="mb-4">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>
+              {ready.length} WhatsApp message{ready.length === 1 ? " is" : "s are"} ready for you to send.
+            </span>
+            <button type="button" className="font-medium underline underline-offset-2" onClick={() => setReadyOnly((r) => !r)} aria-pressed={readyOnly}>
+              {readyOnly ? "Show all leads" : "Show only these"}
+            </button>
+          </span>
+        </Notice>
+      ) : null}
       <Card>
         <QueryState
           query={leads}
@@ -319,7 +338,7 @@ function LeadsView() {
               <THead>
                 <tr>
                   <Th>Name</Th>
-                  <Th className="hidden md:table-cell">Email</Th>
+                  <Th className="hidden md:table-cell">Contact</Th>
                   <Th>Score</Th>
                   <Th>Priority</Th>
                   <Th className="hidden sm:table-cell">Status</Th>
@@ -329,7 +348,7 @@ function LeadsView() {
                 </tr>
               </THead>
               <TBody>
-                {data.map((l) => (
+                {(readyOnly && ready.length ? data.filter((l) => l.outreach_draft && !l.opted_out_at) : data).map((l) => (
                   <Tr key={l.id} interactive onClick={() => select(l.id)}>
                     <Td className="max-w-[14rem]">
                       <button
@@ -340,11 +359,13 @@ function LeadsView() {
                           select(l.id);
                         }}
                       >
-                        {l.name}
+                        {leadName(l)}
                       </button>
-                      <span className="block truncate text-xs text-subtle">{l.company ?? "—"}</span>
+                      <span className="block truncate text-xs text-subtle">
+                        {l.source === "prospector" ? outreachState(l).label : (l.company ?? "—")}
+                      </span>
                     </Td>
-                    <Td className="hidden max-w-[14rem] truncate text-muted md:table-cell">{l.email ?? "—"}</Td>
+                    <Td className="hidden max-w-[14rem] truncate text-muted md:table-cell">{l.email ?? l.phone ?? "—"}</Td>
                     <Td>
                       <ScoreBar score={l.score} />
                     </Td>

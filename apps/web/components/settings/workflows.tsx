@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Play } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,17 @@ import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
 
-const SCHEDULED = new Set(["kitchen_daily"]);
+/** Agents that run on a daily clock: the time they run, and how the field is labelled. */
+const SCHEDULED: Record<string, { at: string; label: string }> = {
+  kitchen_daily: { at: "23:30", label: "Runs every night at (IST)" },
+  prospector: { at: "10:30", label: "Finds leads and sends messages every day at (IST)" },
+};
 const INSTRUCTION_HINTS: Record<string, string> = {
   inbox_assistant: "e.g. Reply in Hinglish. Delivery takes 3–5 days. Never quote prices; say we will share a quote.",
   lead_triage: "e.g. We only take projects above ₹1 lakh. Always mention our 2-week pilot offer.",
   loan_verification: "e.g. Salaried applicants need 3 salary slips; self-employed need 2 years of ITR.",
   kitchen_daily: "e.g. Buy paneer only from Amul distributor. Keep 20% extra on weekends.",
+  prospector: "e.g. Mention we built the site for Annapurna Rasoi. Skip hotels and big chains. Offer a free demo page.",
 };
 
 export function parseSettingsJson(text: string): { value: Record<string, unknown> | null; error: string | null } {
@@ -59,7 +65,7 @@ export function optionValues(form: Record<string, unknown>, options: Option[]): 
       else if (n !== o.default) settings[o.key] = n;
     } else if (o.type === "boolean") {
       if (Boolean(raw) !== Boolean(o.default)) settings[o.key] = Boolean(raw);
-    } else if (String(raw) !== String(o.default)) settings[o.key] = String(raw).slice(0, 200);
+    } else if (String(raw) !== String(o.default)) settings[o.key] = String(raw).slice(0, 500);
   }
   return { settings, errors };
 }
@@ -68,8 +74,10 @@ function OptionField({ o, value, error, disabled, onChange }: { o: Option; value
   if (o.type === "boolean") {
     return <Checkbox label={o.label} hint={o.help || undefined} checked={value === undefined ? Boolean(o.default) : Boolean(value)} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />;
   }
+  // Long text (a list of searches, a one-line pitch) gets the full row.
+  const wide = o.type === "text" && (String(o.default ?? "").length > 30 || (o.help ?? "").length > 70);
   return (
-    <Field label={o.label} hint={o.help || undefined} error={error} className="max-w-xs">
+    <Field label={o.label} hint={o.help || undefined} error={error} className={wide ? "sm:col-span-2" : "max-w-xs"}>
       <Input
         type={o.type === "number" ? "number" : "text"}
         value={value === undefined ? String(o.default ?? "") : String(value)}
@@ -87,7 +95,7 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
   const toast = useToast();
   const initial = splitSettings((config?.settings as Record<string, unknown>) ?? {}, wf.options);
   const [enabled, setEnabled] = useState(config?.enabled ?? false);
-  const [schedule, setSchedule] = useState(config?.schedule ?? (SCHEDULED.has(wf.name) ? "23:30" : ""));
+  const [schedule, setSchedule] = useState(config?.schedule ?? SCHEDULED[wf.name]?.at ?? "");
   const [instructions, setInstructions] = useState(config?.instructions ?? "");
   const [form, setForm] = useState<Record<string, unknown>>(initial.form);
   const [advanced, setAdvanced] = useState(false);
@@ -95,7 +103,7 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
   useEffect(() => {
     const s = splitSettings((config?.settings as Record<string, unknown>) ?? {}, wf.options);
     setEnabled(config?.enabled ?? false);
-    setSchedule(config?.schedule ?? (SCHEDULED.has(wf.name) ? "23:30" : ""));
+    setSchedule(config?.schedule ?? SCHEDULED[wf.name]?.at ?? "");
     setInstructions(config?.instructions ?? "");
     setForm(s.form);
     setText(JSON.stringify(s.rest, null, 2));
@@ -154,8 +162,8 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
           ))}
         </div>
       ) : null}
-      {SCHEDULED.has(wf.name) ? (
-        <Field label="Runs every night at (IST)" error={schedErr} className="max-w-[10rem]">
+      {SCHEDULED[wf.name] ? (
+        <Field label={SCHEDULED[wf.name]!.label} error={schedErr} className="max-w-xs">
           <Input type="time" value={schedule} disabled={!canAdmin} onChange={(e) => setSchedule(e.target.value)} />
         </Field>
       ) : null}
@@ -164,13 +172,23 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
           <ChevronDown className={advanced ? "h-3.5 w-3.5 rotate-180 transition-transform" : "h-3.5 w-3.5 transition-transform"} aria-hidden />
           Advanced
         </button>
-        <Button variant="primary" size="sm" disabled={!canAdmin || invalid} loading={save.isPending} onClick={() => save.mutate()} aria-label={`Save ${wf.title}`}>
-          Save
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {wf.name === "prospector" && config?.enabled ? <RunNow ventureId={ventureId} disabled={!canAdmin} /> : null}
+          <Button variant="primary" size="sm" disabled={!canAdmin || invalid} loading={save.isPending} onClick={() => save.mutate()} aria-label={`Save ${wf.title}`}>
+            Save
+          </Button>
+        </div>
       </div>
+      {wf.name === "prospector" ? (
+        <p className="text-xs text-subtle">
+          Emails go from your connected Gmail. WhatsApp only lets a business message someone first from its own phone, so first
+          WhatsApp messages wait in Leads for you to send with one tap. Every message offers a way to opt out, and a reply stops
+          the follow-ups. Calls are yours for now: the lead shows the number and you log the call.
+        </p>
+      ) : null}
       {advanced ? (
         <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
-          {!SCHEDULED.has(wf.name) ? (
+          {!SCHEDULED[wf.name] ? (
             <Field label="Also run daily at (IST)" error={schedErr} hint="Optional" className="max-w-[10rem]">
               <Input type="time" value={schedule} disabled={!canAdmin} onChange={(e) => setSchedule(e.target.value)} />
             </Field>
@@ -185,6 +203,25 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
   );
 }
 
+/** Runs the Prospector now instead of waiting for its daily time, then shows the run working. */
+function RunNow({ ventureId, disabled }: { ventureId: string; disabled: boolean }) {
+  const toast = useToast();
+  const router = useRouter();
+  const run = useMutation({
+    mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/runs", { params: { path: { venture_id: ventureId } }, body: { workflow: "prospector", input: {}, title: "Find leads now" } })),
+    onSuccess: (r) => {
+      toast.success("Prospector started", "New prospects and their messages appear in Leads as it works.");
+      router.push(`/v/${ventureId}/runs/${r.id}`);
+    },
+    onError: (e) => toast.error("Could not start", errorMessage(e)),
+  });
+  return (
+    <Button size="sm" loading={run.isPending} disabled={disabled} onClick={() => run.mutate()}>
+      Find leads now
+    </Button>
+  );
+}
+
 export function WorkflowSettings({ ventureId, kind, canAdmin }: { ventureId: string; kind: string; canAdmin: boolean }) {
   const catalogue = useQuery({ queryKey: ["workflows"], queryFn: () => unwrap(api.GET("/workflows")), staleTime: 10 * 60_000 });
   const configs = useQuery({
@@ -194,7 +231,7 @@ export function WorkflowSettings({ ventureId, kind, canAdmin }: { ventureId: str
   if (catalogue.isPending || configs.isPending) return <SkeletonRows />;
   if (catalogue.isError) return <ErrorState error={catalogue.error} />;
   if (configs.isError) return <ErrorState error={configs.error} />;
-  const ORDER = ["inbox_assistant", "lead_triage", "loan_verification", "kitchen_daily", "meeting_digest"];
+  const ORDER = ["inbox_assistant", "lead_triage", "prospector", "loan_verification", "kitchen_daily", "meeting_digest"];
   const list = catalogue.data
     .filter((w) => w.venture_kinds.includes(kind) || configs.data.some((c) => c.workflow === w.name))
     .sort((a, b) => (ORDER.indexOf(a.name) + 1 || 99) - (ORDER.indexOf(b.name) + 1 || 99));

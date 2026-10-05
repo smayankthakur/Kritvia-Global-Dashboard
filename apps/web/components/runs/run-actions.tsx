@@ -49,6 +49,7 @@ export const WORKFLOW_LABEL: Record<string, string> = {
   loan_verification: "Loan verification",
   kitchen_daily: "Kitchen daily plan",
   meeting_digest: "Meeting digest",
+  prospector: "Prospector",
 };
 
 export function workflowLabel(w: string): string {

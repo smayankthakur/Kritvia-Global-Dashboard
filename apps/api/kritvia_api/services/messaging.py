@@ -86,15 +86,16 @@ class Messaging:
         if google:
             token, g = google
             try:
-                mid = await self.google.send_email(token, to=to, subject=subject, body=body, cc=cc,
-                                                   thread_id=thread_id, sender=g.email, attachments=attachments)
+                sent = await self.google.send_email(token, to=to, subject=subject, body=body, cc=cc,
+                                                    thread_id=thread_id, sender=g.email, attachments=attachments)
             except Exception as exc:
                 await self._record(ctx, approval_id, channel="email", recipient=to, subject=subject, body=body,
                                    transport="gmail", status="failed", error=str(exc)[:300])
                 raise MessagingError(f"gmail send failed: {exc}") from exc
             await self._record(ctx, approval_id, channel="email", recipient=to, subject=subject, body=body,
-                               transport="gmail", status="sent", provider_id=mid)
-            return {"transport": "gmail", "status": "sent", "message_id": mid}
+                               transport="gmail", status="sent", provider_id=sent["id"])
+            return {"transport": "gmail", "status": "sent", "message_id": sent["id"],
+                    "thread_id": sent.get("thread_id") or thread_id or ""}
         if self.fallback == "log":
             await self._record(ctx, approval_id, channel="email", recipient=to, subject=subject,
                                body=body + (f"\n\n[attachments: {', '.join(a[0] for a in attachments)}]"

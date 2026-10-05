@@ -165,7 +165,8 @@ class GoogleClient:
 
     async def send_email(self, token: str, *, to: str, subject: str, body: str, sender: str | None = None,
                          cc: list[str] | None = None, thread_id: str | None = None,
-                         attachments: list[tuple[str, str, bytes]] | None = None) -> str:
+                         attachments: list[tuple[str, str, bytes]] | None = None) -> dict[str, str]:
+        """Returns {"id", "thread_id"}: the thread lets a reply be matched to what was sent."""
         msg = EmailMessage()
         msg["To"] = to
         msg["Subject"] = subject
@@ -181,7 +182,7 @@ class GoogleClient:
         if thread_id:
             payload["threadId"] = thread_id
         res = await self._req("POST", f"{GMAIL}/messages/send", token, json=payload)
-        return res.get("id", "")
+        return {"id": res.get("id", ""), "thread_id": res.get("threadId", "")}
 
     # --- Calendar ---------------------------------------------------------------
     async def create_event(self, token: str, *, summary: str, start: str, end: str,

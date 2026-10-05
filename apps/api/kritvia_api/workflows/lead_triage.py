@@ -129,9 +129,10 @@ async def upsert_lead(ctx: RunContext, state: dict) -> Goto:
                           "scope": ex["scope"], "timeline": ex.get("timeline"), "subject": inp.get("subject")})
     async with ctx.tx() as conn:
         existing = None
-        if state.get("lead_id"):
-            existing = (await conn.execute(text("SELECT id FROM leads WHERE id = :id"),
-                                           {"id": uuid.UUID(state["lead_id"])})).first()
+        pinned = state.get("lead_id") or inp.get("lead_id")   # e.g. a prospect replying to the Prospector
+        if pinned:
+            existing = (await conn.execute(text("SELECT id FROM leads WHERE id = :id AND venture_id = :v"),
+                                           {"id": uuid.UUID(pinned), "v": ctx.venture_id})).first()
         if existing is None and (email or company):
             existing = (await conn.execute(text(
                 "SELECT id FROM leads WHERE venture_id = :v AND status NOT IN ('won','lost','archived')"
@@ -243,7 +244,7 @@ async def score(ctx: RunContext, state: dict) -> Goto | Finish:
     async with ctx.tx() as conn:
         await conn.execute(text(
             "UPDATE leads SET score = :s, priority = :p, score_reasons = CAST(:r AS jsonb),"
-            " status = CASE WHEN status = 'new' AND :s >= 40 THEN 'qualified' ELSE status END, updated_at = now()"
+            " status = CASE WHEN status IN ('new', 'contacted', 'replied') AND :s >= 40 THEN 'qualified' ELSE status END, updated_at = now()"
             " WHERE id = :id"),
             {"s": total, "p": priority, "r": json.dumps(reasons), "id": uuid.UUID(state["lead_id"])})
     update = {"score": total, "priority": priority, "fit_reason": fit_reason,
@@ -407,7 +408,7 @@ async def send_proposal(ctx: RunContext, state: dict) -> Goto:
         await conn.execute(text("UPDATE proposals SET status = 'sent', sent_at = now() WHERE id = :id"),
                            {"id": uuid.UUID(state["proposal_id"])})
         await conn.execute(text("UPDATE leads SET status = 'proposal', updated_at = now() WHERE id = :id"
-                                " AND status IN ('new','qualified')"), {"id": uuid.UUID(state["lead_id"])})
+                                " AND status IN ('new','contacted','replied','qualified')"), {"id": uuid.UUID(state["lead_id"])})
     return Goto("invite", note=f"proposal {res.get('status')} via {res.get('transport')}")
 
 

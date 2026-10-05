@@ -60,6 +60,7 @@ below, through code we wrote.
 | Cerebras | Text of non-sensitive tasks | US | No | Cerebras terms |
 | Google Gemini free / OpenRouter free / Mistral (opt-in per business only) | Text of non-sensitive tasks, never Google Workspace data | US/EU | **May** | Provider terms; opt-in recorded per organisation |
 | Razorpay | Billing name, GSTIN, email, plan | India | No | Razorpay merchant agreement |
+| Google Maps Platform (Places API, Prospector agent only) | The search text a business types (e.g. "restaurants in Nangloi"), place IDs; returns public business listings | Global | No | Maps Platform terms: only place IDs stored; details fetched live and shown with "Google Maps" attribution |
 | Browser push services (Google, Apple, Mozilla, Microsoft) | Encrypted notification | Global | No | Platform terms |
 
 Connected by a business itself (the business's own account and contract): Google Workspace, Meta

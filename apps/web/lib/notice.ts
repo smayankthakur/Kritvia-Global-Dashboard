@@ -43,6 +43,16 @@ const ITEMS: Record<string, Item> = {
       hi: "आपको कोटेशन या प्रस्ताव भेजने और आप चाहें तो कॉल तय करने के लिए।",
     },
   },
+  prospector: {
+    what: {
+      en: "Business details that are public on Google Maps: the business name, address, phone number, rating and whether it has a website, and any reply you send us.",
+      hi: "Google Maps पर सार्वजनिक व्यावसायिक जानकारी: व्यवसाय का नाम, पता, फ़ोन नंबर, रेटिंग और वेबसाइट है या नहीं, और आप हमें जो जवाब भेजते हैं।",
+    },
+    why: {
+      en: "To offer our services to your business once, follow up at most a few times, and stop for good when you reply STOP or tell us you are not interested.",
+      hi: "आपके व्यवसाय को एक बार अपनी सेवाओं की जानकारी देने, कुछ बार से ज़्यादा फ़ॉलो-अप न करने, और STOP लिखने या मना करने पर हमेशा के लिए रुक जाने के लिए।",
+    },
+  },
   loan_verification: {
     what: {
       en: "Loan application documents: identity and address proof, income records and bank statements.",

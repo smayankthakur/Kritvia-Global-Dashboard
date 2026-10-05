@@ -33,6 +33,7 @@ class Services:
     messaging: Messaging
     google: Any = None
     whatsapp: Any = None
+    places: Any = None
     worker_id: str = field(default_factory=lambda: f"w-{uuid.uuid4().hex[:8]}")
 
 

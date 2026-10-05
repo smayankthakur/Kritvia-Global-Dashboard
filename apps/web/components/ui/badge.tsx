@@ -58,6 +58,8 @@ const STATUS_TONES: Record<string, Tone> = {
   auto_executed: "success",
   // leads / proposals
   new: "accent",
+  contacted: "neutral",
+  replied: "success",
   qualified: "info",
   proposal: "warning",
   won: "success",

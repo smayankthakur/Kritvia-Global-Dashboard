@@ -25,7 +25,7 @@ CORE_AGENTS = frozenset({"inbox_assistant", "lead_triage", "meeting_digest"})
 KIND_AGENT = {"finance": "loan_verification", "kitchen": "kitchen_daily"}
 AGENT_NAMES = {"inbox_assistant": "Inbox assistant", "lead_triage": "Lead triage & proposals",
                "meeting_digest": "Meeting digests", "loan_verification": "Loan document checks",
-               "kitchen_daily": "Nightly kitchen plan"}
+               "kitchen_daily": "Nightly kitchen plan", "prospector": "Prospector (outbound sales)"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
                      "drive": "Google Drive", "whatsapp": "WhatsApp Business", "tally": "Tally"}
 BASIC = frozenset({"gmail", "lead_form"})

@@ -132,8 +132,16 @@ class LeadIn(BaseModel):
     notes: str | None = Field(default=None, max_length=20_000)
 
 
+LeadStatus = Literal["new", "contacted", "replied", "qualified", "proposal", "won", "lost", "archived"]
+
+
 class LeadPatch(BaseModel):
-    status: Literal["new", "qualified", "proposal", "won", "lost", "archived"] | None = None
+    status: LeadStatus | None = None
+    email: EmailStr | None = Field(default=None, description="e.g. a prospect's email you found; "
+                                                              "the Prospector emails them from then on")
+    name: str | None = Field(default=None, min_length=1, max_length=200,
+                             description="e.g. a prospect's name as they gave it to you when they replied")
+    phone: str | None = Field(default=None, max_length=30)
     score: int | None = Field(default=None, ge=0, le=100)
     notes: str | None = Field(default=None, max_length=20_000)
 
@@ -158,6 +166,40 @@ class LeadOut(BaseModel):
     last_inquiry_at: datetime | None = None
     last_run_id: uuid.UUID | None = None
     details: dict | None = None
+    # Prospects (source 'prospector'). Only the Google place ID is stored; `place` is looked up live.
+    place_id: str | None = None
+    place_search: str | None = None
+    website_kind: str | None = Field(default=None, description="none | social | listing | own")
+    place: "PlaceOut | None" = Field(default=None, description="live from Google Maps (single lead, or list?live=true)")
+    place_error: str | None = None
+    outreach_step: int = 0
+    next_touch_at: datetime | None = None
+    last_touch_at: datetime | None = None
+    last_touch_channel: str | None = None
+    replied_at: datetime | None = None
+    opted_out_at: datetime | None = None
+    outreach_draft: str | None = Field(default=None, description="WhatsApp message waiting for your one-tap send")
+    whatsapp_link: str | None = Field(default=None, description="wa.me link that opens WhatsApp with the message")
+
+
+class PlaceOut(BaseModel):
+    """A business as Google Maps shows it right now. Never stored (Google Maps Platform terms)."""
+    name: str
+    phone: str | None = None
+    address: str | None = None
+    website: str | None = None
+    rating: float | None = None
+    review_count: int | None = None
+    category: str | None = None
+    maps_url: str | None = None
+    status: str | None = None
+
+
+LeadOut.model_rebuild()
+
+
+class LeadOutreachIn(BaseModel):
+    action: Literal["whatsapp_sent", "called", "replied", "skip", "resume", "opt_out"]
 
 
 class AuditOut(BaseModel):

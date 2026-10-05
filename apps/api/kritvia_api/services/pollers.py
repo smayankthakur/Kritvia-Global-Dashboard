@@ -34,6 +34,9 @@ DEFAULT_QUERIES = {
     "lead_triage": "in:inbox -category:promotions -category:social -category:updates newer_than:2d",
     "kitchen_daily": "has:attachment (from:swiggy.in OR from:zomato.com OR subject:report) newer_than:3d",
     "loan_verification": "has:attachment subject:TRU- newer_than:7d",
+    # Only when the inbox assistant is off (it matches prospects itself): notice replies from prospects
+    # so their follow-ups stop.
+    "prospector": "in:inbox newer_than:2d",
 }
 REF = re.compile(r"\bTRU-\d{4}-\d{5}-[0-9A-F]{4}\b")
 # Sales reports are trusted only from the delivery apps' own domains, or from senders the business lists
@@ -80,8 +83,8 @@ async def poll_gmail_venture(services: Services, org_id: uuid.UUID, venture_id: 
     for wf, settings in configs.items():
         if wf not in DEFAULT_QUERIES or not settings.get("poll_gmail", True):
             continue
-        if wf == "lead_triage" and "inbox_assistant" in configs:
-            continue   # the inbox assistant reads the inbox and hands enquiries over
+        if wf in ("lead_triage", "prospector") and "inbox_assistant" in configs:
+            continue   # the inbox assistant reads the inbox, hands enquiries over and spots prospect replies
         query = settings.get("gmail_query") or DEFAULT_QUERIES[wf]
         ids = await google.list_message_ids(token, query, max_results=int(settings.get("poll_max", 20)))
         for mid in ids:
@@ -211,5 +214,15 @@ async def _inbox(ctx: RunContext, services: Services, token: str, msg) -> int:
         return 0
 
 
-HANDLERS = {"inbox_assistant": _inbox, "lead_triage": _lead, "kitchen_daily": _kitchen_report,
+async def _prospect_reply(ctx: RunContext, services: Services, token: str, msg) -> int:
+    """A prospect wrote back: stop their follow-ups (no run; the owner answers from Gmail)."""
+    from kritvia_api.workflows.prospector import match_reply
+    async with ctx.tx() as conn:
+        hit = await match_reply(conn, ctx.venture_id, email=msg.sender_email, phone=None,
+                                thread_id=msg.thread_id, body=msg.body)
+    await _mark(ctx, "gmail:prospector", msg.id)
+    return 1 if hit else 0
+
+
+HANDLERS = {"inbox_assistant": _inbox, "prospector": _prospect_reply, "lead_triage": _lead, "kitchen_daily": _kitchen_report,
             "loan_verification": _loan_docs}

@@ -3,6 +3,7 @@
 run in the sandbox."""
 from __future__ import annotations
 
+import dataclasses
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -32,6 +33,11 @@ def build_tools() -> ToolRegistry:
     async def whatsapp_send(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
         assert ok is not None
         return await ctx.services.messaging.send_whatsapp(ctx, ok.id, to=p["to"], body=p["body"])
+
+    @reg.tool("places.search", Capability.READ, "Search Google Maps (Places API) for businesses")
+    async def places_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        found = await ctx.services.places.search(str(p["query"]), max_results=int(p.get("max_results", 60)))
+        return {"places": [{**dataclasses.asdict(x), "website_kind": x.website_kind} for x in found]}
 
     @reg.tool("calendar.create_event", Capability.SEND, "Create a calendar event and invite attendees")
     async def calendar_create(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:

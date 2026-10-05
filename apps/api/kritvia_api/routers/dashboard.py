@@ -71,7 +71,7 @@ async def dashboard(org_id: uuid.UUID, db: TenantDB) -> DashboardOut:
                 "SELECT status, count(*) AS n FROM leads WHERE venture_id = :v GROUP BY status"), p)).all()}
             metrics["hot_leads"] = (await db.execute(text(
                 "SELECT count(*) FROM leads WHERE venture_id = :v AND priority = 'hot'"
-                " AND status IN ('new','qualified','proposal')"), p)).scalar()
+                " AND status IN ('new','contacted','replied','qualified','proposal')"), p)).scalar()
             tt = (await db.execute(text(
                 "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM a.decided_at - r.created_at))"
                 " / 3600 FROM approvals a JOIN workflow_runs r ON r.id = a.run_id WHERE a.venture_id = :v"
