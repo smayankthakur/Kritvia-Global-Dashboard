@@ -129,7 +129,13 @@ async def accept_terms(body: TermsIn, user_id: UserId, db: TenantDB) -> None:
     """Records that the caller accepted the Terms of Service and Privacy Policy now in force."""
     if body.version != get_settings().terms_version:
         raise HTTPException(status.HTTP_409_CONFLICT, "these terms have been replaced; reload to read the current ones")
-    await db.execute(text("SELECT public.accept_terms(:v)"), {"v": body.version})
+    if not body.adult:
+        raise HTTPException(422, "Kritvia is only for people aged 18 or over; please confirm your age")
+    try:
+        async with db.begin_nested():
+            await db.execute(text("SELECT public.accept_terms(:v, :a)"), {"v": body.version, "a": body.adult})
+    except DBAPIError as exc:
+        raise_for_db(exc, "account not found")
 
 
 @router.post("/password", response_model=TokenOut)
@@ -287,7 +293,8 @@ async def export_my_data(user_id: UserId, db: TenantDB) -> dict:
     u = {"u": user_id}
     return {
         "exported_at": datetime.now(UTC).isoformat(),
-        "profile": (await _rows(db, "SELECT id, email, full_name, created_at, email_verified_at"
+        "profile": (await _rows(db, "SELECT id, email, full_name, created_at, email_verified_at,"
+                                    " terms_version, terms_accepted_at, adult_confirmed_at, product_email_optout_at"
                                     " FROM users WHERE id = :u", u))[0],
         "memberships": await _rows(db, "SELECT o.name AS organisation, v.name AS business, m.role, m.created_at"
                                        " FROM memberships m JOIN organisations o ON o.id = m.org_id"

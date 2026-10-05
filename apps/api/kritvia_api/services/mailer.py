@@ -1,6 +1,13 @@
 """System email (sign-in codes) — separate from agent messaging, which sends as the
 venture's own Gmail after an approval.
 
+Every system email ends with who sent it (legal name, CIN, address). Product emails —
+anything a person could reasonably opt out of, such as digests, tips or announcements —
+must pass unsubscribe_url: the message then carries a visible unsubscribe link and the
+List-Unsubscribe / List-Unsubscribe-Post headers (RFC 2369, RFC 8058) so mail apps show a
+one-click Unsubscribe button. Sign-in codes and security notices are transactional and
+have no unsubscribe.
+
 MAIL_TRANSPORT:
   smtp    send through SMTP_HOST (Amazon SES SMTP, Zoho, Brevo, Google Workspace relay...)
   log     write the message to the API log instead of sending (single-owner dogfooding:
@@ -45,10 +52,16 @@ class Mailer:
     def can_deliver(self) -> bool:
         return self.transport != "smtp" or bool(self.host)
 
-    async def send(self, to: str, subject: str, body: str) -> None:
+    async def send(self, to: str, subject: str, body: str, *, unsubscribe_url: str | None = None,
+                   one_click_url: str | None = None) -> None:
+        """unsubscribe_url: the page linked in the email; one_click_url: where mail apps POST
+        "List-Unsubscribe=One-Click" (defaults to unsubscribe_url)."""
         msg = EmailMessage()
         msg["From"], msg["To"], msg["Subject"] = self.sender, to, subject
-        msg.set_content(body)
+        if unsubscribe_url:
+            msg["List-Unsubscribe"] = f"<{one_click_url or unsubscribe_url}>"
+            msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+        msg.set_content(body.rstrip() + "\n\n" + email_footer(unsubscribe_url))
         if self.transport == "memory":
             self.outbox.append(msg)
         elif self.transport == "log":
@@ -72,6 +85,17 @@ class Mailer:
                 conn.send_message(msg)
         except (OSError, smtplib.SMTPException) as exc:
             raise MailError(f"could not send email: {exc.__class__.__name__}") from None
+
+
+def email_footer(unsubscribe_url: str | None = None) -> str:
+    """Sender identification for every system email, plus the unsubscribe line for product email."""
+    from kritvia_api.config import get_settings
+    s = get_settings()
+    lines = ["--", f"Kritvia by {s.company_legal_name} (CIN {s.company_cin})",
+             s.company_address or "New Delhi, India", f"Questions: {s.support_email}"]
+    if unsubscribe_url:
+        lines.append(f"Don't want these emails? Unsubscribe in one click: {unsubscribe_url}")
+    return "\n".join(lines)
 
 
 _mailer: Mailer | None = None

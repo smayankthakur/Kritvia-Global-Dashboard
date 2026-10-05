@@ -83,6 +83,7 @@ class MeOut(BaseModel):
 
 class TermsIn(BaseModel):
     version: str = Field(min_length=1, max_length=32)
+    adult: bool = Field(default=False, description="the person confirms they are 18 or older (required)")
 
 
 class OrgIn(BaseModel):

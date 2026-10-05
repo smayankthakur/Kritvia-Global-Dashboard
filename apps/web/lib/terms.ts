@@ -1,5 +1,6 @@
 /**
- * Terms acceptance (ToS 1.3). The sign-up page records the tick in this tab's session storage;
+ * Terms acceptance (ToS 1.3) and the 18+ confirmation (ToS 4.5). The sign-up page records both
+ * ticks (only together) in this tab's session storage;
  * once the account exists, the app gate turns it into a stored acceptance on the server.
  * People who signed up before, or when the terms change, accept in a dialog instead.
  */

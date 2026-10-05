@@ -7,7 +7,7 @@ from kritvia_api.bodylimit import BodyLimitMiddleware
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import dispose_engine
 from kritvia_api.routers import (ai_models, approvals, audit, auth, billing, board, compliance, connectors, dashboard, kitchen, knowledge, leads,
-                                 notice, orgs, push, sitelytc, support, tally, task_boards, truhome, ventures, voice, workflows)
+                                 notice, orgs, privacy, push, sitelytc, support, tally, task_boards, truhome, ventures, voice, workflows)
 
 UNSAFE_DEFAULTS = ("dev-only-secret",)
 
@@ -70,7 +70,7 @@ def create_app() -> FastAPI:
     for r in (auth.router, orgs.router, ventures.router, leads.router, audit.router, workflows.router,
               approvals.router, sitelytc.router, knowledge.router, truhome.router, kitchen.router,
               compliance.router, connectors.router, dashboard.router, voice.router, billing.router, support.router, tally.router,
-              board.router, push.router, notice.router, ai_models.router, task_boards.router):
+              board.router, push.router, notice.router, ai_models.router, task_boards.router, privacy.router):
         app.include_router(r)
 
     @app.get("/healthz", tags=["ops"])

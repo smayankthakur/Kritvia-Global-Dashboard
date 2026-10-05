@@ -10,7 +10,9 @@ import { markTermsIntent } from "@/lib/terms";
 
 export default function RegisterPage() {
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [agreed, setAgreed] = useState(false);
+  const [terms, setTerms] = useState(false);
+  const [adult, setAdult] = useState(false);
+  const agreed = terms && adult;
   const done = () => {
     const next = new URLSearchParams(window.location.search).get("next");
     window.location.assign(next ? safeNext(next) : "/onboarding");
@@ -30,11 +32,21 @@ export default function RegisterPage() {
       }
     >
       <Checkbox
-        className="mb-4"
-        checked={agreed}
+        className="mb-3"
+        checked={adult}
         onChange={(e) => {
-          setAgreed(e.target.checked);
-          markTermsIntent(e.target.checked);
+          setAdult(e.target.checked);
+          markTermsIntent(terms && e.target.checked);
+        }}
+        label="I am 18 or older"
+        hint="Kritvia is a business tool for adults. We don't ask for your date of birth."
+      />
+      <Checkbox
+        className="mb-4"
+        checked={terms}
+        onChange={(e) => {
+          setTerms(e.target.checked);
+          markTermsIntent(adult && e.target.checked);
         }}
         label={
           <>
@@ -61,7 +73,7 @@ export default function RegisterPage() {
       </fieldset>
       {agreed ? null : (
         <p id="terms-first" className="mt-3 text-center text-xs text-subtle">
-          Tick the box above to sign up.
+          {adult ? "Accept the terms above to sign up." : terms ? "Confirm you are 18 or older to sign up." : "Tick both boxes above to sign up."}
         </p>
       )}
     </AuthCard>

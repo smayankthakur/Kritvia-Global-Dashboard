@@ -96,7 +96,7 @@ class Settings(BaseSettings):
 
     # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
     signup_open: bool = True            # false: only existing accounts and invitees can sign in
-    terms_version: str = "2026-10-04"   # Terms of Service + Privacy Policy in force; bump when they change
+    terms_version: str = "2026-10-05"   # Terms of Service + Privacy Policy in force; bump when they change
     email_code_minutes: int = 10
     # System email for sign-in codes: smtp | log | memory (see services/mailer.py)
     mail_transport: str = "log"
@@ -107,6 +107,11 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     # Where Help-page messages are emailed (they are always stored too). Empty: stored only.
     support_inbox: str = ""
+    # Sender identification in system emails (and shown on the website footer).
+    company_legal_name: str = "Sitelytc Digital Media Private Limited"
+    company_cin: str = "U63121DL2025PTC453508"
+    company_address: str = ""          # registered office; set COMPANY_ADDRESS once confirmed
+    support_email: str = "support@sitelytc.com"
 
     # Uploads
     max_upload_mb: int = 25

@@ -23,13 +23,20 @@ async def test_terms_acceptance_is_recorded(client):
     assert (await me.get("/auth/me")).json()["terms_version"] is None
     assert (await me.get("/auth/me")).json()["terms_current"] == current
     assert (await me.post("/auth/me/terms", json={"version": "2001-01-01"})).status_code == 409
-    assert (await me.post("/auth/me/terms", json={"version": current})).status_code == 204
+    # under-18s are refused: the age confirmation is required with the acceptance
+    assert (await me.post("/auth/me/terms", json={"version": current})).status_code == 422
+    assert (await me.post("/auth/me/terms", json={"version": current, "adult": False})).status_code == 422
+    assert (await me.get("/auth/me")).json()["terms_version"] is None
+    assert (await me.post("/auth/me/terms", json={"version": current, "adult": True})).status_code == 204
     assert (await me.get("/auth/me")).json()["terms_version"] == current
     conn = await asyncpg.connect(ADMIN_DSN)
     try:
-        assert await conn.fetchval("SELECT terms_accepted_at FROM users WHERE id = $1", me.id) is not None
+        row = await conn.fetchrow("SELECT terms_accepted_at, adult_confirmed_at FROM users WHERE id = $1", me.id)
+        assert row["terms_accepted_at"] is not None and row["adult_confirmed_at"] is not None
     finally:
         await conn.close()
+    profile = (await me.get("/auth/me/export")).json()["profile"]
+    assert profile["terms_version"] == current and profile["adult_confirmed_at"]
 
 
 async def test_delete_account_closes_solo_org_and_anonymises(client, monkeypatch):

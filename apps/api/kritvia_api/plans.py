@@ -54,6 +54,9 @@ class Plan:
     featured: bool = False
     support: Literal["email", "priority", "dedicated"] = "email"
     extras: tuple[str, ...] = field(default=())
+    # Announced but not yet available: shown on the pricing page as "Coming soon" and not part
+    # of what a paid plan includes until released (Terms 10.2).
+    coming_soon: tuple[str, ...] = ()
 
     @property
     def autonomy(self) -> bool:
@@ -76,7 +79,7 @@ class Plan:
                 "autonomy": self.autonomy, "autonomy_per_agent": self.autonomy_per_agent,
                 "analytics": self.analytics, "tagline": self.tagline, "audience": self.audience,
                 "highlights": list(self.highlights), "featured": self.featured, "support": self.support,
-                "extras": list(self.extras)}
+                "extras": list(self.extras), "coming_soon": list(self.coming_soon)}
 
 
 PLANS: dict[str, Plan] = {
@@ -90,27 +93,31 @@ PLANS: dict[str, Plan] = {
         tagline="For individuals and small businesses.", audience="Solo founders and micro-businesses",
         highlights=("1 business, 5 people", "Inbox, lead and proposal agents", "The agent for your kind of business",
                     "Calendar, Google Drive and WhatsApp", "Each agent can earn one action it does alone",
-                    "10 GB business memory", "Basic analytics")),
+                    "10 GB business memory"),
+        coming_soon=("Basic analytics",)),
     "growth": Plan(
         "growth", "Growth", 6999, 69_990, 15_000_000, 3, 15, 50 * GB, None, "all", ALL, 0, "advanced",
         tagline="For businesses automating daily operations.", audience="Agencies, consultants and growing SMBs",
         highlights=("3 businesses, 15 people", "Every agent: inbox, lead, proposal, document and kitchen",
                     "Autonomous actions and approval policies", "All integrations, including Tally",
-                    "50 GB business memory", "Advanced analytics", "Priority support"),
-        featured=True, support="priority"),
+                    "50 GB business memory", "Priority support"),
+        featured=True, support="priority", coming_soon=("Advanced analytics",)),
     "scale": Plan(
         "scale", "Scale", 14_999, 1_49_990, 50_000_000, 10, 50, 250 * GB, None, "all", ALL, 0, "advanced",
         tagline="For growing teams and multiple businesses.", audience="Serious SMBs and multi-team companies",
-        highlights=("10 businesses, 50 people", "All agents and all integrations", "Autonomous and custom workflows",
-                    "Advanced permissions and audit logs", "250 GB business memory", "Advanced analytics and API access",
-                    "Priority processing and support"),
-        support="priority", extras=("custom_workflows", "api_access", "priority_processing")),
+        highlights=("10 businesses, 50 people", "All agents and all integrations",
+                    "Autonomous actions and approval policies", "Advanced permissions and audit logs",
+                    "250 GB business memory", "Priority support"),
+        support="priority", extras=("custom_workflows", "api_access", "priority_processing"),
+        coming_soon=("Custom workflows", "Advanced analytics", "API access", "Priority processing")),
     "enterprise": Plan(
         "enterprise", "Enterprise", 29_999, None, None, None, None, None, None, "all", ALL, 0, "advanced",
         tagline="Talk to us.", audience="Custom businesses, users and AI usage",
-        highlights=("Unlimited or custom businesses", "100+ people", "Custom agents and workflows", "API, SSO and RBAC",
-                    "Dedicated environment and SLA", "Onboarding and data migration", "Dedicated success manager"),
-        support="dedicated", extras=("custom_workflows", "api_access", "priority_processing", "sso", "sla")),
+        highlights=("Unlimited or custom businesses", "100+ people", "Custom agents built for you",
+                    "Role-based access control", "Dedicated environment and SLA", "Onboarding and data migration",
+                    "Dedicated success manager"),
+        support="dedicated", extras=("custom_workflows", "api_access", "priority_processing", "sso", "sla"),
+        coming_soon=("API access", "Single sign-on (SSO)")),
     "internal": Plan(
         "internal", "Internal", 0, None, None, None, None, None, None, "all", ALL, 0, "advanced", support="dedicated"),
 }

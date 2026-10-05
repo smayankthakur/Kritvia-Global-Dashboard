@@ -94,7 +94,7 @@ class VoiceSettings(BaseModel):
     language: str = "auto"
     remove_fillers: bool = True
     profanity_filter: bool = False
-    auto_learn: bool = True
+    auto_learn: bool = False   # off until the person switches it on (Privacy Policy 2)
     hotkey: str = Field(default="ControlRight", pattern=r"^[A-Za-z0-9]{2,24}$")
     widget_enabled: bool = True
 

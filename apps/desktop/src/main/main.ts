@@ -329,7 +329,7 @@ async function stop() {
     return settle("error", "Couldn't type it here — the text is on your clipboard", 4000);
   }
   settle("done", out.text, 2500);
-  if (hook && (voice?.auto_learn ?? true) && prefs.data.autoLearn) {
+  if (hook && (voice?.auto_learn ?? false) && prefs.data.autoLearn) {
     const pasted = out.text;
     setTimeout(() => {
       if (id !== session_ || !hook) return;

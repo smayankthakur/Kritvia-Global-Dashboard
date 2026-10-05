@@ -19,10 +19,11 @@ export function TermsGate() {
   const qc = useQueryClient();
   const me = useQuery({ queryKey: meKey, queryFn: () => unwrap(api.GET("/auth/me")), staleTime: 5 * 60_000 });
   const [agreed, setAgreed] = useState(false);
+  const [adult, setAdult] = useState(false);
   const [ask, setAsk] = useState(false);
   const tried = useRef(false);
   const accept = useMutation({
-    mutationFn: (version: string) => unwrap(api.POST("/auth/me/terms", { body: { version } })),
+    mutationFn: (version: string) => unwrap(api.POST("/auth/me/terms", { body: { version, adult: true } })),
     onSuccess: () => {
       setAsk(false);
       void qc.invalidateQueries({ queryKey: meKey });
@@ -55,7 +56,7 @@ export function TermsGate() {
       footer={
         <Button
           variant="primary"
-          disabled={!agreed}
+          disabled={!agreed || !adult}
           loading={accept.isPending}
           onClick={() => accept.mutate(me.data!.terms_current)}
         >
@@ -65,6 +66,7 @@ export function TermsGate() {
     >
       <div className="space-y-3">
         <FormError message={accept.isError ? errorMessage(accept.error) : null} />
+        <Checkbox checked={adult} onChange={(e) => setAdult(e.target.checked)} label="I am 18 or older" hint="Kritvia is only for adults." />
         <Checkbox
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}

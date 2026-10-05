@@ -28,6 +28,15 @@ describe("pricing 2026–27", () => {
       if (p.price_annual_inr) expect(nums[1], p.code).toBe(p.price_annual_inr);
       expect(PLANS_PY.replace(/_/g, "")).toContain(String(p.monthly_tokens));
       for (const h of p.highlights) expect(PLANS_PY, `${p.code}: ${h}`).toContain(h);
+      for (const h of p.coming_soon ?? []) expect(PLANS_PY, `${p.code}: ${h}`).toContain(h);
+    }
+  });
+
+  it("never lists an unreleased feature as included", () => {
+    // Not built yet: these may only appear under "Coming soon" (Terms 10.2, no unsupported claims).
+    const unreleased = /analytics|api access|\bapi\b|sso|single sign-on|custom workflow|priority processing/i;
+    for (const p of [...PLAN_CARDS, ENTERPRISE]) {
+      for (const h of p.highlights) expect(h, `${p.code}: "${h}" is not built yet`).not.toMatch(unreleased);
     }
   });
 

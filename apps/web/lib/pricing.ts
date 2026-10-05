@@ -11,6 +11,8 @@ export interface PlanCard {
   tagline: string;
   audience: string;
   highlights: string[];
+  /** Announced but not available yet: shown as "Coming soon", never as included (Terms 10.2). */
+  coming_soon?: string[];
   featured: boolean;
 }
 
@@ -41,8 +43,8 @@ export const PLAN_CARDS: PlanCard[] = [
       "Calendar, Google Drive and WhatsApp",
       "Each agent can earn one action it does alone",
       "10 GB business memory",
-      "Basic analytics",
     ],
+    coming_soon: ["Basic analytics"],
     featured: false,
   },
   {
@@ -59,9 +61,9 @@ export const PLAN_CARDS: PlanCard[] = [
       "Autonomous actions and approval policies",
       "All integrations, including Tally",
       "50 GB business memory",
-      "Advanced analytics",
       "Priority support",
     ],
+    coming_soon: ["Advanced analytics"],
     featured: true,
   },
   {
@@ -75,12 +77,12 @@ export const PLAN_CARDS: PlanCard[] = [
     highlights: [
       "10 businesses, 50 people",
       "All agents and all integrations",
-      "Autonomous and custom workflows",
+      "Autonomous actions and approval policies",
       "Advanced permissions and audit logs",
       "250 GB business memory",
-      "Advanced analytics and API access",
-      "Priority processing and support",
+      "Priority support",
     ],
+    coming_soon: ["Custom workflows", "Advanced analytics", "API access", "Priority processing"],
     featured: false,
   },
 ];
@@ -90,7 +92,16 @@ export const ENTERPRISE = {
   name: "Enterprise",
   from_inr: 29_999,
   tagline: "Custom businesses, users and AI usage, quoted for you.",
-  highlights: ["Unlimited or custom businesses", "100+ people", "Custom agents and workflows", "API, SSO and RBAC", "Dedicated environment and SLA", "Onboarding and data migration", "Dedicated success manager"],
+  highlights: [
+    "Unlimited or custom businesses",
+    "100+ people",
+    "Custom agents built for you",
+    "Role-based access control",
+    "Dedicated environment and SLA",
+    "Onboarding and data migration",
+    "Dedicated success manager",
+  ],
+  coming_soon: ["API access", "Single sign-on (SSO)"],
   contact: "mailto:support@sitelytc.com?subject=Kritvia%20Enterprise",
 };
 

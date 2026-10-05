@@ -4,10 +4,12 @@ import type { ReactNode } from "react";
 import { Logo } from "@/components/shell/logo";
 import { buttonClass } from "@/components/ui/button";
 import { Markdown } from "@/components/ui/markdown";
+import { BUSINESS } from "@/lib/business";
+import { SiteFooter } from "./site-footer";
 
-export const COMPANY = "Sitelytc Digital Media Pvt. Ltd.";
-export const CIN = "U63121DL2025PTC453508";
-export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@sitelytc.com";
+export const COMPANY = BUSINESS.shortName;
+export const CIN = BUSINESS.cin;
+export const SUPPORT_EMAIL = BUSINESS.email;
 
 const LINKS = [
   ["/security", "Security"],
@@ -65,23 +67,7 @@ export function PublicShell({ children, wide }: { children: ReactNode; wide?: bo
       <main id="main" className={`mx-auto w-full flex-1 ${width} px-4 py-10`}>
         {children}
       </main>
-      <footer className="glass mt-6 border-t">
-        <div className={`mx-auto flex ${width} flex-col gap-3 px-4 py-6 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between`}>
-          <p>
-            © {new Date().getFullYear()} {COMPANY} · CIN {CIN} · New Delhi, India
-          </p>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-4 gap-y-1">
-            {LINKS.map(([href, label]) => (
-              <Link key={href} href={href} className="transition-colors hover:text-fg">
-                {label}
-              </Link>
-            ))}
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="transition-colors hover:text-fg">
-              {SUPPORT_EMAIL}
-            </a>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter wide={wide} />
     </div>
   );
 }

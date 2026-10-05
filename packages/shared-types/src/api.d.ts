@@ -1019,6 +1019,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/privacy-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Privacy Request */
+        post: operations["submit_privacy_request_public_privacy_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/support": {
         parameters: {
             query?: never;
@@ -1030,6 +1047,23 @@ export interface paths {
         put?: never;
         /** Contact */
         post: operations["contact_public_support_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unsubscribe */
+        post: operations["unsubscribe_public_unsubscribe_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4724,6 +4758,55 @@ export interface components {
              */
             target_date: string;
         };
+        /** PrivacyRequestIn */
+        PrivacyRequestIn: {
+            /**
+             * Business Name
+             * @description the business that holds your data, if you are its customer
+             * @default
+             */
+            business_name: string;
+            /** Details */
+            details: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "access" | "correct" | "erase" | "withdraw" | "nominate" | "grievance" | "other";
+            /** Name */
+            name: string;
+            /**
+             * Relationship
+             * @enum {string}
+             */
+            relationship: "account_holder" | "business_customer" | "nominee" | "other";
+            /**
+             * Website
+             * @description leave empty (spam trap)
+             * @default
+             */
+            website: string;
+        };
+        /** PrivacyRequestOut */
+        PrivacyRequestOut: {
+            /**
+             * Acknowledge By
+             * Format: date-time
+             */
+            acknowledge_by: string;
+            /** Reference */
+            reference: string;
+            /**
+             * Respond By
+             * Format: date-time
+             */
+            respond_by: string;
+        };
         /** ProposalOut */
         ProposalOut: {
             /** Citations */
@@ -5572,6 +5655,12 @@ export interface components {
         };
         /** TermsIn */
         TermsIn: {
+            /**
+             * Adult
+             * @description the person confirms they are 18 or older (required)
+             * @default false
+             */
+            adult: boolean;
             /** Version */
             version: string;
         };
@@ -5682,11 +5771,6 @@ export interface components {
             rejected: number;
             /** Threshold */
             threshold: number;
-        };
-        /** UnsubscribeIn */
-        UnsubscribeIn: {
-            /** Endpoint */
-            endpoint: string;
         };
         /** UploadLinkOut */
         UploadLinkOut: {
@@ -6169,6 +6253,21 @@ export interface components {
             notice_version: string;
             /** Purpose */
             purpose: string;
+        };
+        /** UnsubscribeIn */
+        kritvia_api__routers__privacy__UnsubscribeIn: {
+            /**
+             * Resubscribe
+             * @default false
+             */
+            resubscribe: boolean;
+            /** Token */
+            token: string;
+        };
+        /** UnsubscribeIn */
+        kritvia_api__routers__push__UnsubscribeIn: {
+            /** Endpoint */
+            endpoint: string;
         };
         /** ConsentIn */
         kritvia_api__routers__truhome__ConsentIn: {
@@ -6990,7 +7089,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UnsubscribeIn"];
+                "application/json": components["schemas"]["kritvia_api__routers__push__UnsubscribeIn"];
             };
         };
         responses: {
@@ -8092,6 +8191,39 @@ export interface operations {
             };
         };
     };
+    submit_privacy_request_public_privacy_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     contact_public_support_post: {
         parameters: {
             query?: never;
@@ -8107,6 +8239,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_public_unsubscribe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["kritvia_api__routers__privacy__UnsubscribeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

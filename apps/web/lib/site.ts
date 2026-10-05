@@ -9,6 +9,9 @@ export const INDEXABLE = [
   { path: "/help", priority: 0.6, changeFrequency: "monthly" },
   { path: "/privacy", priority: 0.4, changeFrequency: "yearly" },
   { path: "/terms", priority: 0.4, changeFrequency: "yearly" },
+  { path: "/cookies", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/refunds", priority: 0.4, changeFrequency: "yearly" },
+  { path: "/privacy-request", priority: 0.3, changeFrequency: "yearly" },
   { path: "/status", priority: 0.3, changeFrequency: "daily" },
 ] as const;
 

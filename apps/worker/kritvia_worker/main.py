@@ -126,8 +126,9 @@ async def purge_expired(ctx: dict) -> int:
         orgs = (await conn.execute(text("SELECT private.purge_closed_orgs(30)"))).scalar()
         ventures = (await conn.execute(text("SELECT private.purge_removed_ventures(30)"))).scalar()
         support = (await conn.execute(text("SELECT private.purge_support(730)"))).scalar()
-    log.info("retention purge removed %s document(s), %s closed organisation(s), %s removed business(es)"
-             " and %s old support message(s)", n, orgs, ventures, support)
+        privacy = (await conn.execute(text("SELECT private.purge_privacy_requests(1095)"))).scalar()
+    log.info("retention purge removed %s document(s), %s closed organisation(s), %s removed business(es),"
+             " %s old support message(s) and %s closed privacy request(s)", n, orgs, ventures, support, privacy)
     return n or 0
 
 

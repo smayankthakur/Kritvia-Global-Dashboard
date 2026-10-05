@@ -1,10 +1,10 @@
 /**
- * Privacy Policy, version 2026-10-04. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Privacy Policy, version 2026-10-05. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Privacy Policy). Every factual statement here was checked against the code;
  * if routing, retention or providers change (infra/litellm/tiers.yaml, migrations, worker purges),
  * change this text too and bump terms_version in the API settings.
  */
-export const PRIVACY_UPDATED = "4 October 2026";
+export const PRIVACY_UPDATED = "5 October 2026";
 
 export const PRIVACY_MD = `## 1. Who we are and what this policy covers
 
@@ -29,6 +29,7 @@ This policy is published under the Digital Personal Data Protection Act, 2023 an
 | What | Where it comes from | Why we use it | Basis |
 | --- | --- | --- | --- |
 | Name, email address, password (stored only as an Argon2 hash), organisation and role | You, at sign-up or when invited; Google, if you sign in with Google (name and email) | To create and run your account and sign you in | Consent; data you provided for this purpose (DPDP Act s.7(a)) |
+| Your confirmation that you are 18 or older, and when you accepted our Terms and this policy | You, at sign-up | To keep Kritvia for adults only and to show which terms you agreed to | Legal duty (DPDP Act s.9); data you provided for this purpose |
 | Sign-in and security records: time, IP address, device and browser, session tokens, one-time codes | Your use of Kritvia | To keep accounts secure, detect misuse, and investigate incidents | Data you provided for this purpose; legal duties to keep security logs |
 | Billing details: legal name, GSTIN, billing address, billing contact, plan, payment status and invoices | You; Razorpay (payment status only) | To bill you and issue GST tax invoices | Data you provided for this purpose; compliance with tax law |
 | Support messages and contact-form details | You | To answer you and improve help content | Data you provided for this purpose |
@@ -92,6 +93,7 @@ We keep personal data only as long as the purpose needs it or the law requires, 
 | Security and system logs | One year, then deleted, as Indian cyber-security rules require. |
 | Sign-in codes | One day. |
 | Support messages | Two years. |
+| Privacy requests (section 6) | Three years after we close the request, as a record of how we handled it. |
 | Tax invoices and billing records | Eight years, as tax and company law require. |
 | Audit log of actions in a workspace | For the life of the organisation and as a tamper-evident legal record after it. It records who did what and when, by internal ID, and never the content of documents. |
 
@@ -120,7 +122,7 @@ Under the DPDP Act you have the right to:
 - **nominate** someone to exercise your rights if you die or become unable to; and
 - **have a grievance resolved**, and then complain to the Data Protection Board of India if you are not satisfied.
 
-**How to use them.** In Kritvia, go to **Your account** to download your data or delete your account. For anything else, email support@sitelytc.com with "Privacy" in the subject, from the address on your account, or write to the grievance officer below. We may ask you to confirm your identity. We acknowledge requests within 2 business days and respond within 30 days, and in any case within the 90 days the law allows.
+**How to use them.** In Kritvia, go to **Your account** to download your data or delete your account. For anything else, including if you can't sign in or you are a customer of a business that uses Kritvia, use our [privacy request form](/privacy-request) or email support@sitelytc.com with "Privacy" in the subject. You get a reference number straight away. We confirm your identity by replying to the email address you give; we never ask for identity documents through the form. We acknowledge requests within 2 business days and respond within 30 days, and in any case within the 90 days the law allows. Using your rights is free, and we will not treat you differently for using them.
 
 **If a business holds your data in Kritvia** (for example you are its customer or a loan applicant), please contact that business: it decides how your data is used. If you write to us, we will pass your request to the business and help it respond.
 
@@ -128,22 +130,35 @@ Under the DPDP Act you have the right to:
 
 ## 7. Children
 
-Kritvia is for businesses and is not meant for anyone under 18. We do not knowingly collect children's personal data for our own purposes. Businesses that put children's data into Kritvia must obtain verifiable consent from a parent or lawful guardian as the DPDP Act requires.
+Kritvia is a tool for businesses and is only for people aged 18 or over. Everyone confirms they are 18 or older when they create an account or accept these terms, and we record that confirmation; we do not ask for your date of birth. If we learn that someone under 18 has an account, we close it and delete their Account Data. Kritvia is not directed at children under 13, and we do not knowingly collect personal data from them (as the US Children's Online Privacy Protection Act requires).
+
+A business that puts children's personal data into Kritvia (for example a parent's loan file that lists a child) must obtain verifiable consent from the child's parent or lawful guardian as the DPDP Act requires, and must not use Kritvia to track or monitor children's behaviour or to target advertising at them. If you are a parent and think your child's data is in Kritvia, contact the business, or use our [privacy request form](/privacy-request) and we will help.
 
 ## 8. Cookies and similar technology
 
-We use only cookies and browser storage that Kritvia needs to work. We use no advertising or analytics cookies and no third-party trackers.
+We use only cookies and browser storage that Kritvia needs to work: to keep you signed in, protect sign-in, and remember your theme and the business you last used. We use no advertising or analytics cookies and no third-party trackers, so we do not ask for cookie consent. Our [Cookie Policy](/cookies) lists every cookie and storage key. We honour the Global Privacy Control signal from your browser.
 
-| Name | Purpose | Lasts |
-| --- | --- | --- |
-| kv_at, kv_rt | Keep you signed in securely (cannot be read by page scripts) | 60 minutes; 30 days |
-| kv_oauth, kv_signin | Protect Google sign-in and connection steps | 10 minutes |
-| kv_theme, kv_org, kv_venture | Remember your theme and the organisation and business you last used | 1 year |
-| Local and session storage (kv_voice_*, kv_terms_intent) | Remember voice settings on this device; carry your acceptance of these terms from the sign-up page | Until you clear it; until the tab closes |
+## 9. If you are in the European Economic Area, the United Kingdom or Switzerland
 
-The installable app also stores the app's layout on your device so it opens quickly; it never stores your business data there.
+Kritvia is offered to businesses in India. If the EU or UK General Data Protection Regulation (GDPR) applies to our processing of your data, the following also applies.
 
-## 9. Changes to this policy
+- **Our role.** We are the controller of Account Data and a processor of Customer Data for the business that uses Kritvia.
+- **Legal bases.** We process Account Data to perform our contract with you or your business (GDPR art. 6(1)(b)); for our legitimate interests in keeping Kritvia secure, preventing misuse and fixing faults (art. 6(1)(f)); to meet legal duties such as tax records (art. 6(1)(c)); and with your consent for voice dictation and browser notifications (art. 6(1)(a)), which you can withdraw at any time.
+- **Your rights.** Besides the rights in section 6, you can ask us to restrict processing, receive your Account Data in a portable format (**Your account → Download my data** gives you a machine-readable file), and object to processing based on legitimate interests. We do not make decisions about you based solely on automated processing. We respond within one month, which we may extend by two months for complex requests, telling you why.
+- **Transfers.** Your data is stored in India, which does not have an EU or UK adequacy decision. Where GDPR requires, we will sign the European Commission's Standard Contractual Clauses (and the UK Addendum) with a business customer on request.
+- **Representative.** We have not appointed a representative in the EU or UK because we do not offer Kritvia there. If that changes, we will appoint one and name them here.
+- **Complaints.** You can complain to the data protection authority where you live or work.
+
+## 10. If you are a California resident
+
+We may not meet the thresholds that make the California Consumer Privacy Act (as amended by the CPRA) apply to us, but we follow these commitments anyway.
+
+- **No sale or sharing.** We do not sell personal information, and we do not share it for cross-context behavioural advertising. We have not done so in the last 12 months. Because we do neither, there is nothing to opt out of; we still treat a Global Privacy Control signal as an opt-out request.
+- **What we collect.** In the last 12 months we collected the categories in section 2: identifiers (name, email, IP address), commercial information (plan and billing records), internet activity (sign-in and usage records), audio (dictation, which we do not keep) and professional information (your organisation and role). We collected them from the sources, for the purposes, and keep them for the periods in sections 2 and 5, and disclose them only to the service providers in section 4.
+- **Sensitive information.** We use account sign-in details only to provide and secure Kritvia, and never to infer characteristics about you.
+- **Your rights.** You can ask to know what we collect, use and disclose; to delete it; and to correct it, through section 6. An authorised agent can ask for you with your signed permission. We verify requests by email, and we will not discriminate against you for using these rights.
+
+## 11. Changes to this policy
 
 We will update this policy when our practices or the law change, and change the date at the top. For a material change we will tell you by email or in the app at least 15 days before it takes effect. Where a change needs your consent, we will ask for it.
 `;

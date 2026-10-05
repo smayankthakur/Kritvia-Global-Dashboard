@@ -25,7 +25,7 @@ export const DEFAULT_PREFS: Prefs = {
   bubble: null,
   launchAtLogin: false,
   showBubble: true,
-  autoLearn: true,
+  autoLearn: false, // keystroke-based learning stays off until the person turns it on (Privacy Policy 2)
 };
 
 export interface Crypto {

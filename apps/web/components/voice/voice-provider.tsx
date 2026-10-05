@@ -21,7 +21,7 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   language: "auto",
   remove_fillers: true,
   profanity_filter: false,
-  auto_learn: true,
+  auto_learn: false,
   hotkey: "ControlRight",
   widget_enabled: true,
 };

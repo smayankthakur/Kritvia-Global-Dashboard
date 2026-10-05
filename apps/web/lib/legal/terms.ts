@@ -1,9 +1,9 @@
 /**
- * Terms of Service, version 2026-10-04. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Terms of Service, version 2026-10-05. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Terms of Service). Keep the two in step; when the text changes, bump
  * TERMS_VERSION in the API settings (terms_version) so everyone is asked to accept again.
  */
-export const TERMS_UPDATED = "4 October 2026";
+export const TERMS_UPDATED = "5 October 2026";
 
 export const TERMS_MD = `These Terms of Service are an agreement between your business and Sitelytc Digital Media Private Limited for the use of Kritvia. Please read them with our [Privacy Policy](/privacy).
 
@@ -52,7 +52,7 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 
 4.4 Each User account is for one individual. Users must not share sign-in credentials.
 
-4.5 The Service is not directed at children. Users must be at least 18 years old.
+4.5 The Service is not directed at children. Users must be at least 18 years old, and each User confirms this when they accept these Terms. We will close any account we learn belongs to someone under 18.
 
 ## 5. Customer Data
 
@@ -142,6 +142,8 @@ We may remove content or suspend access under clause 14 if we reasonably believe
 
 Extra hosted-AI usage can be bought in packs (5 million tokens for ₹1,499, 20 million for ₹4,999, 50 million for ₹9,999), usable in the calendar month of purchase.
 
+Features marked "Coming soon" on the pricing page are not yet available and are not part of any Plan until we release them. We may change their timing or scope, or decide not to release them; that is not a breach of these Terms, and we do not charge for them before they are released.
+
 10.2 **Billing.** Paid Plans are billed monthly or yearly in advance, as you choose, through our payment partner, Razorpay, and renew automatically at the end of each period until cancelled. You authorise recurring charges to the payment method you set up. We do not see or store full card or bank details.
 
 10.3 **Taxes.** Prices exclude Goods and Services Tax, which we charge at the applicable rate (currently 18%) and show on a GST-compliant tax invoice. If you give us your GSTIN before payment, the invoice will carry it so that you can claim input tax credit. If you must deduct tax at source, you will send us the TDS certificate within the statutory time; otherwise you will pay the amount withheld.
@@ -152,7 +154,7 @@ Extra hosted-AI usage can be bought in packs (5 million tokens for ₹1,499, 20 
 
 10.6 **Price changes.** We may change prices by giving at least 30 days' notice by email and in the app. The new price applies from your first renewal after the notice period. If you do not agree, you may cancel before that renewal.
 
-10.7 **Cancellation and refunds.** You may cancel a paid Plan at any time in the app. The Plan stays active until the end of the period you have paid for and then moves to Free. Fees are non-refundable and we do not refund part-months, except (a) as these Terms expressly provide in clauses 3.2, 6.5 and 18.3, (b) where we have charged you in error, or (c) where the law requires a refund.
+10.7 **Cancellation and refunds.** Our [Cancellation, Refund and Delivery Policy](/refunds) explains this clause in plain terms. You may cancel a paid Plan at any time in the app. The Plan stays active until the end of the period you have paid for and then moves to Free. Fees are non-refundable and we do not refund part-months, except (a) as these Terms expressly provide in clauses 3.2, 6.5 and 18.3, (b) where we have charged you in error, or (c) where the law requires a refund.
 
 10.8 **Disputed charges.** Tell us at support@sitelytc.com within 30 days of a charge you dispute. We will investigate in good faith. Please contact us before raising a chargeback with your bank.
 

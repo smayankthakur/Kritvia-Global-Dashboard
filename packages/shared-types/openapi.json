@@ -5251,6 +5251,98 @@
         "title": "PlanOut",
         "type": "object"
       },
+      "PrivacyRequestIn": {
+        "properties": {
+          "business_name": {
+            "default": "",
+            "description": "the business that holds your data, if you are its customer",
+            "maxLength": 200,
+            "title": "Business Name",
+            "type": "string"
+          },
+          "details": {
+            "maxLength": 5000,
+            "minLength": 5,
+            "title": "Details",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "access",
+              "correct",
+              "erase",
+              "withdraw",
+              "nominate",
+              "grievance",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "relationship": {
+            "enum": [
+              "account_holder",
+              "business_customer",
+              "nominee",
+              "other"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "website": {
+            "default": "",
+            "description": "leave empty (spam trap)",
+            "maxLength": 200,
+            "title": "Website",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "relationship",
+          "name",
+          "email",
+          "details"
+        ],
+        "title": "PrivacyRequestIn",
+        "type": "object"
+      },
+      "PrivacyRequestOut": {
+        "properties": {
+          "acknowledge_by": {
+            "format": "date-time",
+            "title": "Acknowledge By",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "respond_by": {
+            "format": "date-time",
+            "title": "Respond By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "acknowledge_by",
+          "respond_by"
+        ],
+        "title": "PrivacyRequestOut",
+        "type": "object"
+      },
       "ProposalOut": {
         "properties": {
           "citations": {
@@ -7417,6 +7509,12 @@
       },
       "TermsIn": {
         "properties": {
+          "adult": {
+            "default": false,
+            "description": "the person confirms they are 18 or older (required)",
+            "title": "Adult",
+            "type": "boolean"
+          },
           "version": {
             "maxLength": 32,
             "minLength": 1,
@@ -7748,21 +7846,6 @@
           "promoted_at"
         ],
         "title": "TrustOut",
-        "type": "object"
-      },
-      "UnsubscribeIn": {
-        "properties": {
-          "endpoint": {
-            "maxLength": 2000,
-            "minLength": 10,
-            "title": "Endpoint",
-            "type": "string"
-          }
-        },
-        "required": [
-          "endpoint"
-        ],
-        "title": "UnsubscribeIn",
         "type": "object"
       },
       "UploadLinkOut": {
@@ -8921,6 +9004,41 @@
         "title": "ConsentIn",
         "type": "object"
       },
+      "kritvia_api__routers__privacy__UnsubscribeIn": {
+        "properties": {
+          "resubscribe": {
+            "default": false,
+            "title": "Resubscribe",
+            "type": "boolean"
+          },
+          "token": {
+            "maxLength": 80,
+            "minLength": 20,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "UnsubscribeIn",
+        "type": "object"
+      },
+      "kritvia_api__routers__push__UnsubscribeIn": {
+        "properties": {
+          "endpoint": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Endpoint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "UnsubscribeIn",
+        "type": "object"
+      },
       "kritvia_api__routers__truhome__ConsentIn": {
         "properties": {
           "channel": {
@@ -10017,7 +10135,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UnsubscribeIn"
+                "$ref": "#/components/schemas/kritvia_api__routers__push__UnsubscribeIn"
               }
             }
           },
@@ -11842,6 +11960,47 @@
         ]
       }
     },
+    "/public/privacy-requests": {
+      "post": {
+        "operationId": "submit_privacy_request_public_privacy_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Privacy Request",
+        "tags": [
+          "privacy"
+        ]
+      }
+    },
     "/public/support": {
       "post": {
         "operationId": "contact_public_support_post",
@@ -11882,6 +12041,49 @@
         "summary": "Contact",
         "tags": [
           "support"
+        ]
+      }
+    },
+    "/public/unsubscribe": {
+      "post": {
+        "operationId": "unsubscribe_public_unsubscribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/kritvia_api__routers__privacy__UnsubscribeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Unsubscribe Public Unsubscribe Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unsubscribe",
+        "tags": [
+          "privacy"
         ]
       }
     },

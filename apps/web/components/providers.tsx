@@ -3,6 +3,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
+import { ConsentProvider } from "@/components/legal/consent";
 import { ScrollActivity } from "@/components/shell/scroll-activity";
 import { ToastProvider } from "@/components/ui/toast";
 import { registerServiceWorker } from "@/lib/pwa";
@@ -15,7 +16,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       {/* Animations made with motion follow the visitor's reduced-motion setting. */}
       <MotionConfig reducedMotion="user">
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <ConsentProvider>{children}</ConsentProvider>
+        </ToastProvider>
         <ScrollActivity />
       </MotionConfig>
     </QueryClientProvider>
