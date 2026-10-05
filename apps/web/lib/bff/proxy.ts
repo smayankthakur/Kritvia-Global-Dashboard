@@ -174,7 +174,7 @@ export async function proxyRequest(req: Request, segments: string[], deps: Proxy
   const doFetch = deps.fetch ?? fetch;
   const method = req.method.toUpperCase();
   if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
-  if (!csrfOk(req)) return csrfRefused();
+  if (!csrfOk(req)) return csrfRefused(req);
 
   const path = normalisePath(segments);
   if (!path) return json(400, "bad path");

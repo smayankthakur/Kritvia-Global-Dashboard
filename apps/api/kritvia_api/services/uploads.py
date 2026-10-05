@@ -100,4 +100,10 @@ async def read_checked(file: UploadFile, kind: str, max_mb: int | None = None) -
         raise HTTPException(413, f"file larger than {limit // 1048576} MB")
     if not data:
         raise HTTPException(422, "empty file")
-    return data, check_upload(file.filename, data, kind)
+    try:
+        return data, check_upload(file.filename, data, kind)
+    except HTTPException:
+        from kritvia_api.services.security_log import security_event
+        await security_event("upload.refused", "info", kind=kind, extension=extension(file.filename)[:10],
+                             first_bytes=data[:8].hex())
+        raise

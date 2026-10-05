@@ -29,6 +29,10 @@ import httpx
 import yaml
 from sqlalchemy import text
 
+from kritvia_api.config import get_settings
+from kritvia_api.services import guardrails
+from kritvia_api.services.security_log import security_event
+
 from kritvia_api.db.session import ActorType, tenant_tx
 
 RETRYABLE_STATUS = {408, 409, 429, 500, 502, 503, 504}
@@ -129,6 +133,7 @@ class CallContext:
     agent_id: str | None = None
     workflow: str | None = None
     ticket_id: uuid.UUID | None = None
+    run_id: uuid.UUID | None = None
 
 
 @dataclass
@@ -212,13 +217,20 @@ class ModelRouter:
         return route
 
     async def _over_quota(self, ctx: CallContext) -> str | None:
-        """None, 'org' (plan allowance used) or 'agent' (the board budget for this workflow used)."""
+        """None, 'org' (plan allowance used), 'agent' (the board budget for this workflow used) or
+        'user' (this person's daily share of hosted AI used)."""
         async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
             local = self.local_deployments()
             if ctx.workflow and await self.gate.agent_over_budget(conn, ctx.venture_id, ctx.workflow, local):
                 return "agent"
             if await self.gate.over_limit(conn, ctx.org_id, local):
                 return "org"
+            cap = get_settings().ai_user_daily_tokens
+            if cap and ctx.actor_type == "user" and ctx.user_id:
+                used = (await conn.execute(text("SELECT user_tokens_today(:u, :l)"),
+                                           {"u": ctx.user_id, "l": local})).scalar()
+                if int(used or 0) >= cap:
+                    return "user"
             return None
 
     async def _meter(self, ctx: CallContext, **row: Any) -> None:
@@ -226,9 +238,9 @@ class ModelRouter:
             await conn.execute(
                 text(
                     "INSERT INTO model_calls (org_id, venture_id, workflow, tier, provider_model, attempt, status,"
-                    " prompt_tokens, completion_tokens, latency_ms, error, agent_id, ticket_id, cost_usd)"
+                    " prompt_tokens, completion_tokens, latency_ms, error, agent_id, ticket_id, cost_usd, user_id)"
                     " VALUES (:org, :venture, :workflow, :tier, :model, :attempt, :status,"
-                    " :pt, :ct, :latency, :error, :agent, :ticket, :cost)"
+                    " :pt, :ct, :latency, :error, :agent, :ticket, :cost, :user)"
                 ),
                 {
                     "org": ctx.org_id, "venture": ctx.venture_id, "workflow": ctx.workflow,
@@ -236,8 +248,22 @@ class ModelRouter:
                     "status": row["status"], "pt": row.get("pt"), "ct": row.get("ct"),
                     "latency": row.get("latency"), "error": (row.get("error") or None) and row["error"][:500],
                     "agent": ctx.agent_id, "ticket": ctx.ticket_id, "cost": row.get("cost"),
+                    "user": ctx.user_id if ctx.actor_type == "user" else None,
                 },
             )
+
+    async def _guard(self, ctx: CallContext, messages: list[dict[str, Any]], params: dict[str, Any]) -> None:
+        """Per-request limits: prompt size, output size, and how fast one person can call the AI."""
+        s = get_settings()
+        size = sum(len(m["content"]) for m in messages if isinstance(m.get("content"), str))
+        if size > s.ai_max_prompt_chars:
+            await self._meter(ctx, tier="-", status="blocked", error="prompt too large")
+            raise PolicyViolation(f"the request is too large for the AI ({size:,} characters; the limit is "
+                                  f"{s.ai_max_prompt_chars:,}); split the document or ask about a part of it")
+        params["max_tokens"] = min(int(params.get("max_tokens") or s.ai_max_output_tokens), s.ai_max_output_tokens)
+        if ctx.actor_type == "user" and ctx.user_id:
+            from kritvia_api.ratelimit import limiter
+            await limiter.hit(f"ai-user:{ctx.user_id}", per_minute=s.ai_user_calls_per_minute)
 
     async def chat(
         self,
@@ -249,6 +275,15 @@ class ModelRouter:
         **params: Any,
     ) -> ChatResult:
         from kritvia_api.services import byok
+        await self._guard(ctx, messages, params)
+        messages, findings = guardrails.protect(messages)
+        if findings:
+            await security_event("ai.injection_suspected", "warning", user_id=ctx.user_id, org_id=ctx.org_id,
+                                 workflow=ctx.workflow, patterns=",".join(findings))
+            if ctx.run_id:
+                async with tenant_tx(None, "system") as conn:
+                    await conn.execute(text("SELECT flag_run(:r, :why)"),
+                                       {"r": ctx.run_id, "why": "outside text tried to instruct the AI: " + ", ".join(findings)})
         candidates = self.config.candidates(tier, sensitive)
         if not candidates:
             reason = "sensitive request: no deployment in tier is permitted for sensitive data"
@@ -270,6 +305,14 @@ class ModelRouter:
         over = None
         if any(hosted(d) for d in candidates):
             over = await self._over_quota(ctx)
+        if over == "user":
+            local = [d for d in candidates if not hosted(d)]
+            if not local:
+                await self._meter(ctx, tier=tier, status="blocked", error="personal daily AI allowance used")
+                raise QuotaExceeded("you've used today's share of hosted AI for one person; it resets at midnight IST "
+                                    "(steps that can run on the local model still do)")
+            candidates = local
+            over = None
         if over == "agent":
             # The owner capped this agent on the board: pause it, local model or not.
             await self._meter(ctx, tier=tier, status="blocked", error="agent budget used")

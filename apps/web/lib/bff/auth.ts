@@ -56,7 +56,7 @@ export async function exchangeCredentials(
 
 export async function logout(req: Request, doFetch: typeof fetch = fetch): Promise<Response> {
   if (!isSameOrigin(req)) return forbiddenOrigin();
-  if (!csrfOk(req)) return csrfRefused();
+  if (!csrfOk(req)) return csrfRefused(req);
   const rt = parseCookies(req.headers.get("cookie"))[REFRESH_COOKIE];
   if (rt) {
     try {

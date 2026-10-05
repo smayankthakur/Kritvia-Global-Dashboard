@@ -17,7 +17,8 @@ from sqlalchemy import text
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import TenantDB
-from kritvia_api.plans import LEGACY, SELF_SERVE, plan as plan_of
+from kritvia_api.plans import SELF_SERVE, plan as plan_of
+from kritvia_api.services.security_log import security_event
 from kritvia_api.ratelimit import client_ip, limiter
 
 router = APIRouter(tags=["billing"])
@@ -158,6 +159,14 @@ async def cancel(org_id: uuid.UUID, db: TenantDB) -> dict:
 
 
 # ------------------------------------------------------------------ webhook --
+def minimum_paise(plan: str, annual: bool) -> int:
+    """The least a genuine charge for this plan can be: our price before GST, in paise (less ₹1
+    for rounding). Razorpay plans may be set up with or without GST; anything below this is wrong."""
+    p = plan_of(plan)
+    rupees = (p.price_annual_inr or 0) if annual else p.price_inr
+    return max(rupees * 100 - 100, 0)
+
+
 PLAN_FOR_STATUS = {"activated": True, "charged": True, "resumed": True, "authenticated": False,
                    "pending": True, "halted": False, "cancelled": False, "completed": False, "paused": False}
 
@@ -176,6 +185,7 @@ async def razorpay_webhook(request: Request) -> dict:
     sig = request.headers.get("x-razorpay-signature", "")
     good = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, good):
+        await security_event("webhook.bad_signature", "warning", request=request, provider="razorpay")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad signature")
     ev = json.loads(raw)
     event_id = request.headers.get("x-razorpay-event-id") or hashlib.sha256(raw).hexdigest()
@@ -189,25 +199,36 @@ async def razorpay_webhook(request: Request) -> dict:
         org_id = uuid.UUID(str(notes.get("org_id", "")))
     except ValueError:
         return {"ignored": "no organisation in notes"}
-    by_id = {v: k.removesuffix("_annual") for k, v in _plan_ids().items()}
+    # The plan comes ONLY from the Razorpay plan id we configured on the server, never from
+    # notes or anything the browser sent; the amount actually paid is checked against our price.
+    by_id = {v: k for k, v in _plan_ids().items()}
     plan = None
     status_ = sub.get("status")
+    amount = pay.get("amount") or inv.get("amount_paid") or inv.get("amount")
     if name.startswith("subscription."):
         paid = PLAN_FOR_STATUS.get(name.split(".", 1)[1])
         if paid is True:
-            plan = by_id.get(sub.get("plan_id", "")) or LEGACY.get(notes.get("plan", ""), notes.get("plan"))
+            key = by_id.get(sub.get("plan_id", ""))
+            plan = key.removesuffix("_annual") if key else None
             if plan not in SELF_SERVE:
+                if sub.get("plan_id"):
+                    await security_event("billing.unknown_plan", "warning", request=request, org_id=org_id,
+                                         razorpay_plan=str(sub.get("plan_id"))[:40], event_name=name)
                 plan = None   # only plans sold through checkout change here; Enterprise is set by hand
+            elif amount is not None and int(amount) < minimum_paise(plan, key.endswith("_annual")):
+                await security_event("billing.amount_mismatch", "critical", request=request, org_id=org_id,
+                                     plan=key, paid_paise=int(amount), minimum_paise=minimum_paise(plan, key.endswith("_annual")))
+                plan = None   # paid less than the plan costs: record the payment, don't grant the plan
         elif paid is False and name.split(".", 1)[1] in ("halted", "cancelled", "completed", "paused"):
             plan = "free"
     renews = datetime.fromtimestamp(sub["current_end"], UTC) if sub.get("current_end") else None
-    amount = pay.get("amount") or inv.get("amount_paid") or inv.get("amount")
     async with tenant_tx(None, "system") as conn:
         fresh = (await conn.execute(text(
             "SELECT billing_record(:o, :e, :i, :s, :p, :st, :r, :a, :u)"),
             {"o": org_id, "e": name, "i": event_id, "s": sub.get("id") or inv.get("subscription_id"),
              "p": plan, "st": status_, "r": renews, "a": amount, "u": inv.get("short_url")})).scalar()
     if fresh and plan:
+        await security_event("billing.plan_changed", "info", request=request, org_id=org_id, plan=plan, event_name=name)
         from kritvia_api.engine.context import get_services
         get_services().router.gate.forget(org_id)
         cap = plan_of(plan).autonomy_per_agent

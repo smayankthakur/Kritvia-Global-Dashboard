@@ -7,6 +7,8 @@
  * and the BFF refuses the request unless header and cookie match. A page on another site can
  * make the browser send the cookie but can neither read it nor set the header.
  */
+import { securityLog } from "./security-log";
+
 export const CSRF_HEADER = "x-kv-csrf";
 export const csrfCookieName = (secure: boolean) => (secure ? "__Host-kv_csrf" : "kv_csrf");
 const SAFE = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -49,7 +51,8 @@ export function csrfOk(req: Request): boolean {
   return !!have && equal(sent, have);
 }
 
-export function csrfRefused(): Response {
+export function csrfRefused(req?: Request): Response {
+  if (req) securityLog("csrf.refused", req);
   return Response.json({ detail: "This page is out of date. Reload it and try again." }, { status: 403 });
 }
 

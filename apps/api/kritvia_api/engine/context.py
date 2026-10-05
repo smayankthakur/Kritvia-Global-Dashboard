@@ -162,7 +162,7 @@ class RunContext:
     def call_ctx(self, agent: str | None = None) -> CallContext:
         return CallContext(org_id=self.org_id, venture_id=self.venture_id, user_id=self.run_as,
                            actor_type="agent", agent_id=agent or self.agent, workflow=self.workflow,
-                           ticket_id=self.ticket_id)
+                           ticket_id=self.ticket_id, run_id=self.run_id)
 
     async def llm_json(self, *, tier: str, system: str, prompt: str, schema: type[T],
                        sensitive: bool = False) -> T:

@@ -24,6 +24,7 @@ from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import AnonDB, Svc, TenantDB, UserId
 from kritvia_api.errors import raise_for_db
 from kritvia_api.ratelimit import client_ip, limiter, signin_guard
+from kritvia_api.services.security_log import security_event
 from kritvia_api.schemas import (
     EmailStartIn,
     EmailStartOut,
@@ -98,17 +99,23 @@ async def login(body: LoginIn, db: AnonDB, request: Request) -> TokenOut:
     row = (await db.execute(text("SELECT * FROM auth_lookup(:e)"), {"e": body.email})).first()
     ok = verify_password(body.password, row.password_hash if row else None)
     if not ok or row is None or not row.is_active:
-        await _failed_attempt(body.email, row is not None)
+        await _failed_attempt(body.email, row is not None, request, "auth.login_failed")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid credentials")
     await signin_guard.succeeded(body.email)
     return await _pair(db, row.id, request)
 
 
-async def _failed_attempt(email: str, has_account: bool) -> None:
-    """Counts a failed sign-in; when the address first gets locked, tells the real owner."""
+async def _failed_attempt(email: str, has_account: bool, request: Request | None = None,
+                          kind: str = "auth.login_failed") -> None:
+    """Counts a failed sign-in and logs it; when the address first gets locked, tells the real owner."""
     n = await signin_guard.failed(email)
-    if n == signin_guard.FREE_TRIES and has_account:
-        asyncio.get_running_loop().create_task(_tell_owner_about_lock(email))
+    await security_event(kind, "info" if n < signin_guard.FREE_TRIES else "warning", request=request,
+                         subject=email, consecutive=n)
+    if n == signin_guard.FREE_TRIES:
+        await security_event("auth.locked", "warning", request=request, subject=email,
+                             minutes=signin_guard.lock_seconds(n) // 60)
+        if has_account:
+            asyncio.get_running_loop().create_task(_tell_owner_about_lock(email))
 
 
 async def _tell_owner_about_lock(email: str) -> None:
@@ -133,6 +140,7 @@ async def refresh(body: RefreshIn, request: Request) -> TokenOut:
         uid = (await db.execute(text("SELECT auth_rotate_refresh(:h, :n, :d)"),
                                 {"h": _hash(body.refresh_token), "n": _hash(new), "d": s.refresh_token_days})).scalar()
     if uid is None:
+        await security_event("auth.refresh_rejected", "warning", request=request)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "refresh token invalid, expired or reused")
     return TokenOut(access_token=issue_access_token(uid), expires_in=s.access_token_minutes * 60, refresh_token=new)
 
@@ -176,9 +184,10 @@ async def change_password(body: PasswordIn, user_id: UserId, db: TenantDB, reque
     await signin_guard.check(row.email)    # a stolen session can't brute-force the current password
     cur = (await db.execute(text("SELECT * FROM auth_lookup(:e)"), {"e": row.email})).first()
     if not verify_password(body.current_password, cur.password_hash):
-        await signin_guard.failed(row.email)
+        await _failed_attempt(row.email, False, request, "auth.current_password_failed")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "current password is wrong")
     await signin_guard.succeeded(row.email)
+    await security_event("auth.password_changed", "info", request=request, user_id=user_id)
     await db.execute(text("SELECT auth_set_password(:h)"), {"h": hash_password(body.new_password)})
     return await _pair(db, user_id, request)
 
@@ -233,7 +242,7 @@ async def email_verify(body: EmailVerifyIn, request: Request) -> TokenOut:
         ok = (await db.execute(text("SELECT auth_code_consume(:e, :h)"),
                                {"e": email, "h": _code_hash(email, body.code)})).scalar()
     if not ok:
-        await signin_guard.failed(email)
+        await _failed_attempt(email, False, request, "auth.code_failed")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
     await signin_guard.succeeded(email)
     async with tenant_tx(None) as db:
@@ -257,7 +266,7 @@ async def password_reset(body: PasswordResetIn, request: Request) -> TokenOut:
         ok = (await db.execute(text("SELECT auth_code_consume(:e, :h)"),
                                {"e": email, "h": _code_hash(email, body.code)})).scalar()
     if not ok:
-        await signin_guard.failed(email)
+        await _failed_attempt(email, False, request, "auth.reset_code_failed")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
     await signin_guard.succeeded(email)
     async with tenant_tx(None) as db:
@@ -265,6 +274,7 @@ async def password_reset(body: PasswordResetIn, request: Request) -> TokenOut:
                                 {"e": email, "h": hash_password(body.new_password)})).scalar()
         if uid is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "no account with that email")
+        await security_event("auth.password_reset", "info", request=request, user_id=uid)
         return await _pair(db, uid, request)
 
 

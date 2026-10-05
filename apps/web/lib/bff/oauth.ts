@@ -74,7 +74,7 @@ export async function startGoogle(
 ): Promise<Response> {
   // CSRF: the browser's own request must be same-origin and carry the token; the inner request is built by us.
   if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
-  if (!csrfOk(req)) return csrfRefused();
+  if (!csrfOk(req)) return csrfRefused(req);
   let ventureId = "";
   try {
     ventureId = String(

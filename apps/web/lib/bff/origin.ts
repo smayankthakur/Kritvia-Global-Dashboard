@@ -1,3 +1,5 @@
+import { securityLog } from "./security-log";
+
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function firstValue(v: string | null): string | null {
@@ -37,11 +39,12 @@ export function isSameOrigin(req: Request, extraTrusted: string[] = trustedOrigi
     }
   }
   if (!ok) {
-    // Diagnostic only: header names/values below are not secrets.
-    console.warn(
-      `[kritvia-bff] cross-site refused: origin=${origin ?? "-"} host=${req.headers.get("host") ?? "-"} ` +
-        `x-forwarded-host=${req.headers.get("x-forwarded-host") ?? "-"} trusted=${extraTrusted.join(",") || "-"}`,
-    );
+    // Header names/values below are not secrets.
+    securityLog("origin.refused", req, {
+      host: req.headers.get("host"),
+      forwarded_host: req.headers.get("x-forwarded-host"),
+      trusted: extraTrusted.join(",") || null,
+    });
   }
   return ok;
 }

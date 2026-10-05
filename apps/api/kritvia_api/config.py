@@ -79,6 +79,12 @@ class Settings(BaseSettings):
     # When online payment went live. Until it is set, free trials don't end (nobody can pay yet);
     # after, a trial ends 15 days after sign-up or 3 days after this moment, whichever is later.
     payments_live_at: datetime | None = None
+    # AI guardrails (services/model_router.py): one person's share of hosted AI per day (0 = no cap),
+    # how often one person may call the AI, and the largest prompt and answer per call.
+    ai_user_daily_tokens: int = 250_000
+    ai_user_calls_per_minute: int = 30
+    ai_max_prompt_chars: int = 600_000
+    ai_max_output_tokens: int = 4096
 
     # Billing (Razorpay subscriptions). Plans are created once in the Razorpay dashboard;
     # their ids go here. Test-mode keys (rzp_test_...) work end to end without real money.

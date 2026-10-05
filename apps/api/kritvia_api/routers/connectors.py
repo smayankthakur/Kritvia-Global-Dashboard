@@ -21,6 +21,7 @@ from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.runner import DuplicateTrigger, start_run
 from kritvia_api.errors import raise_for_db
+from kritvia_api.services.security_log import security_event
 from kritvia_api.ratelimit import client_ip, limiter
 from kritvia_api.services import memory
 from kritvia_api.services.crypto import EnvelopeCrypto
@@ -337,6 +338,7 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
     if len(body) > 256 * 1024:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "payload too large")
     if not verify_signature(svc.whatsapp.app_secret, body, request.headers.get("X-Hub-Signature-256")):
+        await security_event("webhook.bad_signature", "warning", request=request, provider="whatsapp")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad signature")
     try:
         payload = json.loads(body)
@@ -394,10 +396,15 @@ async def inbound_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> H
                     request.headers.get("x-kritvia-key"))
     if sig and ts:
         if not ts.isdigit() or abs(time.time() - int(ts)) > 300:
+            await security_event("webhook.stale", "warning", request=request, org_id=p.org_id, provider="lead_form")
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "stale or invalid timestamp")
         if not hmac.compare_digest(sig, sign(secret, ts, body)):
+            await security_event("webhook.bad_signature", "warning", request=request, org_id=p.org_id, provider="lead_form")
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad signature")
+        # Replays inside the 5-minute window are harmless: the same body maps to the same run
+        # (deduplicated below), so a re-sent request never starts a second one.
     elif not (key and hmac.compare_digest(key, secret)):
+        await security_event("webhook.bad_signature", "warning", request=request, org_id=p.org_id, provider="lead_form")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing signature")
     try:
         payload: dict[str, Any] = json.loads(body or b"{}")

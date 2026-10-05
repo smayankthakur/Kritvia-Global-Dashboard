@@ -57,6 +57,17 @@ fi
 errs=$($DC logs --since 5m --no-color api worker 2>/dev/null | grep -cE 'Traceback \(most recent call last\)|\bERROR\b' || true)
 [ "${errs:-0}" -lt "${ERROR_ALERT_THRESHOLD:-10}" ] || fails+=("${errs} application errors in the last 5 minutes (api/worker logs)")
 
+# Security events (apps/api/kritvia_api/services/security_log.py): any critical event (e.g. a payment
+# that doesn't match its plan) or a burst of warnings (failed sign-ins, bad webhook signatures,
+# suspected prompt injection) alerts the owner. Never shown on the public status page.
+if [ -z "${MANAGED_DATABASE_URL:-}" ]; then
+  sec=$($DC exec -T postgres psql -U postgres -d kritvia -tAF'|' -c "SELECT * FROM private.security_alert_counts(5)" 2>/dev/null | head -1)
+  crit=$(cut -d'|' -f1 <<<"$sec"); warn=$(cut -d'|' -f2 <<<"$sec"); top=$(cut -d'|' -f3 <<<"$sec")
+  if [ "${crit:-0}" -gt 0 ] 2>/dev/null || [ "${warn:-0}" -ge "${SECURITY_WARN_THRESHOLD:-30}" ] 2>/dev/null; then
+    fails+=("security: ${crit:-0} critical and ${warn:-0} warning event(s) in 5 minutes (most: ${top:-n/a}); see docs/security/security-events.md")
+  fi
+fi
+
 # Public incidents for the status page (no internal detail: what users would have noticed, and when).
 public=()
 for f in "${fails[@]}"; do

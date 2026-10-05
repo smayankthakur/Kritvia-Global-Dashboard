@@ -27,6 +27,7 @@ from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.ratelimit import client_ip, limiter
 from kritvia_api.services.mailer import MailError, get_mailer
+from kritvia_api.services.security_log import security_event
 
 router = APIRouter(tags=["privacy"])
 
@@ -68,6 +69,8 @@ async def submit_privacy_request(body: PrivacyRequestIn, request: Request) -> Pr
              "b": body.business_name.strip(), "d": body.details.strip()})).first()
     if row is None:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "could not save your request")
+    await security_event("privacy.request_received", "info", request=request, subject=body.email,
+                         kind=body.kind, reference=row.reference)
     inbox = get_settings().support_inbox
     if inbox:
         try:

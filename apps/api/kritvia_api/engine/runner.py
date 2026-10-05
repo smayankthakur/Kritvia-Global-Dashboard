@@ -31,7 +31,9 @@ from kritvia_api.engine.core import Finish, Goto, Interrupt, registry
 from kritvia_api.services.crypto import EnvelopeCrypto
 from kritvia_api.services import push
 from kritvia_api.services.model_router import AgentBudgetExceeded
+from kritvia_api.services import guardrails
 from kritvia_api.services.quota import require_agent
+from kritvia_api.services.security_log import security_event
 
 log = logging.getLogger("kritvia.runner")
 
@@ -332,6 +334,15 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
             {"v": ctx.venture_id, "a": req.agent, "t": req.action})).scalar())
         # A sensitive draft, or one marked for review, is never auto-approved, whatever its history.
         auto = trusted and not req.sensitive and not req.always_review
+        if auto:
+            # Guardrails: a run that read text trying to instruct the AI, or a draft carrying a secret
+            # or injection text, waits for a person even though the agent earned autonomy.
+            flagged = bool((await conn.execute(text("SELECT run_flagged(:r)"), {"r": ctx.run_id})).scalar())
+            reasons = guardrails.check_draft(json.dumps(req.payload, default=str, ensure_ascii=False))
+            if flagged or reasons:
+                auto = False
+                await security_event("ai.autonomy_withheld", "warning", org_id=ctx.org_id, workflow=ctx.workflow,
+                                     action=req.action, reasons=",".join(reasons) or "run flagged")
         payload_enc = await ctx.crypto(conn).encrypt(ctx.venture_id, PAYLOAD_PURPOSE,
                                                      json.dumps(req.payload, default=str))
         approval_id = (await conn.execute(
