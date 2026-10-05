@@ -132,7 +132,7 @@ We may remove content or suspend access under clause 14 if we reasonably believe
 
 10.1 **Plans and prices.** Current Plans and prices are shown on our pricing page and in the app. At the date of these Terms they are:
 
-| Plan | Price (including GST) | Main limits |
+| Plan | Price | Main limits |
 | --- | --- | --- |
 | Free trial | ₹0 for 15 days | 1 business, 2 Users, 300,000 hosted-AI tokens a month, 500 MB business memory, 10 proposals; every Agent action needs Approval |
 | Starter | ₹2,499 a month or ₹24,990 a year | 1 business, 5 Users, 3 million hosted-AI tokens a month, 10 GB business memory; each Agent may act without Approval on one kind of action |
@@ -148,7 +148,7 @@ Features marked "Coming soon" on the pricing page are not yet available and are 
 
 10.2 **Billing.** Paid Plans are billed monthly or yearly in advance, as you choose, through our payment partner, Razorpay, and renew automatically at the end of each period until cancelled. You authorise recurring charges to the payment method you set up. We do not see or store full card or bank details.
 
-10.3 **Taxes.** Prices include Goods and Services Tax at the applicable rate (currently 18%), shown separately on a GST-compliant tax invoice. If the GST rate changes, we may adjust prices from your next billing period with at least 30 days' notice. If you give us your GSTIN before payment, the invoice will carry it so that you can claim input tax credit. If you must deduct tax at source, you will send us the TDS certificate within the statutory time; otherwise you will pay the amount withheld.
+10.3 **Taxes.** The prices above are the full amount you pay. We are not currently registered for Goods and Services Tax (GST), so we do not charge GST and our invoices do not show it. If we register for GST, we will tell you at least 30 days before any change to what you pay, and from then on our invoices will be GST tax invoices that carry your GSTIN if you have given it to us. If you must deduct tax at source, you will send us the TDS certificate within the statutory time; otherwise you will pay the amount withheld.
 
 10.4 **Upgrades and downgrades.** An upgrade takes effect at once; the new price applies from the next billing date unless the app shows a pro-rata charge when you upgrade. A downgrade takes effect at the end of the current billing period. If your data or Users exceed the lower Plan's limits, you must reduce them, or the Service will become read-only for the excess until you do.
 
@@ -245,7 +245,7 @@ Features marked "Coming soon" on the pricing page are not yet available and are 
 1. When your organisation is closed or these Terms end, Agents stop, Connected Services are disconnected and the Service becomes read-only.
 2. For 30 days after that, you can sign in to export Customer Data, or ask us to restore the organisation.
 3. After those 30 days we permanently delete Customer Data from the live Service. Copies in encrypted backups expire within a further 30 days.
-4. We keep only what the law requires, such as tax invoices and billing records (which the GST law requires us to keep for the statutory period), and the security audit log, which records who did what and when but not the content of documents. These stay protected by these Terms for as long as we hold them.
+4. We keep only what the law requires, such as tax invoices and billing records (which tax law requires us to keep for the statutory period), and the security audit log, which records who did what and when but not the content of documents. These stay protected by these Terms for as long as we hold them.
 
 18.6 Clauses 5.1, 6.9, 10 (for amounts owed), 11, 12, 15.3, 16, 17, 18.5, 19 and 20 survive termination.
 

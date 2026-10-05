@@ -160,7 +160,7 @@ async def cancel(org_id: uuid.UUID, db: TenantDB) -> dict:
 
 # ------------------------------------------------------------------ webhook --
 def minimum_paise(plan: str, annual: bool) -> int:
-    """The least a genuine charge for this plan can be: our price (GST included), in paise, less ₹1
+    """The least a genuine charge for this plan can be: our listed price, in paise, less ₹1
     for rounding. Anything below this is wrong."""
     p = plan_of(plan)
     rupees = (p.price_annual_inr or 0) if annual else p.price_inr

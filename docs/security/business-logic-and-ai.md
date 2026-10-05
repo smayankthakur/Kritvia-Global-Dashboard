@@ -16,7 +16,7 @@ Last reviewed: 6 October 2026.
 | Other webhooks: WhatsApp `X-Hub-Signature-256`; lead forms HMAC with a 5-minute timestamp window, and the same body never starts two runs | `routers/connectors.py` | `test_ops.py` |
 
 When you create the six Razorpay plans, set each plan's amount to the price on the pricing page
-(prices include GST: ₹2,499, ₹24,990 and so on), and put their ids in `RAZORPAY_PLAN_*`.
+(the listed price is the full amount: ₹2,499, ₹24,990 and so on), and put their ids in `RAZORPAY_PLAN_*`.
 
 ## AI guardrails
 

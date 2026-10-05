@@ -1,3 +1,4 @@
+import { PRICE_TAX_NOTE } from "@/lib/business";
 import { ArrowRight, BookOpen, Inbox, Landmark, Lock, Mic, Network, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -194,7 +195,7 @@ export default function WelcomePage() {
           id="pricing"
           eyebrow="Pricing"
           title="Plans that grow with your business"
-          text="Cheaper than a part-time operations assistant. Prices include 18% GST; cancel any time and keep the month you paid for."
+          text={`Cheaper than a part-time operations assistant. ${PRICE_TAX_NOTE} Cancel any time and keep the month you paid for.`}
         />
         <div className="mt-8">
           <PublicPricing plans={PLAN_CARDS} />

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CookieSettingsLink } from "@/components/legal/consent";
-import { BUSINESS } from "@/lib/business";
+import { BUSINESS, PRICE_TAX_NOTE } from "@/lib/business";
 import { OPTIONAL_TOOLS } from "@/lib/consent";
 
 const GROUPS = [
@@ -85,7 +85,7 @@ export function SiteFooter({ wide }: { wide?: boolean }) {
       </div>
       <div className="border-t border-border">
         <p className={`mx-auto ${wide ? "max-w-6xl" : "max-w-4xl"} px-4 py-4 text-xs text-subtle`}>
-          © {year} {BUSINESS.legalName}. Prices include 18% GST. No advertising or tracking cookies.
+          © {year} {BUSINESS.legalName}. {PRICE_TAX_NOTE} No advertising or tracking cookies.
         </p>
       </div>
     </footer>

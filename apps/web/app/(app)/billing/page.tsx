@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreditCard, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { GST_REGISTERED, PRICE_TAX_NOTE } from "@/lib/business";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
@@ -122,7 +123,7 @@ export default function BillingPage() {
 
   return (
     <>
-      <PageHeader eyebrow={org.name} title="Plan & billing" description="Your plan, this month's usage, and payments. Prices include 18% GST; pay monthly, or yearly and get two months free." />
+      <PageHeader eyebrow={org.name} title="Plan & billing" description={`Your plan, this month's usage, and payments. ${PRICE_TAX_NOTE} Pay monthly, or yearly and get two months free.`} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader title={p.plan.code === "free" || p.plan.code === "expired" ? p.plan.name : `${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : p.plan.code === "free" ? trialNote(p.trial) : p.plan.code === "expired" ? "Read-only until you choose a plan" : undefined} />
@@ -146,7 +147,7 @@ export default function BillingPage() {
               <li key={t.code} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">+{fmtTokens(t.tokens)} tokens</p>
-                  <p className="text-xs text-subtle">{rupees(t.price_inr)} incl. GST</p>
+                  <p className="text-xs text-subtle">{rupees(t.price_inr)}{GST_REGISTERED ? " incl. GST" : ""}</p>
                 </div>
                 <Button size="sm" disabled title="Usage packs go on sale when online payments are live">
                   Available soon
@@ -188,7 +189,7 @@ export default function BillingPage() {
       {isOwner ? (
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader title="Billing details" description="Shown on your GST invoices. Add your GSTIN to claim input tax credit." />
+            <CardHeader title="Billing details" description={GST_REGISTERED ? "Shown on your GST invoices. Add your GSTIN to claim input tax credit." : "Shown on your invoices."} />
             <form
               className="space-y-3 p-4"
               onSubmit={(e) => {

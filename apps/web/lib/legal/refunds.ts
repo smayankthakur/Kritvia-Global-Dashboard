@@ -34,15 +34,15 @@ Extra AI-usage packs are used up as you go and are not refundable once added to 
 
 ## 4. How to ask for a refund
 
-Email support@sitelytc.com with "Refund" in the subject, from the address on your account, and include your invoice number. We will reply within 5 business days. If we approve a refund, we send it back to the payment method you used, through our payment partner Razorpay; banks usually show it within 5–7 business days. We issue a GST credit note for every refund.
+Email support@sitelytc.com with "Refund" in the subject, from the address on your account, and include your invoice number. We will reply within 5 business days. If we approve a refund, we send it back to the payment method you used, through our payment partner Razorpay; banks usually show it within 5–7 business days. We issue a credit note for every refund.
 
 Please talk to us before raising a chargeback with your bank. If you disagree with our decision, you can use the grievance process in our [Privacy Policy](/privacy) or the dispute clause in our [Terms](/terms).
 
 ## 5. Delivery
 
-Kritvia is an online service; nothing is shipped. Your plan is active as soon as your payment is confirmed, usually within a minute, and your GST tax invoice appears in **Plan & billing**. If your plan is not active within 24 hours of payment, email support@sitelytc.com and we will fix it or refund you in full.
+Kritvia is an online service; nothing is shipped. Your plan is active as soon as your payment is confirmed, usually within a minute, and your invoice appears in **Plan & billing**. If your plan is not active within 24 hours of payment, email support@sitelytc.com and we will fix it or refund you in full.
 
 ## 6. Prices
 
-Prices on our pricing page are in Indian rupees and include GST at the applicable rate (currently 18%); the amount shown is the amount you pay. There are no other fees. Online payment for paid plans opens soon; until then, no one is charged.
+Prices on our pricing page are in Indian rupees and are the full amount you pay. We are not registered for GST yet, so no GST is added. There are no other fees. Online payment for paid plans opens soon; until then, no one is charged.
 `;

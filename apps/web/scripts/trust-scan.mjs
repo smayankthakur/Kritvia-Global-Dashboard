@@ -71,12 +71,12 @@ export function scanCopy(root = ROOT) {
   return findings;
 }
 
-/** Any price shown on a public page must say how GST applies (prices include it) on the same page. */
+/** Any price shown on a public page must say how GST applies (PRICE_TAX_NOTE) on the same page. */
 export function scanPrices(root = ROOT) {
   const findings = [];
   for (const f of walk(join(root, "app", "(public)"))) {
     const src = readFileSync(f, "utf8");
-    if (/₹\s?\d|rupees\(|PricingTable|PublicPricing/.test(src) && !/GST/.test(src)) findings.push({ file: relative(root, f), line: 1, rule: "price-without-gst", text: "shows prices but never mentions GST" });
+    if (/₹\s?\d|rupees\(|PricingTable|PublicPricing/.test(src) && !/GST|PRICE_TAX_NOTE/.test(src)) findings.push({ file: relative(root, f), line: 1, rule: "price-without-gst", text: "shows prices but never mentions GST" });
   }
   return findings;
 }

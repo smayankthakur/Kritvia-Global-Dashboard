@@ -29,9 +29,11 @@ Protection Act 2019 and the CCPA (India) Guidelines for Prevention and Regulatio
 
 ## Owner actions
 
-1. Set the registered office address (and GSTIN, if you want it shown): `NEXT_PUBLIC_COMPANY_ADDRESS`,
-   `NEXT_PUBLIC_COMPANY_GSTIN` in the web build and `COMPANY_ADDRESS` in the API `.env`. The web values are
-   build-time, so rebuild after setting them.
+1. Registered office is set (`COMPANY_ADDRESS`, `NEXT_PUBLIC_COMPANY_ADDRESS`, 5 Oct 2026). The company is
+   **not GST-registered**, so no GST is charged and `NEXT_PUBLIC_COMPANY_GSTIN` stays empty. On GST
+   registration: set the GSTIN (web build arg, rebuild), switch the Razorpay account's GST/invoice settings
+   on, and update Terms 10.1/10.3, the refund policy (pricing and credit-note lines) and the privacy table,
+   giving customers 30 days' notice of any change to what they pay (Terms 10.3).
 2. Decide the four copy items in [ethical-ux.md](ethical-ux.md#findings-that-need-a-decision).
 3. Update the Claude Doc legal master copy to match the new Terms and Privacy Policy text.
 4. Have a lawyer review `/privacy`, `/terms`, `/refunds` and `/cookies` before paid launch.

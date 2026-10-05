@@ -1,5 +1,6 @@
 "use client";
 
+import { PRICE_TAX_NOTE } from "@/lib/business";
 import { ChevronDown } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { PublicShell, SUPPORT_EMAIL } from "@/components/public/doc-page";
@@ -51,10 +52,10 @@ const ARTICLES: { q: string; a: string[] }[] = [
   { q: "The mind map", a: [
     "Mind map shows the people, companies and deals Kritvia has learned about and how they connect. Click anything to see its sources; double-click to centre on it.",
   ]},
-  { q: "Plans, AI allowance and GST invoices", a: [
-    "Plans: Free (₹0), Starter (₹2,499 a month), Growth (₹6,999) and Scale (₹14,999), plus Enterprise from ₹29,999. Pay yearly and get two months free. Prices include 18% GST.",
+  { q: "Plans, AI allowance and invoices", a: [
+    `Plans: Free (₹0), Starter (₹2,499 a month), Growth (₹6,999) and Scale (₹14,999), plus Enterprise from ₹29,999. Pay yearly and get two months free. ${PRICE_TAX_NOTE}`,
     "Each plan includes a monthly AI allowance. If it runs out, Kritvia keeps working on its private model; add a usage pack or upgrade on Plan & billing for more.",
-    "Add your GSTIN under Plan & billing → Billing details to get it on your invoices.",
+    "Add your business name, address and GSTIN (if you have one) under Plan & billing → Billing details to get them on your invoices.",
   ]},
   { q: "Your data: download or delete", a: [
     "Your account → Download my data gives you a file of everything held about you. Delete my account removes your access and personal data.",
