@@ -44,7 +44,7 @@ class Plan:
     max_members: int | None
     storage_bytes: int | None               # business memory (documents, recordings)
     proposals_per_month: int | None         # None = unlimited
-    agents: Literal["core", "kind", "all"]
+    agents: Literal["none", "core", "kind", "all"]
     integrations: frozenset[str]
     autonomy_per_agent: int | None          # None = never; 0 = unlimited; n = n actions per agent
     analytics: Literal["basic", "advanced"]
@@ -57,12 +57,20 @@ class Plan:
     # Announced but not yet available: shown on the pricing page as "Coming soon" and not part
     # of what a paid plan includes until released (Terms 10.2).
     coming_soon: tuple[str, ...] = ()
+    trial_days: int | None = None           # the Free plan is a trial that lasts this long
+
+    @property
+    def label(self) -> str:
+        """For messages: "the Starter plan", "the free trial"."""
+        return {"free": "the free trial", "expired": "an ended free trial"}.get(self.code, f"the {self.name} plan")
 
     @property
     def autonomy(self) -> bool:
         return self.autonomy_per_agent is not None
 
     def allows_agent(self, workflow: str, kind: str | None) -> bool:
+        if self.agents == "none":
+            return False
         if self.agents == "all" or workflow in CORE_AGENTS:
             return True
         return self.agents == "kind" and KIND_AGENT.get(kind or "general") == workflow
@@ -79,15 +87,17 @@ class Plan:
                 "autonomy": self.autonomy, "autonomy_per_agent": self.autonomy_per_agent,
                 "analytics": self.analytics, "tagline": self.tagline, "audience": self.audience,
                 "highlights": list(self.highlights), "featured": self.featured, "support": self.support,
-                "extras": list(self.extras), "coming_soon": list(self.coming_soon)}
+                "extras": list(self.extras), "coming_soon": list(self.coming_soon), "trial_days": self.trial_days}
 
 
 PLANS: dict[str, Plan] = {
     "free": Plan(
-        "free", "Free", 0, None, 300_000, 1, 2, 500 * MB, 10, "core", BASIC, None, "basic",
-        tagline="For exploring Kritvia.", audience="See what agents can do for your business",
-        highlights=("1 business, 2 people", "Inbox assistant and lead triage", "10 proposals a month",
-                    "Agents always ask before acting", "Business memory up to 500 MB", "Gmail and website lead form")),
+        "free", "Free trial", 0, None, 300_000, 1, 2, 500 * MB, 10, "core", BASIC, None, "basic",
+        tagline="15 days to try Kritvia. No card.", audience="See what agents can do for your business",
+        highlights=("15 days free, then choose a plan", "1 business, 2 people", "Inbox assistant and lead triage",
+                    "10 proposals", "Agents always ask before acting", "Business memory up to 500 MB",
+                    "Gmail and website lead form"),
+        trial_days=15),
     "starter": Plan(
         "starter", "Starter", 2499, 24_990, 3_000_000, 1, 5, 10 * GB, None, "kind", STANDARD, 1, "basic",
         tagline="For individuals and small businesses.", audience="Solo founders and micro-businesses",
@@ -118,6 +128,11 @@ PLANS: dict[str, Plan] = {
                     "Dedicated success manager"),
         support="dedicated", extras=("custom_workflows", "api_access", "priority_processing", "sso", "sla"),
         coming_soon=("API access", "Single sign-on (SSO)")),
+    # A trial that ended without a plan being chosen: read-only. People can view, export and
+    # delete; agents, connections, uploads, invitations and new businesses wait for a plan.
+    "expired": Plan(
+        "expired", "Trial ended", 0, None, 0, 0, 0, 0, 0, "none", frozenset(), None, "basic",
+        tagline="Choose a plan to keep working. Your data is safe."),
     "internal": Plan(
         "internal", "Internal", 0, None, None, None, None, None, None, "all", ALL, 0, "advanced", support="dedicated"),
 }

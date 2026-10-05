@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
@@ -75,6 +76,9 @@ class Settings(BaseSettings):
 
     # Plan for organisations without one (see plans.py). Tests use "internal".
     default_plan: str = "free"
+    # When online payment went live. Until it is set, free trials don't end (nobody can pay yet);
+    # after, a trial ends 15 days after sign-up or 3 days after this moment, whichever is later.
+    payments_live_at: datetime | None = None
 
     # Billing (Razorpay subscriptions). Plans are created once in the Razorpay dashboard;
     # their ids go here. Test-mode keys (rzp_test_...) work end to end without real money.
@@ -96,7 +100,7 @@ class Settings(BaseSettings):
 
     # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
     signup_open: bool = True            # false: only existing accounts and invitees can sign in
-    terms_version: str = "2026-10-05"   # Terms of Service + Privacy Policy in force; bump when they change
+    terms_version: str = "2026-10-06"   # Terms of Service + Privacy Policy in force; bump when they change
     email_code_minutes: int = 10
     # System email for sign-in codes: smtp | log | memory (see services/mailer.py)
     mail_transport: str = "log"

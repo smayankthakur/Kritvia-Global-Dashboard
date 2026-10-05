@@ -24,6 +24,7 @@ the script with a reason; never delete a rule to make it pass.
 | Confirm shaming | Decline buttons say "Cancel" / "No", never guilt ("No, I don't want to grow") | Scan rule `confirmshaming` |
 | Forced action | Using Kritvia never requires sharing contacts, subscribing to emails, or connecting Google | Review |
 | Subscription trap | Cancel in-app in a few clicks; no "contact us to cancel"; renewal date visible | `/refunds` section 2; billing page |
+| Forced continuity (free trial) | The 15-day trial takes no card and never turns into a charge; when it ends the organisation becomes read-only, with data export and deletion still open | Scan rule `forced-continuity`; `tests/test_trial.py` |
 | Interface interference | "Reject all" as prominent as "Accept all"; destructive actions in red with confirmation | `components/legal/consent.tsx`; review |
 | Bait and switch | What a plan card lists is what the plan gives | `tests/pricing.test.ts` (unbuilt features only under "Coming soon") |
 | Drip pricing | Every price says GST is extra; no other fees | Scan rules `hidden-fee`, `price-without-gst` |

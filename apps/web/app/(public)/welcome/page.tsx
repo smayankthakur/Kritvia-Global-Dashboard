@@ -124,7 +124,7 @@ export default function WelcomePage() {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
               <Link href="/register" className={buttonClass("primary", "md", "h-11 px-6 text-[15px]")}>
-                Start free <ArrowRight className="h-4 w-4" aria-hidden />
+                Start 15-day free trial <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Link href="/login" className={buttonClass("secondary", "md", "h-11 px-6 text-[15px]")}>
                 Sign in

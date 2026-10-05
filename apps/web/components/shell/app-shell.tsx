@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/dialog";
 import { useAccess } from "@/lib/access";
+import { TrialBanner } from "./trial-banner";
 import { AskDialog } from "./ask-dialog";
 import { LogoMark } from "./logo";
 import { SidebarContent } from "./sidebar";
@@ -127,6 +128,7 @@ function Shell({ children }: { children: ReactNode }) {
       </header>
 
       <main id="main" className="mx-auto w-full max-w-[1400px] px-4 pt-6 pb-28 sm:px-6 lg:px-8">
+        <TrialBanner />
         {children}
       </main>
 

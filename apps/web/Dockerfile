@@ -19,8 +19,11 @@ COPY packages/shared-types/package.json packages/shared-types/package.json
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter @kritvia/web...
 
-# 2) build
+# 2) build. Business details shown in the site footer are baked in at build time.
 FROM deps AS build
+ARG NEXT_PUBLIC_COMPANY_ADDRESS=""
+ARG NEXT_PUBLIC_COMPANY_GSTIN=""
+ENV NEXT_PUBLIC_COMPANY_ADDRESS=$NEXT_PUBLIC_COMPANY_ADDRESS NEXT_PUBLIC_COMPANY_GSTIN=$NEXT_PUBLIC_COMPANY_GSTIN
 COPY packages/shared-types packages/shared-types
 COPY apps/web apps/web
 RUN pnpm --filter @kritvia/web build

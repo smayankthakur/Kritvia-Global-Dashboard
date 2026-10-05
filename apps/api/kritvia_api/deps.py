@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import AsyncIterator
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -38,9 +39,35 @@ async def current_user_id(
     return user_id
 
 
-async def tenant_db(user_id: Annotated[uuid.UUID, Depends(current_user_id)]) -> AsyncIterator[AsyncConnection]:
+_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "DELETE"})   # deleting is always allowed (erasure)
+_SCOPED = re.compile(r"^/(ventures|orgs)/([0-9a-fA-F-]{36})(?:/|$)")
+_ALWAYS_OPEN = re.compile(r"^/orgs/[^/]+/(billing|plan)(?:/|$)")   # choosing a plan must work
+
+
+async def tenant_db(request: Request,
+                    user_id: Annotated[uuid.UUID, Depends(current_user_id)]) -> AsyncIterator[AsyncConnection]:
     async with tenant_tx(user_id) as conn:
+        await _refuse_writes_after_trial(conn, request)
         yield conn
+
+
+async def _refuse_writes_after_trial(conn: AsyncConnection, request: Request) -> None:
+    """An organisation whose free trial ended without a plan is read-only: every change to its
+    businesses or settings answers 402, except choosing a plan and deleting things."""
+    if request.method in _SAFE_METHODS:
+        return
+    path = request.url.path
+    m = _SCOPED.match(path)
+    if not m or _ALWAYS_OPEN.match(path):
+        return
+    from kritvia_api.services.quota import READ_ONLY_MESSAGE, read_only
+    try:
+        ident = uuid.UUID(m.group(2))
+    except ValueError:
+        return
+    scope = {"venture_id": ident} if m.group(1) == "ventures" else {"org_id": ident}
+    if await read_only(conn, **scope):
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, READ_ONLY_MESSAGE)
 
 
 async def anonymous_db() -> AsyncIterator[AsyncConnection]:

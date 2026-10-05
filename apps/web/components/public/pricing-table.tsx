@@ -90,7 +90,7 @@ export function PricingTable({
               <p className="mt-1 text-sm text-muted">{p.tagline}</p>
               <p className="mt-4 text-3xl font-bold tracking-tight text-fg tabular-nums">
                 {price.big}
-                {p.price_inr ? <span className="ml-1 text-sm font-normal text-subtle">/month</span> : null}
+                {p.price_inr ? <span className="ml-1 text-sm font-normal text-subtle">/month</span> : <span className="ml-1 text-sm font-normal text-subtle">for 15 days</span>}
               </p>
               <p className="mt-0.5 text-xs text-subtle">{price.note}</p>
               <ul className="mt-5 flex-1 space-y-2.5 text-sm text-muted">
@@ -166,7 +166,7 @@ export function PublicPricing({ plans }: { plans: PlanCard[] }) {
               : "border border-border bg-surface-strong text-fg shadow-card hover:border-border-strong",
           )}
         >
-          {p.price_inr ? `Start with ${p.name}` : "Start free"}
+          {p.price_inr ? `Start with ${p.name}` : "Start 15-day free trial"}
         </a>
       )}
     />

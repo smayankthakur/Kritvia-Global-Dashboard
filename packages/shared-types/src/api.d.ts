@@ -6046,7 +6046,7 @@ export interface components {
         VoiceSettings: {
             /**
              * Auto Learn
-             * @default true
+             * @default false
              */
             auto_learn: boolean;
             /**

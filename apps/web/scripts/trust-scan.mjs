@@ -30,8 +30,9 @@ export const RULES = [
   { id: "pre-ticked", re: /defaultChecked(=\{true\})?(?!=\{false\})/ },
   // Drip pricing / hidden fees
   { id: "hidden-fee", re: /\b(convenience|processing|service|platform|handling) fee\b/i },
-  // Disguised ads and forced continuity wording
-  { id: "forced-continuity", re: /\bfree trial\b(?![^.]*\b(no card|cancel))/i },
+  // Forced continuity: a "free" trial that quietly turns into a charge. Kritvia's trial takes no
+  // card and never charges; it becomes read-only. Copy must never suggest automatic billing.
+  { id: "forced-continuity", re: /\bfree trial\b[^.]*\b(we('| wi)ll charge|charged automatically|auto[- ]?renews? (in|at|after)|billed (automatically|after))/i },
 ];
 
 /** Reviewed exceptions: file + rule + why it is fair. Keep this short. */

@@ -95,5 +95,7 @@ describe("trust scan", () => {
     expect(hit("confirmshaming", "No thanks, I don't want to grow my business")).toBe(true);
     expect(hit("pre-ticked", "<input type=checkbox defaultChecked />")).toBe(true);
     expect(hit("hidden-fee", "plus a small convenience fee")).toBe(true);
+    expect(hit("forced-continuity", "Start a free trial, then we'll charge your card ₹2,499")).toBe(true);
+    expect(hit("forced-continuity", "Start 15-day free trial")).toBe(false);
   });
 });

@@ -124,7 +124,12 @@ services:
 
   web:
     logging: *logging
-    build: { context: .., dockerfile: apps/web/Dockerfile }
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:   # from the .env file; shown in the site footer
+        NEXT_PUBLIC_COMPANY_ADDRESS: ${NEXT_PUBLIC_COMPANY_ADDRESS:-}
+        NEXT_PUBLIC_COMPANY_GSTIN: ${NEXT_PUBLIC_COMPANY_GSTIN:-}
     restart: unless-stopped
     environment:
       KRITVIA_API_URL: http://api:8000

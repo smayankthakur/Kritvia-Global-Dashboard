@@ -40,7 +40,7 @@ export function PublicShell({ children, wide }: { children: ReactNode; wide?: bo
               Sign in
             </Link>
             <Link href="/register" className={buttonClass("primary", "sm")}>
-              Start free
+              Try free
             </Link>
             <details className="group relative md:hidden">
               <summary

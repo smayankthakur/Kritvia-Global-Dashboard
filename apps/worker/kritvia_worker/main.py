@@ -28,6 +28,7 @@ from kritvia_api.db.session import dispose_engine, tenant_tx
 from kritvia_api.engine.bootstrap import build_services
 from kritvia_api.engine.context import set_services
 from kritvia_api.engine.runner import DuplicateTrigger, advance_run, start_run, sweep as sweep_runs
+from kritvia_api.services.quota import PlanRestricted
 
 IST = timezone(timedelta(hours=5, minutes=30))
 log = logging.getLogger("kritvia.worker")
@@ -78,6 +79,8 @@ async def fire_schedules(ctx: dict, now: datetime | None = None) -> int:
             started += 1
         except DuplicateTrigger:
             continue
+        except PlanRestricted:
+            continue   # the plan doesn't include it (or the free trial has ended): skip quietly
         except Exception:
             log.exception("could not start scheduled %s for %s", d.workflow, d.venture_id)
     return started

@@ -7,7 +7,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.deps import Svc, TenantDB
-from kritvia_api.plans import PLANS, PUBLIC_PLANS, TOKEN_PACKS
+from kritvia_api.config import get_settings
+from kritvia_api.plans import PLANS, PUBLIC_PLANS, TOKEN_PACKS, plan as plan_of
 from kritvia_api.services.quota import org_usage, require_room
 from kritvia_api.errors import raise_for_db
 from kritvia_api.schemas import GrantIn, IdOut, MemberIn, OrgIn, VentureIn, VentureOut
@@ -27,6 +28,15 @@ async def _user_id_by_email(db, org_id: uuid.UUID, email: str) -> uuid.UUID:
 
 @router.post("", response_model=IdOut, status_code=201)
 async def create_org(body: OrgIn, db: TenantDB) -> IdOut:
+    # Each person gets one free trial: a second organisation needs the first on a paid plan.
+    if plan_of(get_settings().default_plan).code == "free":
+        other = (await db.execute(text("SELECT name FROM my_unpaid_owned_orgs()"
+                                       " WHERE coalesce(plan, :d) = 'free' LIMIT 1"),
+                                  {"d": get_settings().default_plan})).scalar()
+        if other:
+            raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                                f"you already have a free trial for {other}; choose a plan for it first, "
+                                "or add another business inside it")
     try:
         async with db.begin_nested():
             oid = (await db.execute(text("SELECT create_organisation(:n, :s)"),

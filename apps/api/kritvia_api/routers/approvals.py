@@ -232,7 +232,7 @@ async def set_autonomy(venture_id: uuid.UUID, agent: str, action: str, body: Aut
         u = await org_usage(db, org, svc.router.local_deployments())
         if u is not None and not u.plan.autonomy:
             raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
-                                f"on the {u.plan.name} plan agents always ask first; upgrade to let them act alone")
+                                f"on {u.plan.label} agents always ask first; upgrade to let them act alone")
         cap = u.plan.autonomy_per_agent if u is not None else None
         if cap:   # e.g. Starter: each agent may act alone on one kind of action
             others = (await db.execute(text(
@@ -240,7 +240,7 @@ async def set_autonomy(venture_id: uuid.UUID, agent: str, action: str, body: Aut
                 {"v": venture_id, "a": agent, "t": action})).scalar()
             if int(others or 0) >= cap:
                 raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
-                                    f"on the {u.plan.name} plan each agent can act alone on {cap} kind of action; "
+                                    f"on {u.plan.label} each agent can act alone on {cap} kind of action; "
                                     "switch the other one off first, or upgrade to Growth for no limit")
     try:
         async with db.begin_nested():

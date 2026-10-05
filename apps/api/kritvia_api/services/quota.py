@@ -5,12 +5,55 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import text
 
 from kritvia_api.config import get_settings
-from kritvia_api.plans import AGENT_NAMES, INTEGRATION_NAMES, Plan, plan as plan_of
+from kritvia_api.plans import AGENT_NAMES, INTEGRATION_NAMES, PLANS, Plan, plan as plan_of
+
+GRACE_AFTER_PAYMENTS = timedelta(days=3)
+
+
+@dataclass
+class Trial:
+    ends_at: datetime | None     # None: held open until online payment is live
+    expired: bool
+
+    def as_dict(self) -> dict:
+        days = None
+        if self.ends_at is not None and not self.expired:
+            days = max(0, (self.ends_at - datetime.now(UTC)).days + 1)
+        return {"ends_at": self.ends_at.isoformat() if self.ends_at else None, "expired": self.expired,
+                "held": self.ends_at is None, "days_left": days}
+
+
+def trial_for(plan_code: str | None, trial_ends_at: datetime | None, now: datetime | None = None) -> Trial | None:
+    """The trial, for an organisation on the Free plan; None for paid and internal plans."""
+    if plan_of(plan_code or get_settings().default_plan).code != "free" or trial_ends_at is None:
+        return None
+    live = get_settings().payments_live_at
+    if live is None:
+        return Trial(None, False)
+    if live.tzinfo is None:
+        live = live.replace(tzinfo=UTC)
+    ends = max(trial_ends_at, live + GRACE_AFTER_PAYMENTS)
+    return Trial(ends, (now or datetime.now(UTC)) >= ends)
+
+
+def effective_plan(plan_code: str | None, trial_ends_at: datetime | None) -> Plan:
+    """The plan that applies now: a Free trial that has ended is read-only ("expired")."""
+    t = trial_for(plan_code, trial_ends_at)
+    return PLANS["expired"] if t and t.expired else plan_of(plan_code or get_settings().default_plan)
+
+
+class TrialEnded(Exception):
+    pass
+
+
+READ_ONLY_MESSAGE = ("Your 15-day free trial has ended, so this organisation is read-only. Choose a plan in "
+                     "Plan & billing to keep working; you can still view, export and delete your data.")
 
 
 @dataclass
@@ -20,6 +63,7 @@ class Usage:
     ventures: int
     members: int
     storage: int = 0
+    trial: Trial | None = None
 
     @property
     def tokens_left(self) -> int | None:
@@ -28,7 +72,8 @@ class Usage:
 
     def as_dict(self) -> dict:
         return {"plan": self.plan.as_dict(), "tokens": self.tokens, "tokens_left": self.tokens_left,
-                "ventures": self.ventures, "members": self.members, "storage_bytes": self.storage}
+                "ventures": self.ventures, "members": self.members, "storage_bytes": self.storage,
+                "trial": self.trial.as_dict() if self.trial else None, "read_only": self.plan.code == "expired"}
 
 
 async def org_usage(conn, org_id: uuid.UUID, local: list[str]) -> Usage | None:
@@ -36,8 +81,9 @@ async def org_usage(conn, org_id: uuid.UUID, local: list[str]) -> Usage | None:
     row = (await conn.execute(text("SELECT * FROM org_usage(:o, :l)"), {"o": org_id, "l": local})).first()
     if row is None:
         return None
-    return Usage(plan_of(row.plan or get_settings().default_plan), int(row.tokens), int(row.ventures),
-                 int(row.members), int(row.storage))
+    ends = (await conn.execute(text("SELECT trial_ends_at FROM org_plan_state(:o)"), {"o": org_id})).scalar()
+    return Usage(effective_plan(row.plan, ends), int(row.tokens), int(row.ventures),
+                 int(row.members), int(row.storage), trial_for(row.plan, ends))
 
 
 class TokenGate:
@@ -90,7 +136,7 @@ async def require_room(conn, org_id: uuid.UUID, what: str, local: list[str]) -> 
     if lim is not None and used >= lim:
         noun = ("business" if lim == 1 else "businesses") if what == "venture" else ("person" if lim == 1 else "people")
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
-                            f"the {u.plan.name} plan includes {lim} {noun}; upgrade to add more")
+                            f"{u.plan.label} includes {lim} {noun}; upgrade to add more")
 
 
 class PlanRestricted(ValueError):
@@ -102,19 +148,28 @@ def _human_bytes(n: int) -> str:
 
 
 async def plan_for_venture(conn, venture_id: uuid.UUID) -> Plan:
-    code = (await conn.execute(text("SELECT venture_plan(:v)"), {"v": venture_id})).scalar()
-    return plan_of(code or get_settings().default_plan)
+    row = (await conn.execute(text("SELECT plan, trial_ends_at FROM venture_plan_state(:v)"), {"v": venture_id})).first()
+    return effective_plan(row.plan if row else None, row.trial_ends_at if row else None)
+
+
+async def read_only(conn, *, venture_id: uuid.UUID | None = None, org_id: uuid.UUID | None = None) -> bool:
+    """True when the organisation's free trial has ended without a plan being chosen."""
+    if venture_id is not None:
+        row = (await conn.execute(text("SELECT plan, trial_ends_at FROM venture_plan_state(:v)"), {"v": venture_id})).first()
+    else:
+        row = (await conn.execute(text("SELECT plan, trial_ends_at FROM org_plan_state(:o)"), {"o": org_id})).first()
+    return bool(row) and effective_plan(row.plan, row.trial_ends_at).code == "expired"
 
 
 def upgrade_hint(p: Plan) -> str:
-    return {"free": "Starter", "starter": "Growth", "growth": "Scale"}.get(p.code, "a bigger plan")
+    return {"free": "Starter", "expired": "a plan", "starter": "Growth", "growth": "Scale"}.get(p.code, "a bigger plan")
 
 
 async def require_agent(conn, venture_id: uuid.UUID, workflow: str, kind: str | None) -> None:
     p = await plan_for_venture(conn, venture_id)
     if not p.allows_agent(workflow, kind):
         name = AGENT_NAMES.get(workflow, workflow)
-        raise PlanRestricted(f"the {p.name} plan doesn't include {name}; upgrade to {upgrade_hint(p)} to switch it on")
+        raise PlanRestricted(f"{p.label} doesn't include {name}; upgrade to {upgrade_hint(p)} to switch it on")
 
 
 async def require_integration(conn, venture_id: uuid.UUID, integration: str) -> None:
@@ -122,7 +177,7 @@ async def require_integration(conn, venture_id: uuid.UUID, integration: str) -> 
     if not p.allows_integration(integration):
         name = INTEGRATION_NAMES.get(integration, integration)
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
-                            f"the {p.name} plan doesn't include {name}; upgrade to {upgrade_hint(p)} to connect it")
+                            f"{p.label} doesn't include {name}; upgrade to {upgrade_hint(p)} to connect it")
 
 
 async def require_storage(conn, org_id: uuid.UUID, adding: int, local: list[str]) -> None:
@@ -132,6 +187,6 @@ async def require_storage(conn, org_id: uuid.UUID, adding: int, local: list[str]
         return
     if u.storage + adding > u.plan.storage_bytes:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
-                            f"business memory is full on the {u.plan.name} plan ({_human_bytes(u.storage)} of "
+                            f"business memory is full on {u.plan.label} ({_human_bytes(u.storage)} of "
                             f"{_human_bytes(u.plan.storage_bytes)} used); delete documents or upgrade to "
                             f"{upgrade_hint(u.plan)}")

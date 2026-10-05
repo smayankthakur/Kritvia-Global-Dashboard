@@ -4,7 +4,7 @@ import { INDEX } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Create your account",
-  description: "Start free with Kritvia: AI agents that draft replies, proposals and checks for your business. No card needed.",
+  description: "Try Kritvia free for 15 days: AI agents that draft replies, proposals and checks for your business. No card needed.",
   robots: INDEX,
   alternates: { canonical: "/register" },
 };

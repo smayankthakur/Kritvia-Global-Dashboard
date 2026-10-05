@@ -21,6 +21,7 @@ from typing import Any
 from sqlalchemy import text
 
 from kritvia_api.db.session import tenant_tx
+from kritvia_api.services.quota import read_only
 from kritvia_api.engine.context import RunContext, Services
 from kritvia_api.engine.runner import DuplicateTrigger, start_run
 from kritvia_api.services import memory
@@ -45,6 +46,9 @@ async def poll_gmail_all(services: Services) -> dict[str, int]:
         conns = (await conn.execute(text("SELECT * FROM private.active_connectors('google')"))).all()
     totals: dict[str, int] = {}
     for c in conns:
+        async with tenant_tx(None, "system") as conn:
+            if await read_only(conn, venture_id=c.venture_id):
+                continue   # free trial ended without a plan: nothing new comes in until one is chosen
         try:
             got = await poll_gmail_venture(services, c.org_id, c.venture_id, c.run_as)
             for k, v in got.items():

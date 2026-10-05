@@ -46,7 +46,7 @@ async def test_free_gets_core_agents_only_starter_adds_its_own_kind(client, monk
     owner, org, vid = await _org(client, monkeypatch, kind="kitchen")
     cfg = {"enabled": True, "settings": {}, "instructions": ""}
     r = await owner.put(f"/ventures/{vid}/workflow-configs/kitchen_daily", json=cfg)
-    assert r.status_code == 402 and "Free plan doesn't include Nightly kitchen plan" in r.text
+    assert r.status_code == 402 and "the free trial doesn't include Nightly kitchen plan" in r.text
     assert (await owner.post(f"/ventures/{vid}/kitchen/run", json={})).status_code == 402
     assert (await owner.put(f"/ventures/{vid}/workflow-configs/inbox_assistant", json=cfg)).status_code == 200
 
@@ -88,7 +88,7 @@ async def test_business_memory_is_capped(client, monkeypatch):
     assert plan["storage_bytes"] >= 499 * 1024 * 1024 and plan["plan"]["storage_bytes"] == 500 * 1024 * 1024
     big = {"title": "Big", "text": "x" * 150_000, "kind": "note"}
     r = await owner.post(f"/ventures/{vid}/notes", json=big)
-    assert r.status_code == 402 and "business memory is full on the Free plan" in r.text
+    assert r.status_code == 402 and "business memory is full on the free trial" in r.text
 
 
 async def test_free_proposals_stop_at_the_monthly_allowance(client, monkeypatch, fake_llm):

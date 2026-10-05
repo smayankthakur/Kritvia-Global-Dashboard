@@ -16,6 +16,7 @@ import { useAccess } from "@/lib/access";
 import { formatDate, formatDateTime, formatINR } from "@/lib/format";
 import { PricingTable } from "@/components/public/pricing-table";
 import { rupees, type Period, type PlanCard } from "@/lib/pricing";
+import { trialNote, type Trial } from "@/lib/trial";
 
 interface PlanInfo extends PlanCard {
   max_ventures: number | null;
@@ -31,6 +32,8 @@ interface PlanOut {
   members: number;
   storage_bytes: number;
   renews_at: string | null;
+  trial: Trial | null;
+  read_only: boolean;
   available: PlanInfo[];
   token_packs: { code: string; tokens: number; price_inr: number }[];
 }
@@ -122,7 +125,7 @@ export default function BillingPage() {
       <PageHeader eyebrow={org.name} title="Plan & billing" description="Your plan, this month's usage, and payments. Prices plus 18% GST; pay monthly, or yearly and get two months free." />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
-          <CardHeader title={`${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : p.plan.code === "free" ? "Free forever" : undefined} />
+          <CardHeader title={p.plan.code === "free" || p.plan.code === "expired" ? p.plan.name : `${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : p.plan.code === "free" ? trialNote(p.trial) : p.plan.code === "expired" ? "Read-only until you choose a plan" : undefined} />
           <div className="space-y-4 p-4">
             <Meter label="AI this month" used={p.tokens} limit={p.plan.monthly_tokens} unit="tokens" />
             <Meter label="Businesses" used={p.ventures} limit={p.plan.max_ventures} />
@@ -266,7 +269,7 @@ export default function BillingPage() {
         onConfirm={() => cancel.mutate()}
         loading={cancel.isPending}
         title="Cancel your plan?"
-        description="You keep everything until the end of the period you paid for, then move to the Free plan. Your data stays."
+        description="You keep everything until the end of the period you paid for, then the organisation becomes read-only until you choose a plan again. Your data stays."
         confirmLabel="Cancel plan"
       />
     </>

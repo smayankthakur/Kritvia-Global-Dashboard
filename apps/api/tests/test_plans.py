@@ -28,7 +28,7 @@ async def test_free_plan_limits_ventures_members_and_autonomy(client, monkeypatc
     assert v.status_code == 201
     vid = v.json()["id"]
     r = await owner.post(f"/orgs/{org}/ventures", json={"name": "Two", "slug": "two"})
-    assert r.status_code == 402 and "Free plan includes 1 business;" in r.text
+    assert r.status_code == 402 and "the free trial includes 1 business;" in r.text
 
     friend = await make_actor(client, "friend")
     inv = await owner.post(f"/orgs/{org}/invitations", json={"email": friend.email, "role": "operator", "venture_id": vid})

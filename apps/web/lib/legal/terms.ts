@@ -1,9 +1,9 @@
 /**
- * Terms of Service, version 2026-10-05. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Terms of Service, version 2026-10-06. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Terms of Service). Keep the two in step; when the text changes, bump
  * TERMS_VERSION in the API settings (terms_version) so everyone is asked to accept again.
  */
-export const TERMS_UPDATED = "5 October 2026";
+export const TERMS_UPDATED = "6 October 2026";
 
 export const TERMS_MD = `These Terms of Service are an agreement between your business and Sitelytc Digital Media Private Limited for the use of Kritvia. Please read them with our [Privacy Policy](/privacy).
 
@@ -134,11 +134,13 @@ We may remove content or suspend access under clause 14 if we reasonably believe
 
 | Plan | Price (excluding GST) | Main limits |
 | --- | --- | --- |
-| Free | ₹0 | 1 business, 2 Users, 300,000 hosted-AI tokens a month, 500 MB business memory, 10 proposals a month; every Agent action needs Approval |
+| Free trial | ₹0 for 15 days | 1 business, 2 Users, 300,000 hosted-AI tokens a month, 500 MB business memory, 10 proposals; every Agent action needs Approval |
 | Starter | ₹2,499 a month or ₹24,990 a year | 1 business, 5 Users, 3 million hosted-AI tokens a month, 10 GB business memory; each Agent may act without Approval on one kind of action |
 | Growth | ₹6,999 a month or ₹69,990 a year | 3 businesses, 15 Users, 15 million hosted-AI tokens a month, 50 GB business memory |
 | Scale | ₹14,999 a month or ₹1,49,990 a year | 10 businesses, 50 Users, 50 million hosted-AI tokens a month, 250 GB business memory |
 | Enterprise | From ₹29,999 a month, by order form | As agreed in the order form |
+
+**Free trial.** Each person may start one free trial. It lasts 15 days from when the organisation is created; if online payment is not yet available when it would end, it continues until 3 days after online payment opens. When the trial ends without a paid Plan, your organisation becomes **read-only**: you can still sign in, see, export and delete your data, but Agents stop and nothing new can be added until you choose a Plan. We do not delete Customer Data because a trial ended without at least 30 days' written notice.
 
 Extra hosted-AI usage can be bought in packs (5 million tokens for ₹1,499, 20 million for ₹4,999, 50 million for ₹9,999), usable in the calendar month of purchase.
 
@@ -150,11 +152,11 @@ Features marked "Coming soon" on the pricing page are not yet available and are 
 
 10.4 **Upgrades and downgrades.** An upgrade takes effect at once; the new price applies from the next billing date unless the app shows a pro-rata charge when you upgrade. A downgrade takes effect at the end of the current billing period. If your data or Users exceed the lower Plan's limits, you must reduce them, or the Service will become read-only for the excess until you do.
 
-10.5 **Failed payments.** If a renewal payment fails, we will notify you and retry. If it is still unpaid 7 days after the due date, we may move your organisation to the Free Plan. We will not delete Customer Data because of non-payment without at least 30 days' further written notice.
+10.5 **Failed payments.** If a renewal payment fails, we will notify you and retry. If it is still unpaid 7 days after the due date, we may make your organisation read-only, as when a free trial ends, until payment is made. We will not delete Customer Data because of non-payment without at least 30 days' further written notice.
 
 10.6 **Price changes.** We may change prices by giving at least 30 days' notice by email and in the app. The new price applies from your first renewal after the notice period. If you do not agree, you may cancel before that renewal.
 
-10.7 **Cancellation and refunds.** Our [Cancellation, Refund and Delivery Policy](/refunds) explains this clause in plain terms. You may cancel a paid Plan at any time in the app. The Plan stays active until the end of the period you have paid for and then moves to Free. Fees are non-refundable and we do not refund part-months, except (a) as these Terms expressly provide in clauses 3.2, 6.5 and 18.3, (b) where we have charged you in error, or (c) where the law requires a refund.
+10.7 **Cancellation and refunds.** Our [Cancellation, Refund and Delivery Policy](/refunds) explains this clause in plain terms. You may cancel a paid Plan at any time in the app. The Plan stays active until the end of the period you have paid for; your organisation then becomes read-only until you choose a Plan again. Fees are non-refundable and we do not refund part-months, except (a) as these Terms expressly provide in clauses 3.2, 6.5 and 18.3, (b) where we have charged you in error, or (c) where the law requires a refund.
 
 10.8 **Disputed charges.** Tell us at support@sitelytc.com within 30 days of a charge you dispute. We will investigate in good faith. Please contact us before raising a chargeback with your bank.
 

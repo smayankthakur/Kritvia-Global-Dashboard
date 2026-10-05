@@ -21,7 +21,7 @@ export default function RegisterPage() {
   return (
     <AuthCard
       title="Create your account"
-      subtitle="Free to start. No card, no password to remember."
+      subtitle="15 days free. No card, no password to remember."
       footer={
         <>
           Already have an account?{" "}

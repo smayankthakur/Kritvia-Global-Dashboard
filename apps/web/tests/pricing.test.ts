@@ -43,7 +43,7 @@ describe("pricing 2026–27", () => {
   it("shows yearly prices as a monthly equivalent", () => {
     expect(priceFor({ price_inr: 2499, price_annual_inr: 24_990 }, "annual")).toEqual({ big: "₹2,082", note: "Billed ₹24,990 a year" });
     expect(priceFor({ price_inr: 2499, price_annual_inr: 24_990 }, "monthly").big).toBe("₹2,499");
-    expect(priceFor({ price_inr: 0, price_annual_inr: null }, "annual").note).toBe("Free forever");
+    expect(priceFor({ price_inr: 0, price_annual_inr: null }, "annual").note).toBe("For 15 days, no card needed");
     expect(tokensLabel(15_000_000)).toBe("15M");
     expect(tokensLabel(300_000)).toBe("300K");
   });

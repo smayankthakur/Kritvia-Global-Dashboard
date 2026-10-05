@@ -19,13 +19,21 @@ export interface PlanCard {
 export const PLAN_CARDS: PlanCard[] = [
   {
     code: "free",
-    name: "Free",
+    name: "Free trial",
     price_inr: 0,
     price_annual_inr: null,
     monthly_tokens: 300_000,
-    tagline: "For exploring Kritvia.",
+    tagline: "15 days to try Kritvia. No card.",
     audience: "See what agents can do for your business",
-    highlights: ["1 business, 2 people", "Inbox assistant and lead triage", "10 proposals a month", "Agents always ask before acting", "Business memory up to 500 MB", "Gmail and website lead form"],
+    highlights: [
+      "15 days free, then choose a plan",
+      "1 business, 2 people",
+      "Inbox assistant and lead triage",
+      "10 proposals",
+      "Agents always ask before acting",
+      "Business memory up to 500 MB",
+      "Gmail and website lead form",
+    ],
     featured: false,
   },
   {
@@ -124,7 +132,7 @@ export function tokensLabel(n: number | null): string {
 
 /** What the card shows as the big number, and the line under it. */
 export function priceFor(p: Pick<PlanCard, "price_inr" | "price_annual_inr">, period: Period): { big: string; note: string } {
-  if (!p.price_inr) return { big: rupees(0), note: "Free forever" };
+  if (!p.price_inr) return { big: rupees(0), note: "For 15 days, no card needed" };
   if (period === "annual" && p.price_annual_inr) {
     return { big: rupees(Math.floor(p.price_annual_inr / 12)), note: `Billed ${rupees(p.price_annual_inr)} a year` };
   }

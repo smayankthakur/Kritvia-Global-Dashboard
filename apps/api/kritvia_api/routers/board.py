@@ -161,7 +161,7 @@ async def put_agent(venture_id: uuid.UUID, workflow: str, body: AgentIn, user_id
         u = await org_usage(db, org, svc.router.local_deployments())
         if u is not None and not u.plan.autonomy:
             raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
-                                f"per-agent budgets come with the Starter plan; the {u.plan.name} plan has one shared allowance")
+                                f"per-agent budgets come with the Starter plan; {u.plan.label} has one shared allowance")
     sets = ["updated_by = :u", "updated_at = now()"]
     params: dict = {"o": org, "v": venture_id, "w": workflow, "u": user_id,
                     "role": body.role or DEFAULT_ROLE.get(workflow, "ops")}

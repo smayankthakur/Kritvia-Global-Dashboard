@@ -1,20 +1,20 @@
 /**
- * Cancellation, Refund and Delivery Policy, version 2026-10-05. Must agree with Terms 10.7 and the
+ * Cancellation, Refund and Delivery Policy, version 2026-10-06. Must agree with Terms 10.7 and the
  * clauses it cites (3.2, 6.5, 15.1, 18.3). Razorpay requires this page to be public.
  */
-export const REFUNDS_UPDATED = "5 October 2026";
+export const REFUNDS_UPDATED = "6 October 2026";
 
 export const REFUNDS_MD = `This policy explains how you can cancel a paid Kritvia plan, when we give refunds, and how Kritvia is delivered. It is part of our [Terms of Service](/terms); if the two ever differ, the Terms apply. Kritvia is provided by Sitelytc Digital Media Private Limited (details at the foot of this page).
 
-## 1. Free plan
+## 1. Free trial
 
-The Free plan costs nothing and needs no card. You can stop using it or delete your account at any time from **Your account**.
+The 15-day free trial costs nothing and needs no card, so there is nothing to cancel or refund. If online payment isn't open yet when your trial would end, it continues until 3 days after it opens. When the trial ends, your organisation becomes read-only until you choose a plan: you can still see, export and delete your data. You can delete your account at any time from **Your account**.
 
 ## 2. Cancelling a paid plan
 
 - You can cancel a monthly or yearly plan at any time in **Plan & billing**, in a few clicks, without contacting us. We do not ask you to call, email or chat to cancel.
-- Your plan stays active until the end of the period you have already paid for, and then moves to the Free plan. Nothing renews after you cancel.
-- Your data is not deleted when you cancel. If it is over the Free plan's limits, it becomes read-only until you reduce it or upgrade again.
+- Your plan stays active until the end of the period you have already paid for. Nothing renews after you cancel.
+- After that your organisation becomes read-only: your data is not deleted, and you can still see, export and delete it, or choose a plan again at any time.
 - Plans renew automatically at the end of each period until you cancel. The renewal date is always shown in **Plan & billing**.
 
 ## 3. Refunds
