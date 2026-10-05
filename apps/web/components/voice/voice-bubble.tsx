@@ -93,6 +93,8 @@ export function VoiceBubble() {
     d.moved = true;
     setPos(clamp({ right: d.start.right - dx, bottom: d.start.bottom - dy }));
   };
+  // First click ever opens "Set up your mic" (Scribe's onboarding); after that a click dictates.
+  const press = () => (v.setupDone || v.phase === "recording" ? v.toggle() : v.openSetup());
   const onPointerUp = useCallback(() => {
     const d = drag.current;
     drag.current = null;
@@ -107,8 +109,9 @@ export function VoiceBubble() {
         return p;
       });
     } else {
-      v.toggle();
+      press();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [v]);
 
   if (!v.available || !v.settings.widget_enabled) return null;
@@ -130,11 +133,15 @@ export function VoiceBubble() {
   const recording = v.phase === "recording";
   const label =
     v.phase === "recording"
-      ? `Listening… release ${key} to finish (${v.elapsed}s)`
+      ? v.handsFree
+        ? `Listening… just pause when you're done (${v.elapsed}s)`
+        : `Listening… release ${key} to finish (${v.elapsed}s)`
       : v.phase === "transcribing"
         ? "Transcribing…"
         : v.message
-          ? tail(v.message)
+          ? v.phase === "error"
+            ? v.message // errors and hints are read in full; only long transcripts are trimmed
+            : tail(v.message)
           : null;
   const ringColor =
     v.phase === "recording"
@@ -282,12 +289,12 @@ export function VoiceBubble() {
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              v.toggle();
+              press();
             }
           }}
-          aria-label={recording ? "Stop and transcribe" : `Dictate (${modeInfo.label} mode). Hold ${key} or click. Drag to move.`}
+          aria-label={recording ? "Stop and transcribe" : `Dictate (${modeInfo.label} mode). Click and speak, or hold ${key}. Drag to move.`}
           aria-pressed={recording}
-          title={recording ? "Click to stop" : `Hold ${key} anywhere in Kritvia, or click — ${modeInfo.hint}`}
+          title={recording ? "Click to finish now" : `Click and speak — it finishes when you pause. Or hold ${key}. ${modeInfo.hint}`}
           className={cn(
             "relative flex cursor-grab touch-none items-center justify-center rounded-full shadow-[var(--shadow-lg)] ring-2 transition-colors select-none active:cursor-grabbing",
             ringColor,

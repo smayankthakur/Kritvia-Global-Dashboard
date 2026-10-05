@@ -8,7 +8,8 @@ import { useAccess } from "@/lib/access";
 import { extensionFor, insertText } from "@/lib/recorder";
 import { initialPtt, pttKeyDown, pttKeyUp } from "@/lib/voice/hotkey";
 import { detectCorrection, type Correction } from "@/lib/voice/learn";
-import { useLevelRecorder } from "@/lib/voice/recorder";
+import { useLevelRecorder, type AutoStopReason } from "@/lib/voice/recorder";
+import { MicWizard } from "./mic-wizard";
 
 export type VoiceSettings = Schemas["VoiceSettings"];
 export type DictationResult = Schemas["DictationOut"];
@@ -30,6 +31,8 @@ type Editable = HTMLInputElement | HTMLTextAreaElement;
 const TEXT_INPUTS = new Set(["text", "search", "email", "url", "tel", ""]);
 const SNOOZE_KEY = "kv_voice_snooze_until";
 const MODE_KEY = "kv_voice_mode";
+/** Set once the person has been through "Set up your mic" (per browser, like Scribe's onboarding). */
+const SETUP_KEY = "kv_voice_setup_v1";
 const LEARN_PROMPT_MS = 15_000;
 const LEARN_IDLE_MS = 1_500;
 const LEARN_WATCH_MS = 30_000;
@@ -67,8 +70,15 @@ interface VoiceCtx {
   mode: VoiceMode;
   setMode: (m: VoiceMode) => void;
   settings: VoiceSettings;
+  /** Click/tap: start hands-free (finishes by itself after a pause) or stop. */
   toggle: () => void;
-  start: () => void;
+  start: (opts?: { handsFree?: boolean }) => void;
+  /** True while a click-started recording is listening for the pause that ends it. */
+  handsFree: boolean;
+  /** Whether "Set up your mic" has been completed in this browser. */
+  setupDone: boolean;
+  openSetup: () => void;
+  finishSetup: () => void;
   stop: () => void;
   cancel: () => void;
   learn: Correction | null;
@@ -107,20 +117,31 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<VoiceMode>("type");
   const [learn, setLearn] = useState<Correction | null>(null);
   const [snoozeUntil, setSnoozeUntil] = useState<number>(0);
+  const [handsFree, setHandsFree] = useState(false);
+  const [setupDone, setSetupDone] = useState(true);
+  const [setupOpen, setSetupOpen] = useState(false);
   const target = useRef<Editable | null>(null);
   const askHandler = useRef<((q: string) => void) | null>(null);
   const phaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const learnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watchCleanup = useRef<(() => void) | null>(null);
   const session = useRef(0);
-  const stopRef = useRef<() => void>(() => undefined);
-  const rec = useLevelRecorder(() => stopRef.current());
+  const autoStopRef = useRef<(reason: AutoStopReason) => void>(() => undefined);
+  const rec = useLevelRecorder((reason) => autoStopRef.current(reason));
 
   useEffect(() => {
     const m = readStore(MODE_KEY);
     if (m === "type" || m === "note" || m === "ask") setModeState(m);
     const s = Number(readStore(SNOOZE_KEY) ?? 0);
     if (s > Date.now()) setSnoozeUntil(s);
+    setSetupDone(readStore(SETUP_KEY) === "1");
+  }, []);
+
+  const openSetup = useCallback(() => setSetupOpen(true), []);
+  const finishSetup = useCallback(() => {
+    writeStore(SETUP_KEY, "1");
+    setSetupDone(true);
+    setSetupOpen(false);
   }, []);
 
   const setMode = useCallback((m: VoiceMode) => {
@@ -242,8 +263,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         if (settings.auto_learn) watchForCorrection(el, out.text, before, after);
         return settle("done", out.text, 2500);
       }
+      // No text box had focus: keep the words on the clipboard and say so plainly.
       await navigator.clipboard?.writeText(out.text).catch(() => undefined);
-      return settle("done", `Copied: ${out.text}`, 4000);
+      return settle("done", `No text box selected — copied, paste with Ctrl+V: ${out.text}`, 6000);
     },
     [settle, toast, settings.engine, settings.auto_learn, qc, watchForCorrection],
   );
@@ -279,16 +301,20 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     [venture, deliver, settle],
   );
 
-  const start = useCallback(() => {
-    if (!venture || rec.recording) return;
-    session.current += 1;
-    if (phaseTimer.current) clearTimeout(phaseTimer.current);
-    setPhase("recording");
-    setMessage(null);
-    void rec.start().then((err) => {
-      if (err) settle("error", err, 5000);
-    });
-  }, [venture, rec, settle]);
+  const start = useCallback(
+    (opts?: { handsFree?: boolean }) => {
+      if (!venture || rec.recording) return;
+      session.current += 1;
+      if (phaseTimer.current) clearTimeout(phaseTimer.current);
+      setPhase("recording");
+      setMessage(null);
+      setHandsFree(Boolean(opts?.handsFree));
+      void rec.start({ handsFree: opts?.handsFree }).then((err) => {
+        if (err) settle("error", err, 5000);
+      });
+    },
+    [venture, rec, settle],
+  );
 
   const stop = useCallback(() => {
     if (!rec.recording) return;
@@ -302,7 +328,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       void transcribe(r.blob, r.durationMs, usedMode, id);
     });
   }, [rec, mode, transcribe]);
-  stopRef.current = stop;
 
   const cancel = useCallback(() => {
     session.current += 1;
@@ -311,7 +336,14 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setMessage(null);
   }, [rec]);
 
-  const toggle = useCallback(() => (rec.recording ? stop() : start()), [rec.recording, start, stop]);
+  autoStopRef.current = (reason) => {
+    if (reason !== "nothing-heard") return stop();
+    session.current += 1;
+    void rec.cancel();
+    settle("error", "Didn't hear anything — check your mic isn't muted, or run Set up your mic in Voice settings", 6000);
+  };
+
+  const toggle = useCallback(() => (rec.recording ? stop() : start({ handsFree: true })), [rec.recording, start, stop]);
 
   // push-to-talk hotkey (works anywhere in the app; the desktop companion covers other apps)
   const ptt = useRef(initialPtt);
@@ -322,7 +354,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       if (document.body.dataset.voiceCapture) return;
       const [next, ev] = pttKeyDown(ptt.current, e, hotkey);
       ptt.current = next;
-      if (ev === "start") start();
+      if (ev === "start") start({ handsFree: false });
       else if (ev === "cancel") cancel();
       if (e.key === "Escape" && rec.recording) cancel();
     };
@@ -384,6 +416,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       settings,
       toggle,
       start,
+      handsFree,
+      setupDone,
+      openSetup,
+      finishSetup,
       stop,
       cancel,
       learn,
@@ -396,7 +432,13 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       copyLast,
     }),
     [venture, rec.supported, rec.recording, rec.level, rec.elapsed, phase, message, last, mode, setMode, settings, toggle,
-      start, stop, cancel, learn, saveLearn, dismissLearn, snoozeUntil, snooze, unsnooze, setAskHandler, copyLast],
+      start, handsFree, setupDone, openSetup, finishSetup, stop, cancel, learn, saveLearn, dismissLearn, snoozeUntil,
+      snooze, unsnooze, setAskHandler, copyLast],
   );
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      {venture ? <MicWizard open={setupOpen} onClose={() => setSetupOpen(false)} /> : null}
+    </Ctx.Provider>
+  );
 }

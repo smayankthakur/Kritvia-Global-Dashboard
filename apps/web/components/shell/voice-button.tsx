@@ -18,14 +18,14 @@ export function VoiceButton() {
   const label = !v.available
     ? "Voice input needs a venture"
     : recording
-      ? `Stop recording (${v.elapsed}s) and transcribe`
-      : `Voice input: dictate into the focused field (or hold ${key})`;
+      ? `Finish now (${v.elapsed}s) — or just pause`
+      : `Voice input: click and speak into the focused field (or hold ${key})`;
   return (
     <Button
       variant={recording ? "danger" : "ghost"}
       size={recording ? "sm" : "icon"}
       onMouseDown={(e) => e.preventDefault()}
-      onClick={v.toggle}
+      onClick={() => (v.setupDone || recording ? v.toggle() : v.openSetup())}
       disabled={!v.available || busy}
       aria-label={label}
       aria-pressed={recording}

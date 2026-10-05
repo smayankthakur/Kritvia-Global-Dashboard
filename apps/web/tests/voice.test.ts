@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { initialPtt, isAllowedHotkey, pttKeyDown, pttKeyUp, type PttState } from "@/lib/voice/hotkey";
 import { detectCorrection, editedInsertion, isLearnable, singleDiffRegion } from "@/lib/voice/learn";
+import { initialVad, VAD, vadStep } from "@/lib/voice/vad";
 
 describe("auto-learn diff", () => {
   it("finds the one changed span", () => {
@@ -79,5 +80,39 @@ describe("vocabulary import and widget text", async () => {
     expect(t.startsWith("…")).toBe(true);
     expect(t.endsWith("lazy dog")).toBe(true);
     expect(t.length).toBeLessThanOrEqual(30);
+  });
+});
+
+describe("hands-free pause detector", () => {
+  const feed = (levels: number[], dt = 100) => {
+    let s = initialVad;
+    for (let i = 0; i < levels.length; i++) {
+      const [next, ev] = vadStep(s, levels[i]!, dt);
+      s = next;
+      if (ev) return { ev, at: (i + 1) * dt };
+    }
+    return { ev: null, at: levels.length * dt };
+  };
+  const speech = (ms: number) => Array(ms / 100).fill(0.4);
+  const quiet = (ms: number) => Array(ms / 100).fill(0.02);
+
+  it("finishes after speech followed by a pause", () => {
+    const r = feed([...quiet(500), ...speech(1500), ...quiet(2000)]);
+    expect(r.ev).toBe("finish");
+    expect(r.at).toBe(500 + 1500 + VAD.pauseMs);
+  });
+  it("short gaps between words don't finish it", () => {
+    expect(feed([...speech(800), ...quiet(900), ...speech(800), ...quiet(900)]).ev).toBeNull();
+  });
+  it("a click or cough is not speech", () => {
+    expect(feed([0.6, ...quiet(3000)]).ev).toBeNull();
+  });
+  it("gives up when nothing is heard", () => {
+    const r = feed(quiet(VAD.nothingMs + 500));
+    expect(r.ev).toBe("nothing-heard");
+    expect(r.at).toBe(VAD.nothingMs);
+  });
+  it("in-between levels keep the pause timer where it is (hysteresis)", () => {
+    expect(feed([...speech(500), ...Array(30).fill(0.1)]).ev).toBeNull();
   });
 });

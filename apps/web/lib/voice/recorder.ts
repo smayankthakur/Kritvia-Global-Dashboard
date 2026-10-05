@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { initialVad, vadStep, type VadState } from "./vad";
 
 export const MAX_RECORDING_MS = 5 * 60 * 1000;
 /** People release the key ~100–250 ms after the last syllable; keep recording a moment longer (Scribe). */
@@ -14,6 +15,9 @@ function pickMime(): string | undefined {
   return undefined;
 }
 
+/** Why a recording ended by itself: the 5-minute cap, a pause after speech (hands-free), or silence. */
+export type AutoStopReason = "limit" | "pause" | "nothing-heard";
+
 export interface Recording {
   blob: Blob;
   durationMs: number;
@@ -23,7 +27,7 @@ export interface Recording {
  * Microphone recorder with a live input level (0..1) for the widget's waveform.
  * `stop()` resolves with the audio; `cancel()` discards it.
  */
-export function useLevelRecorder(onAutoStop?: () => void) {
+export function useLevelRecorder(onAutoStop?: (reason: AutoStopReason) => void) {
   const [recording, setRecording] = useState(false);
   const [level, setLevel] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -36,6 +40,9 @@ export function useLevelRecorder(onAutoStop?: () => void) {
   const startedAt = useRef(0);
   const resolver = useRef<((r: Recording | null) => void) | null>(null);
   const discard = useRef(false);
+  const vad = useRef<VadState | null>(null);
+  const measureRef = useRef<(() => number) | null>(null);
+  const vadTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoStop = useRef(onAutoStop);
   autoStop.current = onAutoStop;
 
@@ -47,6 +54,10 @@ export function useLevelRecorder(onAutoStop?: () => void) {
     raf.current = null;
     if (timer.current) clearInterval(timer.current);
     timer.current = null;
+    if (vadTimer.current) clearInterval(vadTimer.current);
+    vadTimer.current = null;
+    vad.current = null;
+    measureRef.current = null;
     stream.current?.getTracks().forEach((t) => t.stop());
     stream.current = null;
     void audioCtx.current?.close().catch(() => undefined);
@@ -56,7 +67,8 @@ export function useLevelRecorder(onAutoStop?: () => void) {
 
   useEffect(() => cleanup, [cleanup]);
 
-  const start = useCallback(async (): Promise<string | null> => {
+  /** `handsFree`: finish by itself after the person pauses (click-started dictation). */
+  const start = useCallback(async (opts?: { handsFree?: boolean }): Promise<string | null> => {
     if (!supported) return "Recording is not supported in this browser";
     if (rec.current && rec.current.state !== "inactive") return null;
     try {
@@ -94,19 +106,28 @@ export function useLevelRecorder(onAutoStop?: () => void) {
           analyser.fftSize = 512;
           ctx.createMediaStreamSource(s).connect(analyser);
           const buf = new Uint8Array(analyser.fftSize);
+          const measure = () => {
+            analyser.getByteTimeDomainData(buf);
+            let sum = 0;
+            for (const v of buf) sum += ((v - 128) / 128) ** 2;
+            return Math.min(1, Math.sqrt(sum / buf.length) * 3);
+          };
           let last = 0;
           const tick = (t: number) => {
             if (t - last > 80) {
               // ~12 updates a second is plenty for a meter and keeps React renders cheap
               last = t;
-              analyser.getByteTimeDomainData(buf);
-              let sum = 0;
-              for (const v of buf) sum += ((v - 128) / 128) ** 2;
-              setLevel(Math.round(Math.min(1, Math.sqrt(sum / buf.length) * 3) * 20) / 20);
+              setLevel(Math.round(measure() * 20) / 20);
             }
             raf.current = requestAnimationFrame(tick);
           };
           raf.current = requestAnimationFrame(tick);
+          // The pause detector runs on a timer, not animation frames: browsers pause those in a
+          // background tab, and a hands-free dictation must still finish there.
+          if (opts?.handsFree) {
+            vad.current = initialVad;
+            measureRef.current = measure;
+          }
         }
       } catch {
         /* the level meter is cosmetic */
@@ -118,8 +139,23 @@ export function useLevelRecorder(onAutoStop?: () => void) {
       timer.current = setInterval(() => {
         const ms = Date.now() - startedAt.current;
         setElapsed(Math.floor(ms / 1000));
-        if (ms >= MAX_RECORDING_MS) autoStop.current?.();
+        if (ms >= MAX_RECORDING_MS) autoStop.current?.("limit");
       }, 250);
+      if (vad.current && measureRef.current) {
+        const measure = measureRef.current;
+        let prev = Date.now();
+        vadTimer.current = setInterval(() => {
+          if (!vad.current) return;
+          const now = Date.now();
+          const [next, ev] = vadStep(vad.current, measure(), now - prev);
+          prev = now;
+          vad.current = next;
+          if (ev) {
+            vad.current = null; // fire once
+            autoStop.current?.(ev === "finish" ? "pause" : "nothing-heard");
+          }
+        }, 100);
+      }
       setRecording(true);
       return null;
     } catch (e) {

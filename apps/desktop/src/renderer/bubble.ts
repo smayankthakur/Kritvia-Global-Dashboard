@@ -1,11 +1,13 @@
 // Floating widget (sandboxed renderer). Records audio when the main process says so and shows
 // state; everything else (auth, API, paste) happens in the main process.
+import { initialVad, vadStep } from "../shared";
 
 interface State {
   phase: "idle" | "recording" | "transcribing" | "done" | "error";
   message: string | null;
   mode: "type" | "note";
   hotkey: string;
+  handsFree?: boolean;
   learn: { heard: string; correct: string } | null;
   canShare: boolean;
   signedIn: boolean;
@@ -47,7 +49,17 @@ function render() {
   wave.hidden = s.phase !== "recording";
 
   const text =
-    s.phase === "recording" ? `Listening… release ${s.hotkey} to finish (${elapsed}s)` : s.phase === "transcribing" ? "Transcribing…" : s.message ? tail(s.message) : "";
+    s.phase === "recording"
+      ? s.handsFree
+        ? `Listening… just pause when you're done (${elapsed}s)`
+        : `Listening… release ${s.hotkey} to finish (${elapsed}s)`
+      : s.phase === "transcribing"
+        ? "Transcribing…"
+        : s.message
+          ? s.phase === "error"
+            ? s.message
+            : tail(s.message)
+          : "";
   label.textContent = text;
   label.hidden = !text || Boolean(s.learn);
 
@@ -150,6 +162,7 @@ interface Rec {
   error: string | null;
   raf: number | null;
   ready: Promise<void>;
+  vadTimer: ReturnType<typeof setInterval> | null;
 }
 let rec: Rec | null = null;
 
@@ -162,6 +175,8 @@ function pickMime(): string {
 
 function release(r: Rec) {
   if (r.raf) cancelAnimationFrame(r.raf);
+  if (r.vadTimer) clearInterval(r.vadTimer);
+  r.vadTimer = null;
   r.stream?.getTracks().forEach((t) => t.stop());
   void r.ctx?.close().catch(() => undefined);
   pulse.style.transform = "scale(1)";
@@ -169,9 +184,9 @@ function release(r: Rec) {
 }
 
 k.on("rec:start", (p) => {
-  const id = (p as { id: number }).id;
+  const { id, handsFree } = p as { id: number; handsFree?: boolean };
   if (rec) release(rec);
-  const r: Rec = { id, recorder: null, stream: null, ctx: null, chunks: [], startedAt: Date.now(), error: null, raf: null, ready: Promise.resolve() };
+  const r: Rec = { id, recorder: null, stream: null, ctx: null, chunks: [], startedAt: Date.now(), error: null, raf: null, ready: Promise.resolve(), vadTimer: null };
   rec = r;
   r.ready = (async () => {
     try {
@@ -209,6 +224,25 @@ k.on("rec:start", (p) => {
         r.raf = requestAnimationFrame(tick);
       };
       r.raf = requestAnimationFrame(tick);
+      if (handsFree) {
+        // a timer, not animation frames: those pause while the bubble window is hidden
+        let vad = initialVad;
+        let prev = Date.now();
+        r.vadTimer = setInterval(() => {
+          an.getByteTimeDomainData(buf);
+          let sum = 0;
+          for (const v of buf) sum += ((v - 128) / 128) ** 2;
+          const now = Date.now();
+          const [next, ev] = vadStep(vad, Math.min(1, Math.sqrt(sum / buf.length) * 3), now - prev);
+          prev = now;
+          vad = next;
+          if (ev && r.vadTimer) {
+            clearInterval(r.vadTimer);
+            r.vadTimer = null;
+            k.send("rec:auto", { id, reason: ev === "finish" ? "pause" : "nothing-heard" });
+          }
+        }, 100);
+      }
     } catch (e) {
       r.error =
         e instanceof Error && e.name === "NotAllowedError"

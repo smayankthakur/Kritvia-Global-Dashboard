@@ -83,6 +83,7 @@ function pushState() {
     canShare: v?.access === "write",
     signedIn: Boolean(client?.signedIn && me),
     venture: v?.venture_name ?? null,
+    handsFree,
   });
   refreshTray();
 }
@@ -249,7 +250,10 @@ function setMode(m: "type" | "note") {
 // ----------------------------------------------------------------- dictation --
 const pending = new Map<number, (r: { audio: Uint8Array | null; mime: string; durationMs: number; error?: string }) => void>();
 
-function start() {
+/** Click-started recordings finish by themselves after a pause; the hotkey is hold-to-talk. */
+let handsFree = false;
+
+function start(opts?: { handsFree?: boolean }) {
   if (!client || !me) {
     openSettings();
     return;
@@ -262,8 +266,9 @@ function start() {
   if (phaseTimer) clearTimeout(phaseTimer);
   phase = "recording";
   message = null;
+  handsFree = Boolean(opts?.handsFree);
   pushState();
-  bubble?.webContents.send("rec:start", { id: session_ });
+  bubble?.webContents.send("rec:start", { id: session_, handsFree });
 }
 
 function cancel() {
@@ -378,7 +383,7 @@ function finishRecording() {
 
 function toggle() {
   if (phase === "recording") finishRecording();
-  else start();
+  else start({ handsFree: true });
 }
 
 // --------------------------------------------------------------- global hook --
@@ -402,7 +407,7 @@ function startHook() {
   hook.on("keydown", (e) => {
     const [next, ev] = pttKeyDown(ptt, asLike(e), hotkey());
     ptt = next;
-    if (ev === "start") start();
+    if (ev === "start") start({ handsFree: false });
     else if (ev === "cancel") cancel();
     if (e.keycode === UK.Escape && phase === "recording") cancel();
   });
@@ -554,6 +559,13 @@ function registerIpc() {
     } catch (e) {
       settle("error", e instanceof Error ? e.message : "Could not save", 4000);
     }
+  });
+  // hands-free recording ended by itself in the bubble: a pause after speech, or nothing heard
+  ipcMain.on("rec:auto", (e, r: { id: number; reason: string }) => {
+    if (!bubble || e.sender !== bubble.webContents || r?.id !== session_ || phase !== "recording") return;
+    if (r.reason === "pause") return finishRecording();
+    cancel();
+    settle("error", "Didn't hear anything — check your mic isn't muted", 5000);
   });
   ipcMain.on("rec:result", (e, r: { id: number; audio: ArrayBuffer | null; mime: string; durationMs: number; error?: string }) => {
     if (!bubble || e.sender !== bubble.webContents) return;

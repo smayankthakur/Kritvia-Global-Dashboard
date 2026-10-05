@@ -11,49 +11,10 @@ import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap } from "@/lib/api";
 import { hotkeyLabel, isAllowedHotkey } from "@/lib/voice/hotkey";
+import { HotkeyCapture } from "./hotkey-capture";
 import { DEFAULT_VOICE_SETTINGS, useVoice, useVoiceSettings, voiceSettingsKey, type VoiceSettings } from "./voice-provider";
 
 const DESKTOP_RELEASES = "https://github.com/smayankthakur/Kritvia-Global-Dashboard/releases";
-
-function HotkeyCapture({ value, onChange }: { value: string; onChange: (code: string) => void }) {
-  const [listening, setListening] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    if (!listening) return;
-    document.body.dataset.voiceCapture = "1"; // the push-to-talk listener stands down while a key is being chosen
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.code === "Escape") {
-        setListening(false);
-        return;
-      }
-      if (!isAllowedHotkey(e.code)) {
-        setErr(`${hotkeyLabel(e.code)} can't be used — it would get in the way of typing. Try Right Ctrl, Right Alt or F8.`);
-        return;
-      }
-      setErr(null);
-      onChange(e.code);
-      setListening(false);
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("keydown", onKey, true);
-      delete document.body.dataset.voiceCapture;
-    };
-  }, [listening, onChange]);
-  return (
-    <div>
-      <div className="flex items-center gap-2">
-        <kbd className="rounded-md border border-border-strong bg-surface-2 px-2.5 py-1 font-sans text-sm font-medium">{hotkeyLabel(value)}</kbd>
-        <Button size="sm" onClick={() => setListening((l) => !l)} aria-pressed={listening} aria-label="Change push-to-talk key">
-          {listening ? "Press a key… (Esc to cancel)" : "Change"}
-        </Button>
-      </div>
-      {err ? <p className="mt-1.5 text-xs text-danger">{err}</p> : null}
-    </div>
-  );
-}
 
 function Row({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
   return (
@@ -158,8 +119,14 @@ export function VoiceSettingsPanel() {
 
       <div className="space-y-4">
         <Card>
-          <CardHeader title="Try it" description={`Click in the box, hold ${hotkeyLabel(voice.settings.hotkey)} and speak.`} />
+          <CardHeader
+            title="Try it"
+            description={`Click in the box, then click the mic and speak (it stops when you pause), or hold ${hotkeyLabel(voice.settings.hotkey)}.`}
+          />
           <div className="p-3">
+            <Button size="sm" className="mb-2" onClick={voice.openSetup}>
+              Set up your mic
+            </Button>
             <Textarea rows={4} value={tryText} onChange={(e) => setTryText(e.target.value)} placeholder="Your words appear here…" aria-label="Dictation test area" />
             {voice.last?.deployment ? (
               <p className="mt-2 text-xs text-subtle">
