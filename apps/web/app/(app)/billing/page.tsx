@@ -122,7 +122,7 @@ export default function BillingPage() {
 
   return (
     <>
-      <PageHeader eyebrow={org.name} title="Plan & billing" description="Your plan, this month's usage, and payments. Prices plus 18% GST; pay monthly, or yearly and get two months free." />
+      <PageHeader eyebrow={org.name} title="Plan & billing" description="Your plan, this month's usage, and payments. Prices include 18% GST; pay monthly, or yearly and get two months free." />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader title={p.plan.code === "free" || p.plan.code === "expired" ? p.plan.name : `${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : p.plan.code === "free" ? trialNote(p.trial) : p.plan.code === "expired" ? "Read-only until you choose a plan" : undefined} />
@@ -146,7 +146,7 @@ export default function BillingPage() {
               <li key={t.code} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">+{fmtTokens(t.tokens)} tokens</p>
-                  <p className="text-xs text-subtle">{rupees(t.price_inr)} + GST</p>
+                  <p className="text-xs text-subtle">{rupees(t.price_inr)} incl. GST</p>
                 </div>
                 <Button size="sm" disabled title="Usage packs go on sale when online payments are live">
                   Available soon

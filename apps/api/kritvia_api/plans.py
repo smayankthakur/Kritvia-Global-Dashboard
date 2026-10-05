@@ -1,4 +1,4 @@
-"""Plans and their limits (pricing 2026–27). Prices are in rupees, before 18% GST.
+"""Plans and their limits (pricing 2026–27). Prices are in rupees, including 18% GST.
 
 AI usage is counted in tokens sent to hosted models this calendar month (IST). Local models
 (on your own server) are never counted. When a workspace runs out, Kritvia keeps working on

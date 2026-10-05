@@ -44,5 +44,5 @@ Kritvia is an online service; nothing is shipped. Your plan is active as soon as
 
 ## 6. Prices
 
-Prices on our pricing page are in Indian rupees and exclude GST, which is added at the applicable rate (currently 18%) and shown before you pay. There are no other fees. Online payment for paid plans opens soon; until then, no one is charged.
+Prices on our pricing page are in Indian rupees and include GST at the applicable rate (currently 18%); the amount shown is the amount you pay. There are no other fees. Online payment for paid plans opens soon; until then, no one is charged.
 `;

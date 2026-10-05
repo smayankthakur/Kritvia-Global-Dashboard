@@ -71,7 +71,7 @@ export function scanCopy(root = ROOT) {
   return findings;
 }
 
-/** Any price shown on a public page must say GST is extra on the same page. */
+/** Any price shown on a public page must say how GST applies (prices include it) on the same page. */
 export function scanPrices(root = ROOT) {
   const findings = [];
   for (const f of walk(join(root, "app", "(public)"))) {

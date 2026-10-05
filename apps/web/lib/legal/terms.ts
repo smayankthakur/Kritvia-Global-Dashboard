@@ -132,7 +132,7 @@ We may remove content or suspend access under clause 14 if we reasonably believe
 
 10.1 **Plans and prices.** Current Plans and prices are shown on our pricing page and in the app. At the date of these Terms they are:
 
-| Plan | Price (excluding GST) | Main limits |
+| Plan | Price (including GST) | Main limits |
 | --- | --- | --- |
 | Free trial | ₹0 for 15 days | 1 business, 2 Users, 300,000 hosted-AI tokens a month, 500 MB business memory, 10 proposals; every Agent action needs Approval |
 | Starter | ₹2,499 a month or ₹24,990 a year | 1 business, 5 Users, 3 million hosted-AI tokens a month, 10 GB business memory; each Agent may act without Approval on one kind of action |
@@ -148,7 +148,7 @@ Features marked "Coming soon" on the pricing page are not yet available and are 
 
 10.2 **Billing.** Paid Plans are billed monthly or yearly in advance, as you choose, through our payment partner, Razorpay, and renew automatically at the end of each period until cancelled. You authorise recurring charges to the payment method you set up. We do not see or store full card or bank details.
 
-10.3 **Taxes.** Prices exclude Goods and Services Tax, which we charge at the applicable rate (currently 18%) and show on a GST-compliant tax invoice. If you give us your GSTIN before payment, the invoice will carry it so that you can claim input tax credit. If you must deduct tax at source, you will send us the TDS certificate within the statutory time; otherwise you will pay the amount withheld.
+10.3 **Taxes.** Prices include Goods and Services Tax at the applicable rate (currently 18%), shown separately on a GST-compliant tax invoice. If the GST rate changes, we may adjust prices from your next billing period with at least 30 days' notice. If you give us your GSTIN before payment, the invoice will carry it so that you can claim input tax credit. If you must deduct tax at source, you will send us the TDS certificate within the statutory time; otherwise you will pay the amount withheld.
 
 10.4 **Upgrades and downgrades.** An upgrade takes effect at once; the new price applies from the next billing date unless the app shows a pro-rata charge when you upgrade. A downgrade takes effect at the end of the current billing period. If your data or Users exceed the lower Plan's limits, you must reduce them, or the Service will become read-only for the excess until you do.
 

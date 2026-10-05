@@ -10,13 +10,13 @@ Last reviewed: 6 October 2026.
 | Webhook authenticity: HMAC-SHA256 of the raw body with `RAZORPAY_WEBHOOK_SECRET`, constant-time compare; 256 KB cap; rate limit | `razorpay_webhook` | `test_payment_webhook_trusts_only_our_plan_ids_and_prices` |
 | Idempotency: each event id is recorded once; a replayed event changes nothing | `billing_record()` | `test_billing.py` |
 | The plan comes **only** from a Razorpay plan id configured on our server — never from notes or metadata | `razorpay_webhook` | same |
-| The amount paid is checked: below the plan's price before GST means the plan is not granted and a **critical** security event alerts you | `minimum_paise()` | same |
+| The amount paid is checked: below the plan's price (GST included) means the plan is not granted and a **critical** security event alerts you | `minimum_paise()` | same |
 | Downgrades on cancel/halt; earned autonomy beyond the new plan's allowance is switched off | `limit_autonomy()` | `test_pricing.py` |
 | Proposal prices come from the business's rate card in code, never from the AI ("LLMs never do arithmetic") | `workflows/lead_triage.py`, `services/llm.py` | `test_lead_triage.py` |
 | Other webhooks: WhatsApp `X-Hub-Signature-256`; lead forms HMAC with a 5-minute timestamp window, and the same body never starts two runs | `routers/connectors.py` | `test_ops.py` |
 
 When you create the six Razorpay plans, set each plan's amount to the price on the pricing page
-(with or without GST — both pass the check), and put their ids in `RAZORPAY_PLAN_*`.
+(prices include GST: ₹2,499, ₹24,990 and so on), and put their ids in `RAZORPAY_PLAN_*`.
 
 ## AI guardrails
 

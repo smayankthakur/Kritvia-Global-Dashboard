@@ -85,7 +85,7 @@ export function SiteFooter({ wide }: { wide?: boolean }) {
       </div>
       <div className="border-t border-border">
         <p className={`mx-auto ${wide ? "max-w-6xl" : "max-w-4xl"} px-4 py-4 text-xs text-subtle`}>
-          © {year} {BUSINESS.legalName}. Prices exclude 18% GST. No advertising or tracking cookies.
+          © {year} {BUSINESS.legalName}. Prices include 18% GST. No advertising or tracking cookies.
         </p>
       </div>
     </footer>
