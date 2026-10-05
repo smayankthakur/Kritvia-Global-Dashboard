@@ -55,6 +55,8 @@ export function ActivityHeatmap({ days, weeks = 12 }: { days: Insights["days"]; 
   const cols = grid.cells.length / 7;
   return (
     <div className="relative">
+      {/* The hover tooltip is a mouse extra; the totals are also in the text next to the chart. */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         className="grid grid-flow-col gap-[3px]"
         style={{ gridTemplateRows: "repeat(7, 12px)", gridTemplateColumns: `repeat(${cols}, 12px)` }}
@@ -63,6 +65,7 @@ export function ActivityHeatmap({ days, weeks = 12 }: { days: Insights["days"]; 
         onMouseLeave={() => setHover(null)}
       >
         {grid.cells.map((c) => (
+          // eslint-disable-next-line jsx-a11y/no-static-element-interactions
           <div
             key={c.day}
             className={`h-3 w-3 rounded-[3px] ${c.future ? "bg-transparent" : STEP_CLASS[step(c.words, grid.max)]}`}

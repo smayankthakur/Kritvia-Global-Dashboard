@@ -66,7 +66,7 @@ export default function SecurityPage() {
       <ul>
         <li>
           Download your data or delete your account from <strong>Your account</strong> at any time. See the{" "}
-          <a href="/privacy" className="text-accent hover:underline">
+          <a href="/privacy" className="text-accent underline underline-offset-2">
             Privacy policy
           </a>
           .
@@ -75,7 +75,7 @@ export default function SecurityPage() {
       <h2>Report a problem</h2>
       <p>
         Found a security issue? Email{" "}
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-accent hover:underline">
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-accent underline underline-offset-2">
           {SUPPORT_EMAIL}
         </a>{" "}
         with &quot;Security&quot; in the subject. We reply within two business days and do not take action against good-faith research.

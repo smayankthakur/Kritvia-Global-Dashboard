@@ -45,6 +45,8 @@ export function FileDrop({
 
   return (
     <div className={className}>
+      {/* Drag-and-drop is a mouse extra: the label opens the file input, which works from the keyboard. */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <label
         htmlFor={`fd-${id}`}
         onDragOver={(e) => {

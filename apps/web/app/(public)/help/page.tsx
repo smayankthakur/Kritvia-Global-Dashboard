@@ -148,7 +148,7 @@ export default function HelpPage() {
       </h2>
       <p className="mt-1 mb-4 text-sm text-muted">
         We reply within one business day. Or email{" "}
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-accent hover:underline">
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-accent underline underline-offset-2">
           {SUPPORT_EMAIL}
         </a>
         .

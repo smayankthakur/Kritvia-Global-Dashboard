@@ -22,9 +22,9 @@
   --fg: #0b1324;
   --fg-muted: #3c4a5f;
   --fg-subtle: #536176;
-  --accent: #2563eb;
-  --accent-2: #1d4ed8;
-  --accent-hover: #1d4ed8;
+  --accent: #1d4ed8;
+  --accent-2: #1e40af;
+  --accent-hover: #1e40af;
   --accent-fg: #ffffff;
   --accent-soft: rgb(37 99 235 / 0.12);
   --accent-soft-fg: #1e3a8a;
@@ -520,8 +520,14 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9em;
-  display: block;
+}
+.prose-kv .kv-table {
   overflow-x: auto;
+  border-radius: 0.5rem;
+}
+.prose-kv .kv-table:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 .prose-kv th,
 .prose-kv td {

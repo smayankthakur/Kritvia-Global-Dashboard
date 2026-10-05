@@ -9,10 +9,21 @@ export function Markdown({ children, className }: { children: string; className?
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          a: ({ href, children: c }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer nofollow">
-              {c}
-            </a>
+          a: ({ href, children: c }) =>
+            href?.startsWith("/") || href?.startsWith("#") ? (
+              <a href={href}>{c}</a>
+            ) : (
+              <a href={href} target="_blank" rel="noopener noreferrer nofollow">
+                {c}
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ),
+          // Wide tables scroll sideways on phones; the wrapper can take keyboard focus so the
+          // table can be scrolled with arrow keys too (WCAG 2.1.1).
+          table: ({ children: c }) => (
+            <div className="kv-table" role="region" aria-label="Table" tabIndex={0}>
+              <table>{c}</table>
+            </div>
           ),
         }}
       >

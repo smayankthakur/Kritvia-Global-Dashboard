@@ -10,7 +10,7 @@ export type LabelColor = TaskLabel["color"];
 
 /** Trello-like label colours: a solid chip in light and dark themes, white or dark text for 4.5:1. */
 export const LABEL_COLORS: { id: LabelColor; name: string; bg: string; fg: string }[] = [
-  { id: "green", name: "Green", bg: "#16a34a", fg: "#ffffff" },
+  { id: "green", name: "Green", bg: "#15803d", fg: "#ffffff" },
   { id: "yellow", name: "Yellow", bg: "#facc15", fg: "#1f2937" },
   { id: "orange", name: "Orange", bg: "#f97316", fg: "#1f2937" },
   { id: "red", name: "Red", bg: "#dc2626", fg: "#ffffff" },

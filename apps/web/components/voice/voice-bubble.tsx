@@ -159,11 +159,17 @@ export function VoiceBubble() {
   const modeInfo = MODES.find((m) => m.id === v.mode)!;
 
   return (
+    // Hover or keyboard focus inside reveals the same controls (focus handlers below).
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className="fixed z-40 flex flex-col items-end gap-2"
       style={{ right: pos.right, bottom: pos.bottom }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHover(false);
+      }}
       data-voice-ignore
     >
       {v.learn ? (
