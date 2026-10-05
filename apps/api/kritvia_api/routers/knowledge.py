@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from kritvia_api.config import get_settings
+from kritvia_api.services.uploads import read_checked
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.runner import start_run
@@ -30,13 +30,9 @@ DocKind = Literal["upload", "note", "proposal", "report", "drive", "email"]
 ROLE_NAMES = {"venture_admin", "operator", "approver", "viewer", "kitchen_manager", "loan_officer"}
 
 
-async def read_upload(file: UploadFile) -> bytes:
-    limit = get_settings().max_upload_mb * 1024 * 1024
-    data = await file.read(limit + 1)
-    if len(data) > limit:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, f"file larger than {limit // 1048576} MB")
-    if not data:
-        raise HTTPException(422, "empty file")
+async def read_upload(file: UploadFile, kind: str = "document") -> bytes:
+    """Size-limited read with a type allowlist and magic-number check (services/uploads.py)."""
+    data, _ = await read_checked(file, kind)
     return data
 
 
@@ -95,10 +91,10 @@ async def upload_document(venture_id: uuid.UUID, user_id: UserId, svc: Svc, file
     roles = sorted({r.strip() for r in (restricted_to or "").split(",") if r.strip()}) or None
     if roles and not set(roles) <= ROLE_NAMES:
         raise HTTPException(422, "unknown role in restricted_to")
-    data = await read_upload(file)
+    data, mime = await read_checked(file, "document")
     try:
         res = await memory.ingest(actor, title=title or file.filename or "document", kind=kind, data=data,
-                                  filename=file.filename or "document", mime=file.content_type, access_roles=roles,
+                                  filename=file.filename or "document", mime=mime, access_roles=roles,
                                   sensitive=sensitive or bool(roles), created_by=user_id, extract_knowledge=extract,
                                   extraction_focus="proposal" if kind == "proposal" else "general")
     except ExtractionError as exc:
@@ -503,7 +499,7 @@ async def upload_meeting(venture_id: uuid.UUID, user_id: UserId, svc: Svc, file:
             names = {str(k): str(v)[:80] for k, v in json.loads(speaker_names).items()}
         except (ValueError, AttributeError):
             raise HTTPException(422, "speaker_names must be a JSON object") from None
-    data = await read_upload(file)
+    data, mime = await read_checked(file, "audio")
     doc_id = uuid.uuid4()
     async with tenant_tx(user_id) as conn:
         org = await venture_org(conn, venture_id)
@@ -515,7 +511,7 @@ async def upload_meeting(venture_id: uuid.UUID, user_id: UserId, svc: Svc, file:
                     "INSERT INTO documents (id, org_id, venture_id, title, kind, mime, sha256, size_bytes, raw_enc,"
                     " sensitive, status, meta, created_by) VALUES (:id, :o, :v, :t, 'meeting', :m, :h, :sz, :raw,"
                     " :se, 'pending', CAST(:meta AS jsonb), :u)"),
-                    {"id": doc_id, "o": org, "v": venture_id, "t": title[:300], "m": file.content_type,
+                    {"id": doc_id, "o": org, "v": venture_id, "t": title[:300], "m": mime,
                      "h": hashlib.sha256(data).hexdigest(), "sz": len(data), "raw": raw, "se": sensitive,
                      "meta": json.dumps({"filename": file.filename}), "u": user_id})
         except DBAPIError as exc:

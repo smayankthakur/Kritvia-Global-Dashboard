@@ -20,13 +20,13 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from kritvia_api.services.uploads import read_checked
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.runner import start_run
 from kritvia_api.errors import raise_for_db
 from kritvia_api.ratelimit import client_ip, limiter
-from kritvia_api.routers.knowledge import read_upload
 from kritvia_api.services import memory
 from kritvia_api.services.crypto import EnvelopeCrypto, mask_label, principal_hash
 from kritvia_api.services.textextract import ExtractionError
@@ -273,7 +273,10 @@ async def upload_loan_documents(venture_id: uuid.UUID, application_id: uuid.UUID
                                        " AND id = :id"), {"v": venture_id, "id": application_id})).first()
     if app is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "application not found")
-    payload = [(f.filename or "document", f.content_type, await read_upload(f)) for f in files]
+    payload = []
+    for f in files:
+        data, mime = await read_checked(f, "document")
+        payload.append((f.filename or "document", mime, data))
     actor = memory.UserActor(user_id, app.org_id, venture_id, svc.router, svc.keys, workflow="loan_intake")
     warnings = await attach_documents(actor, application_id, payload, user_id, app.data_principal)
     run_id = None
@@ -371,7 +374,8 @@ async def public_upload(token: str, request: Request, svc: Svc, files: list[Uplo
         name = (f.filename or "document").split("/")[-1].split("\\")[-1]
         if not name.lower().endswith(allowed):
             raise HTTPException(422, "only PDF and image files are accepted")
-        payload.append((name, f.content_type, await read_upload(f)))
+        data, mime = await read_checked(f, "image_or_pdf")
+        payload.append((name, mime, data))
 
     from kritvia_api.engine.context import RunContext
     ctx = RunContext(run_id=uuid.uuid4(), org_id=p.org_id, venture_id=p.venture_id, run_as=p.run_as,

@@ -1,5 +1,6 @@
 "use client";
 
+import { csrfHeaders } from "@/lib/bff/csrf";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -32,7 +33,7 @@ export default function AccountPage() {
   const remove = useMutation({
     mutationFn: () => unwrap(api.POST("/auth/me/delete", { body: { confirm: "DELETE" } })),
     onSuccess: async () => {
-      await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+      await fetch("/api/auth/logout", { method: "POST", headers: csrfHeaders() }).catch(() => undefined);
       window.location.assign("/login");
     },
     onError: (e) => {

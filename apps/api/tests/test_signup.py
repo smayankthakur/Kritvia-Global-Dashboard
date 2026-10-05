@@ -12,6 +12,7 @@ import httpx
 from conftest import ADMIN_DSN
 from kritvia_api.config import get_settings
 from kritvia_api.services.google import GoogleClient
+from kritvia_api.ratelimit import signin_guard
 from kritvia_api.services.mailer import get_mailer
 
 
@@ -61,7 +62,10 @@ async def test_code_is_single_use_and_burns_after_five_wrong_tries(client):
         r = await client.post("/auth/email/verify", json={"email": email, "code": wrong})
         assert r.status_code == 401
     r = await client.post("/auth/email/verify", json={"email": email, "code": code})
-    assert r.status_code == 401                       # burnt by the wrong guesses
+    assert r.status_code == 429                       # five failures: attempts paused for a minute
+    signin_guard._mem.clear()                         # ... a minute later
+    r = await client.post("/auth/email/verify", json={"email": email, "code": code})
+    assert r.status_code == 401                       # and the code was burnt by the wrong guesses
 
     await client.post("/auth/email/start", json={"email": email})
     code = _last_code(email)

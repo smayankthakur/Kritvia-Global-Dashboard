@@ -7,7 +7,7 @@ describe("free trial", () => {
     const free = PLAN_CARDS.find((p) => p.code === "free")!;
     expect(free.name).toBe("Free trial");
     expect(free.highlights[0]).toBe("15 days free, then choose a plan");
-    expect(priceFor(free, "monthly").note).toBe("For 15 days, no card needed");
+    expect(priceFor(free, "monthly").note).toBe("No card needed");
   });
 
   it("says where the trial stands and nudges only near the end", () => {

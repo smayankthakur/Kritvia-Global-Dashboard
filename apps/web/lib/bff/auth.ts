@@ -1,4 +1,5 @@
 import { REFRESH_COOKIE, clearSessionCookies, parseCookies, sessionCookies, type TokenPair } from "./cookies";
+import { csrfOk, csrfRefused } from "./csrf";
 import { forbiddenOrigin, isSameOrigin } from "./origin";
 
 export function apiUrl(): string {
@@ -55,6 +56,7 @@ export async function exchangeCredentials(
 
 export async function logout(req: Request, doFetch: typeof fetch = fetch): Promise<Response> {
   if (!isSameOrigin(req)) return forbiddenOrigin();
+  if (!csrfOk(req)) return csrfRefused();
   const rt = parseCookies(req.headers.get("cookie"))[REFRESH_COOKIE];
   if (rt) {
     try {

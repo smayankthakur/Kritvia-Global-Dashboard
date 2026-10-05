@@ -13,6 +13,7 @@
  * Sign in with Google uses the same redirect URI: start sets kv_signin instead, and the
  * callback tells the two apart by the state's "typ" claim (the API verifies the state).
  */
+import { CSRF_HEADER, csrfOk, csrfRefused, newCsrfToken } from "./csrf";
 import { forbiddenOrigin, isSameOrigin, requestHost } from "./origin";
 import { parseCookies, serializeCookie, sessionCookies, type TokenPair } from "./cookies";
 import { proxyRequest, type ProxyDeps } from "./proxy";
@@ -51,6 +52,14 @@ function innerRequest(req: Request, method: string, body: unknown): Request {
     const v = req.headers.get(h);
     if (v) headers.set(h, v);
   }
+  // We build this request ourselves after checking the browser's, so it carries its own token.
+  const token = newCsrfToken();
+  headers.set(CSRF_HEADER, token);
+  const others = (headers.get("cookie") ?? "")
+    .split(";")
+    .map((c) => c.trim())
+    .filter((c) => c && !/^(__Host-)?kv_csrf=/.test(c));
+  headers.set("cookie", [...others, `kv_csrf=${token}`].join("; "));
   return new Request(req.url, { method, headers, body: JSON.stringify(body) });
 }
 
@@ -63,8 +72,9 @@ export async function startGoogle(
   req: Request,
   deps: ProxyDeps,
 ): Promise<Response> {
-  // CSRF: the browser's own request must be same-origin; the inner request is built by us.
+  // CSRF: the browser's own request must be same-origin and carry the token; the inner request is built by us.
   if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
+  if (!csrfOk(req)) return csrfRefused();
   let ventureId = "";
   try {
     ventureId = String(

@@ -5,8 +5,10 @@ and grouped in families: presenting a used token revokes the whole family
 (stolen-token detection). Login and registration are rate-limited per IP and
 per email.
 """
+import asyncio
 import hashlib
 import hmac
+import logging
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -21,7 +23,7 @@ from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import AnonDB, Svc, TenantDB, UserId
 from kritvia_api.errors import raise_for_db
-from kritvia_api.ratelimit import client_ip, limiter
+from kritvia_api.ratelimit import client_ip, limiter, signin_guard
 from kritvia_api.schemas import (
     EmailStartIn,
     EmailStartOut,
@@ -42,6 +44,7 @@ from kritvia_api.services.google import GoogleError
 from kritvia_api.services.mailer import MailError, get_mailer
 from kritvia_api.security import hash_password, issue_access_token, verify_password
 
+log = logging.getLogger("kritvia.auth")
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -68,7 +71,11 @@ async def _limit(request: Request, email: str | None = None) -> None:
 
 @router.post("/register", response_model=TokenOut, status_code=201)
 async def register(body: RegisterIn, db: AnonDB, request: Request) -> TokenOut:
+    """Password sign-up, for tests and local development only. In production everyone signs up
+    by proving their email address with a code, so this can't reveal who has an account."""
     await _limit(request, body.email)
+    if get_settings().environment == "production":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not Found")
     if not get_settings().signup_open:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "sign-up is closed on this server")
     try:
@@ -87,11 +94,33 @@ async def login(body: LoginIn, db: AnonDB, request: Request) -> TokenOut:
     await _limit(request, body.email)
     # A slow, steady password guesser still runs into an hourly cap per address.
     await limiter.hit_window(f"login-hour:{body.email.lower()}", 30, 3600)
+    await signin_guard.check(body.email)
     row = (await db.execute(text("SELECT * FROM auth_lookup(:e)"), {"e": body.email})).first()
     ok = verify_password(body.password, row.password_hash if row else None)
     if not ok or row is None or not row.is_active:
+        await _failed_attempt(body.email, row is not None)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid credentials")
+    await signin_guard.succeeded(body.email)
     return await _pair(db, row.id, request)
+
+
+async def _failed_attempt(email: str, has_account: bool) -> None:
+    """Counts a failed sign-in; when the address first gets locked, tells the real owner."""
+    n = await signin_guard.failed(email)
+    if n == signin_guard.FREE_TRIES and has_account:
+        asyncio.get_running_loop().create_task(_tell_owner_about_lock(email))
+
+
+async def _tell_owner_about_lock(email: str) -> None:
+    try:
+        await get_mailer().send(
+            email, "Several failed sign-in attempts on your Kritvia account",
+            "Someone (maybe you) tried to sign in to your Kritvia account several times with the wrong password "
+            "or code, so we've paused sign-in attempts for a few minutes.\n\n"
+            "If it was you, wait a little and try again, or sign in with Google. If it wasn't you, your account "
+            "is still safe: no one got in. You can change your password in Kritvia under Your account.")
+    except Exception:   # a notice that can't be sent never affects sign-in
+        log.warning("could not send the sign-in lock notice")
 
 
 @router.post("/refresh", response_model=TokenOut)
@@ -144,9 +173,12 @@ async def change_password(body: PasswordIn, user_id: UserId, db: TenantDB, reque
     tokens rejected) and returns a fresh pair for the current one."""
     await _limit(request, str(user_id))
     row = (await db.execute(text("SELECT email FROM users WHERE id = :u"), {"u": user_id})).first()
+    await signin_guard.check(row.email)    # a stolen session can't brute-force the current password
     cur = (await db.execute(text("SELECT * FROM auth_lookup(:e)"), {"e": row.email})).first()
     if not verify_password(body.current_password, cur.password_hash):
+        await signin_guard.failed(row.email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "current password is wrong")
+    await signin_guard.succeeded(row.email)
     await db.execute(text("SELECT auth_set_password(:h)"), {"h": hash_password(body.new_password)})
     return await _pair(db, user_id, request)
 
@@ -195,12 +227,15 @@ async def email_verify(body: EmailVerifyIn, request: Request) -> TokenOut:
     await _limit(request, email)
     # Six digits are guessable at minute-rate limits over weeks; a daily cap per address stops that.
     await limiter.hit_window(f"email-verify-day:{email}", 30, 86400)
+    await signin_guard.check(email)
     # Own transaction: a wrong code must count as an attempt even though we answer 401.
     async with tenant_tx(None) as db:
         ok = (await db.execute(text("SELECT auth_code_consume(:e, :h)"),
                                {"e": email, "h": _code_hash(email, body.code)})).scalar()
     if not ok:
+        await signin_guard.failed(email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
+    await signin_guard.succeeded(email)
     async with tenant_tx(None) as db:
         if not await _signup_allowed(db, email):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "sign-up is closed on this server")
@@ -217,11 +252,14 @@ async def password_reset(body: PasswordResetIn, request: Request) -> TokenOut:
     set, every other session is signed out, and the browser is signed in."""
     email = body.email.lower()
     await _limit(request, email)
+    await signin_guard.check(email)
     async with tenant_tx(None) as db:
         ok = (await db.execute(text("SELECT auth_code_consume(:e, :h)"),
                                {"e": email, "h": _code_hash(email, body.code)})).scalar()
     if not ok:
+        await signin_guard.failed(email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
+    await signin_guard.succeeded(email)
     async with tenant_tx(None) as db:
         uid = (await db.execute(text("SELECT auth_password_reset(:e, :h)"),
                                 {"e": email, "h": hash_password(body.new_password)})).scalar()

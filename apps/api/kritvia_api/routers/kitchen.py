@@ -149,7 +149,7 @@ async def import_csv(venture_id: uuid.UUID,
     vendors(code,name,email,phone,lead_days) recipes(dish_code,ingredient_code,qty_per_portion,wastage_pct)
     vendor_items(vendor_code,ingredient_code,sku,pack_size,price_per_pack,min_order_packs)."""
     org = await _write_access(db, venture_id)
-    rows = _csv_rows(await read_upload(file))
+    rows = _csv_rows(await read_upload(file, "csv"))
     try:
         async with db.begin_nested():
             if entity in ENTITY_MODELS:
@@ -323,7 +323,7 @@ async def upload_sales(venture_id: uuid.UUID, db: TenantDB, file: UploadFile = F
     """Aggregator export or template CSV: date, dish (code or name), qty[, channel, revenue]."""
     org = await _write_access(db, venture_id)
     codes, names = await dish_maps(db, venture_id)
-    rows, warnings = parse_sales_csv(await read_upload(file), codes, names)
+    rows, warnings = parse_sales_csv(await read_upload(file, "csv"), codes, names)
     try:
         async with db.begin_nested():
             n = await upsert_sales(db, org, venture_id, rows, "csv")

@@ -44,7 +44,13 @@ describe("auth route handlers", () => {
 
   it("logout revokes the refresh token and clears both cookies", async () => {
     const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
-    const res = await logout(req("/api/auth/logout", {}, { cookie: "kv_at=AT; kv_rt=RT" }), fetchMock as unknown as typeof fetch);
+    // without the CSRF token a forged logout is refused
+    expect((await logout(req("/api/auth/logout", {}, { cookie: "kv_at=AT; kv_rt=RT" }), fetchMock as unknown as typeof fetch)).status).toBe(403);
+    const tok = "csrf-token-0123456789abcdef";
+    const res = await logout(
+      req("/api/auth/logout", {}, { cookie: `kv_at=AT; kv_rt=RT; kv_csrf=${tok}`, "x-kv-csrf": tok }),
+      fetchMock as unknown as typeof fetch,
+    );
     expect(res.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];

@@ -47,7 +47,7 @@ async def import_tally(venture_id: uuid.UUID, user_id: UserId, svc: Svc, file: U
                                   {"v": venture_id})).scalar()
     if not can_write:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found")
-    data = await read_upload(file)
+    data = await read_upload(file, "xml")
     try:
         vouchers = parse_vouchers(data)
     except TallyParseError as exc:

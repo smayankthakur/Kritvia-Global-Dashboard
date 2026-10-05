@@ -277,7 +277,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register */
+        /**
+         * Register
+         * @description Password sign-up, for tests and local development only. In production everyone signs up
+         *     by proving their email address with a code, so this can't reveal who has an account.
+         */
         post: operations["register_auth_register_post"];
         delete?: never;
         options?: never;

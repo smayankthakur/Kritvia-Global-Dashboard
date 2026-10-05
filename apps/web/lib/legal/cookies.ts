@@ -1,9 +1,9 @@
 /**
- * Cookie Policy, version 2026-10-05. Lists every cookie and storage key Kritvia sets. When you add
+ * Cookie Policy, version 2026-10-06. Lists every cookie and storage key Kritvia sets. When you add
  * one, add it here and, if it is not strictly necessary, register it in lib/consent.ts so the
  * consent banner asks first (tests/consent.test.ts checks the two lists agree).
  */
-export const COOKIES_UPDATED = "5 October 2026";
+export const COOKIES_UPDATED = "6 October 2026";
 
 export const COOKIES_MD = `## 1. What this policy covers
 
@@ -25,6 +25,7 @@ A cookie is a small text file a website stores in your browser. Similar technolo
 | kv_at | Keeps you signed in (a short-lived access token). Page scripts cannot read it. | Strictly necessary, first party | 60 minutes |
 | kv_rt | Renews your sign-in without asking again. Page scripts cannot read it. | Strictly necessary, first party | 30 days |
 | kv_oauth, kv_signin | Protect the Google sign-in and connection steps against forgery. | Strictly necessary, first party | 10 minutes |
+| \\_\\_Host-kv_csrf | A random security token that proves a change really came from a Kritvia page (protection against cross-site request forgery). | Strictly necessary, first party | 1 year |
 | kv_org, kv_venture | Remember the organisation and business you last opened. | Strictly necessary (functional), first party | 1 year |
 | kv_theme | Remembers light or dark mode. | Strictly necessary (functional), first party | 1 year |
 

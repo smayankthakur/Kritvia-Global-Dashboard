@@ -4,6 +4,7 @@ import { proxyRequest, resetRefreshCache } from "@/lib/bff/proxy";
 
 const API = "http://api.test";
 const ORIGIN = "http://app.test";
+const CSRF = "csrf-token-0123456789abcdef";
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: string | null; contentType: string | null };
 
@@ -25,7 +26,11 @@ function mockApi(handler: (c: Call, n: number) => Response | Promise<Response>) 
 function browserReq(path: string, init: { method?: string; cookie?: string; body?: BodyInit; headers?: Record<string, string> } = {}) {
   const headers: Record<string, string> = { host: "app.test", ...(init.headers ?? {}) };
   if (init.cookie) headers.cookie = init.cookie;
-  if (init.method && init.method !== "GET") headers.origin = ORIGIN;
+  if (init.method && init.method !== "GET") {
+    headers.origin = ORIGIN;
+    headers["x-kv-csrf"] = CSRF;
+    headers.cookie = `${headers.cookie ? `${headers.cookie}; ` : ""}kv_csrf=${CSRF}`;
+  }
   return new Request(`${ORIGIN}/api/k/${path}`, { method: init.method ?? "GET", headers, body: init.body });
 }
 
@@ -187,5 +192,24 @@ describe("BFF proxy", () => {
     }) as unknown as typeof fetch;
     const res = await proxyRequest(browserReq("orgs", { cookie: "kv_at=AT" }), ["orgs"], { apiUrl: API, fetch: fetchMock });
     expect(res.status).toBe(502);
+  });
+
+  it("refuses a state-changing request without a matching CSRF token", async () => {
+    const { fetchMock, calls } = mockApi(() => json(200, {}));
+    const base = { host: "app.test", origin: ORIGIN };
+    const noToken = new Request(`${ORIGIN}/api/k/orgs`, { method: "POST", headers: { ...base, cookie: "kv_at=AT" }, body: "{}" });
+    const mismatch = new Request(`${ORIGIN}/api/k/orgs`, {
+      method: "POST",
+      headers: { ...base, cookie: `kv_at=AT; kv_csrf=${CSRF}`, "x-kv-csrf": "someone-elses-token-0000000" },
+      body: "{}",
+    });
+    for (const r of [noToken, mismatch]) {
+      const res = await proxyRequest(r, ["orgs"], { apiUrl: API, fetch: fetchMock });
+      expect(res.status).toBe(403);
+    }
+    expect(calls).toHaveLength(0);
+    // the same request with the token goes through, and GETs never need one
+    const ok = await proxyRequest(browserReq("orgs", { method: "POST", cookie: "kv_at=AT", body: "{}" }), ["orgs"], { apiUrl: API, fetch: fetchMock });
+    expect(ok.status).toBe(200);
   });
 });

@@ -65,3 +65,75 @@ class RateLimiter:
 
 
 limiter = RateLimiter()
+
+
+class SignInGuard:
+    """Progressive lock-out after repeated failed sign-ins for one email address.
+
+    After FREE_TRIES consecutive failures, further attempts for that address are refused for
+    1, 2, 4 … up to 60 minutes (doubling with each further failure); a success clears it. It
+    applies the same way whether or not the address has an account, so the answer never
+    reveals who is registered, and the lock is on attempts, not on the account: the real owner
+    can still sign in with Google. Works with Valkey/Redis in production and memory in tests.
+    """
+
+    FREE_TRIES = 5
+    MAX_LOCK_S = 3600
+    MEMORY_S = 24 * 3600
+
+    def __init__(self) -> None:
+        self._mem: dict[str, tuple[int, float]] = {}   # key -> (failures, locked_until)
+
+    @staticmethod
+    def _key(email: str) -> str:
+        return f"signin-fail:{email.strip().lower()}"
+
+    def lock_seconds(self, failures: int) -> int:
+        if failures < self.FREE_TRIES:
+            return 0
+        return min(60 * 2 ** (failures - self.FREE_TRIES), self.MAX_LOCK_S)
+
+    async def _get(self, key: str) -> tuple[int, float]:
+        backend = await limiter._backend()
+        if backend is None:
+            return self._mem.get(key, (0, 0.0))
+        raw = await backend.hmget(key, "n", "until")
+        return int(raw[0] or 0), float(raw[1] or 0)
+
+    async def check(self, email: str) -> None:
+        """429 while the address is locked."""
+        _, until = await self._get(self._key(email))
+        left = int(until - time.time())
+        if left > 0:
+            mins = max(1, (left + 59) // 60)
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                                f"too many failed attempts; try again in {mins} minute{'s' if mins != 1 else ''}",
+                                headers={"Retry-After": str(left)})
+
+    async def failed(self, email: str) -> int:
+        """Records a failure; returns the number of consecutive failures."""
+        key = self._key(email)
+        n, _ = await self._get(key)
+        n += 1
+        until = time.time() + self.lock_seconds(n)
+        backend = await limiter._backend()
+        if backend is None:
+            self._mem[key] = (n, until)
+            if len(self._mem) > 50_000:
+                now = time.time()
+                self._mem = {k: v for k, v in self._mem.items() if v[1] > now - self.MEMORY_S}
+        else:
+            await backend.hset(key, mapping={"n": n, "until": until})
+            await backend.expire(key, self.MEMORY_S)
+        return n
+
+    async def succeeded(self, email: str) -> None:
+        key = self._key(email)
+        backend = await limiter._backend()
+        if backend is None:
+            self._mem.pop(key, None)
+        else:
+            await backend.delete(key)
+
+
+signin_guard = SignInGuard()

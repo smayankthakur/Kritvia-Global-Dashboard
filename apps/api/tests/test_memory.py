@@ -161,7 +161,7 @@ async def test_meeting_recording_to_cited_tasks(world, fake_llm):
 async def test_voice_note_transcribes(world, fake_llm):
     alice, v = world["alice"], world["site"]
     fake_llm.transcript = {"text": "Kal subah client ko proposal bhejna hai", "language": "hi", "segments": []}
-    files = {"file": ("note.webm", io.BytesIO(b"fake"), "audio/webm")}
+    files = {"file": ("note.webm", io.BytesIO(b"\x1aE\xdf\xa3fake"), "audio/webm")}
     r = await alice.post(f"/ventures/{v}/transcribe", files=files)
     assert r.status_code == 200 and r.json()["text"].startswith("Kal subah")
     # sensitive voice notes never leave the VM

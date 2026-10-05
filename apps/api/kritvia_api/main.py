@@ -1,11 +1,16 @@
 from contextlib import asynccontextmanager
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.bodylimit import BodyLimitMiddleware
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import dispose_engine
+from kritvia_api.errors import sqlstate
 from kritvia_api.routers import (ai_models, approvals, audit, auth, billing, board, compliance, connectors, dashboard, kitchen, knowledge, leads,
                                  notice, orgs, privacy, push, sitelytc, support, tally, task_boards, truhome, ventures, voice, workflows)
 
@@ -25,6 +30,8 @@ def check_production_config() -> None:
         problems.append("SANDBOX_URL is not set (LocalSandbox has no network isolation)")
     if s.dispatch_mode != "arq":
         problems.append("DISPATCH_MODE must be 'arq' in production")
+    if s.email_code_minutes > 15:
+        problems.append("EMAIL_CODE_MINUTES must be 15 or less (sign-in and reset codes expire quickly)")
     if s.mail_transport == "log" and s.signup_open:
         problems.append("MAIL_TRANSPORT=log would write sign-in codes to the logs; use smtp, or set SIGNUP_OPEN=false")
     if problems:
@@ -41,15 +48,33 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     s = get_settings()
     app = FastAPI(title=s.app_name, version="1.0.0", lifespan=lifespan,
+                  # No API explorer or schema in production: nothing to map the attack surface from.
                   docs_url=None if s.environment == "production" else "/docs",
+                  openapi_url=None if s.environment == "production" else "/openapi.json",
                   redoc_url=None)
+    origins = s.allowed_origins
+    if s.environment == "production":
+        # Browsers reach the API only through the web app's server, so production CORS allows
+        # nothing but exact https:// origins; anything else in ALLOWED_ORIGINS is ignored.
+        dropped = [o for o in origins if o == "*" or not o.startswith("https://")]
+        if dropped:
+            logging.getLogger("kritvia").warning("ignoring non-https CORS origins in production: %s", dropped)
+        origins = [o for o in origins if o not in dropped]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=s.allowed_origins,
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
+        max_age=600,
     )
+
+    @app.exception_handler(DBAPIError)
+    async def bad_text(request: Request, exc: DBAPIError):
+        # Text with a NUL byte or an invalid encoding is refused as bad input (422), never a 500.
+        if sqlstate(exc) in ("22021", "22P05"):
+            return JSONResponse({"detail": "the text contains characters that aren't allowed"}, status_code=422)
+        raise exc
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):

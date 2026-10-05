@@ -7,11 +7,12 @@
  *   because the API treats a reused refresh token as theft and revokes the family.
  * - Request bodies (JSON or multipart, with the original boundary) are read once so the
  *   retry can resend them; responses (including binary downloads) are streamed back.
- * - Non-GET requests must pass the Origin check (CSRF).
+ * - Non-GET requests must pass the Origin check and carry the CSRF token (lib/bff/csrf.ts).
  * - Token-issuing auth endpoints are not reachable through the proxy: tokens would land
  *   in page JavaScript. Use /api/auth/* instead.
  */
 import { ACCESS_COOKIE, REFRESH_COOKIE, clearSessionCookies, parseCookies, sessionCookies, type TokenPair } from "./cookies";
+import { csrfOk, csrfRefused } from "./csrf";
 import { forbiddenOrigin, isSameOrigin } from "./origin";
 
 export interface ProxyDeps {
@@ -173,6 +174,7 @@ export async function proxyRequest(req: Request, segments: string[], deps: Proxy
   const doFetch = deps.fetch ?? fetch;
   const method = req.method.toUpperCase();
   if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
+  if (!csrfOk(req)) return csrfRefused();
 
   const path = normalisePath(segments);
   if (!path) return json(400, "bad path");

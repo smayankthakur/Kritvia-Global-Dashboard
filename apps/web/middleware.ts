@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/bff/cookies";
+import { ACCESS_COOKIE, REFRESH_COOKIE, cookieSecure } from "@/lib/bff/cookies";
+import { csrfCookie, csrfCookieName, newCsrfToken } from "@/lib/bff/csrf";
 import { buildCsp, makeNonce } from "@/lib/csp";
 
 const PUBLIC_PAGES = [
@@ -58,6 +59,9 @@ function withCsp(req: NextRequest, rewriteTo?: URL) {
     ? NextResponse.rewrite(rewriteTo, { request: { headers: requestHeaders } })
     : NextResponse.next({ request: { headers: requestHeaders } });
   res.headers.set("Content-Security-Policy", csp);
+  // Hand out a CSRF token with every page (see lib/bff/csrf.ts).
+  const secure = cookieSecure();
+  if (!req.cookies.get(csrfCookieName(secure))?.value) res.headers.append("Set-Cookie", csrfCookie(newCsrfToken(), secure));
   return res;
 }
 

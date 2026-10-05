@@ -4,11 +4,19 @@
 // the bearer token from an httpOnly cookie — the page never handles tokens.
 import createClient from "openapi-fetch";
 import type { components, paths } from "@kritvia/shared-types";
+import { csrfHeaders } from "@/lib/bff/csrf";
 
 export type Schemas = components["schemas"];
 export type Paths = paths;
 
 export const api = createClient<paths>({ baseUrl: "/api/k" });
+// Every state-changing call carries the CSRF token the BFF checks (lib/bff/csrf.ts).
+api.use({
+  onRequest({ request }) {
+    if (request.method !== "GET" && request.method !== "HEAD") for (const [k, v] of Object.entries(csrfHeaders())) request.headers.set(k, v);
+    return request;
+  },
+});
 
 /** Field-level messages from a FastAPI 422, keyed by dotted body path ("applicant.pan"). */
 export type FieldErrors = Record<string, string>;

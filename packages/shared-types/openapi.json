@@ -9649,6 +9649,7 @@
     },
     "/auth/register": {
       "post": {
+        "description": "Password sign-up, for tests and local development only. In production everyone signs up\nby proving their email address with a code, so this can't reveal who has an account.",
         "operationId": "register_auth_register_post",
         "requestBody": {
           "content": {

@@ -14,4 +14,4 @@ ENV TIERS_CONFIG_PATH=/app/tiers.yaml KRITVIA_MIGRATIONS_DIR=/app/migrations
 RUN useradd --uid 10001 --no-create-home kritvia
 USER kritvia
 EXPOSE 8000
-CMD ["uvicorn", "kritvia_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uvicorn", "kritvia_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-server-header"]

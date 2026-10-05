@@ -4,6 +4,8 @@ import { OAUTH_COOKIE, SIGNIN_COOKIE, completeGoogle, startGoogle, startGoogleSi
 const deps = (fetchImpl: typeof fetch) => ({ apiUrl: "http://api", fetch: fetchImpl, secureCookies: false, trustedOrigins: [] });
 const V = "11111111-2222-3333-4444-555555555555";
 
+const TOK = "csrf-token-0123456789abcdef";
+
 describe("Google OAuth BFF", () => {
   it("start: sends a nonce to the API and pins it in an httpOnly cookie", async () => {
     const f = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
@@ -13,7 +15,7 @@ describe("Google OAuth BFF", () => {
     });
     const req = new Request("http://app.test/api/oauth/google/start", {
       method: "POST",
-      headers: { origin: "http://app.test", host: "app.test", cookie: "kv_at=tok", "content-type": "application/json" },
+      headers: { origin: "http://app.test", host: "app.test", cookie: `kv_at=tok; kv_csrf=${TOK}`, "x-kv-csrf": TOK, "content-type": "application/json" },
       body: JSON.stringify({ venture_id: V }),
     });
     const res = await startGoogle(req, deps(f as unknown as typeof fetch));
@@ -139,7 +141,7 @@ describe("Google OAuth behind a tunnel", () => {
     const f = vi.fn(async () => Response.json({ url: "https://accounts.google.com/o/oauth2?x" }));
     const req = new Request("http://localhost:3000/api/oauth/google/start", {
       method: "POST",
-      headers: { origin: "https://app.sitelytc.com", host: "app.sitelytc.com", cookie: "kv_at=tok", "content-type": "application/json" },
+      headers: { origin: "https://app.sitelytc.com", host: "app.sitelytc.com", cookie: `kv_at=tok; __Host-kv_csrf=${TOK}`, "x-kv-csrf": TOK, "content-type": "application/json" },
       body: JSON.stringify({ venture_id: V }),
     });
     const res = await startGoogle(req, deps(f as unknown as typeof fetch));

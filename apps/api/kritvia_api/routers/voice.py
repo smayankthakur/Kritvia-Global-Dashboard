@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, StringConstraints, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from kritvia_api.services.uploads import check_upload
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.errors import raise_for_db
@@ -223,6 +224,7 @@ async def read_dictation(file: UploadFile) -> bytes:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "voice notes are limited to 10 MB")
     if not data:
         raise HTTPException(422, "empty file")
+    check_upload(file.filename or "voice.webm", data, "audio")
     return data
 
 

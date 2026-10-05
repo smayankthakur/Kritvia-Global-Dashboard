@@ -1,5 +1,6 @@
 "use client";
 
+import { csrfHeaders } from "@/lib/bff/csrf";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Menu, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -70,7 +71,7 @@ function Shell({ children }: { children: ReactNode }) {
   const signOut = async () => {
     setSigningOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", headers: csrfHeaders() });
     } finally {
       qc.clear();
       window.location.assign("/login");

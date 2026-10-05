@@ -43,7 +43,7 @@ describe("cookie consent", () => {
 
   it("lists every cookie the app sets in the Cookie Policy", () => {
     const names = new Set<string>();
-    for (const f of ["lib/bff/cookies.ts", "app/api/oauth/google/start/route.ts"]) {
+    for (const f of ["lib/bff/cookies.ts", "lib/bff/csrf.ts", "app/api/oauth/google/start/route.ts"]) {
       try {
         for (const m of read(f).matchAll(/"(kv_[a-z_]+)"/g)) names.add(m[1]!);
       } catch {

@@ -1,5 +1,6 @@
 "use client";
 
+import { csrfHeaders } from "@/lib/bff/csrf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpenCheck, FolderDown, Mail, MessageCircle, RefreshCw, Trash2, Upload, Webhook } from "lucide-react";
 import { useRef, useState } from "react";
@@ -255,7 +256,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
     mutationFn: async () => {
       const res = await fetch("/api/oauth/google/start", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...csrfHeaders() },
         body: JSON.stringify({ venture_id: ventureId }),
       });
       const body = (await res.json().catch(() => ({}))) as { url?: string; detail?: string };

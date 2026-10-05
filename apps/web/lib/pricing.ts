@@ -132,7 +132,7 @@ export function tokensLabel(n: number | null): string {
 
 /** What the card shows as the big number, and the line under it. */
 export function priceFor(p: Pick<PlanCard, "price_inr" | "price_annual_inr">, period: Period): { big: string; note: string } {
-  if (!p.price_inr) return { big: rupees(0), note: "For 15 days, no card needed" };
+  if (!p.price_inr) return { big: rupees(0), note: "No card needed" };
   if (period === "annual" && p.price_annual_inr) {
     return { big: rupees(Math.floor(p.price_annual_inr / 12)), note: `Billed ${rupees(p.price_annual_inr)} a year` };
   }
