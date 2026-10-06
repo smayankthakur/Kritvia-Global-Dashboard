@@ -35,7 +35,7 @@ SECURITY_RULES = (
 )
 
 # Characters people use to hide text from humans while models still read it.
-_INVISIBLE = re.compile("[​-‏‪-‮⁠-⁤⁦-⁩﻿\U000e0000-\U000e007f]")
+_INVISIBLE = re.compile("[\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\U000e0000-\U000e007f]")
 
 INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("override", re.compile(r"\b(ignore|disregard|forget|override)\b[^.\n]{0,40}\b(previous|prior|above|earlier|all|your|the system)\b[^.\n]{0,20}\b(instructions?|prompts?|rules|messages?)", re.I)),
