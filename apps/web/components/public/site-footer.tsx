@@ -20,6 +20,7 @@ const GROUPS = [
       ["/privacy", "Privacy Policy"],
       ["/cookies", "Cookie Policy"],
       ["/refunds", "Cancellation & refunds"],
+      ["/accessibility", "Accessibility"],
     ],
   },
   {

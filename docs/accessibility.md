@@ -52,5 +52,5 @@ next to the field; sign-in puts the cursor in the email field.
 - Automated tools find roughly a third of real-world problems. Before launch, do one manual pass
   with NVDA (Windows) or VoiceOver (macOS) through sign-up, creating a business, approving a draft
   and the task board.
-- An accessibility statement page (who to contact about a barrier) is a good addition once the
-  support address is final.
+- The accessibility statement is public at /accessibility (lib/legal/accessibility.ts); keep its
+  "Known gaps" table in step with this list.

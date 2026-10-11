@@ -5,6 +5,7 @@ import { allowed, consentVersion, gpcEnabled, needsBanner, OPTIONAL_TOOLS, readC
 import { COOKIES_MD } from "@/lib/legal/cookies";
 import { PRIVACY_MD } from "@/lib/legal/privacy";
 import { REFUNDS_MD } from "@/lib/legal/refunds";
+import { ACCESSIBILITY_MD } from "@/lib/legal/accessibility";
 import { TERMS_MD } from "@/lib/legal/terms";
 // @ts-expect-error plain ESM script without types
 import { scanCopy, scanPrices, scanThirdParty } from "../scripts/trust-scan.mjs";
@@ -66,6 +67,14 @@ describe("policies", () => {
     expect(TERMS_MD).toContain("(/refunds)");
     expect(TERMS_MD).toMatch(/"Coming soon"/);
     expect(REFUNDS_MD).toMatch(/cancel a monthly or yearly plan at any time/);
+  });
+
+  it("publishes an accessibility statement with a way to report a barrier", () => {
+    expect(ACCESSIBILITY_MD).toMatch(/WCAG\) 2\.2 at level AA/);
+    expect(ACCESSIBILITY_MD).toMatch(/support@sitelytc\.com/);
+    expect(ACCESSIBILITY_MD).toMatch(/Known gaps/);
+    expect(read("components/public/site-footer.tsx")).toContain('"/accessibility"');
+    expect(read("middleware.ts")).toContain('"/accessibility"');
   });
 
   it("asks for the 18+ confirmation before sign-up and before re-accepting terms", () => {

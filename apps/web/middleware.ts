@@ -12,6 +12,7 @@ const PUBLIC_PAGES = [
   "/privacy",
   "/cookies",
   "/refunds",
+  "/accessibility",
   "/privacy-request",
   "/unsubscribe",
   "/security",
