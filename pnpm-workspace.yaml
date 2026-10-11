@@ -3,3 +3,20 @@ packages:
   - "!apps/desktop"   # Electron app: own npm lockfile, built by .github/workflows/desktop.yml
   - "packages/*"
   - "services/*"
+
+# Supply-chain guard: never install a package version published less than a day ago (most malicious
+# releases are found and pulled within hours). Needs pnpm >= 10.16.
+minimumReleaseAge: 1440
+
+# pnpm 10 runs no install scripts unless the package is listed here. These two only fetch or check
+# their platform binary.
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver
+
+# Known advisories that do not reach production, reviewed 11 Oct 2026:
+#   GHSA-vfj7-8cjw-p6xm  braces (ReDoS-style stack exhaustion), only through eslint-config-next's glob
+#                        matching of our own source files at lint time; no patched braces exists yet.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm

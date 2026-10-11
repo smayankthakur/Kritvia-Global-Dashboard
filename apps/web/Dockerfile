@@ -8,7 +8,7 @@ ARG NODE_VERSION=22-alpine
 
 FROM node:${NODE_VERSION} AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.6 --activate
 WORKDIR /repo
 
 # 1) dependencies (cached unless manifests change)
