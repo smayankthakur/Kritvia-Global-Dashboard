@@ -15,6 +15,13 @@ cd "$(dirname "$0")/.."
 . scripts/load-env.sh; load_env ../.env || true
 STATE_DIR=/var/lib/kritvia; mkdir -p "$STATE_DIR"
 STATE="$STATE_DIR/health.state"; LAST_ALERT="$STATE_DIR/health.alerted"
+# A deploy is restarting services on purpose (deploy.sh): stand down, so it doesn't count as an
+# outage, restart things behind it or email anyone. A deploy older than 30 minutes is treated as
+# stuck and checked as usual.
+if [ -f "$STATE_DIR/deploying" ] && [ $(( $(date +%s) - $(cat "$STATE_DIR/deploying" 2>/dev/null || echo 0) )) -lt 1800 ]; then
+  logger -t kritvia-health "deploy in progress; checks skipped"
+  exit 0
+fi
 DC="docker compose -f docker-compose.yml"
 [ -n "${MANAGED_DATABASE_URL:-}" ] && DC="$DC -f docker-compose.managed.yml"   # postgres lives elsewhere
 fails=()

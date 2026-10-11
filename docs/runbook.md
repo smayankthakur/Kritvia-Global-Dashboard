@@ -85,7 +85,14 @@ It restores into a scratch database, checks migrations and that every organisati
 
 ## 7. Deploys
 
-Push to `main` → CI (API tests, web lint/types/tests/build, image builds, sandbox network probe) → `deploy` workflow SSHes to the VM and runs `infra/scripts/deploy.sh` (pull, rebuild, `up -d`, wait for `/readyz`). Secrets: `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KNOWN_HOSTS` in the `production` environment (add a required reviewer).
+Push to `main` → CI (API tests, web lint/types/tests/build, image builds, sandbox network probe) → `deploy` workflow SSHes to the VM and runs `infra/scripts/deploy.sh` (pull, rebuild, `up -d`, wait for `/readyz`).
+
+By hand on the VM: `sudo /opt/kritvia/infra/scripts/deploy.sh --bg`, then `tail -f /var/log/kritvia-deploy.log` (it ends with `DEPLOY-DONE`). Deploys are quiet:
+
+- Images build while the old containers keep serving, and only changed services restart.
+- While `/var/lib/kritvia/deploying` exists, the health watchdog skips its checks, so a deploy doesn't open a status-page incident or send an alert email. A marker older than 30 minutes is ignored, so a stuck deploy is still reported.
+- Build output goes to `/var/lib/kritvia/deploy-build.log`.
+- The deploy ends with a one-line summary: commit, migration count, health. Secrets: `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KNOWN_HOSTS` in the `production` environment (add a required reviewer).
 
 Migrations are forward-only and checksummed: never edit an applied file — add `0006_*.sql`.
 
