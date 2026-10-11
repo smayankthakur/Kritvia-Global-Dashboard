@@ -136,6 +136,19 @@ It installs the AWS CLI, writes `/etc/cron.d/kritvia` (health watchdog every 5 m
 - Watchdog log: `sudo journalctl -t kritvia-health -n 50` · backup log: `/var/log/kritvia-backup.log`
 - Stage 2 gate (each workflow 10 consecutive days on real data): `sudo infra/scripts/dogfood-report.sh`
 
+## Paid AI through OpenRouter
+
+Free models stay first. Paid models are used when the free ones are busy or rate-limited, when a business is
+past its fair share of the free pool (`AI_FREE_POOL_DAILY_TOKENS`), and for planning (tier `plan`).
+
+1. openrouter.ai → Settings → Privacy: switch **off** "Enable training and logging" (only providers that do
+   not train are used). Settings → Credits: add credit and set a monthly limit.
+2. Use the account's key as `OPENROUTER_API_KEY` and set `OPENROUTER_PAID_ENABLED=1` in `.env`.
+3. `docker compose up -d --force-recreate litellm api worker`.
+
+Paid calls count against each plan's monthly AI allowance like any hosted call; the cost of each call is
+recorded in `model_calls.cost_usd`.
+
 ## Email forwarding and the Drive picker (no restricted Google permissions)
 
 Customers no longer give Kritvia Gmail read access or all-of-Drive access (Google's restricted scopes need a

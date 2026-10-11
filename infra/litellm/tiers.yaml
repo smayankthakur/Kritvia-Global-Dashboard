@@ -39,6 +39,12 @@ deployments:
   # in no tier until there is a signed no-training agreement.
   sarvam-saaras:    { data_policy: may_train, provider: sarvam, model: "saaras:v4" }
 
+  # --- Paid (Kritvia's OpenRouter account), only when OPENROUTER_PAID_ENABLED=1 -------------------
+  # cost: paid keeps them out of the shared free pool's fair-share limit (model_router.free_pool).
+  # no_training holds only with OpenRouter's training/logging switched off for the account (config.yaml).
+  openrouter-paid:    { data_policy: no_training, cost: paid, requires_env: OPENROUTER_PAID_ENABLED }
+  openrouter-planner: { data_policy: no_training, cost: paid, requires_env: OPENROUTER_PAID_ENABLED }
+
   # --- Our own server ----------------------------------------------------------------------------
   ollama-qwen-7b:   { data_policy: local }
   ollama-bge-m3:    { data_policy: local }
@@ -46,9 +52,11 @@ deployments:
 
 tiers:
   fast:         [groq-llama-8b, cerebras-large, cloudflare-llama-70b, openrouter-free, gemini-flash, ollama-qwen-7b]
-  extract:      [groq-llama-70b, cerebras-large, cloudflare-llama-70b, gemini-flash, mistral-large, openrouter-free, ollama-qwen-7b]
-  reason:       [groq-llama-70b, cerebras-qwen, cerebras-large, gemini-flash, mistral-large, openrouter-free, cloudflare-llama-70b, ollama-qwen-7b]
-  long_context: [gemini-flash, openrouter-free, cerebras-qwen, groq-llama-70b, mistral-large]
+  extract:      [groq-llama-70b, cerebras-large, cloudflare-llama-70b, gemini-flash, mistral-large, openrouter-free, openrouter-paid, ollama-qwen-7b]
+  reason:       [groq-llama-70b, cerebras-qwen, cerebras-large, gemini-flash, mistral-large, openrouter-free, cloudflare-llama-70b, openrouter-paid, ollama-qwen-7b]
+  long_context: [gemini-flash, openrouter-free, cerebras-qwen, groq-llama-70b, mistral-large, openrouter-paid]
+  # Planning a multi-step job and choosing tools (general assistant): the strongest model first.
+  plan:         [openrouter-planner, openrouter-paid, groq-llama-70b, cerebras-qwen, ollama-qwen-7b]
   private:      [ollama-qwen-7b]
   embed:        [ollama-bge-m3]
   # Long recordings (meetings). Sarvam's REST API takes short clips only, so it is not in this chain.

@@ -32,6 +32,15 @@ model_list:
   - model_name: openrouter-free
     litellm_params: { model: openrouter/qwen/qwen3.8-27b:free, api_key: os.environ/OPENROUTER_API_KEY }
 
+  # --- Paid, through OpenRouter (Kritvia's own account; billed per token). Used when the free pool is busy
+  # or a business is past its fair share, and for planning. In OpenRouter → Settings → Privacy, switch OFF
+  # "Enable training and logging" so only providers that do not train on inputs are used.
+  # Check models and prices: https://openrouter.ai/models
+  - model_name: openrouter-paid       # good and cheap: the same open model as Groq's "large" slot
+    litellm_params: { model: openrouter/openai/gpt-oss-120b, api_key: os.environ/OPENROUTER_API_KEY }
+  - model_name: openrouter-planner    # strongest at planning and using tools (general assistant)
+    litellm_params: { model: openrouter/anthropic/claude-sonnet-4.5, api_key: os.environ/OPENROUTER_API_KEY }
+
   # --- Local Ollama on the VM (the only 'private' destination at MVP) ---
   - model_name: ollama-qwen-7b
     litellm_params: { model: ollama_chat/qwen2.5:7b-instruct, api_base: os.environ/OLLAMA_BASE_URL }

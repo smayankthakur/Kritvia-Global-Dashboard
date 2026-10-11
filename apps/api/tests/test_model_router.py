@@ -199,3 +199,20 @@ async def test_free_pool_is_hosted_free_tiers_only():
     pool = set(CONFIG.free_pool())
     assert {"groq-llama-70b", "groq-llama-8b", "cerebras-large"} <= pool
     assert not any(CONFIG.policies[d] == "local" for d in pool)
+
+
+async def test_paid_models_only_when_switched_on_and_never_in_the_free_pool(client, monkeypatch):
+    assert "openrouter-paid" not in CONFIG.free_pool() and "openrouter-planner" not in CONFIG.free_pool()
+    assert CONFIG.tiers["plan"][0] == "openrouter-planner"
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_free_pool_daily_tokens", 1_000_000)
+    monkeypatch.setattr(s, "ai_user_daily_tokens", 0)
+    c = await _busy_org(client, 1_100_000)          # past its fair share of the free pool
+    monkeypatch.delenv("OPENROUTER_PAID_ENABLED", raising=False)
+    fake = FakeLiteLLM({})
+    assert (await make_router(fake).chat(c, tier="reason", messages=[{"role": "user", "content": "hi"}])).deployment \
+        == "ollama-qwen-7b"
+    monkeypatch.setenv("OPENROUTER_PAID_ENABLED", "1")
+    fake = FakeLiteLLM({})
+    res = await make_router(fake).chat(c, tier="reason", messages=[{"role": "user", "content": "hi"}])
+    assert res.deployment == "openrouter-paid" and fake.calls == ["openrouter-paid"]
