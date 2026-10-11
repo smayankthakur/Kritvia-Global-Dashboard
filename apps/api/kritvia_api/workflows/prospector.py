@@ -57,6 +57,10 @@ wf = registry.register(Workflow(
         Option("min_reviews", "Skip places with fewer Google reviews than", "number", 10, min=0, max=10000),
         Option("min_rating", "Skip places rated below", "number", 3.5, min=0, max=5),
         Option("social_counts_as_none", "Count an Instagram, Swiggy or Zomato page as no website", "boolean", True),
+        Option("skip_chains", "Skip chains and franchises", "boolean", True,
+               help="Big brands (Domino's, Haldiram's…) and any name that shows up as several branches are left out: "
+                    "their websites are decided at head office."),
+        Option("skip_hotels", "Skip hotels and guest houses", "boolean", True),
         Option("followups", "Follow-ups after the first message", "number", 2, min=0, max=3),
         Option("follow_up_days", "Days between messages", "number", 3, min=1, max=14),
         Option("send_without_asking", "Send emails and answer replies without asking me", "boolean", True,
@@ -79,6 +83,81 @@ OPT_OUT_SHORT = re.compile(r"^\W*(stop|unsubscribe|no|nahi|nahin|remove)\W*(plea
 def is_opt_out(body: str | None) -> bool:
     b = (body or "").strip()
     return bool(OPT_OUT.search(b) or OPT_OUT_SHORT.match(b))
+
+
+# --- who to leave out ------------------------------------------------------------------------
+# Google place types for somewhere to stay (https://developers.google.com/maps/documentation/places/web-service/place-types).
+LODGING_TYPES = frozenset({
+    "lodging", "hotel", "motel", "resort_hotel", "hostel", "guest_house", "bed_and_breakfast", "inn",
+    "extended_stay_hotel", "budget_japanese_inn", "japanese_inn", "cottage", "farmstay", "private_guest_room",
+    "campground", "camping_cabin", "mobile_home_park", "rv_park"})
+LODGING_WORDS = re.compile(r"\b(hotel|hotels|motel|resort|hostel|guest ?house|lodge|inn|homestay|bnb|b&b|"
+                           r"dharamshala|dharmshala|oyo)\b", re.I)
+# Chains and franchises common in India; their branches have no say over a website.
+CHAINS = (
+    "domino", "mcdonald", "kfc", "pizza hut", "burger king", "subway", "starbucks", "haldiram", "bikanervala",
+    "bikano", "cafe coffee day", "ccd", "barista", "costa coffee", "dunkin", "baskin robbins", "taco bell",
+    "wow momo", "biryani by kilo", "behrouz", "faasos", "oven story", "la pino'z", "sagar ratna",
+    "nirula", "moti mahal", "chaayos", "chai point", "burger singh", "giani", "keventers", "theobroma",
+    "mad over donuts", "belgian waffle", "third wave coffee", "blue tokai", "om sweets", "nathu", "bittu tikki",
+    "rollsking", "goli vada pav", "jumboking", "box8", "eatfit", "lunchbox", "the good bowl", "sweet truth",
+    "naturals ice cream", "cream bell", "amul", "mother dairy", "frozen bottle", "lavazza", "tim hortons",
+    "wendy", "popeyes", "california burrito", "chili's", "barbeque nation", "absolute barbecues", "mainland china",
+    "punjab grill", "pind balluchi", "dhaba by claridges", "social", "the beer cafe",
+)
+
+
+def brand_key(name: str) -> str:
+    """'Sagar Ratna - Rajouri Garden' / 'Sagar Ratna (Rohini)' -> 'sagar ratna'."""
+    n = re.split(r"\s[-|–—]\s|\(|,|\|", name.lower(), maxsplit=1)[0]
+    n = re.sub(r"[^a-z0-9 &']+", " ", n.replace("'s", "s"))
+    return re.sub(r"\s+", " ", n).strip()
+
+
+_CHAIN_KEYS = frozenset(brand_key(c) for c in CHAINS)
+
+
+def is_known_chain(name: str) -> bool:
+    """A brand from CHAINS, allowing a plural or possessive ('Domino's Pizza', 'McDonald's') and a suffix."""
+    k = brand_key(name)
+    return any(k == c or k == c + "s" or k.startswith(c + " ") or k.startswith(c + "s ") for c in _CHAIN_KEYS)
+
+
+def is_lodging(primary_type: str | None, category: str | None, name: str) -> bool:
+    """Somewhere to stay, by Google's own type. The name is not used: in India 'Hotel Saravana Bhavan' or
+    'Sharma Hotel' is usually a restaurant, and Google types those as restaurants."""
+    if primary_type:
+        return primary_type in LODGING_TYPES
+    return bool(LODGING_WORDS.search(category or ""))
+
+
+# Everyday Hindi words written in Roman script. A "Hinglish" message with almost none of them is English.
+HINGLISH_WORDS = frozenset({
+    "aap", "aapka", "aapke", "aapki", "aapko", "hai", "hain", "ho", "hum", "hamare", "humare", "hamari", "ke",
+    "ki", "ka", "ko", "se", "mein", "me", "par", "pe", "nahi", "nahin", "kya", "bhi", "sakte", "sakta",
+    "sakti", "karna", "karein", "kariye", "chahiye", "ji", "apne", "apna", "liye", "toh", "to", "aur", "abhi",
+    "ek", "dekha", "dekhi", "mil", "milenge", "milega", "bataiye", "batayein", "baat", "kaise", "kitna", "sahi",
+    "accha", "achha", "acha", "dhanyavaad", "shukriya", "namaste", "zaroor", "jaldi", "ghar", "dukaan", "wala",
+    "wali", "wale", "karte", "karta", "hota", "hoti", "hote", "jayega", "jayegi", "dijiye", "lijiye"})
+
+
+def looks_hinglish(text_: str) -> bool:
+    words = re.findall(r"[a-z]+", (text_ or "").lower())
+    hits = sum(1 for w in words if w in HINGLISH_WORDS)
+    return bool(words) and hits >= 3 and hits / len(words) >= 0.12
+
+
+def hinglish_wanted(language: str | None) -> bool:
+    return "hinglish" in (language or "hinglish").lower()
+
+
+LANGUAGE_GUIDE = {
+    "hinglish": ("Write the WhatsApp message in Hinglish: everyday Hindi in Roman (English) letters, mixed with "
+                 "common English words, the way a Delhi shop owner texts on WhatsApp. Not Devanagari, not formal "
+                 "Hindi, and not plain English. Address them as 'aap' and '... ji' where natural. For example "
+                 "(style only, do not copy): 'Namaste ji, Google Maps pe aapka dhaba dekha, reviews kaafi acche "
+                 "hain. Abhi aapki website nahi hai, isliye log Swiggy pe hi order karte hain...'"),
+}
 
 
 class Outreach(BaseModel):
@@ -168,7 +247,10 @@ async def find(ctx: RunContext, state: dict) -> Goto | Finish:
 
     allowed = {"none", "social", "listing"} if cfg.get("social_counts_as_none", True) else {"none"}
     min_reviews, min_rating = int(cfg.get("min_reviews", 10)), float(cfg.get("min_rating", 3.5))
+    skip_chains, skip_hotels = bool(cfg.get("skip_chains", True)), bool(cfg.get("skip_hotels", True))
     candidates, seen, found, errors = [], set(), 0, []
+    results: list[tuple[str, dict]] = []
+    skipped = {"chains": 0, "hotels": 0}
     for q in searches:
         try:
             res = await ctx.invoke("places.search", {"query": q, "max_results": 60})
@@ -176,16 +258,28 @@ async def find(ctx: RunContext, state: dict) -> Goto | Finish:
             errors.append(f"{type(exc).__name__}")
             ctx.note(f"a Maps search failed ({type(exc).__name__}: {str(exc)[:120]})")
             continue
-        for p in res["places"]:
-            found += 1
-            phone = norm_phone(p.get("phone"))
-            if (p["place_id"] in seen or p.get("status") != "OPERATIONAL" or not phone
-                    or p["website_kind"] not in allowed
-                    or (p.get("review_count") or 0) < min_reviews
-                    or (p.get("rating") is not None and p["rating"] < min_rating)):
-                continue
-            seen.add(p["place_id"])
-            candidates.append({**p, "phone": phone, "search": q})
+        results.extend((q, p) for p in res["places"])
+    # A name seen at two or more addresses in today's results is a chain (branches), whatever its brand.
+    branches: dict[str, set[str]] = {}
+    for _, p in results:
+        branches.setdefault(brand_key(p.get("name") or ""), set()).add(p.get("address") or p["place_id"])
+    for q, p in results:
+        found += 1
+        if skip_hotels and is_lodging(p.get("primary_type"), p.get("category"), p.get("name") or ""):
+            skipped["hotels"] += 1
+            continue
+        key = brand_key(p.get("name") or "")
+        if skip_chains and key and (is_known_chain(p.get("name") or "") or len(branches.get(key, ())) >= 2):
+            skipped["chains"] += 1
+            continue
+        phone = norm_phone(p.get("phone"))
+        if (p["place_id"] in seen or p.get("status") != "OPERATIONAL" or not phone
+                or p["website_kind"] not in allowed
+                or (p.get("review_count") or 0) < min_reviews
+                or (p.get("rating") is not None and p["rating"] < min_rating)):
+            continue
+        seen.add(p["place_id"])
+        candidates.append({**p, "phone": phone, "search": q})
     # Busiest first: more reviews = more customers to lose to a competitor with a website.
     candidates.sort(key=lambda p: -(p.get("review_count") or 0))
 
@@ -210,9 +304,12 @@ async def find(ctx: RunContext, state: dict) -> Goto | Finish:
                  "q": p["search"][:300], "wk": p["website_kind"], "run": ctx.run_id})).scalar()
             if lead_id:
                 added.append(str(lead_id))
-    ctx.note(f"{found} places found, {len(candidates)} without a website, {len(added)} new prospects added")
+    ctx.note(f"{found} places found, {len(candidates)} without a website, {len(added)} new prospects added"
+             + (f" ({skipped['chains']} chains and {skipped['hotels']} hotels left out)"
+                if skipped["chains"] or skipped["hotels"] else ""))
     return Goto("queue", update={"summary": {"found": found, "matching": len(candidates), "added": len(added),
-                                             "search_errors": len(errors)}})
+                                             "search_errors": len(errors), "skipped_chains": skipped["chains"],
+                                             "skipped_hotels": skipped["hotels"]}})
 
 
 @wf.step("queue", agent="prospector")
@@ -301,6 +398,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
 
     biz = await ctx.business()
     offer = str(cfg.get("offer") or "").strip()
+    language = str(cfg.get("language") or "Hinglish").strip() or "Hinglish"
     kind = lead.website_kind or (place.website_kind if place else "none")
     presence = {"none": "no website and no web page at all",
                 "social": "only a social media page" + (f" ({place.website})" if place and place.website else ""),
@@ -327,10 +425,18 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
               "Rules: sound like a real person, not a marketer. Use only the facts given; never invent numbers, "
               "reviews, clients or results. Never mention a price unless it is in the offer line above. "
               "No fake urgency, no ALL CAPS, at most one emoji on WhatsApp. "
-              f"Language: {cfg.get('language') or 'Hinglish'} (email may be simple English if the language is "
-              f"Hinglish). Sign the email as {biz.sign_off}.")
+              f"Language: {language} (email may be simple English if the language is Hinglish). "
+              + (LANGUAGE_GUIDE["hinglish"] + " " if hinglish_wanted(language) else "")
+              + f"Sign the email as {biz.sign_off}.")
     prompt = f"{stage}\n\nAbout them:\n{facts}"
     o = await ctx.llm_json(tier="reason", schema=Outreach, system=system, prompt=prompt)
+    if channel == "whatsapp" and hinglish_wanted(language) and not looks_hinglish(o.whatsapp):
+        # Free models often slip into plain English; one firmer retry, then use whichever reads better.
+        retry = await ctx.llm_json(tier="reason", schema=Outreach, system=system, prompt=(
+            f"{prompt}\n\nYour last WhatsApp draft was in English:\n{o.whatsapp}\n\nRewrite the WhatsApp message "
+            "in Hinglish (Hindi in Roman letters mixed with English), keeping the same facts and offer."))
+        if looks_hinglish(retry.whatsapp):
+            o = retry
 
     # An amount the offer doesn't contain is the model guessing a price: a person must see it.
     offered = set(m.group(0) for m in CURRENCY_IN_TEXT.finditer(offer))

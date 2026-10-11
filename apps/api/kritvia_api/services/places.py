@@ -26,13 +26,14 @@ SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 PLACE_URL = "https://places.googleapis.com/v1/places/{id}"
 DETAIL_FIELDS = ",".join((
     "id", "displayName", "formattedAddress", "nationalPhoneNumber", "internationalPhoneNumber", "websiteUri",
-    "rating", "userRatingCount", "businessStatus", "primaryTypeDisplayName", "googleMapsUri",
+    "rating", "userRatingCount", "businessStatus", "primaryType", "primaryTypeDisplayName", "googleMapsUri",
 ))
 NAME_FIELDS = "id,displayName"   # the cheapest lookup: enough to label a row in a list
 FIELDS = ",".join((
     "places.id", "places.displayName", "places.formattedAddress", "places.nationalPhoneNumber",
     "places.internationalPhoneNumber", "places.websiteUri", "places.rating", "places.userRatingCount",
-    "places.businessStatus", "places.primaryTypeDisplayName", "places.googleMapsUri", "nextPageToken",
+    "places.businessStatus", "places.primaryType", "places.primaryTypeDisplayName", "places.googleMapsUri",
+    "nextPageToken",
 ))
 
 # Hosts that are a listing or a profile, not the business's own website.
@@ -59,6 +60,7 @@ class Place:
     status: str                    # OPERATIONAL, CLOSED_TEMPORARILY, CLOSED_PERMANENTLY
     category: str | None
     maps_url: str | None
+    primary_type: str | None = None   # Google's machine type, e.g. "restaurant", "hotel"
 
     @property
     def website_kind(self) -> str:
@@ -91,6 +93,7 @@ def _place(p: dict[str, Any]) -> Place:
         status=p.get("businessStatus") or "OPERATIONAL",
         category=(p.get("primaryTypeDisplayName") or {}).get("text"),
         maps_url=p.get("googleMapsUri"),
+        primary_type=p.get("primaryType"),
     )
 
 

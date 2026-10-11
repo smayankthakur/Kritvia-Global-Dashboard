@@ -510,3 +510,59 @@ async def _growth_biz(client, monkeypatch):
         "searches": "restaurants in Nangloi, Delhi", "offer": "a website for ₹9,999"}})
     assert r.status_code == 200, r.text
     return owner, org, v
+
+
+# ------------------------------------------------------------- chains, hotels and Hinglish --
+def _at(p, address, ptype=None):
+    return {**p, "formattedAddress": address, **({"primaryType": ptype} if ptype else {})}
+
+
+MIXED = [
+    _at(place("q1", "Domino's Pizza", phone="+91 98111 00001"), "A-1, Nangloi, Delhi 110041", "pizza_restaurant"),
+    _at(place("q2", "Sharma Hotel", phone="+91 98111 00002"), "B-2, Nangloi, Delhi 110041", "restaurant"),
+    _at(place("q3", "Hotel Grand Stay", phone="+91 98111 00003"), "C-3, Nangloi, Delhi 110041", "hotel"),
+    _at(place("q4", "Bittoo Dhaba - Nangloi", phone="+91 98111 00004"), "D-4, Nangloi, Delhi 110041", "restaurant"),
+    _at(place("q5", "Bittoo Dhaba (Mundka)", phone="+91 98111 00005"), "E-5, Mundka, Delhi 110041", "restaurant"),
+]
+
+
+async def test_chains_and_hotels_are_left_out(biz, services, monkeypatch, fake_llm):
+    fake = FakePlaces(pages=(MIXED,))
+    monkeypatch.setattr(services, "places", PlacesClient("test-key", transport=httpx.MockTransport(fake)))
+    script_outreach(fake_llm)
+    r = await run(biz["mayank"], biz["v"])
+    # "Sharma Hotel" is a restaurant by Google's own type, so it stays in
+    assert r["summary"]["skipped_chains"] == 3 and r["summary"]["skipped_hotels"] == 1, r["summary"]
+    assert set(await leads(biz["mayank"], biz["v"])) >= {"Sharma Hotel"}
+    assert {"Domino's Pizza", "Hotel Grand Stay"}.isdisjoint(await leads(biz["mayank"], biz["v"]))
+
+
+async def test_owner_can_keep_chains_and_hotels(biz, services, monkeypatch, fake_llm):
+    fake = FakePlaces(pages=(MIXED,))
+    monkeypatch.setattr(services, "places", PlacesClient("test-key", transport=httpx.MockTransport(fake)))
+    await biz["mayank"].put(f"/ventures/{biz['v']}/workflow-configs/prospector", json={"enabled": True, "settings": {
+        "searches": "restaurants in Nangloi, Delhi", "skip_chains": False, "skip_hotels": False, "new_per_day": 10}})
+    script_outreach(fake_llm)
+    r = await run(biz["mayank"], biz["v"])
+    assert r["summary"]["skipped_chains"] == 0 and r["summary"]["added"] == 5
+
+
+async def test_english_whatsapp_is_rewritten_in_hinglish(biz, places, fake_llm):
+    script_outreach(fake_llm, whatsapp="Hello, I saw your restaurant on Google Maps. A website brings direct orders.")
+    fake_llm.on("Your last WhatsApp draft was in English", {
+        "subject": "Orders", "email_body": "Namaste", "whatsapp":
+        "Namaste ji, Google Maps pe aapka dhaba dekha. Website se aapko direct orders mil sakte hain, bina commission ke."})
+    await run(biz["mayank"], biz["v"])
+    got = await leads(biz["mayank"], biz["v"])
+    assert got["Ramesh Dhaba"]["outreach_draft"].startswith("Namaste ji, Google Maps pe aapka dhaba")
+    system = json.dumps(fake_llm.chat_calls("You write short, honest sales messages")[0], ensure_ascii=False)
+    assert "Roman (English) letters" in system
+
+
+def test_chain_and_hinglish_helpers():
+    from kritvia_api.workflows.prospector import is_known_chain, is_lodging, looks_hinglish
+    assert is_known_chain("Domino's Pizza") and is_known_chain("McDonald's") and is_known_chain("Sagar Ratna - Rohini")
+    assert not is_known_chain("Amulya Restaurant") and not is_known_chain("Socialite Cafe")
+    assert is_lodging("guest_house", None, "") and not is_lodging("restaurant", "Restaurant", "Hotel Saravana Bhavan")
+    assert looks_hinglish("Namaste ji, aapka dhaba Google Maps pe dekha, reviews acche hain")
+    assert not looks_hinglish("Hello, I found your restaurant on Google Maps and loved the reviews")

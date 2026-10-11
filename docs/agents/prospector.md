@@ -11,7 +11,11 @@ where every agent is included (Growth, Scale, Enterprise, Internal). Code: `apps
    - it is open;
    - it has a phone number;
    - it has no website of its own (an Instagram, Swiggy or Zomato page counts as none, unless that option is off);
-   - it has at least the minimum number of reviews and meets the minimum rating.
+   - it has at least the minimum number of reviews and meets the minimum rating;
+   - it is not a chain or franchise (a known brand such as Domino's or Haldiram's, or a name found at two or
+     more addresses in the day's results), unless *Skip chains and franchises* is off;
+   - it is not somewhere to stay by Google's own place type (hotel, guest house, hostel…), unless *Skip hotels*
+     is off. The name is not used, because in India a "Sharma Hotel" is usually a restaurant.
 
    It skips places already in Leads, and phone numbers that already belong to a lead or customer. Busiest places
    (most reviews) come first. It adds up to *New prospects a day* (server ceiling `PROSPECTOR_DAILY_CAP`, default 25).
@@ -19,6 +23,8 @@ where every agent is included (Growth, Scale, Enterprise, Internal). Code: `apps
 3. **Touch.**
    - Looks the business up again by place ID, and the AI writes one message from those facts and the owner's
      offer.
+   - In Hinglish (the default), the WhatsApp message is Hindi in Roman letters mixed with English. If the model
+     answers in plain English, it is asked once more to rewrite it in Hinglish.
    - **Email** (when the lead has an email address) goes from the venture's Gmail. It goes out without asking
      when *Send emails and answer replies without asking me* is on.
    - **WhatsApp:** the message waits on the lead for the owner to send with one tap ("Open in WhatsApp" → send →
