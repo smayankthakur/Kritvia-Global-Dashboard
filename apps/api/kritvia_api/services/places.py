@@ -125,6 +125,30 @@ class PlacesClient:
             raise PlacesError(f"Google Places returned {r.status_code}: {msg[:200]}")
         return _place(r.json())
 
+    async def verify(self) -> str | None:
+        """None if this key can use the Places API (New); otherwise a short reason for the owner.
+
+        One Text Search that asks only for place IDs, the cheapest call there is."""
+        if not self.configured:
+            return "no key"
+        async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
+            try:
+                r = await client.post(SEARCH_URL, json={"textQuery": "restaurant in New Delhi", "pageSize": 1},
+                                      headers={"X-Goog-Api-Key": self.api_key, "X-Goog-FieldMask": "places.id"})
+            except httpx.TransportError as exc:
+                return f"could not reach Google ({type(exc).__name__})"
+        if r.status_code == 200:
+            return None
+        msg = ""
+        try:
+            msg = (r.json().get("error") or {}).get("message", "")
+        except ValueError:
+            pass
+        if r.status_code in (400, 401, 403):
+            return ("Google rejected this key. Check that Places API (New) is enabled for it and that its "
+                    "restrictions allow this server" + (f" ({msg[:120]})" if msg else ""))
+        return f"Google answered HTTP {r.status_code}" + (f" ({msg[:120]})" if msg else "")
+
     async def search(self, query: str, *, max_results: int = 60, region: str = "IN",
                      language: str = "en") -> list[Place]:
         """Text Search, following next-page tokens until `max_results` places (Google stops at 60)."""

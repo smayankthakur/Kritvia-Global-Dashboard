@@ -62,11 +62,11 @@ where every agent is included (Growth, Scale, Enterprise, Internal). Code: `apps
 
 - **Google Maps Platform terms.**
   - Only the **place ID** is stored. Name, phone, address, rating and website are fetched live when the agent
-    writes, when a lead is opened (full details), and when the Leads list loads (name only, at most 60 per
-    load).
+    writes and when a lead is opened. The Leads list makes no Google calls; it shows the search that found
+    each prospect until the lead is opened.
   - Nothing from Google is written to the lead row, run state, run notes or approval titles.
   - Details are shown with "Business details: Google Maps" attribution and a link to the place.
-  - Each lookup is billed by Google, so the list asks only for names.
+  - Each lookup is billed by Google, to the organisation's own key (see below).
 - **WhatsApp Business Platform policy.** Businesses may message someone first only with their opt-in and an
   approved template. So the first WhatsApp always goes from the owner's own phone, one-to-one. The agent never
   sends cold WhatsApp messages through the API.
@@ -81,13 +81,24 @@ where every agent is included (Growth, Scale, Enterprise, Internal). Code: `apps
   - A sole proprietor's phone number is personal data. Not storing it, plus the permanent opt-out, keeps
     processing minimal.
 
+## Whose Google key pays
+
+- Each organisation adds its **own Google Maps key** (Settings → AI models → Google Maps key). Lookups are
+  billed by Google to that account; at the default settings (10 new prospects a day, 2 follow-ups) a business
+  makes about 270 searches and 1,200 detail lookups a month, mostly inside Google's free monthly calls.
+- Kritvia's server key (`GOOGLE_PLACES_API_KEY`) is used only for organisations on the **internal** plan.
+- The key is tested with one ID-only search before it is saved, stored wrapped by the master key
+  (`org_service_keys`, migration 0029), and never shown again. If Google later rejects it, the owner sees
+  why on the AI models page and the Prospector pauses lookups until it is fixed.
+
 ## Set-up (owner)
 
 1. In Google Cloud:
    - create a project with billing and enable **Places API (New)**;
    - create an API key restricted to the server's IP and to that one API;
    - set a daily quota cap so a mistake cannot run up a bill.
-2. On the server, add `GOOGLE_PLACES_API_KEY=…` to `.env` and restart the API and worker.
+2. Paste the key in Settings → AI models → Google Maps key. (Internal organisations only: the server's
+   `GOOGLE_PLACES_API_KEY` in `.env` works instead.)
 3. Make sure the venture's Gmail is connected (Settings → Connectors) so emails go out from it.
 4. Agents page → Prospector:
    - add searches (e.g. `restaurants in Nangloi, Delhi; dhaba in Laxmi Nagar, Delhi`);

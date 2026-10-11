@@ -45,11 +45,15 @@ PAGE2 = [
 class FakePlaces:
     def __init__(self, pages=(PAGE1, PAGE2)):
         self.pages, self.calls, self.lookups, self.closed = list(pages), [], [], {}
+        self.reject = False
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
+        if self.reject:
+            return httpx.Response(403, json={"error": {"message": "API key not valid. Please pass a valid API key."}})
         if request.method == "GET":     # place details by ID
             pid = request.url.path.rsplit("/", 1)[1]
-            self.lookups.append({"id": pid, "mask": request.headers.get("X-Goog-FieldMask")})
+            self.lookups.append({"id": pid, "mask": request.headers.get("X-Goog-FieldMask"),
+                                 "key": request.headers.get("X-Goog-Api-Key")})
             for page in self.pages:
                 for p in page:
                     if p["id"] == pid:
@@ -58,6 +62,8 @@ class FakePlaces:
                         return httpx.Response(200, json=p)
             return httpx.Response(404, json={"error": {"message": "Place not found"}})
         body = json.loads(request.content)
+        if request.headers.get("X-Goog-FieldMask") == "places.id":     # a key check
+            return httpx.Response(200, json={"places": [{"id": "pA"}]})
         self.calls.append({"body": body, "key": request.headers.get("X-Goog-Api-Key"),
                            "mask": request.headers.get("X-Goog-FieldMask")})
         i = int(body.get("pageToken") or 0)
@@ -100,9 +106,19 @@ async def run(actor, v, inp=None):
 
 
 async def leads(actor, v):
-    """Leads by the name Google Maps shows (looked up live), or the stored name for anyone else."""
-    got = (await actor.get(f"/ventures/{v}/leads?limit=200&live=true")).json()
-    return {(x["place"] or {}).get("name") or x["name"]: x for x in got}
+    """Leads by the name Google Maps shows when the lead is opened, or the stored name for anyone else.
+
+    The list itself makes no Google lookups (each one is billed); opening a prospect does."""
+    got = (await actor.get(f"/ventures/{v}/leads?limit=200")).json()
+    out = {}
+    for x in got:
+        assert x["place"] is None
+        if x["place_id"] and not x["opted_out_at"]:
+            one = (await actor.get(f"/ventures/{v}/leads/{x['id']}")).json()
+            out[(one["place"] or {}).get("name") or x["name"]] = {**x, "phone": one["phone"]}
+        else:
+            out[x["name"]] = x
+    return out
 
 
 # ----------------------------------------------------------------------------------- helpers --
@@ -185,7 +201,9 @@ async def test_finds_businesses_without_a_website_and_drafts_whatsapp(biz, place
     assert a["place_search"] == "restaurants in Nangloi, Delhi"
     assert a["status"] == "new" and a["outreach_step"] == 0 and a["next_touch_at"] is None
     assert a["outreach_draft"].startswith("Namaste!") and "Reply STOP" in a["outreach_draft"]
-    assert places.lookups[-1]["mask"] == "id,displayName"          # the list asks only for names
+    before = len(places.lookups)
+    await mayank.get(f"/ventures/{v}/leads?limit=200")
+    assert len(places.lookups) == before                          # the Leads list never calls Google
     one = (await mayank.get(f"/ventures/{v}/leads/{a['id']}")).json()
     assert one["place"]["phone"] == "+91 98737 78861" and one["place"]["review_count"] == 1700
     assert "nationalPhoneNumber" in places.lookups[-1]["mask"]
@@ -426,3 +444,69 @@ async def test_switch_grants_only_the_prospectors_own_trust(biz):
     await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": False, "settings": {}})
     trust = {(t["agent"], t["action"]): t["auto_run"] for t in (await mayank.get(f"/ventures/{v}/trust")).json()}
     assert not trust[("prospector", "gmail.send")]
+
+
+# ------------------------------------------------------------- whose Google key pays for lookups --
+async def test_customers_need_their_own_google_key(client, monkeypatch, places, fake_llm):
+    """Only internal organisations use Kritvia's server key; everyone else brings their own."""
+    owner, org, v = await _growth_biz(client, monkeypatch)
+    r = await run(owner, v)
+    assert r["summary"]["reason"] == "places_not_set_up" and places.calls == []
+    setup = (await owner.get(f"/orgs/{org}/ai")).json()
+    assert setup["google_maps_key"] is None and setup["google_maps_included"] is False
+
+    # a key Google rejects is not saved
+    places.reject = True
+    bad = await owner.put(f"/orgs/{org}/ai/google-maps-key", json={"api_key": "AIzaBadKey0000000000000000000000"})
+    assert bad.status_code == 422 and "Places API (New)" in bad.text
+    places.reject = False
+
+    own = "AIzaOwnKey1111111111111111111111"
+    ok = await owner.put(f"/orgs/{org}/ai/google-maps-key", json={"api_key": own})
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["google_maps_key"]["hint"] == "…1111" and own not in ok.text
+    places.calls.clear()
+    script_outreach(fake_llm)
+    r = await run(owner, v)
+    assert r["summary"]["added"] == 3, r
+    assert {c["key"] for c in places.calls} == {own}             # searched on the customer's key
+    assert {lk["key"] for lk in places.lookups} == {own}         # and looked up on it
+
+    # the owner can remove it
+    removed = await owner.delete(f"/orgs/{org}/ai/google-maps-key")
+    assert removed.json()["google_maps_key"] is None
+
+
+async def test_rejected_key_is_shown_to_the_owner(client, monkeypatch, places, fake_llm):
+    owner, org, v = await _growth_biz(client, monkeypatch)
+    assert (await owner.put(f"/orgs/{org}/ai/google-maps-key",
+                            json={"api_key": "AIzaOwnKey2222222222222222222222"})).status_code == 200
+    places.reject = True
+    r = await run(owner, v)
+    assert r["status"] == "completed" and r["summary"]["added"] == 0
+    err = (await owner.get(f"/orgs/{org}/ai")).json()["google_maps_key"]["last_error"]
+    assert err and "403" in err
+
+
+async def test_only_an_owner_saves_a_google_key(biz, places):
+    r = await biz["alice"].put(f"/orgs/{biz['org']}/ai/google-maps-key",
+                               json={"api_key": "AIzaOwnKey3333333333333333333333"})
+    assert r.status_code == 403
+
+
+async def _growth_biz(client, monkeypatch):
+    import asyncpg
+    from conftest import ADMIN_DSN, make_actor
+    owner = await make_actor(client, "growthowner")
+    org = (await owner.post("/orgs", json={"name": "Growth Co", "slug": "gc-" + uuid.uuid4().hex[:8]})).json()["id"]
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        await conn.execute("SELECT set_org_plan($1, 'growth', now() + interval '30 days')", uuid.UUID(org))
+    finally:
+        await conn.close()
+    v = (await owner.post(f"/orgs/{org}/ventures", json={"name": "Shop", "slug": "shop"})).json()["id"]
+    await owner.put(f"/ventures/{v}/settings", json={"kind": "software", "business_name": "Shop", "city": "Delhi"})
+    r = await owner.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+        "searches": "restaurants in Nangloi, Delhi", "offer": "a website for ₹9,999"}})
+    assert r.status_code == 200, r.text
+    return owner, org, v

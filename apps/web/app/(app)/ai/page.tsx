@@ -110,6 +110,8 @@ export default function AiModelsPage() {
         </div>
       </Card>
 
+      <GoogleMapsCard orgId={org.id} setup={s} onSaved={(d) => qc.setQueryData(key, d)} />
+
       <ConfirmDialog
         open={confirmTraining}
         onClose={() => setConfirmTraining(false)}
@@ -127,6 +129,79 @@ export default function AiModelsPage() {
         </ul>
       </ConfirmDialog>
     </div>
+  );
+}
+
+/** The Prospector's Google Maps lookups run on the organisation's own Google key (billed by Google to them). */
+function GoogleMapsCard({ orgId, setup: s, onSaved }: { orgId: string; setup: Setup; onSaved: (d: Setup) => void }) {
+  const toast = useToast();
+  const [apiKey, setApiKey] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const path = { params: { path: { org_id: orgId } } };
+  const saved = s.google_maps_key;
+  const save = useMutation({
+    mutationFn: () => unwrap(api.PUT("/orgs/{org_id}/ai/google-maps-key", { ...path, body: { api_key: apiKey.trim() } })),
+    onSuccess: (d) => {
+      setErr(null);
+      setApiKey("");
+      onSaved(d);
+      toast.success("Google Maps key saved", "The Prospector looks businesses up with it from its next run.");
+    },
+    onError: (e) => setErr(errorMessage(e)),
+  });
+  const remove = useMutation({
+    mutationFn: () => unwrap(api.DELETE("/orgs/{org_id}/ai/google-maps-key", path)),
+    onSuccess: (d) => {
+      onSaved(d);
+      toast.success("Google Maps key removed");
+    },
+    onError: (e) => toast.error("Could not remove", errorMessage(e)),
+  });
+  return (
+    <Card>
+      <CardHeader
+        title="Google Maps key (for the Prospector)"
+        description="The Prospector finds new customers on Google Maps. Google bills each lookup to the key's own Google Cloud account; at the Prospector's default settings most businesses stay inside Google's free monthly calls."
+      />
+      <div className="space-y-3 p-4">
+        {s.google_maps_included && !saved ? <Notice tone="success">Included: your organisation uses Kritvia&apos;s own Google key.</Notice> : null}
+        {saved ? (
+          saved.last_error ? (
+            <Badge tone="danger">
+              <CircleAlert className="mr-1 h-3 w-3" aria-hidden /> {saved.last_error}
+            </Badge>
+          ) : (
+            <Badge tone="success">
+              <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden /> Key {saved.hint}
+              {saved.last_ok_at ? ` · working ${formatRelative(saved.last_ok_at)}` : ""}
+            </Badge>
+          )
+        ) : null}
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+          <li>In Google Cloud, create a project with billing and enable <strong>Places API (New)</strong>.</li>
+          <li>Create an API key and restrict it to <strong>Places API (New)</strong> only.</li>
+          <li>Set a daily quota cap so a mistake cannot run up a bill. Then paste the key here.</li>
+        </ol>
+        <FormError message={err} />
+        <Field label={saved ? "Replace key" : "API key"}>
+          <Input type="password" autoComplete="off" value={apiKey} disabled={!s.can_edit} placeholder="AIza…" onChange={(e) => setApiKey(e.target.value)} />
+        </Field>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="primary" disabled={!s.can_edit || apiKey.trim().length < 20} loading={save.isPending} onClick={() => save.mutate()}>
+            Test and save
+          </Button>
+          {saved ? (
+            <Button size="sm" variant="ghost" disabled={!s.can_edit} loading={remove.isPending} onClick={() => remove.mutate()} icon={<Trash2 className="h-3.5 w-3.5" />}>
+              Remove
+            </Button>
+          ) : null}
+          <a href="https://console.cloud.google.com/apis/library/places.googleapis.com" target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 text-xs text-accent hover:underline">
+            Open Places API (New) <ExternalLink className="h-3 w-3" aria-hidden />
+            <span className="sr-only">(opens in a new tab)</span>
+          </a>
+        </div>
+      </div>
+    </Card>
   );
 }
 

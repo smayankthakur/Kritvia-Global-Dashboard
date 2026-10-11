@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from kritvia_api.deps import Svc, TenantDB, UserId
-from kritvia_api.services import byok
+from kritvia_api.services import byok, places_keys
+from kritvia_api.services.places import PlacesClient
+from kritvia_api.services.quota import effective_plan
 
 router = APIRouter(prefix="/orgs/{org_id}/ai", tags=["ai-models"])
 
@@ -56,6 +58,12 @@ class KeyOut(BaseModel):
     last_error: str | None
 
 
+class ServiceKeyOut(BaseModel):
+    hint: str
+    last_ok_at: datetime | None
+    last_error: str | None
+
+
 class AiSetupOut(BaseModel):
     can_edit: bool
     allow_training_models: bool
@@ -63,6 +71,13 @@ class AiSetupOut(BaseModel):
     providers: list[ProviderOut]
     keys: list[KeyOut]
     ventures_with_google: int = Field(description="businesses where training models stay off (Google connected)")
+    google_maps_key: ServiceKeyOut | None = Field(default=None, description="the organisation's own Places key")
+    google_maps_included: bool = Field(default=False,
+                                       description="Kritvia's own key covers this organisation (internal plan)")
+
+
+class ServiceKeyIn(BaseModel):
+    api_key: str = Field(min_length=20, max_length=200, pattern=r"^[A-Za-z0-9_\-]+$")
 
 
 class SettingsIn(BaseModel):
@@ -100,6 +115,11 @@ async def get_setup(org_id: uuid.UUID, db: TenantDB, svc: Svc) -> AiSetupOut:
     google = (await db.execute(text(
         "SELECT count(DISTINCT c.venture_id) FROM connectors c WHERE c.org_id = :o AND c.provider = 'google'"
         " AND c.status = 'active'"), {"o": org_id})).scalar()
+    maps = (await db.execute(text(
+        "SELECT key_hint, last_ok_at, last_error FROM org_service_keys WHERE org_id = :o AND service = 'google_places'"),
+        {"o": org_id})).first()
+    st = (await db.execute(text("SELECT plan, trial_ends_at FROM org_plan_state(:o)"), {"o": org_id})).first()
+    plan = effective_plan(st.plan if st else None, st.trial_ends_at if st else None).code
     cfg = svc.router.config
     free = [FreeModelOut(key=f["key"], label=f["label"], may_train=any(cfg.policies.get(d) == "may_train"
                                                                        for d in f["deployments"]),
@@ -111,7 +131,10 @@ async def get_setup(org_id: uuid.UUID, db: TenantDB, svc: Svc) -> AiSetupOut:
                    for p in byok.PROVIDERS.values()],
         keys=[KeyOut(provider=r.provider, label=byok.PROVIDERS[r.provider].label, model=r.model, hint=r.key_hint,
                      position=r.position, last_ok_at=r.last_ok_at, last_error=r.last_error) for r in rows],
-        ventures_with_google=int(google or 0))
+        ventures_with_google=int(google or 0),
+        google_maps_key=ServiceKeyOut(hint=maps.key_hint, last_ok_at=maps.last_ok_at, last_error=maps.last_error)
+        if maps else None,
+        google_maps_included=plan in places_keys.SERVER_KEY_PLANS and bool(svc.places and svc.places.configured))
 
 
 @router.put("/settings", response_model=AiSetupOut)
@@ -156,4 +179,26 @@ async def delete_key(org_id: uuid.UUID, provider: ProviderKey, db: TenantDB, svc
     await _owner(db, org_id)
     await db.execute(text("DELETE FROM org_ai_keys WHERE org_id = :o AND provider = :p"), {"o": org_id, "p": provider})
     svc.router.forget_routes()
+    return await get_setup(org_id, db, svc)
+
+
+@router.put("/google-maps-key", response_model=AiSetupOut)
+async def put_google_maps_key(org_id: uuid.UUID, body: ServiceKeyIn, db: TenantDB, svc: Svc) -> AiSetupOut:
+    """Saves the organisation's own Google Maps (Places API) key after one cheap test call."""
+    await _owner(db, org_id)
+    api_key = body.api_key.strip()
+    problem = await PlacesClient(api_key, transport=getattr(svc.places, "_transport", None)).verify()
+    if problem:
+        raise HTTPException(422, f"Not saved: {problem}.")
+    await db.execute(text("SELECT private.service_key_save(:o, :s, :k, :h)"),
+                     {"o": org_id, "s": places_keys.SERVICE, "k": places_keys.wrap(svc.keys, org_id, api_key),
+                      "h": places_keys.hint(api_key)})
+    return await get_setup(org_id, db, svc)
+
+
+@router.delete("/google-maps-key", response_model=AiSetupOut)
+async def delete_google_maps_key(org_id: uuid.UUID, db: TenantDB, svc: Svc) -> AiSetupOut:
+    await _owner(db, org_id)
+    await db.execute(text("DELETE FROM org_service_keys WHERE org_id = :o AND service = :s"),
+                     {"o": org_id, "s": places_keys.SERVICE})
     return await get_setup(org_id, db, svc)

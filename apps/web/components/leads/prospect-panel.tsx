@@ -36,9 +36,13 @@ export function outreachState(l: Lead): { label: string; tone: "accent" | "succe
 
 export const PLACEHOLDER_NAME = "Business on Google Maps";
 
-/** The name to show: the business's own (saved after they replied), else Google Maps' live one. */
+/** The name to show: the business's own (saved after they replied), else Google Maps' (only once the
+ * lead is opened, since each lookup is billed), else the search that found it. */
 export function leadName(l: Lead): string {
-  if (l.source === "prospector" && l.name === PLACEHOLDER_NAME) return l.place?.name ?? "Google Maps listing";
+  if (l.source === "prospector" && l.name === PLACEHOLDER_NAME) {
+    if (l.place?.name) return l.place.name;
+    return l.place_search ? `Prospect · ${l.place_search}` : "Google Maps prospect";
+  }
   return l.name;
 }
 
@@ -103,7 +107,12 @@ export function ProspectPanel({ lead: listLead, ventureId }: { lead: Lead; ventu
       {live.isPending ? (
         <p className="text-sm text-subtle">Looking the business up on Google Maps…</p>
       ) : live.data?.place_error ? (
-        <p className="text-sm text-muted">Couldn&apos;t load the details from Google Maps right now ({live.data.place_error}).</p>
+        <p className="text-sm text-muted">
+          Couldn&apos;t load the details from Google Maps ({live.data.place_error}).{" "}
+          <a href="/ai" className="text-accent underline-offset-2 hover:underline">
+            Google Maps key settings
+          </a>
+        </p>
       ) : null}
       {place ? (
         <KeyValue

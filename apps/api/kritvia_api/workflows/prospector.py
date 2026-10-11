@@ -145,12 +145,14 @@ async def find(ctx: RunContext, state: dict) -> Goto | Finish:
     from kritvia_api.config import get_settings
     cfg = await ctx.settings()
     searches = [q.strip() for q in re.split(r"[;\n]", str(cfg.get("searches") or "")) if q.strip()][:MAX_SEARCHES]
-    places = ctx.services.places
     if not searches:
         ctx.note("no Google Maps searches set; add one in the Prospector settings")
         return Goto("queue", update={"summary": {"found": 0, "added": 0, "reason": "no_searches"}})
-    if places is None or not places.configured:
-        ctx.note("Google Places is not set up on this server (GOOGLE_PLACES_API_KEY)")
+    from kritvia_api.services.places_keys import places_for
+    async with ctx.tx() as conn:
+        access = await places_for(conn, ctx.services, ctx.venture_id)
+    if access.client is None:
+        ctx.note(f"no new prospects today: {access.problem}")
         return Goto("queue", update={"summary": {"found": 0, "added": 0, "reason": "places_not_set_up"}})
 
     cap = min(int(cfg.get("new_per_day", 10)), get_settings().prospector_daily_cap)
@@ -274,13 +276,18 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
     place = None
     if lead.place_id:
         from kritvia_api.services.places import PlacesError
-        places = ctx.services.places
-        if places is None or not places.configured:
+        from kritvia_api.services.places_keys import key_problem, places_for, record
+        async with ctx.tx() as conn:
+            access = await places_for(conn, ctx.services, ctx.venture_id)
+        if access.client is None:
             await _pause(ctx, lead.id, until=datetime.now(IST) + timedelta(days=1))
-            return Finish("places_not_set_up", note="Google Places is not set up; trying again tomorrow")
+            return Finish("places_not_set_up", note=f"{access.problem}; trying again tomorrow")
         try:
-            place = await places.details(lead.place_id)
+            place = await access.client.details(lead.place_id)
         except PlacesError as exc:
+            if key_problem(str(exc)):
+                async with ctx.tx() as conn:
+                    await record(conn, access, str(exc))
             await _pause(ctx, lead.id, until=datetime.now(IST) + timedelta(days=1))
             return Finish("place_unavailable", note=f"Google Maps lookup failed ({str(exc)[:120]}); trying tomorrow")
         if place.status == "CLOSED_PERMANENTLY":

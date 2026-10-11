@@ -36,7 +36,21 @@ def build_tools() -> ToolRegistry:
 
     @reg.tool("places.search", Capability.READ, "Search Google Maps (Places API) for businesses")
     async def places_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
-        found = await ctx.services.places.search(str(p["query"]), max_results=int(p.get("max_results", 60)))
+        from kritvia_api.services.places import PlacesError
+        from kritvia_api.services.places_keys import key_problem, places_for, record
+        async with ctx.tx() as conn:
+            access = await places_for(conn, ctx.services, ctx.venture_id)
+        if access.client is None:
+            raise PlacesError(access.problem or "Google Maps is not set up")
+        try:
+            found = await access.client.search(str(p["query"]), max_results=int(p.get("max_results", 60)))
+        except PlacesError as exc:
+            if key_problem(str(exc)):
+                async with ctx.tx() as conn:
+                    await record(conn, access, str(exc))
+            raise
+        async with ctx.tx() as conn:
+            await record(conn, access, None)
         return {"places": [{**dataclasses.asdict(x), "website_kind": x.website_kind} for x in found]}
 
     @reg.tool("calendar.create_event", Capability.SEND, "Create a calendar event and invite attendees")

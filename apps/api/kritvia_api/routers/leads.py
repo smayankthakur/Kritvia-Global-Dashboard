@@ -1,4 +1,3 @@
-import asyncio
 import json
 import uuid
 
@@ -20,19 +19,22 @@ def key_provider():
     return get_services().keys
 
 
-LIVE_LIST_MAX = 60      # prospects named live in one list response (each is a Google lookup)
+async def _place(db, venture_id: uuid.UUID, place_id: str) -> tuple[PlaceOut | None, str | None]:
+    """The business as Google Maps shows it now (never stored: Google's terms allow only the ID).
 
-
-async def _place(place_id: str, *, name_only: bool) -> tuple[PlaceOut | None, str | None]:
-    """The business as Google Maps shows it now (never stored: Google's terms allow only the ID)."""
+    Runs on the organisation's own Google key (services/places_keys.py). Only an opened lead is
+    looked up; the Leads list shows no Google data, because each lookup is billed by Google."""
     from kritvia_api.engine.context import get_services
     from kritvia_api.services.places import PlacesError
-    places = get_services().places
-    if places is None or not places.configured:
-        return None, "Google Maps lookups are not set up on this server"
+    from kritvia_api.services.places_keys import key_problem, places_for, record
+    access = await places_for(db, get_services(), venture_id)
+    if access.client is None:
+        return None, access.problem
     try:
-        p = await places.details(place_id, name_only=name_only)
+        p = await access.client.details(place_id)
     except PlacesError as exc:
+        if key_problem(str(exc)):
+            await record(db, access, str(exc))
         return None, str(exc)[:200]
     return PlaceOut(name=p.name, phone=p.phone, address=p.address, website=p.website, rating=p.rating,
                     review_count=p.review_count, category=p.category, maps_url=p.maps_url, status=p.status), None
@@ -89,24 +91,14 @@ async def create_lead(venture_id: uuid.UUID, body: LeadIn, user_id: UserId, db: 
 
 
 @router.get("", response_model=list[LeadOut])
-async def list_leads(venture_id: uuid.UUID, db: TenantDB, limit: int = 50, live: bool = False) -> list[LeadOut]:
-    """`live=true` also names prospects from Google Maps (one lookup each, the first LIVE_LIST_MAX)."""
+async def list_leads(venture_id: uuid.UUID, db: TenantDB, limit: int = 50) -> list[LeadOut]:
+    """No Google lookups here: a prospect is named from Google Maps only when its lead is opened."""
     crypto = EnvelopeCrypto(db, key_provider())
     rows = (await db.execute(
         text(f"SELECT {COLS} FROM leads WHERE venture_id = :v ORDER BY created_at DESC LIMIT :l"),
         {"v": venture_id, "l": min(max(limit, 1), 200)},
     )).all()
-    places: dict[uuid.UUID, tuple[PlaceOut | None, str | None]] = {}
-    if live:
-        todo = [r for r in rows if r.place_id and not r.opted_out_at][:LIVE_LIST_MAX]
-        gate = asyncio.Semaphore(8)
-
-        async def one(r):
-            async with gate:
-                places[r.id] = await _place(r.place_id, name_only=True)
-        await asyncio.gather(*(one(r) for r in todo))
-    return [await _out(crypto, r, place=places.get(r.id, (None, None))[0],
-                       place_error=places.get(r.id, (None, None))[1]) for r in rows]
+    return [await _out(crypto, r) for r in rows]
 
 
 @router.get("/{lead_id}", response_model=LeadOut)
@@ -116,7 +108,7 @@ async def get_lead(venture_id: uuid.UUID, lead_id: uuid.UUID, db: TenantDB) -> L
     )).first()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
-    place, err = (await _place(row.place_id, name_only=False)) if row.place_id and not row.opted_out_at else (None, None)
+    place, err = (await _place(db, venture_id, row.place_id)) if row.place_id and not row.opted_out_at else (None, None)
     return await _out(EnvelopeCrypto(db, key_provider()), row, place=place, place_error=err)
 
 

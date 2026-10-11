@@ -285,8 +285,8 @@ function LeadsView() {
   const [open, setOpen] = useState(false);
   const leads = useQuery({
     queryKey: ["leads", v.id],
-    // live: prospects are named from Google Maps on the fly (only their place ID is stored)
-    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/leads", { params: { path: { venture_id: v.id }, query: { limit: 200, live: true } } })),
+    // Prospects are named from Google Maps only when opened: each lookup is billed by Google.
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/leads", { params: { path: { venture_id: v.id }, query: { limit: 200 } } })),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });

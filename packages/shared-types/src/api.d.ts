@@ -580,6 +580,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/ai/google-maps-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Google Maps Key
+         * @description Saves the organisation's own Google Maps (Places API) key after one cheap test call.
+         */
+        put: operations["put_google_maps_key_orgs__org_id__ai_google_maps_key_put"];
+        post?: never;
+        /** Delete Google Maps Key */
+        delete: operations["delete_google_maps_key_orgs__org_id__ai_google_maps_key_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/ai/keys/{provider}": {
         parameters: {
             query?: never;
@@ -2075,7 +2096,7 @@ export interface paths {
         };
         /**
          * List Leads
-         * @description `live=true` also names prospects from Google Maps (one lookup each, the first LIVE_LIST_MAX).
+         * @description No Google lookups here: a prospect is named from Google Maps only when its lead is opened.
          */
         get: operations["list_leads_ventures__venture_id__leads_get"];
         put?: never;
@@ -2895,6 +2916,14 @@ export interface components {
             can_edit: boolean;
             /** Free Models */
             free_models: components["schemas"]["FreeModelOut"][];
+            /**
+             * Google Maps Included
+             * @description Kritvia's own key covers this organisation (internal plan)
+             * @default false
+             */
+            google_maps_included: boolean;
+            /** @description the organisation's own Places key */
+            google_maps_key?: components["schemas"]["ServiceKeyOut"] | null;
             /** Keys */
             keys: components["schemas"]["KeyOut"][];
             /** Providers */
@@ -5307,6 +5336,20 @@ export interface components {
             /** Workflow */
             workflow: string;
         };
+        /** ServiceKeyIn */
+        ServiceKeyIn: {
+            /** Api Key */
+            api_key: string;
+        };
+        /** ServiceKeyOut */
+        ServiceKeyOut: {
+            /** Hint */
+            hint: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Ok At */
+            last_ok_at: string | null;
+        };
         /** SettingsIn */
         SettingsIn: {
             /** Allow Training Models */
@@ -7330,6 +7373,72 @@ export interface operations {
         };
     };
     get_setup_orgs__org_id__ai_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSetupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_google_maps_key_orgs__org_id__ai_google_maps_key_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceKeyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSetupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_google_maps_key_orgs__org_id__ai_google_maps_key_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -10674,7 +10783,6 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
-                live?: boolean;
             };
             header?: never;
             path: {

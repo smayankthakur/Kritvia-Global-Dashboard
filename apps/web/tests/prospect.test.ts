@@ -25,11 +25,12 @@ describe("outreachState", () => {
 });
 
 describe("leadName", () => {
-  it("shows Google's live name for an unnamed prospect, else the stored name", async () => {
+  it("shows Google's name once opened, else the search that found it, else the stored name", async () => {
     const { leadName, PLACEHOLDER_NAME } = await import("@/components/leads/prospect-panel");
     const p = { ...base, name: PLACEHOLDER_NAME } as Schemas["LeadOut"];
     expect(leadName({ ...p, place: { name: "Ramesh Dhaba" } } as Schemas["LeadOut"])).toBe("Ramesh Dhaba");
-    expect(leadName(p)).toBe("Google Maps listing");
+    expect(leadName({ ...p, place_search: "restaurants in Nangloi" } as Schemas["LeadOut"])).toBe("Prospect · restaurants in Nangloi");
+    expect(leadName({ ...p, place_search: null } as Schemas["LeadOut"])).toBe("Google Maps prospect");
     expect(leadName({ ...p, name: "Ramesh Kumar" } as Schemas["LeadOut"])).toBe("Ramesh Kumar");
   });
 });
