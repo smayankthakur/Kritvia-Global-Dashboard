@@ -5,7 +5,7 @@ AI usage is counted in tokens sent to hosted models this calendar month (IST). L
 the local model where the tier has one, and stops only steps that need a hosted model.
 
 What a plan unlocks:
-  agents        "core"  = inbox assistant, lead triage & proposals, meeting digests;
+  agents        "core"  = the Kritvia assistant, inbox assistant, lead triage & proposals, meeting digests;
                 "kind"  = core + the agent for the business's own kind (loans for a finance
                           business, the nightly plan for a kitchen);
                 "all"   = every agent on every business.
@@ -21,16 +21,17 @@ from typing import Any, Literal
 GB = 1024 ** 3
 MB = 1024 ** 2
 
-CORE_AGENTS = frozenset({"inbox_assistant", "lead_triage", "meeting_digest"})
+CORE_AGENTS = frozenset({"assistant", "inbox_assistant", "lead_triage", "meeting_digest"})
 KIND_AGENT = {"finance": "loan_verification", "kitchen": "kitchen_daily"}
-AGENT_NAMES = {"inbox_assistant": "Inbox assistant", "lead_triage": "Lead triage & proposals",
+AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assistant", "lead_triage": "Lead triage & proposals",
                "meeting_digest": "Meeting digests", "loan_verification": "Loan document checks",
                "kitchen_daily": "Nightly kitchen plan", "prospector": "Prospector (outbound sales)"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
-                     "drive": "Google Drive", "whatsapp": "WhatsApp Business", "tally": "Tally"}
+                     "drive": "Google Drive", "whatsapp": "WhatsApp Business", "tally": "Tally",
+                     "mcp": "Connected apps (MCP)"}
 BASIC = frozenset({"gmail", "lead_form"})
 STANDARD = BASIC | {"calendar", "drive", "whatsapp"}
-ALL = STANDARD | {"tally"}
+ALL = STANDARD | {"tally", "mcp"}
 
 
 @dataclass(frozen=True)

@@ -80,6 +80,32 @@ def build_tools() -> ToolRegistry:
     async def sandbox_bom(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
         return await ctx.services.sandbox.run("bom", p, timeout_s=60)
 
+    @reg.tool("leads.search", Capability.READ, "Look up the business's leads by name, company, email or phone")
+    async def leads_search(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        q = str(p.get("query") or "").strip()[:100]
+        status = str(p.get("status") or "").strip().lower()[:20]
+        where, params = ["venture_id = :v", "opted_out_at IS NULL"], {"v": ctx.venture_id}
+        if q:
+            where.append("(name ILIKE :q OR company ILIKE :q OR email ILIKE :q OR coalesce(phone, '') ILIKE :q)")
+            params["q"] = "%" + q.replace("\\", "").replace("%", "").replace("_", " ") + "%"
+        if status:
+            where.append("status = :s")
+            params["s"] = status
+        async with ctx.tx() as conn:
+            rows = (await conn.execute(text(
+                "SELECT id, name, company, email, phone, status, score, source, created_at FROM leads"
+                f" WHERE {' AND '.join(where)} ORDER BY created_at DESC LIMIT 20"), params)).all()
+        return {"leads": [{"id": str(r.id), "name": r.name, "company": r.company, "email": r.email,
+                           "phone": r.phone, "status": r.status, "score": r.score, "source": r.source,
+                           "added": r.created_at.date().isoformat()} for r in rows]}
+
+    @reg.tool("mcp.call", Capability.SEND, "Use a tool of a connected app (MCP) that changes something")
+    async def mcp_call(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        assert ok is not None
+        from kritvia_api.services import mcp
+        result = await mcp.call(ctx, str(p.get("mcp_tool") or ""), p)
+        return {"status": "done", "result": result[:2000]}
+
     @reg.tool("knowledge.search", Capability.READ, "Semantic search over the venture's knowledge base")
     async def knowledge_search(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
         from kritvia_api.services.memory import search_as_agent

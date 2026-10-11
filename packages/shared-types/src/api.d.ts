@@ -1242,6 +1242,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Apps */
+        get: operations["list_apps_ventures__venture_id__apps_get"];
+        put?: never;
+        /** Add App */
+        post: operations["add_app_ventures__venture_id__apps_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/apps/{app_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove App */
+        delete: operations["remove_app_ventures__venture_id__apps__app_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/apps/{app_id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh App */
+        post: operations["refresh_app_ventures__venture_id__apps__app_id__refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/ask": {
         parameters: {
             query?: never;
@@ -1253,6 +1305,41 @@ export interface paths {
         put?: never;
         /** Ask */
         post: operations["ask_ventures__venture_id__ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Items */
+        get: operations["list_items_ventures__venture_id__assistant_get"];
+        put?: never;
+        /** Ask */
+        post: operations["ask_ventures__venture_id__assistant_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/assistant/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Item */
+        get: operations["get_item_ventures__venture_id__assistant__run_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3026,6 +3113,52 @@ export interface components {
             /** Tier */
             tier: string;
         };
+        /** AppIn */
+        AppIn: {
+            /**
+             * Name
+             * @description short name, e.g. hubspot
+             */
+            name: string;
+            /** Token */
+            token?: string | null;
+            /** Url */
+            url: string;
+        };
+        /** AppOut */
+        AppOut: {
+            /** Has Token */
+            has_token: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Tools */
+            tools: components["schemas"]["AppTool"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Url */
+            url: string;
+        };
+        /** AppTool */
+        AppTool: {
+            /** Description */
+            description: string;
+            /** Name */
+            name: string;
+            /** Read Only */
+            read_only: boolean;
+        };
         /** Applicant */
         Applicant: {
             /** Dob */
@@ -3183,10 +3316,44 @@ export interface components {
             /** Workflow */
             workflow: string;
         };
-        /** AskIn */
-        AskIn: {
-            /** Question */
-            question: string;
+        /** AssistantItem */
+        AssistantItem: {
+            /** Answer */
+            answer: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Outcome */
+            outcome: string | null;
+            /** Pending Approval Id */
+            pending_approval_id: string | null;
+            /** Request */
+            request: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Status */
+            status: string;
+            /** Steps */
+            steps: components["schemas"]["AssistantStep"][];
+        };
+        /** AssistantStep */
+        AssistantStep: {
+            /** N */
+            n: number;
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "done" | "failed" | "not approved" | "waiting for approval";
+            /** Tool */
+            tool: string;
         };
         /** AuditOut */
         AuditOut: {
@@ -6528,6 +6695,11 @@ export interface components {
             /** Venture Kinds */
             venture_kinds: string[];
         };
+        /** AskIn */
+        kritvia_api__routers__assistant__AskIn: {
+            /** Request */
+            request: string;
+        };
         /** ConsentIn */
         kritvia_api__routers__compliance__ConsentIn: {
             /**
@@ -6551,6 +6723,11 @@ export interface components {
             notice_version: string;
             /** Purpose */
             purpose: string;
+        };
+        /** AskIn */
+        kritvia_api__routers__knowledge__AskIn: {
+            /** Question */
+            question: string;
         };
         /** UnsubscribeIn */
         kritvia_api__routers__privacy__UnsubscribeIn: {
@@ -7728,7 +7905,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AskIn"];
+                "application/json": components["schemas"]["kritvia_api__routers__knowledge__AskIn"];
             };
         };
         responses: {
@@ -8910,6 +9087,134 @@ export interface operations {
             };
         };
     };
+    list_apps_ventures__venture_id__apps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_app_ventures__venture_id__apps_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_app_ventures__venture_id__apps__app_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                app_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_app_ventures__venture_id__apps__app_id__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                app_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ask_ventures__venture_id__ask_post: {
         parameters: {
             query?: never;
@@ -8921,7 +9226,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AskIn"];
+                "application/json": components["schemas"]["kritvia_api__routers__knowledge__AskIn"];
             };
         };
         responses: {
@@ -8932,6 +9237,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnswerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_items_ventures__venture_id__assistant_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_ventures__venture_id__assistant_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["kritvia_api__routers__assistant__AskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_item_ventures__venture_id__assistant__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantItem"];
                 };
             };
             /** @description Validation Error */
