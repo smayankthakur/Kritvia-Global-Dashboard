@@ -2,7 +2,9 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from typing import Any
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -131,6 +133,24 @@ class Settings(BaseSettings):
 
     # Uploads
     max_upload_mb: int = 25
+
+    @model_validator(mode="before")
+    @classmethod
+    def _empty_means_unset(cls, data: Any) -> Any:
+        """A line like `PAYMENTS_LIVE_AT=` in .env means "not set", not "an empty date".
+
+        Without this, an empty value for a date, number or true/false setting stops the API and
+        worker from starting (7 Oct 2026). Plain text settings keep an empty value as written."""
+        if not isinstance(data, dict):
+            return data
+        out = {}
+        for key, value in data.items():
+            field = cls.model_fields.get(str(key).lower())
+            if (isinstance(value, str) and not value.strip() and field is not None
+                    and field.annotation is not str):
+                continue
+            out[key] = value
+        return out
 
 
 @lru_cache
