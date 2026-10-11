@@ -8,13 +8,14 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
+from kritvia_api.deps import Svc, TenantDB, TenantDBCommitFirst, UserId, venture_org
 from kritvia_api.engine.core import registry
+from kritvia_api.engine.runner import resume_budget_paused
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services.quota import org_usage
 
@@ -150,8 +151,8 @@ class AgentIn(BaseModel):
 
 
 @router.put("/ventures/{venture_id}/board/agents/{workflow}", response_model=RoleOut)
-async def put_agent(venture_id: uuid.UUID, workflow: str, body: AgentIn, user_id: UserId, db: TenantDB,
-                    svc: Svc) -> RoleOut:
+async def put_agent(venture_id: uuid.UUID, workflow: str, body: AgentIn, user_id: UserId,
+                    db: TenantDBCommitFirst, svc: Svc, background: BackgroundTasks) -> RoleOut:
     """Move an agent to another role or set its monthly token budget (NULL = plan limit only)."""
     org = await venture_org(db, venture_id)
     await _require_admin(db, venture_id)
@@ -181,6 +182,11 @@ async def put_agent(venture_id: uuid.UUID, workflow: str, body: AgentIn, user_id
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     svc.router.gate.forget_agent(venture_id, workflow)
+    if body.clear_budget or body.monthly_tokens is not None:
+        # Runs this agent parked for lack of budget pick up again now, not at the worker's next pass.
+        # They are dispatched after this request's transaction commits, so the worker sees them queued.
+        for run_id in await resume_budget_paused(svc, db, venture_id, enqueue=False):
+            background.add_task(svc.dispatcher.enqueue_run, run_id)
     out = await board(venture_id, db, svc)
     for r in out.roles:
         if r.workflow == workflow:

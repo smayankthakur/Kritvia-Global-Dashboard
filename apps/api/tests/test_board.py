@@ -85,9 +85,8 @@ async def test_budget_parks_the_agent_and_retry_resumes(desk, fake_llm, services
         await conn.close()
     assert blocked >= 1 and attributed >= 1
 
-    # lifting the budget and retrying picks the run up where it stopped
+    # lifting the budget picks the run up where it stopped, with no retry needed
     assert (await mayank.put(f"/ventures/{v}/board/agents/inbox_assistant", json={"clear_budget": True})).json()["paused"] is False
-    assert (await mayank.post(f"/ventures/{v}/runs/{run_id}/retry")).status_code == 200
     run = (await mayank.get(f"/ventures/{v}/runs/{run_id}")).json()
     assert run["status"] == "waiting" and "blocked" not in run["summary"] and run["current_step"] == "send"
     card = next(t for t in (await mayank.get(f"/ventures/{v}/board")).json()["tickets"] if t["run_id"] == run_id)
@@ -104,3 +103,42 @@ async def test_free_plan_cannot_set_budgets(client, monkeypatch):
     r = await owner.put(f"/ventures/{v}/board/agents/inbox_assistant", json={"monthly_tokens": 1000})
     assert r.status_code == 402
     assert (await owner.put(f"/ventures/{v}/board/agents/inbox_assistant", json={"role": "sales"})).status_code == 200
+
+
+async def test_budget_paused_runs_resume_on_their_own(desk, fake_llm, services):
+    """The worker's pass resumes parked runs once the agent has budget again (raised or a new month),
+    and leaves alone those whose agent is still over budget."""
+    from kritvia_api.engine.runner import resume_budget_paused
+
+    mayank, v = desk["mayank"], desk["desk"]
+    assert (await mayank.put(f"/ventures/{v}/board/agents/inbox_assistant", json={"monthly_tokens": 1})).status_code == 200
+    script_inbox(fake_llm)
+    run_id = (await mayank.post(f"/ventures/{v}/runs", json={"workflow": "inbox_assistant",
+                                                             "input": SUPPORT_MAIL})).json()["id"]
+    assert (await mayank.get(f"/ventures/{v}/runs/{run_id}")).json()["summary"].get("blocked") == "budget"
+
+    # still over budget: nothing moves
+    assert await resume_budget_paused(services) == []
+    assert (await mayank.get(f"/ventures/{v}/runs/{run_id}")).json()["status"] == "waiting"
+
+    # a bigger budget set straight in the database (as if a new month began): the worker's pass resumes it
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        await conn.execute("UPDATE workflow_configs SET monthly_tokens = 100000000 WHERE venture_id = $1"
+                           " AND workflow = 'inbox_assistant'", uuid.UUID(v))
+    finally:
+        await conn.close()
+    resumed = await resume_budget_paused(services)
+    assert uuid.UUID(run_id) in resumed
+    run = (await mayank.get(f"/ventures/{v}/runs/{run_id}")).json()
+    assert "blocked" not in run["summary"] and run["current_step"] == "send"
+    card = next(t for t in (await mayank.get(f"/ventures/{v}/board")).json()["tickets"] if t["run_id"] == run_id)
+    assert card["status"] == "waiting_approval"
+    assert await resume_budget_paused(services) == []   # nothing left to resume
+
+
+async def test_resume_budget_paused_is_scoped_to_the_callers_businesses(desk, client):
+    """A person can only trigger the resume for a business they manage."""
+    outsider = await make_actor(client, "resume-outsider")
+    r = await outsider.put(f"/ventures/{desk['desk']}/board/agents/inbox_assistant", json={"clear_budget": True})
+    assert r.status_code in (403, 404)

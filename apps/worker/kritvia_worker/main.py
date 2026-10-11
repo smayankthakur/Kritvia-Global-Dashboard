@@ -27,7 +27,7 @@ from sqlalchemy import text
 from kritvia_api.db.session import dispose_engine, tenant_tx
 from kritvia_api.engine.bootstrap import build_services
 from kritvia_api.engine.context import set_services
-from kritvia_api.engine.runner import DuplicateTrigger, advance_run, start_run, sweep as sweep_runs
+from kritvia_api.engine.runner import DuplicateTrigger, advance_run, resume_budget_paused, start_run, sweep as sweep_runs
 from kritvia_api.services.quota import PlanRestricted
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -98,6 +98,12 @@ async def expire_approvals(ctx: dict) -> int:
     return n or 0
 
 
+async def resume_paused(ctx: dict) -> int:
+    """Runs parked by an agent's monthly budget resume once there is budget again (raised, cleared,
+    or a new month)."""
+    return len(await resume_budget_paused(ctx["services"]))
+
+
 async def poll_gmail(ctx: dict) -> dict:
     from kritvia_api.services.pollers import poll_gmail_all
     return await poll_gmail_all(ctx["services"])
@@ -166,6 +172,7 @@ class WorkerSettings:
         cron(expire_approvals, second=50),
         cron(poll_gmail, minute=_every(5), second=20),
         cron(reembed, minute=_every(15), second=40),
+        cron(resume_paused, minute=_every(10), second=25),
         cron(purge_expired, hour={3}, minute={15}),
         cron(morning_check, hour={6}, minute={30}),
     ]

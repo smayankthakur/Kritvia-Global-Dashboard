@@ -228,7 +228,8 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
         log.info("run %s parked at %s: %s", run_id, step_name, exc)
         state.setdefault("summary", {})["blocked"] = "budget"
         await _park(ctx, state, step_name, step_count, ticket_status="blocked",
-                    ticket_note="Paused: this agent's monthly budget is used up")
+                    ticket_note="Paused: this agent's monthly budget is used up. It carries on by itself"
+                                " when the budget is raised or a new month starts")
         return "waiting"
     except Exception as exc:
         log.exception("run %s failed at %s", run_id, step_name)
@@ -428,6 +429,28 @@ async def retry_run(user_id: uuid.UUID, run_id: uuid.UUID, services: Services) -
         await conn.execute(text("SELECT ticket_for_run(:r, 'open', 'Retried')"), {"r": run_id})
     await services.dispatcher.enqueue_run(run_id)
     return True
+
+
+async def resume_budget_paused(services: Services, conn=None, venture_id: uuid.UUID | None = None, *,
+                               enqueue: bool = True) -> list[uuid.UUID]:
+    """Put runs parked by an agent's monthly budget back on the queue once the agent has budget
+    again (the owner raised or cleared it, or a new month began). With a connection and venture,
+    as that person, for one business; without, for every business (the worker). With
+    enqueue=False the caller dispatches the returned runs itself, after its transaction commits."""
+    local = services.router.local_deployments()
+    sql = text("SELECT run_id FROM private.resume_budget_paused(:l, :v)")
+    if conn is not None:
+        rows = (await conn.execute(sql, {"l": local, "v": venture_id})).all()
+    else:
+        async with tenant_tx(None, "system") as c:
+            rows = (await c.execute(sql, {"l": local, "v": venture_id})).all()
+    ids = [r.run_id for r in rows]
+    if enqueue:
+        for run_id in ids:
+            await services.dispatcher.enqueue_run(run_id)
+    if ids:
+        log.info("resumed %d budget-paused run(s)", len(ids))
+    return ids
 
 
 async def sweep(services: Services, limit: int = 50) -> int:

@@ -113,7 +113,11 @@ class TokenGate:
                  " WHERE c.venture_id = :v AND c.workflow = :w"),
             {"v": venture_id, "w": workflow, "l": local})).first()
         over = bool(row and row.monthly_tokens is not None and int(row.used) >= int(row.monthly_tokens))
-        self._agent_cache[key] = (time.monotonic() + self.ttl, over)
+        if not over:
+            # Only "has budget" is cached: an agent that is over is asked again each time, so a
+            # paused run resumed after the owner raises the budget never meets a stale answer
+            # in another process (the API forgets its own cache; the worker can't).
+            self._agent_cache[key] = (time.monotonic() + self.ttl, over)
         return over
 
     async def over_limit(self, conn, org_id: uuid.UUID, local: list[str]) -> bool:

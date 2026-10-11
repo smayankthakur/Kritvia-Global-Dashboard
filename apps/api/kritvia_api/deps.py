@@ -90,5 +90,8 @@ async def venture_org(db: AsyncConnection, venture_id: uuid.UUID) -> uuid.UUID:
 
 UserId = Annotated[uuid.UUID, Depends(current_user_id)]
 TenantDB = Annotated[AsyncConnection, Depends(tenant_db)]
+# The same transaction, committed as soon as the endpoint returns (before the response is sent), so
+# background tasks added by the endpoint, such as dispatching runs to the worker, see its changes.
+TenantDBCommitFirst = Annotated[AsyncConnection, Depends(tenant_db, scope="function")]
 AnonDB = Annotated[AsyncConnection, Depends(anonymous_db)]
 Svc = Annotated[Services, Depends(services_dep)]
