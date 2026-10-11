@@ -56,6 +56,9 @@ wf = registry.register(Workflow(
         Option("new_per_day", "New prospects a day", "number", 10, min=1, max=25),
         Option("min_reviews", "Skip places with fewer Google reviews than", "number", 10, min=0, max=10000),
         Option("min_rating", "Skip places rated below", "number", 3.5, min=0, max=5),
+        Option("only_no_website", "Only businesses without their own website", "boolean", True,
+               help="Off: businesses that already have a website are included too, for when what you sell "
+                    "isn't a website (software, services, supplies)."),
         Option("social_counts_as_none", "Count an Instagram, Swiggy or Zomato page as no website", "boolean", True),
         Option("skip_chains", "Skip chains and franchises", "boolean", True,
                help="Big brands (Domino's, Haldiram's…) and any name that shows up as several branches are left out: "
@@ -246,6 +249,8 @@ async def find(ctx: RunContext, state: dict) -> Goto | Finish:
         return Goto("queue", update={"summary": {"found": 0, "added": 0, "reason": "daily_cap"}})
 
     allowed = {"none", "social", "listing"} if cfg.get("social_counts_as_none", True) else {"none"}
+    if not cfg.get("only_no_website", True):
+        allowed = {"none", "social", "listing", "own"}
     min_reviews, min_rating = int(cfg.get("min_reviews", 10)), float(cfg.get("min_rating", 3.5))
     skip_chains, skip_hotels = bool(cfg.get("skip_chains", True)), bool(cfg.get("skip_hotels", True))
     candidates, seen, found, errors = [], set(), 0, []
@@ -403,7 +408,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
     presence = {"none": "no website and no web page at all",
                 "social": "only a social media page" + (f" ({place.website})" if place and place.website else ""),
                 "listing": "only a delivery-app or directory page" + (
-                    f" ({place.website})" if place and place.website else "")}
+                    f" ({place.website})" if place and place.website else ""),
+                "own": "their own website" + (f" ({place.website})" if place and place.website else "")}
+    selling_websites = bool(cfg.get("only_no_website", True))
     name = place.name if place else lead.name
     facts = "\n".join(x for x in (
         f"Business: {name}",
@@ -414,7 +421,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         f"Online today: {presence.get(kind, 'a website')}",
     ) if x)
     stage = ("This is the FIRST message: introduce yourself in one line, say you found them on Google Maps, "
-             "name one concrete thing they lose without a website, make the offer, and ask one easy question."
+             + ("name one concrete thing they lose without a website, " if selling_websites else
+                "name one concrete, everyday problem the offer solves for a business like theirs, ")
+             + "make the offer, and ask one easy question."
              if step == 0 else
              f"This is follow-up number {step}: they have not replied. Be brief and friendly, add one new reason "
              "or idea (not the same pitch), and make it easy to say yes or no." + (

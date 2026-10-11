@@ -566,3 +566,19 @@ def test_chain_and_hinglish_helpers():
     assert is_lodging("guest_house", None, "") and not is_lodging("restaurant", "Restaurant", "Hotel Saravana Bhavan")
     assert looks_hinglish("Namaste ji, aapka dhaba Google Maps pe dekha, reviews acche hain")
     assert not looks_hinglish("Hello, I found your restaurant on Google Maps and loved the reviews")
+
+
+async def test_businesses_with_a_website_when_selling_something_else(biz, places, fake_llm):
+    """With 'Only businesses without their own website' off, a place with its own site is a prospect too, and
+    the first message talks about the offer, not about lacking a website."""
+    mayank, v = biz["mayank"], biz["v"]
+    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+        "searches": "restaurants in Nangloi, Delhi", "offer": "AI staff that reply to every enquiry in minutes",
+        "only_no_website": False, "new_per_day": 10}})
+    script_outreach(fake_llm)
+    r = await run(mayank, v)
+    got = await leads(mayank, v)
+    assert "Has A Site" in got and got["Has A Site"]["website_kind"] == "own", (r["summary"], set(got))
+    prompts = json.dumps(fake_llm.chat_calls("You write short, honest sales messages"), ensure_ascii=False)
+    assert "lose without a website" not in prompts and "everyday problem the offer solves" in prompts
+    assert "their own website (https://hasasite.in)" in prompts

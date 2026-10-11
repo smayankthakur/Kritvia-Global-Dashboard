@@ -10,7 +10,9 @@ where every agent is included (Growth, Scale, Enterprise, Internal). Code: `apps
    It keeps a place only if all of these hold:
    - it is open;
    - it has a phone number;
-   - it has no website of its own (an Instagram, Swiggy or Zomato page counts as none, unless that option is off);
+   - it has no website of its own (an Instagram, Swiggy or Zomato page counts as none, unless that option is off).
+     With *Only businesses without their own website* off, places that have a website are kept too, and the
+     first message is about the offer rather than about the missing website (for selling software or services);
    - it has at least the minimum number of reviews and meets the minimum rating;
    - it is not a chain or franchise (a known brand such as Domino's or Haldiram's, or a name found at two or
      more addresses in the day's results), unless *Skip chains and franchises* is off;
