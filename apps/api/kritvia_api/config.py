@@ -90,6 +90,11 @@ class Settings(BaseSettings):
     # AI guardrails (services/model_router.py): one person's share of hosted AI per day (0 = no cap),
     # how often one person may call the AI, and the largest prompt and answer per call.
     ai_user_daily_tokens: int = 250_000
+    # Fair share of the free AI pool (free tiers shared by every customer): the pool's daily size and the
+    # least any organisation gets. Each organisation's share = pool / organisations using it today.
+    # 0 = no fair-share limit.
+    ai_free_pool_daily_tokens: int = 1_600_000
+    ai_free_share_floor: int = 60_000
     ai_user_calls_per_minute: int = 30
     ai_max_prompt_chars: int = 600_000
     ai_max_output_tokens: int = 4096

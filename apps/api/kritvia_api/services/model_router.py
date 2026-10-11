@@ -112,6 +112,11 @@ class TierConfig:
             return "sarvam"
         return "local" if self.policies.get(deployment) == "local" else "whisper"
 
+    def free_pool(self) -> list[str]:
+        """Hosted deployments on free tiers that every customer shares (not ours, not paid)."""
+        return [d for d, p in self.policies.items()
+                if p in ("no_training", "may_train") and self.meta.get(d, {}).get("cost") != "paid"]
+
     def is_private(self, deployment: str) -> bool:
         return self.policies.get(deployment) in self.sensitive_allowed
 
@@ -185,6 +190,7 @@ class ModelRouter:
         self.keys = None   # KeyProvider; set by build_services
         self._byok = httpx.AsyncClient(transport=transport, timeout=timeout_s)
         self._routes: dict[uuid.UUID, tuple[float, Route]] = {}
+        self._shares: dict[uuid.UUID, tuple[float, bool]] = {}
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -232,6 +238,25 @@ class ModelRouter:
                 if int(used or 0) >= cap:
                     return "user"
             return None
+
+    async def _over_fair_share(self, ctx: CallContext) -> bool:
+        """True when this organisation has used its fair share of the free AI pool today.
+
+        Share = pool size / organisations using the pool today, never below the floor."""
+        s = get_settings()
+        if not s.ai_free_pool_daily_tokens:
+            return False
+        hit = self._shares.get(ctx.org_id)
+        if hit and hit[0] > time.monotonic():
+            return hit[1]
+        async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
+            row = (await conn.execute(text("SELECT * FROM ai_pool_today(:o, :p)"),
+                                      {"o": ctx.org_id, "p": self.config.free_pool()})).first()
+        used, active = (int(row.org_tokens), int(row.active_orgs)) if row else (0, 0)
+        share = max(s.ai_free_pool_daily_tokens // max(active, 1), s.ai_free_share_floor)
+        over = used >= share
+        self._shares[ctx.org_id] = (time.monotonic() + 30, over)
+        return over
 
     async def _meter(self, ctx: CallContext, **row: Any) -> None:
         async with tenant_tx(ctx.user_id, ctx.actor_type, ctx.agent_id) as conn:
@@ -326,6 +351,18 @@ class ModelRouter:
                 raise QuotaExceeded("this workspace has used its monthly AI allowance; upgrade the plan or wait "
                                     "for next month (steps that can run on the local model still do)")
             candidates = local
+
+        pool = set(self.config.free_pool())
+        if any(d in pool for d in candidates) and await self._over_fair_share(ctx):
+            # Past today's fair share of the shared free models: the org's own keys, paid models and
+            # our own server still run, so one busy business never uses up the day for everyone else.
+            rest = [d for d in candidates if d not in pool]
+            if not rest:
+                await self._meter(ctx, tier=tier, status="blocked", error="fair share of free AI used today")
+                raise QuotaExceeded("your business has used today's fair share of Kritvia's free AI, which all "
+                                    "customers share; add your own AI key in Settings \u2192 AI models to keep "
+                                    "going, or it resets at midnight IST")
+            candidates = rest
 
         failures: list[str] = []
         for attempt, deployment in enumerate(candidates, start=1):

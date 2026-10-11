@@ -140,3 +140,62 @@ async def test_training_models_are_never_first_and_never_private():
         assert all(CONFIG.policies[d] != "may_train" for d in CONFIG.tiers[tier]), tier
     for tier in ("fast", "extract", "reason"):
         assert CONFIG.policies[CONFIG.tiers[tier][0]] == "no_training", tier
+
+
+# ------------------------------------------------------------------ fair share of the free pool --
+async def _busy_org(client, tokens: int):
+    from conftest import make_actor
+    owner = await make_actor(client, "busy")
+    org = (await owner.post("/orgs", json={"name": "Busy Co", "slug": "busy-" + uuid.uuid4().hex[:8]})).json()["id"]
+    v = (await owner.post(f"/orgs/{org}/ventures", json={"name": "One", "slug": "one"})).json()["id"]
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        await conn.execute("INSERT INTO model_calls (org_id, venture_id, tier, provider_model, status, prompt_tokens,"
+                           " completion_tokens) VALUES ($1, $2, 'reason', 'groq-llama-70b', 'ok', $3, 0)",
+                           uuid.UUID(org), uuid.UUID(v), tokens)
+    finally:
+        await conn.close()
+    return CallContext(org_id=uuid.UUID(org), venture_id=uuid.UUID(v), user_id=owner.id, actor_type="user",
+                       workflow=f"share-{uuid.uuid4().hex[:6]}")
+
+
+async def test_past_its_fair_share_a_business_moves_off_the_free_pool(client, monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_free_pool_daily_tokens", 1_000_000)
+    monkeypatch.setattr(s, "ai_free_share_floor", 60_000)
+    monkeypatch.setattr(s, "ai_user_daily_tokens", 0)
+    c = await _busy_org(client, 1_100_000)   # over the whole pool, whatever else ran today
+    fake = FakeLiteLLM({})
+    res = await make_router(fake).chat(c, tier="fast", messages=[{"role": "user", "content": "hi"}])
+    # the shared free models are skipped; our own server still answers
+    assert fake.calls == ["ollama-qwen-7b"] and res.deployment == "ollama-qwen-7b"
+
+    # a tier with nothing but free hosted models explains how to keep going
+    from kritvia_api.services.model_router import QuotaExceeded
+    with pytest.raises(QuotaExceeded, match="fair share"):
+        await make_router(FakeLiteLLM({})).chat(c, tier="long_context", messages=[{"role": "user", "content": "hi"}])
+
+
+async def test_a_quiet_business_keeps_the_free_pool(client, monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_free_pool_daily_tokens", 1_000_000)
+    monkeypatch.setattr(s, "ai_user_daily_tokens", 0)
+    c = await _busy_org(client, 1_000)
+    fake = FakeLiteLLM({})
+    res = await make_router(fake).chat(c, tier="fast", messages=[{"role": "user", "content": "hi"}])
+    assert res.deployment == "groq-llama-8b"
+
+
+async def test_fair_share_can_be_switched_off(client, monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_free_pool_daily_tokens", 0)
+    monkeypatch.setattr(s, "ai_user_daily_tokens", 0)
+    c = await _busy_org(client, 5_000_000)
+    res = await make_router(FakeLiteLLM({})).chat(c, tier="fast", messages=[{"role": "user", "content": "hi"}])
+    assert res.deployment == "groq-llama-8b"
+
+
+async def test_free_pool_is_hosted_free_tiers_only():
+    pool = set(CONFIG.free_pool())
+    assert {"groq-llama-70b", "groq-llama-8b", "cerebras-large"} <= pool
+    assert not any(CONFIG.policies[d] == "local" for d in pool)
