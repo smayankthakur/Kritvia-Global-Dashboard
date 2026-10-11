@@ -2,7 +2,7 @@
 
 import { csrfHeaders } from "@/lib/bff/csrf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenCheck, FolderDown, Mail, MessageCircle, RefreshCw, Trash2, Upload, Webhook } from "lucide-react";
+import { BookOpenCheck, FolderDown, Forward, Mail, MessageCircle, RefreshCw, Trash2, Upload, Webhook } from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, multipart, unwrap, type Schemas } from "@/lib/api";
 import { formatDateTime, formatINR, formatRelative } from "@/lib/format";
+
+const GMAIL_READ = "https://www.googleapis.com/auth/gmail.readonly";
 
 type Connector = Schemas["ConnectorOut"];
 
@@ -293,6 +295,13 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
     onError: (e) => toast.error("Could not remove", errorMessage(e)),
   });
 
+  const hasGoogle = Boolean(q.data?.some((c) => c.provider === "google"));
+  const picker = useQuery({
+    queryKey: ["drive-picker", ventureId],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors/google/picker", { params: { path: { venture_id: ventureId } } })),
+    enabled: hasGoogle && canAdmin,
+  });
+
   if (q.isPending) return <SkeletonRows />;
   if (q.isError) return <ErrorState error={q.error} />;
   const google = q.data.find((c) => c.provider === "google");
@@ -314,7 +323,11 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
               <Mail className="h-4 w-4 text-subtle" aria-hidden /> Google Workspace
             </span>
           }
-          description="Gmail inquiries in, approved emails and calendar invites out, Drive into knowledge."
+          description={
+            google && !google.scopes.includes(GMAIL_READ)
+              ? "Approved emails and calendar invites go out from this account; incoming mail arrives by forwarding (below). Drive files you choose go into business memory."
+              : "Gmail inquiries in, approved emails and calendar invites out, Drive into knowledge."
+          }
           actions={google ? <StatusBadge status={google.status} /> : <Badge>not connected</Badge>}
         />
         <div className="space-y-4 p-4">
@@ -337,12 +350,21 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
             </Button>
             {google ? (
               <>
-                <Button icon={<RefreshCw className="h-4 w-4" />} disabled={!canAdmin} loading={sync.isPending} onClick={() => sync.mutate()}>
-                  Sync now
-                </Button>
-                <Button icon={<FolderDown className="h-4 w-4" />} disabled={!canAdmin} onClick={() => setDrive(true)}>
-                  Import from Drive
-                </Button>
+                {google.scopes.includes(GMAIL_READ) ? (
+                  <Button icon={<RefreshCw className="h-4 w-4" />} disabled={!canAdmin} loading={sync.isPending} onClick={() => sync.mutate()}>
+                    Sync now
+                  </Button>
+                ) : null}
+                {picker.data?.ready ? (
+                  // A full page load: only the picker page's policy lets Google's picker run (lib/csp.ts).
+                  <Button icon={<FolderDown className="h-4 w-4" />} disabled={!canAdmin} onClick={() => window.location.assign(`/v/${ventureId}/drive-picker`)}>
+                    Choose files from Drive
+                  </Button>
+                ) : picker.data?.full_drive ? (
+                  <Button icon={<FolderDown className="h-4 w-4" />} disabled={!canAdmin} onClick={() => setDrive(true)}>
+                    Import from Drive
+                  </Button>
+                ) : null}
                 <Button variant="ghost" className="text-danger" icon={<Trash2 className="h-4 w-4" />} disabled={!canAdmin} onClick={() => setRemoving(google)}>
                   Disconnect
                 </Button>
@@ -351,6 +373,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
           </div>
         </div>
       </Card>
+      <ForwardingCard ventureId={ventureId} canAdmin={canAdmin} />
       <Card>
         <CardHeader
           title={
@@ -481,5 +504,69 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
         confirmLabel="Remove"
       />
     </div>
+  );
+}
+
+
+/** Incoming mail by forwarding to the business's own Kritvia address (no Gmail read access needed). */
+function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const key = ["email-forwarding", ventureId];
+  const q = useQuery({
+    queryKey: key,
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors/email-forwarding", { params: { path: { venture_id: ventureId } } })),
+    refetchInterval: (query) => (query.state.data && !query.state.data.gmail_code ? 15_000 : false),
+  });
+  const create = useMutation({
+    mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/connectors/email-forwarding", { params: { path: { venture_id: ventureId } } })),
+    onSuccess: (d) => {
+      qc.setQueryData(key, d);
+      void qc.invalidateQueries({ queryKey: ["connectors", ventureId] });
+      toast.success("Forwarding address ready", "Now add it in your mailbox's forwarding settings.");
+    },
+    onError: (e) => toast.error("Couldn't set up forwarding", errorMessage(e)),
+  });
+  const f = q.data;
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Forward className="h-4 w-4 text-subtle" aria-hidden /> Email forwarding
+          </span>
+        }
+        description="Forward your business mail to Kritvia so the Inbox assistant can answer it. Kritvia never gets access to your mailbox; replies still go out from your own Gmail after you approve them."
+        actions={f ? <Badge tone="success">on</Badge> : <Badge>off</Badge>}
+      />
+      <div className="space-y-3 p-4">
+        {q.isError ? <p className="text-sm text-muted">{errorMessage(q.error)}</p> : null}
+        {f ? (
+          <>
+            <CopyField label="Your forwarding address" value={f.address} />
+            {f.gmail_code ? (
+              <Notice tone="success">
+                Gmail sent a confirmation code for {f.gmail_mailbox || "your mailbox"}: <strong className="font-mono">{f.gmail_code}</strong>. Enter it in Gmail to finish.
+              </Notice>
+            ) : null}
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+              <li>In Gmail, open Settings → See all settings → Forwarding and POP/IMAP → Add a forwarding address.</li>
+              <li>Paste the address above. Gmail sends a confirmation code; it appears here within a minute.</li>
+              <li>Enter the code in Gmail, choose &ldquo;Forward a copy of incoming mail&rdquo; and keep Gmail&apos;s copy. Save.</li>
+            </ol>
+            <p className="text-xs text-subtle">
+              Outlook, Zoho Mail and others work too: add a rule that forwards incoming mail to this address. Forwarded mail can&apos;t be checked for who
+              really sent it, so loan documents and sales reports still need Gmail connected.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted">Get an address for this business, then set your mailbox to forward to it.</p>
+        )}
+        <Button variant={f ? "ghost" : "primary"} disabled={!canAdmin} loading={create.isPending} onClick={() => create.mutate()}>
+          {f ? "Get a new address" : "Set up forwarding"}
+        </Button>
+        {f ? <p className="text-xs text-subtle">A new address stops the old one working.</p> : null}
+      </div>
+    </Card>
   );
 }

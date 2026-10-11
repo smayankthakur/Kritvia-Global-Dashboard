@@ -37,3 +37,18 @@ describe("proxy body limits", () => {
     expect(bodyLimit("ventures/x/knowledge/upload", false, false)).toBe(64 * 1024);
   });
 });
+
+describe("Google picker CSP", () => {
+  it("names Google's hosts only on the Drive picker page", async () => {
+    const { buildCsp, PICKER_PAGE } = await import("@/lib/csp");
+    const strict = buildCsp("n");
+    expect(strict).not.toMatch(/google/);
+    expect(strict).toContain("frame-src 'self'");
+    const picker = buildCsp("n", false, { googlePicker: true });
+    expect(picker).toContain("https://docs.google.com");
+    expect(picker).toContain("connect-src 'self' https://www.googleapis.com");
+    expect(PICKER_PAGE.test("/v/3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90/drive-picker")).toBe(true);
+    expect(PICKER_PAGE.test("/v/3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90/settings")).toBe(false);
+    expect(PICKER_PAGE.test("/v/x/drive-picker/evil")).toBe(false);
+  });
+});

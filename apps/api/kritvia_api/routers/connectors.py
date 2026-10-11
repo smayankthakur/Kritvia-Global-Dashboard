@@ -99,9 +99,13 @@ async def google_start(venture_id: uuid.UUID, body: GoogleStartIn, user_id: User
     if svc.google is None or not svc.google.configured:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google OAuth is not configured on this server")
     s = get_settings()
+    from kritvia_api.services.google import DEFAULT_SCOPES, SEND_ONLY_SCOPES
+    read_plans = {p.strip() for p in s.google_read_plans.split(",") if p.strip()}
+    plan = await plan_for_venture(db, venture_id)
+    scopes = DEFAULT_SCOPES if plan.code in read_plans else SEND_ONLY_SCOPES
     state = jwt.encode({"typ": "oauth", "v": str(venture_id), "u": str(user_id), "nh": _nonce_hash(body.nonce),
                         "exp": datetime.now(UTC) + timedelta(minutes=10)}, s.jwt_secret, algorithm=s.jwt_algorithm)
-    return AuthUrlOut(url=svc.google.authorization_url(state))
+    return AuthUrlOut(url=svc.google.authorization_url(state, scopes))
 
 
 class GoogleCompleteIn(BaseModel):
@@ -214,6 +218,74 @@ async def drive_import(venture_id: uuid.UUID, body: DriveImportIn, user_id: User
             skipped += 1 if res.duplicate else 0
         except Exception as exc:
             warnings.append(f"{f.get('name')}: {type(exc).__name__}")
+    return DriveImportOut(imported=imported, skipped=skipped, warnings=warnings[:50])
+
+
+class PickerConfigOut(BaseModel):
+    ready: bool
+    client_id: str = ""
+    api_key: str = ""
+    app_id: str = ""
+    account_email: str | None = None
+    full_drive: bool = Field(default=False, description="this connection can read all of Drive (older connections)")
+
+
+@router.get("/ventures/{venture_id}/connectors/google/picker", response_model=PickerConfigOut)
+async def picker_config(venture_id: uuid.UUID, db: TenantDB) -> PickerConfigOut:
+    """What the browser needs to open Google's file picker (public values; no secrets)."""
+    from kritvia_api.services.google import SCOPES
+    await _require_admin(db, venture_id)
+    s = get_settings()
+    row = (await db.execute(text("SELECT account_email, scopes FROM connectors WHERE venture_id = :v"
+                                 " AND provider = 'google' AND status = 'active'"), {"v": venture_id})).first()
+    ready = bool(row and SCOPES["drive.file"] in row.scopes and s.google_client_id and s.google_picker_api_key
+                 and s.google_app_id)
+    return PickerConfigOut(ready=ready, client_id=s.google_client_id if ready else "",
+                           api_key=s.google_picker_api_key if ready else "", app_id=s.google_app_id if ready else "",
+                           account_email=row.account_email if row else None,
+                           full_drive=bool(row and SCOPES["drive.readonly"] in row.scopes))
+
+
+class DrivePickedIn(BaseModel):
+    file_ids: list[str] = Field(min_length=1, max_length=50)
+
+
+@router.post("/ventures/{venture_id}/connectors/google/drive-picked", response_model=DriveImportOut)
+async def drive_picked(venture_id: uuid.UUID, body: DrivePickedIn, user_id: UserId, svc: Svc) -> DriveImportOut:
+    """Adds the Drive files the person chose in Google's picker to business memory."""
+    import re as _re
+    if any(not _re.fullmatch(r"[A-Za-z0-9_-]{10,200}", f) for f in body.file_ids):
+        raise HTTPException(422, "invalid Drive file id")
+    async with tenant_tx(user_id) as db:
+        org = await _require_admin(db, venture_id)
+        await require_integration(db, venture_id, "drive")
+        run_as = (await db.execute(text("SELECT venture_service_account(:v)"), {"v": venture_id})).scalar_one()
+    from kritvia_api.engine.context import RunContext
+    ctx = RunContext(run_id=uuid.uuid4(), org_id=org, venture_id=venture_id, run_as=run_as, workflow="drive_import",
+                     services=svc, agent="drive_import")
+    async with ctx.tx() as conn:
+        g = await load_google(ctx, conn)
+    if g is None or svc.google is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "connect Google first")
+    token = await svc.google.access_token(g.id, g.refresh_token)
+    imported = skipped = 0
+    warnings: list[str] = []
+    actor = memory.UserActor(user_id, org, venture_id, svc.router, svc.keys, workflow="drive_import")
+    for fid in dict.fromkeys(body.file_ids):
+        try:
+            f = await svc.google.get_drive_file(token, fid)
+            if f.get("trashed"):
+                skipped += 1
+                continue
+            data, mime = await svc.google.download_drive_file(token, f)
+            ext = {"text/plain": ".txt", "text/csv": ".csv", "application/pdf": ".pdf"}.get(mime, "")
+            res = await memory.ingest(actor, title=f["name"], kind="drive", data=data, filename=f["name"] + ext,
+                                      mime=mime, source_uri=f.get("webViewLink"), external_id=f["id"],
+                                      created_by=user_id)
+            imported += 0 if res.duplicate else 1
+            skipped += 1 if res.duplicate else 0
+        except Exception as exc:
+            warnings.append(f"{fid}: {type(exc).__name__}")
     return DriveImportOut(imported=imported, skipped=skipped, warnings=warnings[:50])
 
 

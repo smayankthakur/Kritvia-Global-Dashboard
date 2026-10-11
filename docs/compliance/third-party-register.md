@@ -14,6 +14,14 @@ section 4 is the public list of processors; this register is the internal record
    answer is "yes" to personal data leaving us, it also needs: a Privacy Policy section 4 row, 15 days'
    notice to business customers (Terms 6.5), a contract with data-protection terms, and — if it sets
    non-essential cookies — an entry in `OPTIONAL_TOOLS` (`lib/consent.ts`) so it loads only after consent.
+
+   **The one exception (11 October 2026): Google's Drive file picker**, on the page
+   `/v/<business>/drive-picker` only. Customers no longer give Kritvia read access to all of Drive; they
+   choose files in Google's own picker (`drive.file` permission), which has to run Google's script in our
+   page. The CSP adds Google's hosts (`GOOGLE_PICKER` in `lib/csp.ts`) for that one path and no other;
+   `trust-scan.mjs` fails the build if the block holds a non-Google origin or the middleware applies it
+   anywhere else. Google already receives this data as the customer's connected provider; the picker
+   sets no cookies of ours and loads only when the owner opens that page.
 3. **Review quarterly**: re-run `node apps/web/scripts/trust-scan.mjs --licences`, `pnpm audit --prod`, and
    `pip-audit` for the API; remove anything unused; check each processor's terms (training, retention,
    location) still match what the Privacy Policy says.
@@ -32,7 +40,8 @@ section 4 is the public list of processors; this register is the internal record
 
 ## Code we ship (5 October 2026)
 
-**Web app (browser and Next.js server)** — no third-party network calls from the browser.
+**Web app (browser and Next.js server)** — no third-party network calls from the browser, except
+Google's Drive picker on its own page (above).
 
 | Package | Purpose | Sends data anywhere? | Licence |
 | --- | --- | --- | --- |

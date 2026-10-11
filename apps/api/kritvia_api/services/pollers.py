@@ -78,6 +78,9 @@ async def poll_gmail_venture(services: Services, org_id: uuid.UUID, venture_id: 
             {"v": venture_id})).all()}
     if g is None:
         return {}
+    from kritvia_api.services.google import SCOPES
+    if SCOPES["gmail.readonly"] not in g.scopes:
+        return {}   # connected to send only; this business's mail arrives by forwarding (email_in)
     token = await google.access_token(g.id, g.refresh_token)
     counts: dict[str, int] = {}
     for wf, settings in configs.items():
@@ -226,3 +229,53 @@ async def _prospect_reply(ctx: RunContext, services: Services, token: str, msg) 
 
 HANDLERS = {"inbox_assistant": _inbox, "prospector": _prospect_reply, "lead_triage": _lead, "kitchen_daily": _kitchen_report,
             "loan_verification": _loan_docs}
+
+
+# --------------------------------------------------------------------- forwarded mail --
+async def deliver_forwarded(services: Services, org_id: uuid.UUID, venture_id: uuid.UUID, run_as: uuid.UUID,
+                            msg) -> dict[str, int]:
+    """Mail the business forwarded to its Kritvia address: the inbox assistant answers it (or lead
+    triage when the assistant is off), and a prospect's reply stops their follow-ups.
+
+    Forwarded mail can't be checked for who really sent it, so it never files loan documents or
+    sales reports; those workflows still need Gmail connected with read access."""
+    ctx = RunContext(run_id=uuid.uuid4(), org_id=org_id, venture_id=venture_id, run_as=run_as,
+                     workflow="email_in", services=services, agent="email_in")
+    async with ctx.tx() as conn:
+        on = {r.workflow for r in (await conn.execute(text(
+            "SELECT workflow FROM workflow_configs WHERE venture_id = :v AND enabled"), {"v": venture_id})).all()}
+    counts: dict[str, int] = {}
+    if "inbox_assistant" in on:
+        counts["inbox_assistant"] = await _inbox_forwarded(ctx, services, msg)
+        return counts
+    if "prospector" in on:
+        counts["prospector"] = await _prospect_reply(ctx, services, "", msg)
+    if "lead_triage" in on and not counts.get("prospector"):
+        counts["lead_triage"] = await _lead_forwarded(ctx, services, msg)
+    return counts
+
+
+async def _inbox_forwarded(ctx: RunContext, services: Services, msg) -> int:
+    from kritvia_api.workflows.inbox import message_input
+    try:
+        await start_run(services, actor_user_id=ctx.run_as, actor_type="agent", venture_id=ctx.venture_id,
+                        workflow="inbox_assistant", trigger_kind="email", trigger_ref=msg.id[:200],
+                        dedupe=("email_in:inbox_assistant", msg.id), title=f"Email: {msg.subject[:120]}",
+                        input=message_input(channel="email", from_name=msg.sender, from_email=msg.sender_email,
+                                            subject=msg.subject, body=msg.body, message_id=None, thread_id=None))
+        return 1
+    except DuplicateTrigger:
+        return 0
+
+
+async def _lead_forwarded(ctx: RunContext, services: Services, msg) -> int:
+    try:
+        await start_run(services, actor_user_id=ctx.run_as, actor_type="agent", venture_id=ctx.venture_id,
+                        workflow="lead_triage", trigger_kind="email", trigger_ref=msg.id[:200],
+                        dedupe=("email_in:lead_triage", msg.id), title=f"Email: {msg.subject[:120]}",
+                        input={"source": "email", "from_name": msg.sender, "from_email": msg.sender_email,
+                               "subject": msg.subject, "body": msg.body[:20000], "thread_id": None,
+                               "message_id": None})
+        return 1
+    except DuplicateTrigger:
+        return 0

@@ -136,6 +136,28 @@ It installs the AWS CLI, writes `/etc/cron.d/kritvia` (health watchdog every 5 m
 - Watchdog log: `sudo journalctl -t kritvia-health -n 50` · backup log: `/var/log/kritvia-backup.log`
 - Stage 2 gate (each workflow 10 consecutive days on real data): `sudo infra/scripts/dogfood-report.sh`
 
+## Email forwarding and the Drive picker (no restricted Google permissions)
+
+Customers no longer give Kritvia Gmail read access or all-of-Drive access (Google's restricted scopes need a
+paid yearly security assessment past 100 users). Instead their mail is forwarded to Kritvia and they pick
+Drive files one by one. Organisations on plans in `GOOGLE_READ_PLANS` (default `internal`) keep full access.
+
+**Inbound mail (once):**
+1. Cloudflare → sitelytc.com → Email → Email Routing → enable it for the subdomain `in.sitelytc.com`
+   (Cloudflare adds its MX and SPF records for the subdomain only; mail for sitelytc.com itself is untouched).
+2. Workers & Pages → Create → Worker `kritvia-email-in`, paste `infra/cloudflare/email-worker.js`, deploy.
+   Add variable `KRITVIA_INBOUND_URL=https://api.sitelytc.com/public/email-in` and secret
+   `KRITVIA_INBOUND_SECRET` (generate with `openssl rand -hex 32`).
+3. Email Routing → Routing rules → Catch-all for `in.sitelytc.com` → Send to Worker `kritvia-email-in`.
+4. Server `.env`: `INBOUND_EMAIL_DOMAIN=in.sitelytc.com` and `INBOUND_EMAIL_SECRET=<the same secret>`;
+   recreate api (`docker compose up -d --force-recreate api worker`).
+5. Test: Settings → Connectors → Email forwarding → Set up forwarding, then send a mail to the address.
+
+**Drive picker (once):** in the Google Cloud project used for sign-in, enable **Google Picker API**, create a
+browser API key restricted to HTTP referrer `https://app.sitelytc.com/*` and to the Picker API, then set
+`GOOGLE_PICKER_API_KEY` and `GOOGLE_APP_ID` (the project **number**) in `.env`. Add the `drive.file` scope to
+the OAuth consent screen (it is not a restricted scope).
+
 ## Sign-up: Google and email codes
 
 New people sign up at `/register` with **Sign up with Google** or an emailed 6-digit code; there is no

@@ -1,9 +1,9 @@
 """Google Workspace connector: OAuth (offline access), Gmail, Calendar, Drive.
 
 Plain REST over httpx (no Google SDK) so the transport is injectable in tests.
-During dogfooding the OAuth app stays in "testing" mode (no verification
-needed); external users require Google's verification and, for restricted
-Gmail scopes, a paid security assessment (Phase 2).
+Only plans listed in GOOGLE_READ_PLANS (default: internal) ask for the restricted read
+scopes; everyone else gets SEND_ONLY_SCOPES, forwards mail to Kritvia instead, and picks
+Drive files with Google's file picker (drive.file).
 """
 from __future__ import annotations
 
@@ -30,8 +30,14 @@ SCOPES = {
     "gmail.send": "https://www.googleapis.com/auth/gmail.send",
     "calendar.events": "https://www.googleapis.com/auth/calendar.events",
     "drive.readonly": "https://www.googleapis.com/auth/drive.readonly",
+    "drive.file": "https://www.googleapis.com/auth/drive.file",
 }
-DEFAULT_SCOPES = ["openid", "email", *SCOPES.values()]
+# Restricted scopes (gmail.readonly, drive.readonly) need Google's paid security assessment (CASA) past
+# 100 users. Everyone else connects with these: send mail, calendar, and only the Drive files they pick.
+# Their incoming mail arrives by forwarding (services/email_in.py).
+SEND_ONLY_SCOPES = ["openid", "email", SCOPES["gmail.send"], SCOPES["calendar.events"], SCOPES["drive.file"]]
+DEFAULT_SCOPES = ["openid", "email", SCOPES["gmail.readonly"], SCOPES["gmail.send"], SCOPES["calendar.events"],
+                  SCOPES["drive.readonly"], SCOPES["drive.file"]]
 
 
 class GoogleError(Exception):
@@ -205,6 +211,11 @@ class GoogleClient:
             "q": query, "pageSize": page_size,
             "fields": "files(id,name,mimeType,modifiedTime,webViewLink,size)"})
         return body.get("files", [])
+
+    async def get_drive_file(self, token: str, file_id: str) -> dict[str, Any]:
+        """One file's details. With drive.file this works only for files the person picked for Kritvia."""
+        return await self._req("GET", f"{DRIVE}/files/{file_id}", token,
+                               params={"fields": "id,name,mimeType,modifiedTime,webViewLink,size,trashed"})
 
     async def download_drive_file(self, token: str, file: dict[str, Any]) -> tuple[bytes, str]:
         mime = file.get("mimeType", "")

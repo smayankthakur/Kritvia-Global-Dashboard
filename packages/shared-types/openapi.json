@@ -2781,6 +2781,24 @@
         "title": "DriveImportOut",
         "type": "object"
       },
+      "DrivePickedIn": {
+        "properties": {
+          "file_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "File Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "file_ids"
+        ],
+        "title": "DrivePickedIn",
+        "type": "object"
+      },
       "EdgeOut": {
         "properties": {
           "chunk_id": {
@@ -2829,6 +2847,32 @@
           "document_id"
         ],
         "title": "EdgeOut",
+        "type": "object"
+      },
+      "EmailInOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "confirmation": {
+            "default": false,
+            "title": "Confirmation",
+            "type": "boolean"
+          },
+          "started": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Started",
+            "type": "object"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "EmailInOut",
         "type": "object"
       },
       "EmailStartIn": {
@@ -3248,6 +3292,47 @@
           "after"
         ],
         "title": "FieldDiff",
+        "type": "object"
+      },
+      "ForwardingOut": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "connector_id": {
+            "format": "uuid",
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "gmail_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Code"
+          },
+          "gmail_mailbox": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Mailbox"
+          }
+        },
+        "required": [
+          "connector_id",
+          "address"
+        ],
+        "title": "ForwardingOut",
         "type": "object"
       },
       "FreeModelOut": {
@@ -5402,6 +5487,51 @@
           "new_password"
         ],
         "title": "PasswordResetIn",
+        "type": "object"
+      },
+      "PickerConfigOut": {
+        "properties": {
+          "account_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Email"
+          },
+          "api_key": {
+            "default": "",
+            "title": "Api Key",
+            "type": "string"
+          },
+          "app_id": {
+            "default": "",
+            "title": "App Id",
+            "type": "string"
+          },
+          "client_id": {
+            "default": "",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "full_drive": {
+            "default": false,
+            "description": "this connection can read all of Drive (older connections)",
+            "title": "Full Drive",
+            "type": "boolean"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ready"
+        ],
+        "title": "PickerConfigOut",
         "type": "object"
       },
       "PlaceOut": {
@@ -12402,6 +12532,28 @@
         ]
       }
     },
+    "/public/email-in": {
+      "post": {
+        "description": "One forwarded email from the Cloudflare worker. 404 tells the worker to bounce the message.",
+        "operationId": "email_inbound_public_email_in_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailInOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Email Inbound",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
     "/public/notice/{venture_id}": {
       "get": {
         "operationId": "public_notice_public_notice__venture_id__get",
@@ -14090,6 +14242,109 @@
         ]
       }
     },
+    "/ventures/{venture_id}/connectors/email-forwarding": {
+      "get": {
+        "operationId": "get_forwarding_ventures__venture_id__connectors_email_forwarding_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ForwardingOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Forwarding Ventures  Venture Id  Connectors Email Forwarding Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Forwarding",
+        "tags": [
+          "connectors"
+        ]
+      },
+      "post": {
+        "description": "Gives the business its own forwarding address (a new one each time: the old one stops working).",
+        "operationId": "create_forwarding_ventures__venture_id__connectors_email_forwarding_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForwardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Forwarding",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
     "/ventures/{venture_id}/connectors/google/drive-import": {
       "post": {
         "description": "Pull Drive files (proposals, SOPs, templates) into the knowledge base.",
@@ -14144,6 +14399,114 @@
           }
         ],
         "summary": "Drive Import",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/google/drive-picked": {
+      "post": {
+        "description": "Adds the Drive files the person chose in Google's picker to business memory.",
+        "operationId": "drive_picked_ventures__venture_id__connectors_google_drive_picked_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DrivePickedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Drive Picked",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/google/picker": {
+      "get": {
+        "description": "What the browser needs to open Google's file picker (public values; no secrets).",
+        "operationId": "picker_config_ventures__venture_id__connectors_google_picker_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickerConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Picker Config",
         "tags": [
           "connectors"
         ]

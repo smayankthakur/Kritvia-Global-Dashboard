@@ -94,8 +94,17 @@ export function scanThirdParty(root = ROOT) {
         });
     }
   }
+  // The CSP may name outside origins only inside the marked Google picker block, and the middleware may
+  // apply that block only to the one Drive picker page (docs/compliance/third-party-register.md).
   const csp = readFileSync(join(root, "lib", "csp.ts"), "utf8");
-  if (/https?:\/\//.test(csp.split("export function makeNonce")[0])) findings.push({ file: "lib/csp.ts", line: 1, rule: "csp-third-party", text: "CSP allows an outside origin" });
+  const policy = csp.split("export function makeNonce")[0].replace(/\/\/ trust-scan: allowed-origins-start[\s\S]*?\/\/ trust-scan: allowed-origins-end/, "");
+  if (/https?:\/\//.test(policy)) findings.push({ file: "lib/csp.ts", line: 1, rule: "csp-third-party", text: "CSP allows an outside origin" });
+  const allowed = (csp.match(/\/\/ trust-scan: allowed-origins-start([\s\S]*?)\/\/ trust-scan: allowed-origins-end/) || ["", ""])[1];
+  for (const origin of allowed.match(/https:\/\/[^"'\s]+/g) || []) {
+    if (!/^https:\/\/([a-z*]+\.)?(google\.com|googleapis\.com|googleusercontent\.com|gstatic\.com)$/.test(origin)) findings.push({ file: "lib/csp.ts", line: 1, rule: "csp-third-party", text: `non-Google origin in the picker block: ${origin}` });
+  }
+  const mw = readFileSync(join(root, "middleware.ts"), "utf8");
+  if (!/googlePicker:\s*PICKER_PAGE\.test\(/.test(mw)) findings.push({ file: "middleware.ts", line: 1, rule: "csp-third-party", text: "the Google picker origins must apply only to PICKER_PAGE" });
   return findings;
 }
 

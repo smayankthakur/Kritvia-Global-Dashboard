@@ -1027,6 +1027,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/email-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email Inbound
+         * @description One forwarded email from the Cloudflare worker. 404 tells the worker to bounce the message.
+         */
+        post: operations["email_inbound_public_email_in_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/notice/{venture_id}": {
         parameters: {
             query?: never;
@@ -1493,6 +1513,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/connectors/email-forwarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Forwarding */
+        get: operations["get_forwarding_ventures__venture_id__connectors_email_forwarding_get"];
+        put?: never;
+        /**
+         * Create Forwarding
+         * @description Gives the business its own forwarding address (a new one each time: the old one stops working).
+         */
+        post: operations["create_forwarding_ventures__venture_id__connectors_email_forwarding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/connectors/google/drive-import": {
         parameters: {
             query?: never;
@@ -1507,6 +1548,46 @@ export interface paths {
          * @description Pull Drive files (proposals, SOPs, templates) into the knowledge base.
          */
         post: operations["drive_import_ventures__venture_id__connectors_google_drive_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/google/drive-picked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Drive Picked
+         * @description Adds the Drive files the person chose in Google's picker to business memory.
+         */
+        post: operations["drive_picked_ventures__venture_id__connectors_google_drive_picked_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/google/picker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Picker Config
+         * @description What the browser needs to open Google's file picker (public values; no secrets).
+         */
+        get: operations["picker_config_ventures__venture_id__connectors_google_picker_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3834,6 +3915,11 @@ export interface components {
             /** Warnings */
             warnings: string[];
         };
+        /** DrivePickedIn */
+        DrivePickedIn: {
+            /** File Ids */
+            file_ids: string[];
+        };
         /** EdgeOut */
         EdgeOut: {
             /**
@@ -3862,6 +3948,23 @@ export interface components {
             other_type: string;
             /** Type */
             type: string;
+        };
+        /** EmailInOut */
+        EmailInOut: {
+            /** Accepted */
+            accepted: boolean;
+            /**
+             * Confirmation
+             * @default false
+             */
+            confirmation: boolean;
+            /**
+             * Started
+             * @default {}
+             */
+            started: {
+                [key: string]: number;
+            };
         };
         /** EmailStartIn */
         EmailStartIn: {
@@ -4029,6 +4132,20 @@ export interface components {
             field: string;
             /** Unified */
             unified?: string | null;
+        };
+        /** ForwardingOut */
+        ForwardingOut: {
+            /** Address */
+            address: string;
+            /**
+             * Connector Id
+             * Format: uuid
+             */
+            connector_id: string;
+            /** Gmail Code */
+            gmail_code?: string | null;
+            /** Gmail Mailbox */
+            gmail_mailbox?: string | null;
         };
         /** FreeModelOut */
         FreeModelOut: {
@@ -4848,6 +4965,34 @@ export interface components {
             email: string;
             /** New Password */
             new_password: string;
+        };
+        /** PickerConfigOut */
+        PickerConfigOut: {
+            /** Account Email */
+            account_email?: string | null;
+            /**
+             * Api Key
+             * @default
+             */
+            api_key: string;
+            /**
+             * App Id
+             * @default
+             */
+            app_id: string;
+            /**
+             * Client Id
+             * @default
+             */
+            client_id: string;
+            /**
+             * Full Drive
+             * @description this connection can read all of Drive (older connections)
+             * @default false
+             */
+            full_drive: boolean;
+            /** Ready */
+            ready: boolean;
         };
         /**
          * PlaceOut
@@ -8379,6 +8524,26 @@ export interface operations {
             };
         };
     };
+    email_inbound_public_email_in_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailInOut"];
+                };
+            };
+        };
+    };
     public_notice_public_notice__venture_id__get: {
         parameters: {
             query?: never;
@@ -9391,6 +9556,68 @@ export interface operations {
             };
         };
     };
+    get_forwarding_ventures__venture_id__connectors_email_forwarding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForwardingOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_forwarding_ventures__venture_id__connectors_email_forwarding_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForwardingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     drive_import_ventures__venture_id__connectors_google_drive_import_post: {
         parameters: {
             query?: never;
@@ -9413,6 +9640,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DriveImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    drive_picked_ventures__venture_id__connectors_google_drive_picked_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DrivePickedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    picker_config_ventures__venture_id__connectors_google_picker_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PickerConfigOut"];
                 };
             };
             /** @description Validation Error */

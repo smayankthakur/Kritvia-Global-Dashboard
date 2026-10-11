@@ -16,6 +16,7 @@ LIMITS: tuple[tuple[str, int], ...] = (
     ("/public/billing/", 256 * 1024),
     ("/public/support", 64 * 1024),
     ("/public/upload/", 60 * 1024 * 1024),
+    ("/public/email-in", 26 * 1024 * 1024),   # one forwarded email; Cloudflare caps mail at 25 MB
     ("/auth/", 64 * 1024),
 )
 DEFAULT_LIMIT = 60 * 1024 * 1024

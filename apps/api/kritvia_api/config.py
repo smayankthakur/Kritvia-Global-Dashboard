@@ -139,6 +139,17 @@ class Settings(BaseSettings):
     # Uploads
     max_upload_mb: int = 25
 
+    # Email forwarding (migration 0031): businesses forward mail to <name>@INBOUND_EMAIL_DOMAIN; Cloudflare
+    # Email Routing posts it to /public/email-in signed with INBOUND_EMAIL_SECRET. Both empty = off.
+    # Plans whose Google connection asks for the restricted read scopes (Gmail read, all of Drive).
+    google_read_plans: str = "internal"
+    # Google Picker (choose Drive files with drive.file): a browser API key restricted to the web app's
+    # address with the Picker API enabled, and the Google Cloud project number. Empty = picker hidden.
+    google_picker_api_key: str = ""
+    google_app_id: str = ""
+    inbound_email_domain: str = ""
+    inbound_email_secret: str = ""
+
     @model_validator(mode="before")
     @classmethod
     def _empty_means_unset(cls, data: Any) -> Any:
