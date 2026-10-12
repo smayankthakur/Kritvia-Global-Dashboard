@@ -5,9 +5,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-hin \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY apps/api/pyproject.toml ./
+COPY apps/api/pyproject.toml apps/api/constraints.txt ./
 COPY apps/api/kritvia_api ./kritvia_api
-RUN pip install ".[ocr]"
+RUN pip install -c constraints.txt ".[ocr]"
 COPY apps/api/migrations ./migrations
 COPY infra/litellm/tiers.yaml ./tiers.yaml
 ENV TIERS_CONFIG_PATH=/app/tiers.yaml KRITVIA_MIGRATIONS_DIR=/app/migrations

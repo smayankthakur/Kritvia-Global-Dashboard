@@ -26,9 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12", cache: pip }
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: apps/api/constraints.txt }
       - run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - run: pip install -e ".[dev]"
+      # The tested versions (constraints.txt), so the OpenAPI check below sees what the images run.
+      - run: pip install -c constraints.txt -e ".[dev]"
       - name: Security, engine, workflow and worker tests
         run: pytest -q
       - name: OpenAPI contract is up to date
