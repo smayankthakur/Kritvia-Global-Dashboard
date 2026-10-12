@@ -5,6 +5,8 @@ const TOOL_LABELS: Record<string, string> = {
   "crm.update_lead": "Lead update",
   "gmail.send": "Email",
   "whatsapp.send": "WhatsApp message",
+  "whatsapp.template": "WhatsApp template",
+  "whatsapp.templates": "Looked up WhatsApp templates",
   "calendar.create_event": "Meeting invite",
 };
 

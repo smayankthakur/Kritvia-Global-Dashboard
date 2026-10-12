@@ -56,6 +56,34 @@ export function formToPayload(original: Payload, form: Record<string, string | b
   return buildEditedPayload(original, edits);
 }
 
+/** Fields a person may change before approving. A WhatsApp template's wording was approved by WhatsApp,
+ * so it is approved or rejected as is; a WhatsApp recipient never changes. */
+export function editableFields(action: string, payload: Payload): string[] {
+  if (action === "whatsapp.template") return [];
+  return Object.keys(payload).filter((k) => fieldKind(k, payload[k]) !== "readonly" && !(action.startsWith("whatsapp.") && k === "to"));
+}
+
+function WhatsAppPreview({ payload, template }: { payload: Payload; template: boolean }) {
+  const to = displayValue(payload.to).replace(/\D/g, "");
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-4">
+      <p className="text-sm">
+        <span className="text-subtle">To</span> <span className="font-medium">+{to}</span>
+        {template ? (
+          <span className="text-subtle">
+            {" "}
+            · template <span className="font-medium text-fg">{displayValue(payload.template)}</span>
+          </span>
+        ) : null}
+      </p>
+      <p className="max-w-md rounded-lg bg-accent-soft px-3 py-2 text-sm whitespace-pre-wrap break-words text-accent-soft-fg">
+        {displayValue(payload.body)}
+      </p>
+      {template ? <p className="text-xs text-subtle">WhatsApp approved this template&apos;s wording, so it can be sent or rejected but not edited.</p> : null}
+    </div>
+  );
+}
+
 const LABELS: Record<string, string> = { to: "To", subject: "Subject", body: "Body", start: "Starts", end: "Ends", summary: "Title", attendees: "Attendees", description: "Description" };
 const label = (k: string) => LABELS[k] ?? titleCase(k);
 
@@ -78,6 +106,9 @@ function PayloadView({ action, payload }: { action: string; payload: Payload }) 
         </div>
       </div>
     );
+  }
+  if (action === "whatsapp.send" || action === "whatsapp.template") {
+    return <WhatsAppPreview payload={payload} template={action === "whatsapp.template"} />;
   }
   if (action === "calendar.create_event") {
     const attendees = Array.isArray(payload.attendees) ? (payload.attendees as unknown[]).map(String) : [];
@@ -146,7 +177,7 @@ export function ApprovalDetail({
   onConflict?: () => void;
 }) {
   const original = useMemo<Payload>(() => (approval.payload ?? {}) as Payload, [approval.payload]);
-  const editable = useMemo(() => Object.keys(original).filter((k) => fieldKind(k, original[k]) !== "readonly"), [original]);
+  const editable = useMemo(() => editableFields(approval.action, original), [approval.action, original]);
   const [mode, setMode] = useState<"view" | "edit" | "review">("view");
   const [form, setForm] = useState<Record<string, string | boolean>>({});
   const [dirty, setDirty] = useState<Set<string>>(new Set());

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ApprovalDetail, type Approval, type Decision } from "@/components/approvals/approval-detail";
+import { ApprovalDetail, editableFields, type Approval, type Decision } from "@/components/approvals/approval-detail";
 import { ApiError } from "@/lib/api";
 import { emailApproval, inviteApproval } from "./fixtures/approvals";
 
@@ -187,5 +187,36 @@ describe("ApprovalDetail", () => {
     expect(screen.getByText("Decision recorded: edited")).toBeInTheDocument();
     expect(screen.getByText("old line")).toBeInTheDocument();
     expect(screen.getByText("new line")).toBeInTheDocument();
+  });
+});
+
+describe("WhatsApp approvals", () => {
+  const template: Approval = {
+    ...emailApproval,
+    id: "a-wa-1",
+    action: "whatsapp.template",
+    title: "WhatsApp follow-up to Neha",
+    payload: {
+      to: "919811100011",
+      template: "Follow up",
+      template_id: "t1",
+      language: "en",
+      params: ["Neha", "the bridal package"],
+      body: "Hi Neha, just checking in about the bridal package.",
+    },
+  };
+
+  it("shows a template as the customer will see it and can't be edited", () => {
+    render(<ApprovalDetail approval={template} onDecide={async (b) => decided(template, b)} />);
+    expect(screen.getByText("Hi Neha, just checking in about the bridal package.")).toBeInTheDocument();
+    expect(screen.getByText("+919811100011")).toBeInTheDocument();
+    expect(screen.getByText(/can be sent or rejected but not edited/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /edit/i })).toBeDisabled();
+  });
+
+  it("lets a WhatsApp message be edited but never its recipient", () => {
+    expect(editableFields("whatsapp.send", { to: "919811100011", body: "Hi" })).toEqual(["body"]);
+    expect(editableFields("whatsapp.template", template.payload as Record<string, unknown>)).toEqual([]);
+    expect(editableFields("gmail.send", { to: "a@b.in", subject: "s", body: "b" })).toEqual(["to", "subject", "body"]);
   });
 });

@@ -5,7 +5,8 @@ AI usage is counted in tokens sent to hosted models this calendar month (IST). L
 the local model where the tier has one, and stops only steps that need a hosted model.
 
 What a plan unlocks:
-  agents        "core"  = the Kritvia assistant, inbox assistant, lead triage & proposals, meeting digests;
+  agents        "core"  = the Kritvia assistant, inbox assistant, lead triage & proposals, meeting digests,
+                          WhatsApp follow-ups (they need the WhatsApp connector, Starter and up);
                 "kind"  = core + the agent for the business's own kind (loans for a finance
                           business, the nightly plan for a kitchen);
                 "all"   = every agent on every business.
@@ -21,11 +22,12 @@ from typing import Any, Literal
 GB = 1024 ** 3
 MB = 1024 ** 2
 
-CORE_AGENTS = frozenset({"assistant", "inbox_assistant", "lead_triage", "meeting_digest"})
+CORE_AGENTS = frozenset({"assistant", "inbox_assistant", "lead_triage", "meeting_digest", "whatsapp_followup"})
 KIND_AGENT = {"finance": "loan_verification", "kitchen": "kitchen_daily"}
 AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assistant", "lead_triage": "Lead triage & proposals",
                "meeting_digest": "Meeting digests", "loan_verification": "Loan document checks",
-               "kitchen_daily": "Nightly kitchen plan", "prospector": "Prospector (outbound sales)"}
+               "kitchen_daily": "Nightly kitchen plan", "prospector": "Prospector (outbound sales)",
+               "whatsapp_followup": "WhatsApp follow-ups"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
                      "drive": "Google Drive", "whatsapp": "WhatsApp Business", "tally": "Tally",
                      "mcp": "Connected apps (MCP)"}

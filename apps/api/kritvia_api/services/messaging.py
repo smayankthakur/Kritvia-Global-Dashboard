@@ -79,12 +79,12 @@ class Messaging:
                  "e": error})
 
     async def _chat(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, body: str, status: str,
-                    provider_id: str | None = None, error: str | None = None) -> None:
+                    provider_id: str | None = None, error: str | None = None, kind: str = "text") -> None:
         """The reply also goes into the customer's WhatsApp chat, as sent by Kritvia."""
         async with ctx.tx() as conn:
             await wa_inbox.record_outbound(conn, ctx.crypto(conn), org_id=ctx.org_id, venture_id=ctx.venture_id,
                                            phone=to, body=body, sent_by="kritvia", status=status,
-                                           provider_id=provider_id, error=error, approval_id=approval_id)
+                                           provider_id=provider_id, error=error, approval_id=approval_id, kind=kind)
 
     async def send_email(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, subject: str, body: str,
                          cc: list[str] | None = None, thread_id: str | None = None,
@@ -164,3 +164,38 @@ class Messaging:
                                transport="log", status="logged")
             return {"transport": "log", "status": "logged"}
         raise MessagingError("no WhatsApp connector for this venture (connect WhatsApp in Settings)")
+
+    async def send_whatsapp_template(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str,
+                                     template_id: str, params: list[Any]) -> dict[str, Any]:
+        """Sends one of the business's approved templates to someone who agreed to hear from it. The text
+        is rendered again from the template, so what goes out is exactly what was approved."""
+        from kritvia_api.services import wa_templates
+        async with ctx.tx() as conn:
+            wa = await load_whatsapp(ctx, conn)
+            try:
+                contact = await wa_templates.recipient(conn, ctx.venture_id, to)
+                t = await wa_templates.by_id(conn, ctx.venture_id, template_id)
+                body, clean = wa_templates.render(t, params)
+            except wa_templates.TemplateProblem as exc:
+                raise MessagingError(str(exc)) from exc
+        assert t is not None
+        if not (wa and self.whatsapp is not None):
+            if self.fallback == "log":
+                await self._record(ctx, approval_id, channel="whatsapp", recipient=contact.phone, subject=t.name,
+                                   body=body, transport="log", status="logged")
+                return {"transport": "log", "status": "logged"}
+            raise MessagingError("no WhatsApp connector for this venture (connect WhatsApp in Settings)")
+        try:
+            mid = await self.whatsapp.send_template(wa, to=contact.phone, name=t.name, language=t.language,
+                                                    params=clean)
+        except WhatsAppError as exc:
+            await self._record(ctx, approval_id, channel="whatsapp", recipient=contact.phone, subject=t.name,
+                               body=body, transport="whatsapp", status="failed", error=str(exc)[:300])
+            await self._chat(ctx, approval_id, to=contact.phone, body=body, status="failed", error=str(exc),
+                             kind="template")
+            raise MessagingError(str(exc)) from exc
+        await self._record(ctx, approval_id, channel="whatsapp", recipient=contact.phone, subject=t.name, body=body,
+                           transport="whatsapp", status="sent", provider_id=mid)
+        await self._chat(ctx, approval_id, to=contact.phone, body=body, status="sent", provider_id=mid,
+                         kind="template")
+        return {"transport": "whatsapp", "status": "sent", "message_id": mid, "template": t.name}

@@ -3856,6 +3856,11 @@ export interface components {
             lead_id: string | null;
             /** Name */
             name: string | null;
+            /**
+             * Opted In
+             * @description they wrote first, or the team confirmed they agreed to WhatsApp messages
+             */
+            opted_in: boolean;
             /** Opted Out */
             opted_out: boolean;
             /**
@@ -5306,7 +5311,7 @@ export interface components {
             params?: string[];
             /**
              * Phone
-             * @description with country code, e.g. +91 98111 22233
+             * @description with country code, e.g. +91 98111 22233 (a 10-digit Indian mobile also works)
              */
             phone: string;
             /**

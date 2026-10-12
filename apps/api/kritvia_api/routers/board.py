@@ -26,7 +26,8 @@ ROLE_TITLES = {"front_desk": "Front desk", "sales": "Sales", "accounts": "Accoun
                "owner": "You"}
 # Where each agent sits on the org chart unless the owner moves it.
 DEFAULT_ROLE = {"inbox_assistant": "front_desk", "lead_triage": "sales", "loan_verification": "accounts",
-                "kitchen_daily": "ops", "meeting_digest": "ops", "prospector": "sales"}
+                "kitchen_daily": "ops", "meeting_digest": "ops", "prospector": "sales",
+                "whatsapp_followup": "sales"}
 
 
 class RoleOut(BaseModel):

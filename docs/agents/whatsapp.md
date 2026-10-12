@@ -58,6 +58,29 @@ Meta approved in advance. On the WhatsApp page, **Templates** tab:
 API: `GET/POST /ventures/{v}/whatsapp/templates` (`?refresh=true`), `DELETE …/templates/{id}`,
 `POST …/whatsapp/chats/{id}/template`, `POST …/whatsapp/chats` (new chat).
 
+## Agents that send templates
+
+Who may be written to: only people who **agreed to hear from the business**. A customer who wrote first
+counts (`wa_contacts.opt_in_source = 'wrote_first'`); so does a number a team member started with
+**New chat** after confirming consent (`'team_confirmed'`). Never a cold number: a Prospector's first
+WhatsApp still goes from the owner's own phone, because WhatsApp bans numbers that message strangers.
+
+- **WhatsApp follow-ups** (`workflows/whatsapp_followup.py`, a core agent, Sales on the board). Every
+  day at the set time (default 11:00 IST) it finds chats where the business answered last and the
+  customer has been quiet for *after_days* (default 2): Kritvia handles the chat, the customer opted in,
+  no STOP, fewer than *max_followups* (default 1) since they last wrote, and by default an open lead.
+  For each, it fills the blanks of the owner's chosen template from the chat (or skips the chat if a
+  follow-up would be wrong, e.g. they already said no) and asks for approval (`whatsapp.template`).
+  A reply resets the count; a chat turned down or skipped isn't asked about again until the next quiet
+  spell.
+- **The assistant** can list the templates (`whatsapp.templates`) and send one on request
+  (`whatsapp.template`), with approval, to someone who opted in.
+
+`whatsapp.template` approvals show the message as the customer will get it. They can be approved or
+rejected but not edited (WhatsApp approved the wording); the send renders the text again from the same
+template. A WhatsApp approval's recipient can never be changed (`validate_edit`).
+`services/wa_templates.py` holds these rules for every sender. Migration `0036_whatsapp_followups.sql`.
+
 ## Messages sent from the phone
 
 A number kept on the **WhatsApp Business app** (coexistence) can still be used on the phone. Meta sends
@@ -108,7 +131,7 @@ The manual way (phone number id + permanent token) stays on that page under "Adv
 
 ## Not built yet
 
-Agents proposing templates themselves (e.g. a Prospector first touch or a payment reminder waiting for
-approval), templates with photos or buttons, offering meeting slots from the calendar, media (photos,
+Payment reminders (Kritvia has no invoice records with phone numbers yet), templates with photos or
+buttons, offering meeting slots from the calendar, media (photos,
 voice notes) beyond their captions, read receipts, and importing chat history from the WhatsApp
 Business app.

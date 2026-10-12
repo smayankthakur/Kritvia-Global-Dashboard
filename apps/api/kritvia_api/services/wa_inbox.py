@@ -54,6 +54,7 @@ class Contact:
     opted_out: bool
     last_inbound_at: datetime | None
     lead_id: uuid.UUID | None
+    opted_in: bool = False       # they wrote first, or the team confirmed they agreed to hear from us
 
     @property
     def automatic(self) -> bool:
@@ -62,10 +63,11 @@ class Contact:
 
 
 def _contact(r) -> Contact:
-    return Contact(r.id, r.phone, r.name, r.handled_by, r.opted_out_at is not None, r.last_inbound_at, r.lead_id)
+    return Contact(r.id, r.phone, r.name, r.handled_by, r.opted_out_at is not None, r.last_inbound_at, r.lead_id,
+                   r.opted_in_at is not None)
 
 
-COLS = "id, phone, name, handled_by, opted_out_at, last_inbound_at, lead_id"
+COLS = "id, phone, name, handled_by, opted_out_at, last_inbound_at, lead_id, opted_in_at"
 
 
 async def find_contact(conn, venture_id: uuid.UUID, phone: str) -> Contact | None:
@@ -98,7 +100,9 @@ async def record_inbound(conn, crypto: EnvelopeCrypto, *, org_id: uuid.UUID, ven
     r = (await conn.execute(text(
         "UPDATE wa_contacts SET last_inbound_at = now(), last_message_at = now(), unread = unread + 1,"
         " opted_out_at = CASE WHEN :stop THEN coalesce(opted_out_at, now()) ELSE opted_out_at END,"
-        " updated_at = now() WHERE id = :id"
+        # writing to the business is agreeing to hear back; it also restarts the follow-up count
+        " opted_in_at = coalesce(opted_in_at, now()), opt_in_source = coalesce(opt_in_source, 'wrote_first'),"
+        " followups_sent = 0, updated_at = now() WHERE id = :id"
         f" RETURNING {COLS}"), {"id": r.id, "stop": stop})).first()
     return _contact(r), True
 
@@ -163,6 +167,14 @@ async def newer_inbound(conn, venture_id: uuid.UUID, phone: str, provider_id: st
         " WHERE m.venture_id = :v AND c.phone = :p AND m.direction = 'in'"
         "   AND m.created_at > (SELECT created_at FROM wa_messages WHERE venture_id = :v AND provider_message_id = :m)"
         " LIMIT 1"), {"v": venture_id, "p": digits(phone), "m": provider_id})).first() is not None
+
+
+async def confirm_opt_in(conn, venture_id: uuid.UUID, contact_id: uuid.UUID) -> None:
+    """A team member confirmed this person agreed to get WhatsApp messages from the business."""
+    await conn.execute(text(
+        "UPDATE wa_contacts SET opted_in_at = coalesce(opted_in_at, now()),"
+        " opt_in_source = coalesce(opt_in_source, 'team_confirmed'), updated_at = now()"
+        " WHERE id = :id AND venture_id = :v"), {"id": contact_id, "v": venture_id})
 
 
 async def hand_to_person(conn, venture_id: uuid.UUID, contact_id: uuid.UUID, reason: str) -> None:

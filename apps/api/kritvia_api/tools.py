@@ -34,6 +34,22 @@ def build_tools() -> ToolRegistry:
         assert ok is not None
         return await ctx.services.messaging.send_whatsapp(ctx, ok.id, to=p["to"], body=p["body"])
 
+    @reg.tool("whatsapp.template", Capability.SEND,
+              "Send one of the business's approved WhatsApp templates to someone who agreed to hear from it")
+    async def whatsapp_template(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        assert ok is not None
+        return await ctx.services.messaging.send_whatsapp_template(
+            ctx, ok.id, to=str(p["to"]), template_id=str(p["template_id"]), params=list(p.get("params") or []))
+
+    @reg.tool("whatsapp.templates", Capability.READ,
+              "List the business's approved WhatsApp templates (for writing first or after 24 hours)")
+    async def whatsapp_templates(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import wa_templates
+        async with ctx.tx() as conn:
+            found = await wa_templates.approved(conn, ctx.venture_id)
+        return {"templates": [{"template": t.title, "language": t.language, "blanks": t.params,
+                               "text": t.body, "example_blanks": t.examples} for t in found]}
+
     @reg.tool("places.search", Capability.READ, "Search Google Maps (Places API) for businesses")
     async def places_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
         from kritvia_api.services.places import PlacesError

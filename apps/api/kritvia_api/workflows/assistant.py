@@ -43,7 +43,12 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
     "crm.update_lead": {"lead_id": "the lead's id from leads.search",
                         "status": "optional new status", "score": "optional score 0-100"},
     "gmail.send": {"to": "email address", "subject": "subject line", "body": "the email text"},
-    "whatsapp.send": {"to": "phone number with country code", "body": "the message text"},
+    "whatsapp.send": {"to": "phone number with country code", "body": "the message text (only works within 24 hours "
+                      "of the customer's last WhatsApp message)"},
+    "whatsapp.templates": {},
+    "whatsapp.template": {"to": "phone number with country code of someone who already chats with the business",
+                          "template": "the template's name from whatsapp.templates",
+                          "params": "list of texts for the blanks {{1}}, {{2}} … in order (empty list if none)"},
     "calendar.create_event": {"summary": "title", "start": "ISO date-time with +05:30",
                               "end": "ISO date-time with +05:30", "attendees": "list of email addresses",
                               "description": "optional"},
@@ -51,6 +56,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
 REQUIRED: dict[str, tuple[str, ...]] = {
     "knowledge.search": ("query",), "leads.search": (), "crm.update_lead": ("lead_id",),
     "gmail.send": ("to", "subject", "body"), "whatsapp.send": ("to", "body"),
+    "whatsapp.templates": (), "whatsapp.template": ("to", "template"),
     "calendar.create_event": ("summary", "start", "end"),
 }
 
@@ -194,12 +200,29 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
         log.append({"n": n, "tool": s.tool, "ok": False, "result": "that tool can't be used here"})
         return Goto("think", update={"log": log})
 
+    args = s.args
+    if s.tool == "whatsapp.template":
+        # The approval card shows the exact text; the send renders it again from the same template.
+        from kritvia_api.services import wa_templates
+        try:
+            async with ctx.tx() as conn:
+                to = (await wa_templates.recipient(conn, ctx.venture_id, str(args.get("to")))).phone
+                t = await wa_templates.by_name(conn, ctx.venture_id, str(args.get("template")))
+                params = args.get("params") or []
+                body, clean = wa_templates.render(t, params if isinstance(params, list) else [params])
+        except wa_templates.TemplateProblem as exc:
+            log.append({"n": n, "tool": s.tool, "ok": False, "result": str(exc)})
+            return Goto("think", update={"log": log}, note="whatsapp.template: can't be sent")
+        assert t is not None
+        args = {"to": to, "template": t.title, "template_id": str(t.id), "language": t.language, "params": clean,
+                "body": body}
+
     # write / send: an approval on the board; nothing happens until a person says yes
     title = (s.title or f"{s.tool} for: {request[:80]}")[:140]
     return Interrupt(
         ApprovalRequest(agent="assistant", action=s.tool if not s.tool.startswith(mcp.PREFIX) else "mcp.call",
                         key="decision", title=title, summary=(s.thought or "")[:300],
-                        payload={**s.args, **({"mcp_tool": s.tool} if s.tool.startswith(mcp.PREFIX) else {})},
+                        payload={**args, **({"mcp_tool": s.tool} if s.tool.startswith(mcp.PREFIX) else {})},
                         required_roles=("approver", "venture_admin"),
                         always_review=s.tool.startswith(mcp.PREFIX)),
         resume="act", on_reject="rejected",

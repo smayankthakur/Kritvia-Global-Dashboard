@@ -21,7 +21,8 @@ CUSTOMER = "919811155566"
 
 class FakeGraph:
     """Graph API stand-in for one WhatsApp account: number, templates and sends."""
-    def __init__(self) -> None:
+    def __init__(self, pnid: str | None = None, waba: str | None = None) -> None:
+        self.pnid, self.waba = pnid or PNID, waba or WABA
         self.sent: list[dict] = []
         self.templates: dict[str, dict] = {}
         self.created: list[dict] = []
@@ -29,11 +30,11 @@ class FakeGraph:
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if request.method == "GET" and path.endswith(f"/{WABA}/phone_numbers"):
-            return httpx.Response(200, json={"data": [{"id": PNID}]})
+        if request.method == "GET" and path.endswith(f"/{self.waba}/phone_numbers"):
+            return httpx.Response(200, json={"data": [{"id": self.pnid}]})
         if request.method == "GET" and path.endswith("/phone_numbers"):
             return httpx.Response(200, json={"data": []})
-        if path.endswith(f"/{WABA}/message_templates"):
+        if path.endswith(f"/{self.waba}/message_templates"):
             if request.method == "GET":
                 return httpx.Response(200, json={"data": list(self.templates.values())})
             if request.method == "DELETE":

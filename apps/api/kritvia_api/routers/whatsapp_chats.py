@@ -37,6 +37,7 @@ class ChatOut(BaseModel):
     handled_by: Literal["kritvia", "person"]
     handoff_reason: str | None
     opted_out: bool
+    opted_in: bool = Field(description="they wrote first, or the team confirmed they agreed to WhatsApp messages")
     unread: int
     window_open: bool = Field(description="false once 24 hours have passed since the customer last wrote")
     last_message_at: datetime
@@ -77,7 +78,8 @@ class HandlerIn(BaseModel):
 
 
 CHAT_SQL = (
-    "SELECT c.id, c.phone, c.name, c.handled_by, c.handoff_reason, c.opted_out_at, c.unread, c.last_inbound_at,"
+    "SELECT c.id, c.phone, c.name, c.handled_by, c.handoff_reason, c.opted_out_at, c.opted_in_at, c.unread,"
+    " c.last_inbound_at,"
     " c.last_message_at, c.lead_id, m.body_enc, m.direction,"
     " (SELECT a.id FROM approvals a JOIN workflow_runs r ON r.id = a.run_id"
     "   JOIN wa_messages i ON i.venture_id = r.venture_id AND i.provider_message_id = r.trigger_ref"
@@ -91,7 +93,7 @@ CHAT_SQL = (
 async def _chat(crypto: EnvelopeCrypto, venture_id: uuid.UUID, r) -> ChatOut:
     last = (await crypto.decrypt_str(venture_id, wa_inbox.PURPOSE, r.body_enc) or "") if r.body_enc else ""
     return ChatOut(id=r.id, phone=r.phone, name=r.name, handled_by=r.handled_by, handoff_reason=r.handoff_reason,
-                   opted_out=r.opted_out_at is not None, unread=r.unread,
+                   opted_out=r.opted_out_at is not None, opted_in=r.opted_in_at is not None, unread=r.unread,
                    window_open=wa_inbox.window_open(r.last_inbound_at), last_message_at=r.last_message_at,
                    last_message=last[:140], last_direction=r.direction, lead_id=r.lead_id,
                    pending_approval_id=r.pending_id)
@@ -428,6 +430,10 @@ async def send_template(venture_id: uuid.UUID, chat_id: uuid.UUID, body: SendTem
     await _plan_ok(db, venture_id)
     if r.opted_out_at is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "this customer asked not to receive messages (they wrote STOP)")
+    if r.opted_in_at is None:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "WhatsApp only allows messages to people who agreed to hear from you; start the chat "
+                            "with New chat and confirm their consent")
     await _send_template(db, svc, venture_id, user_id, phone=r.phone, name=None, body=body)
     m = (await wa_inbox.thread(db, EnvelopeCrypto(db, svc.keys), venture_id, chat_id, limit=1))[-1]
     return MessageOut(**m)
@@ -451,6 +457,7 @@ async def new_chat(venture_id: uuid.UUID, body: NewChatIn, user_id: UserId, svc:
     await _send_template(db, svc, venture_id, user_id, phone=phone, name=body.name, body=body)
     cid = (await db.execute(text("SELECT id FROM wa_contacts WHERE venture_id = :v AND phone = :p"),
                             {"v": venture_id, "p": phone})).scalar_one()
+    await wa_inbox.confirm_opt_in(db, venture_id, cid)
     return await _chat(EnvelopeCrypto(db, svc.keys), venture_id, await _one(db, venture_id, cid))
 
 

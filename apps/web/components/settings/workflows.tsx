@@ -18,6 +18,7 @@ import { formatRelative } from "@/lib/format";
 const SCHEDULED: Record<string, { at: string; label: string }> = {
   kitchen_daily: { at: "23:30", label: "Runs every night at (IST)" },
   prospector: { at: "10:30", label: "Finds leads and sends messages every day at (IST)" },
+  whatsapp_followup: { at: "11:00", label: "Looks for quiet chats every day at (IST)" },
 };
 const INSTRUCTION_HINTS: Record<string, string> = {
   inbox_assistant: "e.g. Reply in Hinglish. Delivery takes 3–5 days. Never quote prices; say we will share a quote.",
@@ -25,6 +26,7 @@ const INSTRUCTION_HINTS: Record<string, string> = {
   loan_verification: "e.g. Salaried applicants need 3 salary slips; self-employed need 2 years of ITR.",
   kitchen_daily: "e.g. Buy paneer only from Amul distributor. Keep 20% extra on weekends.",
   prospector: "e.g. Mention we built the site for Annapurna Rasoi. Skip hotels and big chains. Offer a free demo page.",
+  whatsapp_followup: "e.g. Keep it light. Mention the weekend slots if they asked about bookings.",
 };
 
 export function parseSettingsJson(text: string): { value: Record<string, unknown> | null; error: string | null } {
@@ -179,6 +181,12 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
           </Button>
         </div>
       </div>
+      {wf.name === "whatsapp_followup" ? (
+        <p className="text-xs text-subtle">
+          Only chats where the customer wrote to you first, or where your team confirmed they agreed to messages, get a follow-up.
+          Each follow-up waits for your yes unless you let this agent send on its own on the Trust page; a reply from the customer stops them, and STOP opts them out.
+        </p>
+      ) : null}
       {wf.name === "prospector" ? (
         <p className="text-xs text-subtle">
           Emails go from your connected Gmail. WhatsApp only lets a business message someone first from its own phone, so first

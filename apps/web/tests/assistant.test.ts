@@ -4,6 +4,7 @@ import { inProgress, toolLabel } from "@/components/assistant/labels";
 describe("assistant labels", () => {
   it("names built-in and connected-app tools in plain words", () => {
     expect(toolLabel("gmail.send")).toBe("Email");
+    expect(toolLabel("whatsapp.template")).toBe("WhatsApp template");
     expect(toolLabel("leads.search")).toBe("Looked up leads");
     expect(toolLabel("app.hubspot.create_contact")).toBe("hubspot: create contact");
     expect(toolLabel("something.else")).toBe("something.else");

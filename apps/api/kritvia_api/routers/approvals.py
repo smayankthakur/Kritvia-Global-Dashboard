@@ -139,7 +139,10 @@ class DecisionIn(BaseModel):
     comment: str | None = Field(default=None, max_length=2000)
 
 
-def validate_edit(original: dict[str, Any], edited: dict[str, Any]) -> dict[str, Any]:
+def validate_edit(original: dict[str, Any], edited: dict[str, Any], action: str = "") -> dict[str, Any]:
+    if action == "whatsapp.template":
+        raise HTTPException(422, "WhatsApp approved this template's wording, so it can't be edited here; "
+                                 "reject it with a comment instead")
     extra = set(edited) - set(original)
     if extra:
         raise HTTPException(422, f"unknown fields in edit: {sorted(extra)}")
@@ -150,7 +153,10 @@ def validate_edit(original: dict[str, Any], edited: dict[str, Any]) -> dict[str,
                 isinstance(o, int | float) and isinstance(v, int | float)):
             raise HTTPException(422, f"field {k!r} must stay {type(o).__name__}")
         merged[k] = v
-    if "to" in merged and (not isinstance(merged["to"], str) or "@" not in merged["to"]):
+    if action.startswith("whatsapp."):
+        if merged.get("to") != original.get("to"):
+            raise HTTPException(422, "the WhatsApp recipient can't be changed; reject it and ask again")
+    elif "to" in merged and (not isinstance(merged["to"], str) or "@" not in merged["to"]):
         raise HTTPException(422, "recipient must be an email address")
     return merged
 
@@ -159,7 +165,8 @@ def validate_edit(original: dict[str, Any], edited: dict[str, Any]) -> dict[str,
 async def decide(venture_id: uuid.UUID, approval_id: uuid.UUID, body: DecisionIn, user_id: UserId,
                  svc: Svc) -> ApprovalOut:
     async with tenant_tx(user_id) as conn:
-        row = (await conn.execute(text("SELECT payload_enc, status FROM approvals WHERE id = :id AND venture_id = :v"),
+        row = (await conn.execute(text("SELECT payload_enc, status, action FROM approvals"
+                                       " WHERE id = :id AND venture_id = :v"),
                                   {"id": approval_id, "v": venture_id})).first()
         if row is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "approval not found")
@@ -169,7 +176,7 @@ async def decide(venture_id: uuid.UUID, approval_id: uuid.UUID, body: DecisionIn
             original = json.loads(await crypto.decrypt(venture_id, PAYLOAD_PURPOSE, row.payload_enc))
             decision = "approved"
             if body.edited_payload is not None:
-                merged = validate_edit(original, body.edited_payload)
+                merged = validate_edit(original, body.edited_payload, row.action)
                 if merged != original:
                     decision = "edited"
                     final_enc = await crypto.encrypt(venture_id, PAYLOAD_PURPOSE, json.dumps(merged, default=str))
