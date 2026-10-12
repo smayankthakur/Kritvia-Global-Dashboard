@@ -49,7 +49,12 @@ jobs:
         with: { node-version: 22, cache: npm, cache-dependency-path: apps/desktop/package-lock.json }
       - run: npm ci
       - name: Build installers (unsigned unless signing secrets are configured)
-        run: npm run build && npx electron-builder ${{ matrix.flags }} --publish never
+        shell: bash
+        # A missing secret arrives as an empty CSC_LINK, which electron-builder reads as a path (the
+        # folder itself) and fails on macOS; without signing secrets the variables must not be set at all.
+        run: |
+          [ -n "$CSC_LINK" ] || unset CSC_LINK CSC_KEY_PASSWORD
+          npm run build && npx electron-builder ${{ matrix.flags }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK == '' && 'false' || 'true' }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
