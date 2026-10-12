@@ -1,9 +1,9 @@
 /**
- * Terms of Service, version 2026-10-06. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Terms of Service, version 2026-10-13. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Terms of Service). Keep the two in step; when the text changes, bump
  * TERMS_VERSION in the API settings (terms_version) so everyone is asked to accept again.
  */
-export const TERMS_UPDATED = "6 October 2026";
+export const TERMS_UPDATED = "13 October 2026";
 
 export const TERMS_MD = `These Terms of Service are an agreement between your business and Sitelytc Digital Media Private Limited for the use of Kritvia. Please read them with our [Privacy Policy](/privacy).
 
@@ -25,7 +25,7 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 - **Account Data:** personal data about your Users that we need to run their accounts: name, email address, sign-in records, settings and billing contact details.
 - **Customer Data:** all data, documents, messages, recordings and other content that you or your Users put into the Service, or that the Service fetches from a Connected Service on your instruction, including any personal data in it. Customer Data includes Outputs.
 - **Output:** text, drafts, summaries, extracted fields and other content the Service generates for you from Customer Data.
-- **Connected Service:** a third-party service you link to Kritvia, such as Google Workspace (Gmail, Calendar, Drive), WhatsApp Business Platform or Tally.
+- **Connected Service:** a third-party service you link to Kritvia, such as Google Workspace (Gmail, Calendar, Drive), WhatsApp Business Platform, a Telegram bot, Slack, an app connected through its MCP server, or Tally.
 - **Agent:** a configured workflow in the Service that uses AI models to read Customer Data and propose or take actions.
 - **Approval:** the step in which a User reviews an Agent's proposed action and approves, edits or rejects it before it is carried out.
 - **User:** an individual you invite or permit to use the Service under your organisation, including your employees and contractors.

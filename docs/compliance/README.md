@@ -12,7 +12,7 @@ Protection Act 2019 and the CCPA (India) Guidelines for Prevention and Regulatio
 
 | Item | Where it lives | Status |
 | --- | --- | --- |
-| Privacy Policy (DPDP; GDPR and California sections) | `apps/web/lib/legal/privacy.ts` → `/privacy` | Done |
+| Privacy Policy (DPDP; GDPR and California sections) | `apps/web/lib/legal/privacy.ts` → `/privacy` | Done; 2026-10-13 adds Telegram, Slack and MCP apps to "Services a business connects" (version bumped, everyone re-accepts) |
 | Terms of Service (18+, "Coming soon" clause, refund link) | `apps/web/lib/legal/terms.ts` → `/terms` | Done; version bumped to 2026-10-05, so everyone re-accepts |
 | Cancellation, Refund and Delivery Policy | `apps/web/lib/legal/refunds.ts` → `/refunds` | Done (Razorpay needs this page) |
 | Cookie Policy | `apps/web/lib/legal/cookies.ts` → `/cookies` | Done |

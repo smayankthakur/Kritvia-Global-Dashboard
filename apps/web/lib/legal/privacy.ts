@@ -1,10 +1,10 @@
 /**
- * Privacy Policy, version 2026-10-05. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Privacy Policy, version 2026-10-13. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Privacy Policy). Every factual statement here was checked against the code;
  * if routing, retention or providers change (infra/litellm/tiers.yaml, migrations, worker purges),
  * change this text too and bump terms_version in the API settings.
  */
-export const PRIVACY_UPDATED = "5 October 2026";
+export const PRIVACY_UPDATED = "13 October 2026";
 
 export const PRIVACY_MD = `## 1. Who we are and what this policy covers
 
@@ -39,7 +39,7 @@ This policy is published under the Digital Personal Data Protection Act, 2023 an
 
 We do not keep dictation audio. We keep the length, language and word count of each dictation; the text is kept only where you save it as a note. The Kritvia desktop app's auto-learn feature, if you switch it on, briefly holds your keystrokes in memory for up to 8 seconds after you paste dictated text, only to learn your corrections; it does not store or send those keystrokes.
 
-**Customer Data (we are a Data Processor).** Businesses using Kritvia put in or connect data that may include personal data of their own customers and contacts: emails and attachments, WhatsApp messages, calendar events, Drive files, uploaded documents (including loan papers and identity documents), meeting recordings and transcripts, leads, proposals and accounting entries. We process this only to provide Kritvia to that business: to store and search it, extract facts, and run the agents it switches on. We do not use it for our own purposes, sell it, use it for advertising, or use it to train AI models.
+**Customer Data (we are a Data Processor).** Businesses using Kritvia put in or connect data that may include personal data of their own customers and contacts: emails and attachments, WhatsApp and Telegram messages, calendar events, Drive files, uploaded documents (including loan papers and identity documents), meeting recordings and transcripts, leads, proposals and accounting entries. We process this only to provide Kritvia to that business: to store and search it, extract facts, and run the agents it switches on. We do not use it for our own purposes, sell it, use it for advertising, or use it to train AI models.
 
 ## 3. How AI is used
 
@@ -75,7 +75,7 @@ We share personal data only with the service providers below, who process it on 
 | Razorpay | Subscription payments | Billing name, GSTIN, email, plan; you enter card or UPI details directly with Razorpay | India |
 | Browser push services (Google, Apple, Mozilla, Microsoft) | Delivering notifications you switched on | An encrypted notification with the draft's title | Global |
 
-**Services a business connects.** When a business connects Google Workspace or the WhatsApp Business Platform (Meta), Kritvia reads from and sends through the business's own account with that provider. That provider handles the data under its agreement with the business.
+**Services a business connects.** When a business connects Google Workspace, the WhatsApp Business Platform (Meta) or its own Telegram bot, Kritvia reads from and sends through the business's own account with that provider. When a business connects Slack, Kritvia posts short notices to the channel it chose: who needs attention and a link back to Kritvia, never what a customer wrote. When a business connects another app through its MCP server, the Kritvia assistant sends that app only what a task needs, and anything that changes the app waits for a person's approval. Each provider handles the data under its agreement with the business.
 
 **Other disclosures.** We may disclose personal data (a) where the law, a court order or a government agency with lawful authority requires it, after checking the request is valid and disclosing no more than required; (b) to protect the security of Kritvia, our customers or the public; or (c) to a buyer or successor if our business is reorganised or sold, who must honour this policy.
 
