@@ -2929,6 +2929,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/whatsapp/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Chats */
+        get: operations["list_chats_ventures__venture_id__whatsapp_chats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Chat */
+        get: operations["get_chat_ventures__venture_id__whatsapp_chats__chat_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Chat
+         * @description Erase a customer's chat and every message in it (e.g. when they ask for their data to be deleted).
+         */
+        delete: operations["delete_chat_ventures__venture_id__whatsapp_chats__chat_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}/handler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Handler
+         * @description Take a chat over ("person") or give it back to Kritvia ("kritvia").
+         */
+        put: operations["set_handler_ventures__venture_id__whatsapp_chats__chat_id__handler_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply
+         * @description A person answers the customer now. Kritvia steps back from this chat until it is given back.
+         */
+        post: operations["reply_ventures__venture_id__whatsapp_chats__chat_id__reply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/workflow-configs": {
         parameters: {
             query?: never;
@@ -3647,6 +3725,65 @@ export interface components {
             key: string;
             /** Words */
             words: number;
+        };
+        /** ChatDetailOut */
+        ChatDetailOut: {
+            chat: components["schemas"]["ChatOut"];
+            /** Messages */
+            messages: components["schemas"]["MessageOut"][];
+        };
+        /** ChatOut */
+        ChatOut: {
+            /**
+             * Handled By
+             * @enum {string}
+             */
+            handled_by: "kritvia" | "person";
+            /** Handoff Reason */
+            handoff_reason: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Direction */
+            last_direction: ("in" | "out") | null;
+            /** Last Message */
+            last_message: string;
+            /**
+             * Last Message At
+             * Format: date-time
+             */
+            last_message_at: string;
+            /** Lead Id */
+            lead_id: string | null;
+            /** Name */
+            name: string | null;
+            /** Opted Out */
+            opted_out: boolean;
+            /**
+             * Pending Approval Id
+             * @description a reply Kritvia drafted that waits for a yes
+             */
+            pending_approval_id: string | null;
+            /** Phone */
+            phone: string;
+            /** Unread */
+            unread: number;
+            /**
+             * Window Open
+             * @description false once 24 hours have passed since the customer last wrote
+             */
+            window_open: boolean;
+        };
+        /** ChatsOut */
+        ChatsOut: {
+            /** Chats */
+            chats: components["schemas"]["ChatOut"][];
+            /** Connected */
+            connected: boolean;
+            /** Number */
+            number: string | null;
         };
         /** ChecklistIn */
         ChecklistIn: {
@@ -4482,6 +4619,14 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HandlerIn */
+        HandlerIn: {
+            /**
+             * Handled By
+             * @enum {string}
+             */
+            handled_by: "kritvia" | "person";
+        };
         /** HookOut */
         HookOut: {
             /** Accepted */
@@ -4989,6 +5134,40 @@ export interface components {
             /** Venture Id */
             venture_id: string | null;
         };
+        /** MessageOut */
+        MessageOut: {
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "in" | "out";
+            /** Error */
+            error: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Sent By
+             * @enum {string}
+             */
+            sent_by: "customer" | "kritvia" | "person";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "received" | "sent" | "failed";
+        };
         /** MissionIn */
         MissionIn: {
             /**
@@ -5482,6 +5661,11 @@ export interface components {
         RenameIn: {
             /** Name */
             name: string;
+        };
+        /** ReplyIn */
+        ReplyIn: {
+            /** Body */
+            body: string;
         };
         /** RetentionIn */
         RetentionIn: {
@@ -13047,6 +13231,173 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DictationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_chats_ventures__venture_id__whatsapp_chats_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_chat_ventures__venture_id__whatsapp_chats__chat_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_chat_ventures__venture_id__whatsapp_chats__chat_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_handler_ventures__venture_id__whatsapp_chats__chat_id__handler_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandlerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_ventures__venture_id__whatsapp_chats__chat_id__reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"];
                 };
             };
             /** @description Validation Error */

@@ -23,7 +23,7 @@ from kritvia_api.engine.runner import DuplicateTrigger, start_run
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services.security_log import security_event
 from kritvia_api.ratelimit import client_ip, limiter
-from kritvia_api.services import memory
+from kritvia_api.services import memory, push, wa_inbox
 from kritvia_api.services.crypto import EnvelopeCrypto
 from kritvia_api.services.google import GoogleError
 from kritvia_api.services.messaging import load_google
@@ -426,6 +426,22 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
         p = principals[m.phone_number_id]
         if p is None or not await _plan_allows(p.run_as, p.venture_id, "whatsapp"):
             ignored += 1
+            continue
+        # Every message is kept in the customer's chat first (WhatsApp page, and the history agents read).
+        async with tenant_tx(p.run_as, "agent", "whatsapp") as conn:
+            contact, new = await wa_inbox.record_inbound(
+                conn, EnvelopeCrypto(conn, svc.keys), org_id=p.org_id, venture_id=p.venture_id, phone=m.sender,
+                name=m.sender_name, body=m.text, kind=m.kind, provider_id=m.message_id)
+        if not new:                      # Meta redelivered a message we already have
+            ignored += 1
+            continue
+        if not contact.automatic:
+            # A person is handling this chat, or the customer opted out: keep the message, draft nothing.
+            accepted += 1
+            if contact.handled_by == "person" and not contact.opted_out:
+                await push.notify_venture(p.venture_id, title="New WhatsApp message",
+                                          body=f"{contact.name or '+' + contact.phone} wrote again",
+                                          url=f"/v/{p.venture_id}/whatsapp?c={contact.id}", tag=f"wa-{contact.id}")
             continue
         try:
             await start_run(svc, actor_user_id=p.run_as, actor_type="agent", venture_id=p.venture_id,

@@ -80,3 +80,22 @@ async def notify_approval(approval_id: uuid.UUID, *, title: str, venture_id: uui
         for t, ok in zip(targets, results, strict=True):
             await conn.execute(text("SELECT private.push_result(:i, :ok)"), {"i": t.subscription_id, "ok": ok})
     return sum(1 for ok in results if ok)
+
+
+async def notify_venture(venture_id: uuid.UUID, *, title: str, body: str, url: str, tag: str) -> int:
+    """Pushes to everyone on the business who can write or approve (e.g. a chat that needs a person).
+    Keep `body` free of message text: it names who needs attention, not what they wrote."""
+    if not enabled():
+        return 0
+    async with tenant_tx(None, "system") as conn:
+        targets = (await conn.execute(text("SELECT * FROM private.venture_push_targets(:v)"), {"v": venture_id})).all()
+    if not targets:
+        return 0
+    payload = {"title": title[:80], "body": body[:120], "tag": tag[:100], "url": url}
+    results = await asyncio.gather(*(asyncio.to_thread(_send, t.endpoint, dict(t.keys), payload) for t in targets),
+                                   return_exceptions=True)
+    results = [r is True for r in results]
+    async with tenant_tx(None, "system") as conn:
+        for t, ok in zip(targets, results, strict=True):
+            await conn.execute(text("SELECT private.push_result(:i, :ok)"), {"i": t.subscription_id, "ok": ok})
+    return sum(1 for ok in results if ok)

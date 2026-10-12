@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import text
 
+from kritvia_api.services import wa_inbox
 from kritvia_api.services.google import SCOPES, GoogleClient
 from kritvia_api.services.whatsapp import WhatsAppClient, WhatsAppError, load_whatsapp
 
@@ -77,6 +78,14 @@ class Messaging:
                  "s": (subject or "")[:500], "b": enc, "t": transport, "st": status, "p": provider_id,
                  "e": error})
 
+    async def _chat(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, body: str, status: str,
+                    provider_id: str | None = None, error: str | None = None) -> None:
+        """The reply also goes into the customer's WhatsApp chat, as sent by Kritvia."""
+        async with ctx.tx() as conn:
+            await wa_inbox.record_outbound(conn, ctx.crypto(conn), org_id=ctx.org_id, venture_id=ctx.venture_id,
+                                           phone=to, body=body, sent_by="kritvia", status=status,
+                                           provider_id=provider_id, error=error, approval_id=approval_id)
+
     async def send_email(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, subject: str, body: str,
                          cc: list[str] | None = None, thread_id: str | None = None,
                          attachments: list[tuple[str, str, bytes]] | None = None) -> dict[str, Any]:
@@ -127,15 +136,28 @@ class Messaging:
             raise MessagingError("recipient phone number is missing")
         async with ctx.tx() as conn:
             wa = await load_whatsapp(ctx, conn)
+            contact = await wa_inbox.find_contact(conn, ctx.venture_id, to)
         if wa and self.whatsapp is not None:
+            # Checked here rather than left to Meta, so the reason is clear and nothing half-sends.
+            if contact is not None and contact.opted_out:
+                error = "the customer asked not to receive messages (they wrote STOP)"
+            elif contact is None or not wa_inbox.window_open(contact.last_inbound_at):
+                error = ("WhatsApp send failed: the customer last wrote more than 24 hours ago; "
+                         "WhatsApp needs an approved template")
+            else:
+                error = None
             try:
+                if error:
+                    raise WhatsAppError(error)
                 mid = await self.whatsapp.send_text(wa, to=to, body=body)
             except WhatsAppError as exc:
                 await self._record(ctx, approval_id, channel="whatsapp", recipient=to, subject=None, body=body,
                                    transport="whatsapp", status="failed", error=str(exc)[:300])
+                await self._chat(ctx, approval_id, to=to, body=body, status="failed", error=str(exc))
                 raise MessagingError(str(exc)) from exc
             await self._record(ctx, approval_id, channel="whatsapp", recipient=to, subject=None, body=body,
                                transport="whatsapp", status="sent", provider_id=mid)
+            await self._chat(ctx, approval_id, to=to, body=body, status="sent", provider_id=mid)
             return {"transport": "whatsapp", "status": "sent", "message_id": mid}
         if self.fallback == "log":
             await self._record(ctx, approval_id, channel="whatsapp", recipient=to, subject=None, body=body,

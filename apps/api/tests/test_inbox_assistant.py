@@ -143,7 +143,7 @@ class FakeMeta:
         if self.fail:
             return httpx.Response(400, json={"error": {"code": 131047, "message": "Re-engagement message"}})
         self.sent.append({"path": request.url.path, "auth": request.headers.get("authorization"), **body})
-        return httpx.Response(200, json={"messages": [{"id": "wamid.abc"}]})
+        return httpx.Response(200, json={"messages": [{"id": f"wamid.{uuid.uuid4().hex}"}]})
 
 
 @pytest.fixture

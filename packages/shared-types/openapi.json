@@ -1882,6 +1882,181 @@
         "title": "Breakdown",
         "type": "object"
       },
+      "ChatDetailOut": {
+        "properties": {
+          "chat": {
+            "$ref": "#/components/schemas/ChatOut"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "title": "Messages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chat",
+          "messages"
+        ],
+        "title": "ChatDetailOut",
+        "type": "object"
+      },
+      "ChatOut": {
+        "properties": {
+          "handled_by": {
+            "enum": [
+              "kritvia",
+              "person"
+            ],
+            "title": "Handled By",
+            "type": "string"
+          },
+          "handoff_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handoff Reason"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "in",
+                  "out"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Direction"
+          },
+          "last_message": {
+            "title": "Last Message",
+            "type": "string"
+          },
+          "last_message_at": {
+            "format": "date-time",
+            "title": "Last Message At",
+            "type": "string"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "opted_out": {
+            "title": "Opted Out",
+            "type": "boolean"
+          },
+          "pending_approval_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "a reply Kritvia drafted that waits for a yes",
+            "title": "Pending Approval Id"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          },
+          "window_open": {
+            "description": "false once 24 hours have passed since the customer last wrote",
+            "title": "Window Open",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "name",
+          "handled_by",
+          "handoff_reason",
+          "opted_out",
+          "unread",
+          "window_open",
+          "last_message_at",
+          "last_message",
+          "last_direction",
+          "lead_id",
+          "pending_approval_id"
+        ],
+        "title": "ChatOut",
+        "type": "object"
+      },
+      "ChatsOut": {
+        "properties": {
+          "chats": {
+            "items": {
+              "$ref": "#/components/schemas/ChatOut"
+            },
+            "title": "Chats",
+            "type": "array"
+          },
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          }
+        },
+        "required": [
+          "connected",
+          "number",
+          "chats"
+        ],
+        "title": "ChatsOut",
+        "type": "object"
+      },
       "ChecklistIn": {
         "properties": {
           "items": {
@@ -3927,6 +4102,23 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HandlerIn": {
+        "properties": {
+          "handled_by": {
+            "enum": [
+              "kritvia",
+              "person"
+            ],
+            "title": "Handled By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "handled_by"
+        ],
+        "title": "HandlerIn",
+        "type": "object"
+      },
       "HookOut": {
         "properties": {
           "accepted": {
@@ -5381,6 +5573,77 @@
         "title": "MemberOut",
         "type": "object"
       },
+      "MessageOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "in",
+              "out"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "sent_by": {
+            "enum": [
+              "customer",
+              "kritvia",
+              "person"
+            ],
+            "title": "Sent By",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "received",
+              "sent",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "direction",
+          "sent_by",
+          "kind",
+          "body",
+          "status",
+          "error",
+          "created_at"
+        ],
+        "title": "MessageOut",
+        "type": "object"
+      },
       "MissionIn": {
         "properties": {
           "note": {
@@ -6569,6 +6832,21 @@
           "name"
         ],
         "title": "RenameIn",
+        "type": "object"
+      },
+      "ReplyIn": {
+        "properties": {
+          "body": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "ReplyIn",
         "type": "object"
       },
       "RetentionIn": {
@@ -20553,6 +20831,310 @@
         "summary": "Dictate Endpoint",
         "tags": [
           "voice"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/whatsapp/chats": {
+      "get": {
+        "operationId": "list_chats_ventures__venture_id__whatsapp_chats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Chats",
+        "tags": [
+          "whatsapp"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}": {
+      "delete": {
+        "description": "Erase a customer's chat and every message in it (e.g. when they ask for their data to be deleted).",
+        "operationId": "delete_chat_ventures__venture_id__whatsapp_chats__chat_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Chat",
+        "tags": [
+          "whatsapp"
+        ]
+      },
+      "get": {
+        "operationId": "get_chat_ventures__venture_id__whatsapp_chats__chat_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Chat",
+        "tags": [
+          "whatsapp"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}/handler": {
+      "put": {
+        "description": "Take a chat over (\"person\") or give it back to Kritvia (\"kritvia\").",
+        "operationId": "set_handler_ventures__venture_id__whatsapp_chats__chat_id__handler_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandlerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Handler",
+        "tags": [
+          "whatsapp"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}/reply": {
+      "post": {
+        "description": "A person answers the customer now. Kritvia steps back from this chat until it is given back.",
+        "operationId": "reply_ventures__venture_id__whatsapp_chats__chat_id__reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reply",
+        "tags": [
+          "whatsapp"
         ]
       }
     },

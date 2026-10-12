@@ -4,3 +4,4 @@
 * [decisions.md](decisions.md) — as-built decisions (ADR log) and known limitations
 * [runbook.md](runbook.md) — VM provisioning, configuration, first start, backups, deploys, incidents
 * [agents/prospector.md](agents/prospector.md) — the outbound sales agent: how it finds and contacts businesses, and the rules it follows (Google Maps terms, WhatsApp, TRAI, DPDP)
+* [agents/whatsapp.md](agents/whatsapp.md) — the WhatsApp front door: customer chats, drafts with the chat in mind, taking over, STOP and the 24-hour window
