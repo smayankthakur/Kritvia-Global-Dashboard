@@ -172,6 +172,10 @@ Drive files one by one. Organisations on plans in `GOOGLE_READ_PLANS` (default `
 4. Server `.env`: `INBOUND_EMAIL_DOMAIN=in.sitelytc.com` and `INBOUND_EMAIL_SECRET=<the same secret>`;
    recreate api (`docker compose up -d --force-recreate api worker`).
 5. Test: Settings → Connectors → Email forwarding → Set up forwarding, then send a mail to the address.
+6. If the catch-all for `sitelytc.com` itself also goes to this Worker, add the variables
+   `KRITVIA_DOMAIN=in.sitelytc.com` and `FORWARD_OTHER_TO=<a verified Email Routing destination>`. Then mail
+   to any other `@sitelytc.com` address is forwarded there instead of bouncing. Paste the latest
+   `email-worker.js` and deploy again after changing it.
 
 **Drive picker (once):** in the Google Cloud project used for sign-in, enable **Google Picker API**, create a
 browser API key restricted to HTTP referrer `https://app.sitelytc.com/*` and to the Picker API, then set
