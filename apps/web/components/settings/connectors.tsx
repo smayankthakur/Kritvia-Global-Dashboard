@@ -13,6 +13,7 @@ import { Field, FormError, Input } from "@/components/ui/field";
 import { KeyValue, Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
+import { ConnectVideo } from "@/components/settings/how-to-video";
 import { api, errorMessage, multipart, unwrap, type Schemas } from "@/lib/api";
 import { formatDateTime, formatINR, formatRelative } from "@/lib/format";
 
@@ -239,6 +240,10 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 lg:col-span-2">
+        <p className="text-sm text-muted">Connect the tools your business already uses. Nothing is sent without your approval.</p>
+        <ConnectVideo />
+      </div>
       {!canAdmin ? (
         <Notice tone="info" className="lg:col-span-2">
           Only a venture admin or owner can manage connectors.

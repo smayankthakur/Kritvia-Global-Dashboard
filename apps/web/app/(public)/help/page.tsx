@@ -4,6 +4,7 @@ import { PRICE_TAX_NOTE } from "@/lib/business";
 import { ChevronDown } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { PublicShell, SUPPORT_EMAIL } from "@/components/public/doc-page";
+import { CONNECT_STEPS, ConnectVideo } from "@/components/settings/how-to-video";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select, Textarea } from "@/components/ui/field";
 
@@ -13,6 +14,7 @@ const ARTICLES: { q: string; a: string[] }[] = [
     "Go to Settings → General and fill in your Business profile (city, what you do, sign-off). Agents write as your business.",
     "Add a few documents under Knowledge (a past proposal, a price list, a policy). Every answer Kritvia gives cites them.",
   ]},
+  { q: "Connect your apps (all of them, step by step)", a: [...CONNECT_STEPS] },
   { q: "Connect Gmail and Calendar", a: [
     "Open Settings → Connectors → Connect Google and approve access. Kritvia reads new inquiries, and sends emails or invites only after you approve each one.",
     "You can disconnect at any time from the same page, or from your Google account's security settings.",
@@ -129,6 +131,9 @@ export default function HelpPage() {
     <PublicShell>
       <h1 className="text-2xl font-semibold tracking-tight">Help</h1>
       <p className="mt-2 text-muted">Short answers to the common questions. Can&apos;t find yours? Write to us below.</p>
+      <div className="mt-3">
+        <ConnectVideo />
+      </div>
       <div className="mt-6 divide-y divide-border rounded-lg border border-border bg-surface">
         {ARTICLES.map((art, i) => (
           <section key={art.q}>
