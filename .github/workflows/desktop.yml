@@ -10,7 +10,10 @@ on:
     paths: ["apps/desktop/**", "apps/web/lib/voice/**", ".github/workflows/desktop.yml"]
   workflow_dispatch:
 
-concurrency: { group: desktop-${{ github.ref }}, cancel-in-progress: true }
+# Block style: a ${{ }} expression inside a { } flow mapping is invalid YAML.
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run: { working-directory: apps/desktop }
