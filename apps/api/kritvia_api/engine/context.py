@@ -34,6 +34,7 @@ class Services:
     google: Any = None
     whatsapp: Any = None
     telegram: Any = None
+    slack: Any = None
     places: Any = None
     worker_id: str = field(default_factory=lambda: f"w-{uuid.uuid4().hex[:8]}")
 

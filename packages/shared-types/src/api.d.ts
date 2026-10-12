@@ -1742,6 +1742,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/connectors/slack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Slack
+         * @description Connect a Slack channel. Kritvia posts a hello to prove the address works, then stores it
+         *     encrypted; from then on the channel hears when a draft waits for a yes or a chat needs a person.
+         */
+        post: operations["connect_slack_ventures__venture_id__connectors_slack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/connectors/tally/import": {
         parameters: {
             query?: never;
@@ -6311,6 +6332,29 @@ export interface components {
         SigninUrlOut: {
             /** Url */
             url: string;
+        };
+        /** SlackConnectIn */
+        SlackConnectIn: {
+            /**
+             * Channel
+             * @description the channel's name, to show here (optional)
+             */
+            channel?: string | null;
+            /**
+             * Webhook Url
+             * @description Slack → Apps → Incoming Webhooks → the channel's webhook URL; stored encrypted
+             */
+            webhook_url: string;
+        };
+        /** SlackConnectOut */
+        SlackConnectOut: {
+            /** Channel */
+            channel: string | null;
+            /**
+             * Connector Id
+             * Format: uuid
+             */
+            connector_id: string;
         };
         /** StartedOut */
         StartedOut: {
@@ -11010,6 +11054,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_slack_ventures__venture_id__connectors_slack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlackConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlackConnectOut"];
                 };
             };
             /** @description Validation Error */

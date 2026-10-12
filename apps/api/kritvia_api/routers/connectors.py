@@ -329,6 +329,56 @@ class HookOut(BaseModel):
     duplicate: bool = False
 
 
+# -------------------------------------------------------------------- slack --
+class SlackConnectIn(BaseModel):
+    webhook_url: str = Field(min_length=40, max_length=300,
+                             description="Slack → Apps → Incoming Webhooks → the channel's webhook URL; stored encrypted")
+    channel: str | None = Field(default=None, max_length=80, description="the channel's name, to show here (optional)")
+
+
+class SlackConnectOut(BaseModel):
+    connector_id: uuid.UUID
+    channel: str | None
+
+
+@router.post("/ventures/{venture_id}/connectors/slack", response_model=SlackConnectOut, status_code=201)
+async def connect_slack(venture_id: uuid.UUID, body: SlackConnectIn, user_id: UserId, db: TenantDB,
+                        svc: Svc) -> SlackConnectOut:
+    """Connect a Slack channel. Kritvia posts a hello to prove the address works, then stores it
+    encrypted; from then on the channel hears when a draft waits for a yes or a chat needs a person."""
+    from kritvia_api.services.slack import SlackError, message
+    org = await _require_admin(db, venture_id)
+    try:
+        await require_integration(db, venture_id, "slack")
+    except PlanRestricted as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
+    url = body.webhook_url.strip()
+    channel = (body.channel or "").strip().lstrip("#")[:80] or None
+    name = (await db.execute(text("SELECT name FROM ventures WHERE id = :v"), {"v": venture_id})).scalar()
+    try:
+        await svc.slack.post(url, message("Kritvia is connected", "This channel will hear when a draft waits for "
+                                          "a yes and when a customer chat needs a person.", f"/v/{venture_id}/board",
+                                          name))
+    except SlackError as exc:
+        raise HTTPException(422, str(exc)) from None
+    try:
+        async with db.begin_nested():
+            cid = (await db.execute(text(
+                "INSERT INTO connectors (org_id, venture_id, provider, account_email, scopes, created_by)"
+                " VALUES (:o, :v, 'slack', :ch, ARRAY['incoming-webhook'], :u)"
+                " ON CONFLICT (venture_id, provider) DO UPDATE SET status = 'active', account_email = EXCLUDED.account_email,"
+                " last_error = NULL, updated_at = now() RETURNING id"),
+                {"o": org, "v": venture_id, "ch": "#" + channel if channel else None, "u": user_id})).scalar_one()
+            enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, SECRET, url)
+            await db.execute(text(
+                "INSERT INTO connector_tokens (connector_id, org_id, venture_id, secret_enc) VALUES (:c, :o, :v, :s)"
+                " ON CONFLICT (connector_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, updated_at = now()"),
+                {"c": cid, "o": org, "v": venture_id, "s": enc})
+    except DBAPIError as exc:
+        raise_for_db(exc, "venture not found")
+    return SlackConnectOut(connector_id=cid, channel="#" + channel if channel else None)
+
+
 # ----------------------------------------------------------------- telegram --
 class TelegramConnectIn(BaseModel):
     token: str = Field(min_length=30, max_length=120, pattern=r"^[0-9]{3,20}:[A-Za-z0-9_-]{20,100}$",

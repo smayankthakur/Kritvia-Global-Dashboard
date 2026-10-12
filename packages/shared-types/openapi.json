@@ -7987,6 +7987,61 @@
         "title": "SigninUrlOut",
         "type": "object"
       },
+      "SlackConnectIn": {
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the channel's name, to show here (optional)",
+            "title": "Channel"
+          },
+          "webhook_url": {
+            "description": "Slack \u2192 Apps \u2192 Incoming Webhooks \u2192 the channel's webhook URL; stored encrypted",
+            "maxLength": 300,
+            "minLength": 40,
+            "title": "Webhook Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "webhook_url"
+        ],
+        "title": "SlackConnectIn",
+        "type": "object"
+      },
+      "SlackConnectOut": {
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "connector_id": {
+            "format": "uuid",
+            "title": "Connector Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connector_id",
+          "channel"
+        ],
+        "title": "SlackConnectOut",
+        "type": "object"
+      },
       "StartedOut": {
         "properties": {
           "run_id": {
@@ -16576,6 +16631,65 @@
           }
         ],
         "summary": "Google Sync",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/slack": {
+      "post": {
+        "description": "Connect a Slack channel. Kritvia posts a hello to prove the address works, then stores it\nencrypted; from then on the channel hears when a draft waits for a yes or a chat needs a person.",
+        "operationId": "connect_slack_ventures__venture_id__connectors_slack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlackConnectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlackConnectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Slack",
         "tags": [
           "connectors"
         ]

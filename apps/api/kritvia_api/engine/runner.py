@@ -363,8 +363,10 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
     else:
         state[PENDING] = {"approval_id": str(approval_id), "key": req.key, "resume": it.resume,
                           "on_reject": it.on_reject}
+        # Tell the people who can decide (push, and the business's Slack channel); never let a
+        # notification problem touch the run.
+        push.also_slack(ctx.venture_id, title="A draft needs your yes", body=req.title, path=f"/inbox?id={approval_id}")
         if push.enabled():
-            # Tell the people who can decide; never let a push problem touch the run.
             asyncio.get_running_loop().create_task(_notify(approval_id, req.title, ctx.venture_id, req.agent))
     return auto
 

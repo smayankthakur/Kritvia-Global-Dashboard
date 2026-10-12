@@ -82,9 +82,26 @@ async def notify_approval(approval_id: uuid.UUID, *, title: str, venture_id: uui
     return sum(1 for ok in results if ok)
 
 
+_background: set[asyncio.Task] = set()
+
+
+def also_slack(venture_id: uuid.UUID, *, title: str, body: str, path: str) -> None:
+    """The same news in the business's Slack channel, when it has one (in the background: a slow
+    Slack never holds up a webhook or a run)."""
+    from kritvia_api.services import slack
+    try:
+        task = asyncio.get_running_loop().create_task(slack.notify(venture_id, title=title, body=body, path=path))
+    except RuntimeError:          # no running loop (scripts): skip
+        return
+    _background.add(task)
+    task.add_done_callback(_background.discard)
+
+
 async def notify_venture(venture_id: uuid.UUID, *, title: str, body: str, url: str, tag: str) -> int:
-    """Pushes to everyone on the business who can write or approve (e.g. a chat that needs a person).
-    Keep `body` free of message text: it names who needs attention, not what they wrote."""
+    """Pushes to everyone on the business who can write or approve (e.g. a chat that needs a person),
+    and posts to its Slack channel. Keep `body` free of message text: it names who needs attention,
+    not what they wrote."""
+    also_slack(venture_id, title=title, body=body, path=url)
     if not enabled():
         return 0
     async with tenant_tx(None, "system") as conn:

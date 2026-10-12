@@ -2,7 +2,7 @@
 
 import { csrfHeaders } from "@/lib/bff/csrf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenCheck, FolderDown, Forward, Mail, MessageCircle, RefreshCw, Send, Trash2, Upload, Webhook } from "lucide-react";
+import { BellRing, BookOpenCheck, FolderDown, Forward, Mail, MessageCircle, RefreshCw, Send, Trash2, Upload, Webhook } from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -235,6 +235,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   const wa = q.data.find((c) => c.provider === "whatsapp");
   const tallyConn = q.data.find((c) => c.provider === "tally");
   const tg = q.data.find((c) => c.provider === "telegram");
+  const slack = q.data.find((c) => c.provider === "slack");
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -363,6 +364,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
         </div>
       </Card>
       <TelegramCard ventureId={ventureId} canAdmin={canAdmin} bot={tg} onRemove={() => tg && setRemoving(tg)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
+      <SlackCard ventureId={ventureId} canAdmin={canAdmin} conn={slack} onRemove={() => slack && setRemoving(slack)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
       <Card>
         <CardHeader
           title={
@@ -428,7 +430,9 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
               ? "Disconnect WhatsApp?"
               : removing?.provider === "telegram"
                 ? "Disconnect the Telegram bot?"
-                : "Remove webhook?"
+                : removing?.provider === "slack"
+                  ? "Disconnect Slack?"
+                  : "Remove webhook?"
         }
         description={
           removing?.provider === "google"
@@ -437,7 +441,9 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
               ? "Incoming WhatsApp messages will be ignored and the stored token deleted."
               : removing?.provider === "telegram"
                 ? "The bot stops sending messages to Kritvia and its token is deleted. Its chats stay on the Chats page."
-                : "Submissions to the current URL will be refused."
+                : removing?.provider === "slack"
+                  ? "Kritvia stops posting to the channel and the stored address is deleted."
+                  : "Submissions to the current URL will be refused."
         }
         confirmLabel="Remove"
       />
@@ -558,6 +564,126 @@ function TelegramCard({ ventureId, canAdmin, bot, onRemove, onChanged }: {
               maxLength={120}
               className="font-mono"
             />
+          </Field>
+          <FormError message={error} />
+          <button type="submit" hidden />
+        </form>
+      </Dialog>
+    </Card>
+  );
+}
+
+/** The team's Slack channel hears when a draft waits for a yes or a chat needs a person. */
+function SlackCard({ ventureId, canAdmin, conn, onRemove, onChanged }: {
+  ventureId: string;
+  canAdmin: boolean;
+  conn: Connector | undefined;
+  onRemove: () => void;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [channel, setChannel] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const close = () => {
+    setOpen(false);
+    setUrl("");
+    setChannel("");
+    setError(null);
+  };
+  const connect = useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.POST("/ventures/{venture_id}/connectors/slack", {
+          params: { path: { venture_id: ventureId } },
+          body: { webhook_url: url.trim(), channel: channel.trim() || null },
+        }),
+      ),
+    onSuccess: (out) => {
+      close();
+      toast.success("Slack is connected", `Kritvia posted a hello in ${out.channel ?? "the channel"}.`);
+      onChanged();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const submit = () => {
+    if (!url.trim().startsWith("https://hooks.slack.com/services/")) return setError("Paste the address Slack gives, starting https://hooks.slack.com/services/.");
+    connect.mutate();
+  };
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <BellRing className="h-4 w-4 text-subtle" aria-hidden /> Slack
+          </span>
+        }
+        description="Your team's channel hears when a draft waits for a yes or a customer chat needs a person, with a link to open it. Never what a customer wrote."
+        actions={conn ? <StatusBadge status={conn.status} /> : <Badge>not connected</Badge>}
+      />
+      <div className="space-y-4 p-4">
+        {conn ? (
+          <KeyValue
+            items={[
+              ["Channel", conn.account_email ?? "—"],
+              ["Last error", conn.last_error ? <span className="text-danger">{conn.last_error}</span> : "none"],
+              ["Updated", formatRelative(conn.updated_at)],
+            ]}
+          />
+        ) : (
+          <p className="text-sm text-muted">Add Slack&apos;s Incoming Webhooks app to a channel and paste the address it gives you.</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant={conn ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => setOpen(true)}>
+            {conn ? "Change channel" : "Connect Slack"}
+          </Button>
+          {conn ? (
+            <Button variant="ghost" className="text-danger" icon={<Trash2 className="h-4 w-4" />} disabled={!canAdmin} onClick={onRemove}>
+              Disconnect
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      <Dialog
+        open={open}
+        onClose={close}
+        title="Connect a Slack channel"
+        description="Kritvia posts a hello to check the address, then stores it encrypted."
+        footer={
+          <>
+            <Button variant="ghost" onClick={close}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={connect.isPending} onClick={submit}>
+              Connect
+            </Button>
+          </>
+        }
+      >
+        <form
+          className="space-y-3"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+            <li>
+              In Slack, add the{" "}
+              <a href="https://slack.com/apps/A0F7XDUAZ-incoming-webhooks" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">
+                Incoming Webhooks
+              </a>{" "}
+              app and pick the channel your team watches.
+            </li>
+            <li>Copy the Webhook URL it shows and paste it below.</li>
+          </ol>
+          <Field label="Webhook URL" required>
+            <Input type="password" value={url} onChange={(e) => setUrl(e.target.value)} autoComplete="off" spellCheck={false} maxLength={300} className="font-mono" />
+          </Field>
+          <Field label="Channel name" hint="Only to show here, e.g. #sales">
+            <Input value={channel} onChange={(e) => setChannel(e.target.value)} maxLength={80} />
           </Field>
           <FormError message={error} />
           <button type="submit" hidden />
