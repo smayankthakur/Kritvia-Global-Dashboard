@@ -10,12 +10,14 @@ from kritvia_api.services.messaging import Messaging
 from kritvia_api.services.model_router import ModelRouter, TierConfig
 from kritvia_api.services.places import PlacesClient
 from kritvia_api.services.sandbox import HttpSandbox, LocalSandbox
+from kritvia_api.services.telegram import TelegramClient
 from kritvia_api.services.whatsapp import WhatsAppClient
 
 
 def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | None = None,
                    sandbox=None, google: GoogleClient | None = None,
-                   whatsapp: WhatsAppClient | None = None, places: PlacesClient | None = None) -> Services:
+                   whatsapp: WhatsAppClient | None = None, places: PlacesClient | None = None,
+                   telegram: TelegramClient | None = None) -> Services:
     s = get_settings()
     from kritvia_api.tools import build_tools
     import kritvia_api.workflows  # noqa: F401  (registers workflows)
@@ -33,6 +35,7 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
         sandbox = HttpSandbox(s.sandbox_url, s.sandbox_token) if s.sandbox_url else LocalSandbox(s.environment)
     google = google or GoogleClient(s.google_client_id, s.google_client_secret, s.google_redirect_uri)
     whatsapp = whatsapp or WhatsAppClient(s.whatsapp_app_secret, s.whatsapp_verify_token)
+    telegram = telegram or TelegramClient()
     mode = dispatch_mode or s.dispatch_mode
     dispatcher = ArqDispatcher(s.redis_url) if mode == "arq" else InlineDispatcher(wait=(mode == "inline"))
     keys = LocalKeyProvider(s.master_kek_b64, s.master_kek_id)
@@ -44,9 +47,10 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
         tools=build_tools(),
         dispatcher=dispatcher,
         sandbox=sandbox,
-        messaging=Messaging(google, s.messaging_fallback, whatsapp),
+        messaging=Messaging(google, s.messaging_fallback, whatsapp, telegram),
         google=google,
         whatsapp=whatsapp,
+        telegram=telegram,
         places=places or PlacesClient(s.google_places_api_key),
     )
     if isinstance(dispatcher, InlineDispatcher):

@@ -57,18 +57,25 @@ export function formToPayload(original: Payload, form: Record<string, string | b
 }
 
 /** Fields a person may change before approving. A WhatsApp template's wording was approved by WhatsApp,
- * so it is approved or rejected as is; a WhatsApp recipient never changes. */
+ * so it is approved or rejected as is; a WhatsApp or Telegram recipient never changes. */
 export function editableFields(action: string, payload: Payload): string[] {
   if (action === "whatsapp.template") return [];
-  return Object.keys(payload).filter((k) => fieldKind(k, payload[k]) !== "readonly" && !(action.startsWith("whatsapp.") && k === "to"));
+  return Object.keys(payload).filter((k) => fieldKind(k, payload[k]) !== "readonly" && !(/^(whatsapp|telegram)\./.test(action) && k === "to"));
 }
 
-function WhatsAppPreview({ payload, template }: { payload: Payload; template: boolean }) {
+function WhatsAppPreview({ payload, template, telegram = false }: { payload: Payload; template: boolean; telegram?: boolean }) {
   const to = displayValue(payload.to).replace(/\D/g, "");
   return (
     <div className="space-y-2 rounded-lg border border-border p-4">
       <p className="text-sm">
-        <span className="text-subtle">To</span> <span className="font-medium">+{to}</span>
+        {/* A Telegram chat id means nothing to people; the approval's title names the customer. */}
+        {telegram ? (
+          <span className="text-subtle">Reply in their Telegram chat, from your bot</span>
+        ) : (
+          <>
+            <span className="text-subtle">To</span> <span className="font-medium">+{to}</span>
+          </>
+        )}
         {template ? (
           <span className="text-subtle">
             {" "}
@@ -110,6 +117,7 @@ function PayloadView({ action, payload }: { action: string; payload: Payload }) 
   if (action === "whatsapp.send" || action === "whatsapp.template") {
     return <WhatsAppPreview payload={payload} template={action === "whatsapp.template"} />;
   }
+  if (action === "telegram.send") return <WhatsAppPreview payload={payload} template={false} telegram />;
   if (action === "calendar.create_event") {
     const attendees = Array.isArray(payload.attendees) ? (payload.attendees as unknown[]).map(String) : [];
     return (

@@ -1916,8 +1916,47 @@
         "title": "ChatDetailOut",
         "type": "object"
       },
+      "ChatHookOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "ignored": {
+            "default": 0,
+            "title": "Ignored",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "ChatHookOut",
+        "type": "object"
+      },
       "ChatOut": {
         "properties": {
+          "channel": {
+            "default": "whatsapp",
+            "enum": [
+              "whatsapp",
+              "telegram"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Telegram @username, when they have one",
+            "title": "Handle"
+          },
           "handled_by": {
             "enum": [
               "kritvia",
@@ -2012,6 +2051,7 @@
             "title": "Pending Approval Id"
           },
           "phone": {
+            "description": "WhatsApp: the customer's number (digits); Telegram: the chat id",
             "title": "Phone",
             "type": "string"
           },
@@ -2020,7 +2060,7 @@
             "type": "integer"
           },
           "window_open": {
-            "description": "false once 24 hours have passed since the customer last wrote",
+            "description": "WhatsApp: false once 24 hours have passed since the customer last wrote; always true on Telegram",
             "title": "Window Open",
             "type": "boolean"
           }
@@ -2054,6 +2094,7 @@
             "type": "array"
           },
           "connected": {
+            "description": "WhatsApp is connected",
             "title": "Connected",
             "type": "boolean"
           },
@@ -2067,6 +2108,18 @@
               }
             ],
             "title": "Number"
+          },
+          "telegram_bot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the connected Telegram bot's @username",
+            "title": "Telegram Bot"
           }
         },
         "required": [
@@ -8979,6 +9032,53 @@
         "title": "TaskListPatch",
         "type": "object"
       },
+      "TelegramConnectIn": {
+        "properties": {
+          "token": {
+            "description": "the bot's token from @BotFather; checked with Telegram, stored encrypted, never shown again",
+            "maxLength": 120,
+            "minLength": 30,
+            "pattern": "^[0-9]{3,20}:[A-Za-z0-9_-]{20,100}$",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "TelegramConnectIn",
+        "type": "object"
+      },
+      "TelegramConnectOut": {
+        "properties": {
+          "connector_id": {
+            "format": "uuid",
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "link": {
+            "description": "t.me link customers open to chat with the bot",
+            "title": "Link",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connector_id",
+          "username",
+          "name",
+          "link"
+        ],
+        "title": "TelegramConnectOut",
+        "type": "object"
+      },
       "TemplateIn": {
         "properties": {
           "body": {
@@ -11717,6 +11817,50 @@
         "summary": "Healthz",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/hooks/telegram/{connector_id}": {
+      "post": {
+        "description": "One update from a business's bot. Telegram sends the secret set with the webhook in a header;\nwithout it nothing is read. A customer's message in a private chat is kept in their chat and\nstarts the inbox assistant (deduplicated), like a WhatsApp message. Answers 200 once the secret\nchecks out, so Telegram does not retry.",
+        "operationId": "telegram_inbound_hooks_telegram__connector_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatHookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Telegram Inbound",
+        "tags": [
+          "connectors"
         ]
       }
     },
@@ -16493,6 +16637,65 @@
         "summary": "Import Tally",
         "tags": [
           "tally"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/telegram": {
+      "post": {
+        "description": "Connect the business's Telegram bot. The token is checked with Telegram, the bot's messages are\npointed at Kritvia with a secret only Telegram and Kritvia know, and the token is stored encrypted.",
+        "operationId": "connect_telegram_ventures__venture_id__connectors_telegram_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramConnectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramConnectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Telegram",
+        "tags": [
+          "connectors"
         ]
       }
     },

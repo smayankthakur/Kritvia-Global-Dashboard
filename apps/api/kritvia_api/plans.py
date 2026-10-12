@@ -30,10 +30,10 @@ AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assis
                "kitchen_daily": "Nightly kitchen plan", "prospector": "Prospector (outbound sales)",
                "whatsapp_followup": "WhatsApp follow-ups", "collections": "Payment reminders"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
-                     "drive": "Google Drive", "whatsapp": "WhatsApp Business", "tally": "Tally",
+                     "drive": "Google Drive", "whatsapp": "WhatsApp Business", "telegram": "Telegram bot", "tally": "Tally",
                      "mcp": "Connected apps (MCP)"}
 BASIC = frozenset({"gmail", "lead_form"})
-STANDARD = BASIC | {"calendar", "drive", "whatsapp"}
+STANDARD = BASIC | {"calendar", "drive", "whatsapp", "telegram"}
 ALL = STANDARD | {"tally", "mcp"}
 
 

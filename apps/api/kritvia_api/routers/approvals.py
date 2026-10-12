@@ -153,9 +153,10 @@ def validate_edit(original: dict[str, Any], edited: dict[str, Any], action: str 
                 isinstance(o, int | float) and isinstance(v, int | float)):
             raise HTTPException(422, f"field {k!r} must stay {type(o).__name__}")
         merged[k] = v
-    if action.startswith("whatsapp."):
+    if action.startswith(("whatsapp.", "telegram.")):
         if merged.get("to") != original.get("to"):
-            raise HTTPException(422, "the WhatsApp recipient can't be changed; reject it and ask again")
+            app = "Telegram" if action.startswith("telegram.") else "WhatsApp"
+            raise HTTPException(422, f"the {app} recipient can't be changed; reject it and ask again")
     elif "to" in merged and (not isinstance(merged["to"], str) or "@" not in merged["to"]):
         raise HTTPException(422, "recipient must be an email address")
     return merged

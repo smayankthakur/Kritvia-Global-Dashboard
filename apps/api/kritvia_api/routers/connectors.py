@@ -1,4 +1,5 @@
-"""Connectors: Google Workspace (OAuth, offline), signed inbound webhooks, Drive import."""
+"""Connectors: Google Workspace (OAuth, offline), signed inbound webhooks, Drive import, WhatsApp and
+the business's Telegram bot."""
 from __future__ import annotations
 
 import hashlib
@@ -65,8 +66,9 @@ async def _require_admin(db, venture_id: uuid.UUID) -> uuid.UUID:
 
 
 @router.delete("/ventures/{venture_id}/connectors/{connector_id}", status_code=204)
-async def remove_connector(venture_id: uuid.UUID, connector_id: uuid.UUID, db: TenantDB) -> None:
+async def remove_connector(venture_id: uuid.UUID, connector_id: uuid.UUID, db: TenantDB, svc: Svc) -> None:
     await _require_admin(db, venture_id)
+    await _unhook_telegram(db, svc, venture_id, connector_id)
     try:
         async with db.begin_nested():
             res = await db.execute(text("DELETE FROM connectors WHERE venture_id = :v AND id = :id"),
@@ -325,6 +327,138 @@ class HookOut(BaseModel):
     accepted: bool
     run_id: uuid.UUID | None = None
     duplicate: bool = False
+
+
+# ----------------------------------------------------------------- telegram --
+class TelegramConnectIn(BaseModel):
+    token: str = Field(min_length=30, max_length=120, pattern=r"^[0-9]{3,20}:[A-Za-z0-9_-]{20,100}$",
+                       description="the bot's token from @BotFather; checked with Telegram, stored encrypted, never shown again")
+
+
+class TelegramConnectOut(BaseModel):
+    connector_id: uuid.UUID
+    username: str
+    name: str
+    link: str = Field(description="t.me link customers open to chat with the bot")
+
+
+@router.post("/ventures/{venture_id}/connectors/telegram", response_model=TelegramConnectOut, status_code=201)
+async def connect_telegram(venture_id: uuid.UUID, body: TelegramConnectIn, user_id: UserId, db: TenantDB,
+                           svc: Svc) -> TelegramConnectOut:
+    """Connect the business's Telegram bot. The token is checked with Telegram, the bot's messages are
+    pointed at Kritvia with a secret only Telegram and Kritvia know, and the token is stored encrypted."""
+    from kritvia_api.services.telegram import TelegramError
+    org = await _require_admin(db, venture_id)
+    try:
+        await require_integration(db, venture_id, "telegram")
+    except PlanRestricted as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
+    try:
+        me = await svc.telegram.get_me(body.token)
+    except TelegramError as exc:
+        raise HTTPException(422, str(exc)) from None
+    username, name = str(me.get("username") or ""), str(me.get("first_name") or "")[:120]
+    secret = secrets.token_urlsafe(32)
+    meta = {"secret_hash": hashlib.sha256(secret.encode()).hexdigest(), "name": name}
+    try:
+        async with db.begin_nested():
+            cid = (await db.execute(text(
+                "INSERT INTO connectors (org_id, venture_id, provider, account_email, external_id, scopes, meta, created_by)"
+                " VALUES (:o, :v, 'telegram', :d, :x, ARRAY['messages'], CAST(:m AS jsonb), :u)"
+                " ON CONFLICT (venture_id, provider) DO UPDATE SET status = 'active', account_email = EXCLUDED.account_email,"
+                " external_id = EXCLUDED.external_id, meta = EXCLUDED.meta, last_error = NULL, updated_at = now()"
+                " RETURNING id"),
+                {"o": org, "v": venture_id, "d": "@" + username if username else None, "x": str(me["id"]),
+                 "u": user_id, "m": json.dumps(meta)})).scalar_one()
+            enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, SECRET, body.token)
+            await db.execute(text(
+                "INSERT INTO connector_tokens (connector_id, org_id, venture_id, secret_enc) VALUES (:c, :o, :v, :s)"
+                " ON CONFLICT (connector_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, updated_at = now()"),
+                {"c": cid, "o": org, "v": venture_id, "s": enc})
+    except DBAPIError as exc:
+        if "connectors_provider_external_idx" in str(exc):
+            raise HTTPException(status.HTTP_409_CONFLICT, "this bot is connected to another business") from None
+        raise_for_db(exc, "venture not found")
+    try:
+        # Last: if Telegram refuses, nothing above is kept (the request's transaction is rolled back).
+        await svc.telegram.set_webhook(body.token, f"{get_settings().public_api_url}/hooks/telegram/{cid}", secret)
+    except TelegramError as exc:
+        raise HTTPException(422, str(exc)) from None
+    return TelegramConnectOut(connector_id=cid, username=username, name=name, link=f"https://t.me/{username}")
+
+
+async def _unhook_telegram(db, svc, venture_id: uuid.UUID, connector_id: uuid.UUID) -> None:
+    """Disconnecting a bot also stops Telegram sending its messages here (best effort)."""
+    from kritvia_api.services.telegram import TelegramError
+    row = (await db.execute(text(
+        "SELECT t.secret_enc FROM connectors c JOIN connector_tokens t ON t.connector_id = c.id"
+        " WHERE c.id = :c AND c.venture_id = :v AND c.provider = 'telegram'"), {"c": connector_id, "v": venture_id})).first()
+    if row is None:
+        return
+    token = await EnvelopeCrypto(db, svc.keys).decrypt_str(venture_id, SECRET, row.secret_enc)
+    if token:
+        try:
+            await svc.telegram.delete_webhook(token)
+        except TelegramError:
+            pass        # a revoked token can't be unhooked, and Telegram's updates are refused anyway
+
+
+class ChatHookOut(BaseModel):
+    accepted: int
+    ignored: int = 0
+
+
+@router.post("/hooks/telegram/{connector_id}", response_model=ChatHookOut)
+async def telegram_inbound(connector_id: uuid.UUID, request: Request, svc: Svc) -> ChatHookOut:
+    """One update from a business's bot. Telegram sends the secret set with the webhook in a header;
+    without it nothing is read. A customer's message in a private chat is kept in their chat and
+    starts the inbox assistant (deduplicated), like a WhatsApp message. Answers 200 once the secret
+    checks out, so Telegram does not retry."""
+    from kritvia_api.services.telegram import SECRET_HEADER, parse_update
+    from kritvia_api.workflows.inbox import message_input
+    await limiter.hit(f"hook-ip:{client_ip(request)}", per_minute=600)
+    secret = request.headers.get(SECRET_HEADER) or ""
+    p = None
+    if secret:
+        async with tenant_tx(None, "system") as conn:
+            p = (await conn.execute(text("SELECT * FROM private.telegram_principal(:c, :h)"),
+                                    {"c": connector_id, "h": hashlib.sha256(secret.encode()).hexdigest()})).first()
+    if p is None:
+        await security_event("webhook.bad_signature", "warning", request=request, provider="telegram")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad secret")
+    body = await request.body()
+    if len(body) > 256 * 1024:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "payload too large")
+    try:
+        m = parse_update(json.loads(body))
+    except ValueError:
+        raise HTTPException(422, "body must be JSON") from None
+    if m is None or not await _plan_allows(p.run_as, p.venture_id, "telegram"):
+        return ChatHookOut(accepted=0, ignored=1)       # groups, edits, bots, or a plan without Telegram
+    async with tenant_tx(p.run_as, "agent", "telegram") as conn:
+        contact, new = await wa_inbox.record_inbound(
+            conn, EnvelopeCrypto(conn, svc.keys), org_id=p.org_id, venture_id=p.venture_id, phone=m.chat_id,
+            name=m.name, body=m.text, kind="start" if m.is_start else m.kind, provider_id=m.provider_id,
+            channel="telegram", handle=m.handle)
+    if not new:
+        return ChatHookOut(accepted=0, ignored=1)
+    if not contact.automatic:
+        if contact.handled_by == "person" and not contact.opted_out:
+            await push.notify_venture(p.venture_id, title="New Telegram message", body=f"{contact.label} wrote again",
+                                      url=f"/v/{p.venture_id}/whatsapp?c={contact.id}", tag=f"wa-{contact.id}")
+        return ChatHookOut(accepted=1)
+    # /start is how every Telegram chat begins: the customer opened the bot, so it is answered as a hello.
+    said = "Hi" if m.is_start else m.text
+    try:
+        await start_run(svc, actor_user_id=p.run_as, actor_type="agent", venture_id=p.venture_id,
+                        workflow="inbox_assistant", trigger_kind="telegram", trigger_ref=m.provider_id,
+                        dedupe=("telegram", f"{p.connector_id}:{m.provider_id}"),
+                        title=f"Telegram: {contact.label[:60]} — {said[:60]}",
+                        input=message_input(channel="telegram", from_name=m.name or (m.handle and "@" + m.handle),
+                                            chat_id=m.chat_id, subject=None, body=said, message_id=m.provider_id))
+    except (DuplicateTrigger, ValueError):     # already running, or the inbox assistant is off
+        return ChatHookOut(accepted=0, ignored=1)
+    return ChatHookOut(accepted=1)
 
 
 # ----------------------------------------------------------------- whatsapp --

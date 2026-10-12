@@ -29,6 +29,10 @@ const ARTICLES: { q: string; a: string[] }[] = [
     "Settings → Connectors → Connect WhatsApp needs a WhatsApp Business (Meta Cloud API) number: paste the phone number id and a permanent token; Kritvia checks them with Meta before saving.",
     "Replies are free-form within 24 hours of the customer's last message. After that, WhatsApp requires an approved template, and Kritvia tells you instead of guessing.",
   ]},
+  { q: "Telegram bot", a: [
+    "Make a bot with Telegram's @BotFather (/newbot), then paste its token in Settings → Connectors → Telegram bot. Kritvia checks it with Telegram and stores it encrypted.",
+    "Share the bot's t.me link. Its chats appear on the Chats page next to WhatsApp, with replies drafted for your yes. A bot can answer at any time but never writes first.",
+  ]},
   { q: "Tally", a: [
     "Tally has no cloud API, so export: Day Book → Alt+E → XML, then Settings → Connectors → Import from Tally. Vouchers, totals by type and who still owes you become searchable, with a cited document in Knowledge.",
     "Re-importing an overlapping period updates rather than duplicates. Nothing is written back to Tally.",

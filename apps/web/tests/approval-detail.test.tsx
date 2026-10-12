@@ -217,6 +217,7 @@ describe("WhatsApp approvals", () => {
   it("lets a WhatsApp message be edited but never its recipient", () => {
     expect(editableFields("whatsapp.send", { to: "919811100011", body: "Hi" })).toEqual(["body"]);
     expect(editableFields("whatsapp.template", template.payload as Record<string, unknown>)).toEqual([]);
+    expect(editableFields("telegram.send", { to: "551234987", body: "Hi" })).toEqual(["body"]);
     expect(editableFields("gmail.send", { to: "a@b.in", subject: "s", body: "b" })).toEqual(["to", "subject", "body"]);
   });
 });

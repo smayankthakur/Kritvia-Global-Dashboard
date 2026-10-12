@@ -2,7 +2,7 @@
 
 Customers message a business's WhatsApp Business number. Kritvia keeps every chat, drafts each reply
 with the whole chat in mind, and waits for a person's yes. The team reads and answers chats on the
-**WhatsApp** page. Code: `services/wa_inbox.py`, `routers/whatsapp_chats.py`, the WhatsApp parts of
+**Chats** page (shared with [Telegram](telegram.md)). Code: `services/wa_inbox.py`, `routers/whatsapp_chats.py`, the WhatsApp parts of
 `workflows/inbox.py` and `routers/connectors.py` (`/hooks/whatsapp`); web: `app/(app)/v/[ventureId]/whatsapp`.
 Migrations `0034_whatsapp_front_door.sql`, `0035_whatsapp_templates.sql`.
 

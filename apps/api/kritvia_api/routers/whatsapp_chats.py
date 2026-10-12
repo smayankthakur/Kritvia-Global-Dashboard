@@ -1,9 +1,11 @@
-"""The WhatsApp page: a business's customer chats, read and answered by its team.
+"""The Chats page: a business's customer chats on WhatsApp and Telegram, read and answered by its team.
 
 Kritvia drafts replies for every chat it handles (inbox assistant). A person can take a chat over
 at any time, and does so automatically by replying here; Kritvia then stays quiet in that chat
-until someone gives it back. Typed messages can only be sent within WhatsApp's 24-hour window;
-to write first, or after 24 hours, the team sends one of the business's approved templates.
+until someone gives it back. On WhatsApp, typed messages can only be sent within the 24-hour
+window; to write first, or after 24 hours, the team sends one of the business's approved templates.
+A Telegram bot can answer at any time, but only people who wrote to it, and has no templates.
+(The routes keep their /whatsapp/ names.)
 """
 from __future__ import annotations
 
@@ -32,14 +34,17 @@ router = APIRouter(tags=["whatsapp"])
 
 class ChatOut(BaseModel):
     id: uuid.UUID
-    phone: str
+    channel: Literal["whatsapp", "telegram"] = "whatsapp"
+    phone: str = Field(description="WhatsApp: the customer's number (digits); Telegram: the chat id")
+    handle: str | None = Field(default=None, description="Telegram @username, when they have one")
     name: str | None
     handled_by: Literal["kritvia", "person"]
     handoff_reason: str | None
     opted_out: bool
     opted_in: bool = Field(description="they wrote first, or the team confirmed they agreed to WhatsApp messages")
     unread: int
-    window_open: bool = Field(description="false once 24 hours have passed since the customer last wrote")
+    window_open: bool = Field(description="WhatsApp: false once 24 hours have passed since the customer last "
+                                          "wrote; always true on Telegram")
     last_message_at: datetime
     last_message: str
     last_direction: Literal["in", "out"] | None
@@ -48,8 +53,9 @@ class ChatOut(BaseModel):
 
 
 class ChatsOut(BaseModel):
-    connected: bool
+    connected: bool = Field(description="WhatsApp is connected")
     number: str | None
+    telegram_bot: str | None = Field(default=None, description="the connected Telegram bot's @username")
     chats: list[ChatOut]
 
 
@@ -78,12 +84,12 @@ class HandlerIn(BaseModel):
 
 
 CHAT_SQL = (
-    "SELECT c.id, c.phone, c.name, c.handled_by, c.handoff_reason, c.opted_out_at, c.opted_in_at, c.unread,"
+    "SELECT c.id, c.channel, c.phone, c.handle, c.name, c.handled_by, c.handoff_reason, c.opted_out_at, c.opted_in_at, c.unread,"
     " c.last_inbound_at,"
     " c.last_message_at, c.lead_id, m.body_enc, m.direction,"
     " (SELECT a.id FROM approvals a JOIN workflow_runs r ON r.id = a.run_id"
     "   JOIN wa_messages i ON i.venture_id = r.venture_id AND i.provider_message_id = r.trigger_ref"
-    "  WHERE i.contact_id = c.id AND r.trigger_kind = 'whatsapp' AND a.status = 'pending'"
+    "  WHERE i.contact_id = c.id AND r.trigger_kind = c.channel AND a.status = 'pending'"
     "  ORDER BY a.created_at DESC LIMIT 1) AS pending_id"
     " FROM wa_contacts c LEFT JOIN LATERAL (SELECT body_enc, direction FROM wa_messages"
     "   WHERE contact_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1) m ON true"
@@ -92,9 +98,11 @@ CHAT_SQL = (
 
 async def _chat(crypto: EnvelopeCrypto, venture_id: uuid.UUID, r) -> ChatOut:
     last = (await crypto.decrypt_str(venture_id, wa_inbox.PURPOSE, r.body_enc) or "") if r.body_enc else ""
-    return ChatOut(id=r.id, phone=r.phone, name=r.name, handled_by=r.handled_by, handoff_reason=r.handoff_reason,
-                   opted_out=r.opted_out_at is not None, opted_in=r.opted_in_at is not None, unread=r.unread,
-                   window_open=wa_inbox.window_open(r.last_inbound_at), last_message_at=r.last_message_at,
+    return ChatOut(id=r.id, channel=r.channel, phone=r.phone, handle=r.handle, name=r.name, handled_by=r.handled_by,
+                   handoff_reason=r.handoff_reason, opted_out=r.opted_out_at is not None,
+                   opted_in=r.opted_in_at is not None, unread=r.unread,
+                   window_open=wa_inbox.window_open(r.last_inbound_at, channel=r.channel),
+                   last_message_at=r.last_message_at,
                    last_message=last[:140], last_direction=r.direction, lead_id=r.lead_id,
                    pending_approval_id=r.pending_id)
 
@@ -140,9 +148,26 @@ async def _sender(db, svc, venture_id: uuid.UUID) -> _Sender:
     return _Sender(WhatsAppConn(p.connector_id, c.external_id, None, token), p.org_id, p.run_as, c.waba or None)
 
 
-async def _plan_ok(db, venture_id: uuid.UUID) -> None:
+async def _telegram(db, svc, venture_id: uuid.UUID):
+    """The business's bot (token read as the agent runtime, like WhatsApp's) and who to record as."""
+    from kritvia_api.services.telegram import TelegramConn
+    p = (await db.execute(text("SELECT * FROM private.telegram_runtime(:v)"), {"v": venture_id})).first()
+    if p is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "connect your Telegram bot in Settings → Connectors first")
+    async with tenant_tx(p.run_as, "agent", "telegram") as rconn:
+        c = (await rconn.execute(text(
+            "SELECT c.external_id, c.account_email, t.secret_enc FROM connectors c"
+            " JOIN connector_tokens t ON t.connector_id = c.id WHERE c.id = :c"), {"c": p.connector_id})).first()
+        token = await EnvelopeCrypto(rconn, svc.keys).decrypt_str(venture_id, "connector.secret", c.secret_enc) \
+            if c else None
+    if not token:
+        raise HTTPException(status.HTTP_409_CONFLICT, "connect your Telegram bot again in Settings → Connectors")
+    return TelegramConn(p.connector_id, c.external_id or "", c.account_email, token), p.org_id, p.run_as
+
+
+async def _plan_ok(db, venture_id: uuid.UUID, integration: str = "whatsapp") -> None:
     try:
-        await require_integration(db, venture_id, "whatsapp")
+        await require_integration(db, venture_id, integration)
     except PlanRestricted as exc:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
 
@@ -150,13 +175,14 @@ async def _plan_ok(db, venture_id: uuid.UUID) -> None:
 @router.get("/ventures/{venture_id}/whatsapp/chats", response_model=ChatsOut)
 async def list_chats(venture_id: uuid.UUID, svc: Svc, db: TenantDB, limit: int = 50) -> ChatsOut:
     await venture_org(db, venture_id)
-    conn_row = (await db.execute(text(
-        "SELECT account_email FROM connectors WHERE venture_id = :v AND provider = 'whatsapp' AND status = 'active'"),
-        {"v": venture_id})).first()
+    found = {r.provider: r.account_email for r in (await db.execute(text(
+        "SELECT provider, account_email FROM connectors WHERE venture_id = :v"
+        " AND provider IN ('whatsapp', 'telegram') AND status = 'active'"), {"v": venture_id})).all()}
     rows = (await db.execute(text(CHAT_SQL + " ORDER BY c.last_message_at DESC LIMIT :l"),
                              {"v": venture_id, "l": min(max(limit, 1), 200)})).all()
     crypto = EnvelopeCrypto(db, svc.keys)
-    return ChatsOut(connected=conn_row is not None, number=conn_row.account_email if conn_row else None,
+    return ChatsOut(connected="whatsapp" in found, number=found.get("whatsapp"),
+                    telegram_bot=(found.get("telegram") or "").lstrip("@") or None if "telegram" in found else None,
                     chats=[await _chat(crypto, venture_id, r) for r in rows])
 
 
@@ -176,9 +202,11 @@ async def reply(venture_id: uuid.UUID, chat_id: uuid.UUID, body: ReplyIn, user_i
     """A person answers the customer now. Kritvia steps back from this chat until it is given back."""
     r = await _one(db, venture_id, chat_id)
     await _can_write(db, venture_id)
-    await _plan_ok(db, venture_id)
+    await _plan_ok(db, venture_id, r.channel)
     if r.opted_out_at is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "this customer asked not to receive messages (they wrote STOP)")
+    if r.channel == "telegram":
+        return await _reply_telegram(db, svc, venture_id, r, body.body.strip(), user_id, background)
     if not wa_inbox.window_open(r.last_inbound_at):
         raise HTTPException(status.HTTP_409_CONFLICT,
                             "the customer last wrote more than 24 hours ago; send an approved template instead")
@@ -207,6 +235,32 @@ async def reply(venture_id: uuid.UUID, chat_id: uuid.UUID, body: ReplyIn, user_i
         background.add_task(wa_inbox.withdraw_drafts, snd.run_as, waiting)
     m = (await wa_inbox.thread(db, crypto, venture_id, chat_id, limit=1))[-1]
     return MessageOut(**m)
+
+
+async def _reply_telegram(db, svc, venture_id: uuid.UUID, r, text_: str, user_id: uuid.UUID,
+                          background: BackgroundTasks) -> MessageOut:
+    from kritvia_api.services.telegram import TelegramError
+    conn, org_id, run_as = await _telegram(db, svc, venture_id)
+    try:
+        mid = await svc.telegram.send_message(conn, chat_id=r.phone, body=text_)
+        status_, error = "sent", None
+    except TelegramError as exc:
+        mid, status_, error = None, "failed", str(exc)
+    crypto = EnvelopeCrypto(db, svc.keys)
+    try:
+        await wa_inbox.record_outbound(db, crypto, org_id=org_id, venture_id=venture_id, phone=r.phone, body=text_,
+                                       sent_by="person", status=status_, provider_id=mid, error=error,
+                                       user_id=user_id, channel="telegram")
+        if r.handled_by == "kritvia" and not error:
+            await wa_inbox.hand_to_person(db, venture_id, r.id, "A person replied")
+        waiting = await wa_inbox.waiting_runs(db, venture_id, r.id) if not error else []
+    except DBAPIError as exc:
+        raise_for_db(exc, "chat not found")
+    if error:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, error)
+    if waiting:
+        background.add_task(wa_inbox.withdraw_drafts, run_as, waiting)
+    return MessageOut(**(await wa_inbox.thread(db, crypto, venture_id, r.id, limit=1))[-1])
 
 
 @router.put("/ventures/{venture_id}/whatsapp/chats/{chat_id}/handler", response_model=ChatOut)
@@ -426,6 +480,8 @@ async def send_template(venture_id: uuid.UUID, chat_id: uuid.UUID, body: SendTem
                         svc: Svc, db: TenantDB) -> MessageOut:
     """Sends an approved template in a chat, e.g. after the 24 hours have passed."""
     r = await _one(db, venture_id, chat_id)
+    if r.channel != "whatsapp":
+        raise HTTPException(status.HTTP_409_CONFLICT, "templates are for WhatsApp; type the reply instead")
     await _can_write(db, venture_id)
     await _plan_ok(db, venture_id)
     if r.opted_out_at is not None:
@@ -455,7 +511,8 @@ async def new_chat(venture_id: uuid.UUID, body: NewChatIn, user_id: UserId, svc:
     if existing is not None and existing.opted_out:
         raise HTTPException(status.HTTP_409_CONFLICT, "this customer asked not to receive messages (they wrote STOP)")
     await _send_template(db, svc, venture_id, user_id, phone=phone, name=body.name, body=body)
-    cid = (await db.execute(text("SELECT id FROM wa_contacts WHERE venture_id = :v AND phone = :p"),
+    cid = (await db.execute(text("SELECT id FROM wa_contacts WHERE venture_id = :v AND channel = 'whatsapp'"
+                                 " AND phone = :p"),
                             {"v": venture_id, "p": phone})).scalar_one()
     await wa_inbox.confirm_opt_in(db, venture_id, cid)
     return await _chat(EnvelopeCrypto(db, svc.keys), venture_id, await _one(db, venture_id, cid))

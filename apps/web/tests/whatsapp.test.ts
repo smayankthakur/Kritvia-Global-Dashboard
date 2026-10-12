@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cannotSend, chatName, formatPhone, needsTemplate, normalisePhone, senderLabel } from "@/components/whatsapp/chat";
+import { cannotSend, chatAddress, chatName, messageText, formatPhone, needsTemplate, normalisePhone, senderLabel } from "@/components/whatsapp/chat";
 import { blanks, fillTemplate, paramProblem, sendableTemplates, templateProblem, templateStatus, templateTitle } from "@/components/whatsapp/templates";
 import { parseSignupMessage } from "@/lib/meta-signup";
 import { ventureNav } from "@/lib/nav";
@@ -14,6 +14,28 @@ describe("WhatsApp chats", () => {
     expect(chatName({ name: "Neha", phone: "919811122233" })).toBe("Neha");
     expect(chatName({ name: "  ", phone: "919811122233" })).toBe("+91 98111 22233");
     expect(chatName({ name: null, phone: "919811122233" })).toBe("+91 98111 22233");
+  });
+
+  it("names Telegram chats by name or @username, never by the chat id", () => {
+    expect(chatName({ name: "Neha", phone: "551234987", channel: "telegram", handle: "neha_k" })).toBe("Neha");
+    expect(chatName({ name: null, phone: "551234987", channel: "telegram", handle: "neha_k" })).toBe("@neha_k");
+    expect(chatName({ name: null, phone: "551234987", channel: "telegram", handle: null })).toBe("Telegram customer");
+    expect(chatAddress({ phone: "551234987", channel: "telegram", handle: "neha_k" })).toBe("Telegram · @neha_k");
+    expect(chatAddress({ phone: "919811122233", channel: "whatsapp" })).toBe("+91 98111 22233");
+  });
+
+  it("shows Telegram's /start as the customer opening the chat", () => {
+    expect(messageText("/start", "start")).toBe("Opened the chat with your bot");
+    expect(messageText("/start promo", null, "telegram")).toBe("Opened the chat with your bot");
+    expect(messageText("/start", null, "whatsapp")).toBe("/start");
+    expect(messageText("/starter kit?", null, "telegram")).toBe("/starter kit?");
+  });
+
+  it("never asks for a template on Telegram", () => {
+    const tg = { opted_out: false, window_open: false, channel: "telegram" as const };
+    expect(cannotSend(tg, true)).toBeNull();
+    expect(needsTemplate(tg, true)).toBe(false);
+    expect(cannotSend({ ...tg, opted_out: true }, true)).toMatch(/STOP/);
   });
 
   it("says who wrote each message", () => {
@@ -48,7 +70,7 @@ describe("WhatsApp chats", () => {
   it("is in every business's menu, next to the assistant", () => {
     for (const kind of ["general", "software", "finance", "kitchen"] as const) {
       const labels = ventureNav("v1", kind).common.map((i) => i.label);
-      expect(labels.indexOf("WhatsApp")).toBe(labels.indexOf("Assistant") + 1);
+      expect(labels.indexOf("Chats")).toBe(labels.indexOf("Assistant") + 1);
     }
   });
 

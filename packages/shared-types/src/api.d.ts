@@ -348,6 +348,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/telegram/{connector_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Telegram Inbound
+         * @description One update from a business's bot. Telegram sends the secret set with the webhook in a header;
+         *     without it nothing is read. A customer's message in a private chat is kept in their chat and
+         *     starts the inbox assistant (deduplicated), like a WhatsApp message. Answers 200 once the secret
+         *     checks out, so Telegram does not retry.
+         */
+        post: operations["telegram_inbound_hooks_telegram__connector_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/whatsapp": {
         parameters: {
             query?: never;
@@ -1734,6 +1757,27 @@ export interface paths {
          *     period is safe) and a summary document is filed in Knowledge so answers cite it.
          */
         post: operations["import_tally_ventures__venture_id__connectors_tally_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Telegram
+         * @description Connect the business's Telegram bot. The token is checked with Telegram, the bot's messages are
+         *     pointed at Kritvia with a secret only Telegram and Kritvia know, and the token is stored encrypted.
+         */
+        post: operations["connect_telegram_ventures__venture_id__connectors_telegram_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3912,8 +3956,29 @@ export interface components {
             /** Messages */
             messages: components["schemas"]["MessageOut"][];
         };
+        /** ChatHookOut */
+        ChatHookOut: {
+            /** Accepted */
+            accepted: number;
+            /**
+             * Ignored
+             * @default 0
+             */
+            ignored: number;
+        };
         /** ChatOut */
         ChatOut: {
+            /**
+             * Channel
+             * @default whatsapp
+             * @enum {string}
+             */
+            channel: "whatsapp" | "telegram";
+            /**
+             * Handle
+             * @description Telegram @username, when they have one
+             */
+            handle?: string | null;
             /**
              * Handled By
              * @enum {string}
@@ -3951,13 +4016,16 @@ export interface components {
              * @description a reply Kritvia drafted that waits for a yes
              */
             pending_approval_id: string | null;
-            /** Phone */
+            /**
+             * Phone
+             * @description WhatsApp: the customer's number (digits); Telegram: the chat id
+             */
             phone: string;
             /** Unread */
             unread: number;
             /**
              * Window Open
-             * @description false once 24 hours have passed since the customer last wrote
+             * @description WhatsApp: false once 24 hours have passed since the customer last wrote; always true on Telegram
              */
             window_open: boolean;
         };
@@ -3965,10 +4033,18 @@ export interface components {
         ChatsOut: {
             /** Chats */
             chats: components["schemas"]["ChatOut"][];
-            /** Connected */
+            /**
+             * Connected
+             * @description WhatsApp is connected
+             */
             connected: boolean;
             /** Number */
             number: string | null;
+            /**
+             * Telegram Bot
+             * @description the connected Telegram bot's @username
+             */
+            telegram_bot?: string | null;
         };
         /** ChecklistIn */
         ChecklistIn: {
@@ -6622,6 +6698,31 @@ export interface components {
             /** Position */
             position?: number | null;
         };
+        /** TelegramConnectIn */
+        TelegramConnectIn: {
+            /**
+             * Token
+             * @description the bot's token from @BotFather; checked with Telegram, stored encrypted, never shown again
+             */
+            token: string;
+        };
+        /** TelegramConnectOut */
+        TelegramConnectOut: {
+            /**
+             * Connector Id
+             * Format: uuid
+             */
+            connector_id: string;
+            /**
+             * Link
+             * @description t.me link customers open to chat with the bot
+             */
+            link: string;
+            /** Name */
+            name: string;
+            /** Username */
+            username: string;
+        };
         /** TemplateIn */
         TemplateIn: {
             /** Body */
@@ -8003,6 +8104,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    telegram_inbound_hooks_telegram__connector_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatHookOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -10913,6 +11045,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TallyImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_telegram_ventures__venture_id__connectors_telegram_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelegramConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramConnectOut"];
                 };
             };
             /** @description Validation Error */

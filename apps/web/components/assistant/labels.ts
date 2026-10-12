@@ -7,6 +7,7 @@ const TOOL_LABELS: Record<string, string> = {
   "whatsapp.send": "WhatsApp message",
   "whatsapp.template": "WhatsApp template",
   "whatsapp.templates": "Looked up WhatsApp templates",
+  "telegram.send": "Telegram message",
   "calendar.create_event": "Meeting invite",
 };
 

@@ -67,7 +67,7 @@ QUIET_SQL = (
     " LEFT JOIN leads l ON l.id = c.lead_id"
     " JOIN LATERAL (SELECT direction, created_at FROM wa_messages m WHERE m.contact_id = c.id AND m.status <> 'failed'"
     "   ORDER BY m.created_at DESC, m.id DESC LIMIT 1) last ON true"
-    " WHERE c.venture_id = :v AND c.opted_in_at IS NOT NULL AND c.opted_out_at IS NULL AND c.handled_by = 'kritvia'"
+    " WHERE c.venture_id = :v AND c.channel = 'whatsapp' AND c.opted_in_at IS NOT NULL AND c.opted_out_at IS NULL AND c.handled_by = 'kritvia'"
     "   AND c.last_inbound_at IS NOT NULL AND c.followups_sent < :maxf"
     "   AND last.direction = 'out' AND last.created_at < now() - make_interval(days => :d)"
     "   AND (c.last_followup_at IS NULL OR c.last_followup_at < now() - make_interval(days => :d))"

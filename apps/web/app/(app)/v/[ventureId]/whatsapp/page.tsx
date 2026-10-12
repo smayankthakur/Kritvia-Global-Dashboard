@@ -15,7 +15,7 @@ import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/components/ui/cn";
-import { cannotSend, chatName, formatPhone, needsTemplate, normalisePhone, senderLabel } from "@/components/whatsapp/chat";
+import { CHANNEL_LABEL, cannotSend, chatAddress, chatName, messageText, needsTemplate, normalisePhone, senderLabel } from "@/components/whatsapp/chat";
 import { TemplateFields, useTemplates, type TemplateChoice } from "@/components/whatsapp/send-template";
 import { paramProblem, sendableTemplates } from "@/components/whatsapp/templates";
 import { TemplatesPanel } from "@/components/whatsapp/templates-panel";
@@ -26,9 +26,14 @@ import { useVenture } from "@/lib/venture";
 type Chat = Schemas["ChatOut"];
 type Message = Schemas["MessageOut"];
 
-function ChatList({ chats, selected, onSelect }: { chats: Chat[]; selected: string | null; onSelect: (id: string) => void }) {
+function ChatList({ chats, selected, onSelect, showChannel }: {
+  chats: Chat[];
+  selected: string | null;
+  onSelect: (id: string) => void;
+  showChannel: boolean;
+}) {
   if (!chats.length)
-    return <EmptyState title="No chats yet" description="When a customer messages your WhatsApp Business number, the chat shows up here." />;
+    return <EmptyState title="No chats yet" description="When a customer messages your WhatsApp number or Telegram bot, the chat shows up here." />;
   return (
     <ul className="divide-y divide-border" aria-label="Chats">
       {chats.map((c) => (
@@ -49,7 +54,7 @@ function ChatList({ chats, selected, onSelect }: { chats: Chat[]; selected: stri
             <span className="flex items-center gap-2">
               <span className="min-w-0 flex-1 truncate text-sm text-muted">
                 {c.last_direction === "out" ? "You: " : ""}
-                {c.last_message || "…"}
+                {c.last_message ? messageText(c.last_message, null, c.channel) : "…"}
               </span>
               {c.unread ? (
                 <Badge tone="accent">
@@ -58,8 +63,9 @@ function ChatList({ chats, selected, onSelect }: { chats: Chat[]; selected: stri
                 </Badge>
               ) : null}
             </span>
-            {c.handled_by === "person" || c.opted_out ? (
-              <span className="flex gap-1 pt-0.5">
+            {c.handled_by === "person" || c.opted_out || showChannel ? (
+              <span className="flex flex-wrap gap-1 pt-0.5">
+                {showChannel ? <Badge tone={c.channel === "telegram" ? "info" : "neutral"}>{CHANNEL_LABEL[c.channel ?? "whatsapp"]}</Badge> : null}
                 {c.handled_by === "person" ? <Badge tone="warning">You&apos;re replying</Badge> : null}
                 {c.opted_out ? <Badge tone="neutral">Opted out</Badge> : null}
               </span>
@@ -86,8 +92,8 @@ function Bubble({ m, customer }: { m: Message; customer: string }) {
           {senderLabel(m.sent_by, customer)} · {formatTime(m.created_at)}
           {m.kind === "template" ? " · template" : ""}
         </p>
-        <p className="whitespace-pre-wrap break-words">{m.body}</p>
-        {m.status === "failed" ? <p className="mt-1 text-xs text-danger">Not delivered: {m.error ?? "WhatsApp refused it"}</p> : null}
+        <p className={cn("whitespace-pre-wrap break-words", m.kind === "start" && "italic text-muted")}>{messageText(m.body, m.kind)}</p>
+        {m.status === "failed" ? <p className="mt-1 text-xs text-danger">Not delivered: {m.error ?? "it was refused"}</p> : null}
       </div>
     </li>
   );
@@ -251,7 +257,7 @@ function Conversation({ ventureId, chatId, canWrite, canAdmin, onClose }: {
               <div className="min-w-0 flex-1">
                 <h2 className="truncate font-semibold">{name}</h2>
                 <p className="text-xs text-subtle">
-                  {formatPhone(c.phone)}
+                  {chatAddress(c)}
                   {c.lead_id ? (
                     <>
                       {" · "}
@@ -463,7 +469,7 @@ function NewChatDialog({ ventureId, open, onClose, onCreated }: {
   );
 }
 
-function WhatsAppView() {
+function ChatsView() {
   const v = useVenture();
   const router = useRouter();
   const params = useSearchParams();
@@ -484,26 +490,39 @@ function WhatsAppView() {
     <div className="space-y-6">
       <PageHeader
         eyebrow={v.venture_name}
-        title="WhatsApp"
-        description="Your customers' chats. Kritvia drafts each reply with the whole chat in mind and waits for your yes; take over any chat to answer it yourself."
+        title="Chats"
+        description="Your customers' WhatsApp and Telegram chats. Kritvia drafts each reply with the whole chat in mind and waits for your yes; take over any chat to answer it yourself."
       />
-      {chats.data && !chats.data.connected ? (
-        <Notice tone="warning" title="WhatsApp isn't connected">
+      {chats.data && !chats.data.connected && !chats.data.telegram_bot ? (
+        <Notice tone="warning" title="No chat app is connected">
           {/* A full page load (not a client-side link): only that page may open Meta's signup window. */}
           <a href={`/v/${v.id}/whatsapp-connect`} className="font-medium underline underline-offset-2">
             Connect WhatsApp
           </a>{" "}
-          by logging in with Facebook (about 2 minutes), and new customer messages will appear here.
+          by logging in with Facebook (about 2 minutes), or{" "}
+          <Link href={`/v/${v.id}/settings?tab=connectors`} className="font-medium underline underline-offset-2">
+            connect a Telegram bot
+          </Link>
+          , and new customer messages will appear here.
         </Notice>
+      ) : null}
+      {chats.data?.telegram_bot ? (
+        <p className="text-sm text-muted">
+          Customers can chat with your bot at{" "}
+          <a href={`https://t.me/${chats.data.telegram_bot}`} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">
+            t.me/{chats.data.telegram_bot}
+          </a>
+          ; share the link on your website and visiting cards.
+        </p>
       ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <Tabs
-          label="WhatsApp"
+          label="Chats"
           value={tab}
           onChange={setTab}
           items={[
             { id: "chats", label: "Chats" },
-            { id: "templates", label: "Templates" },
+            { id: "templates", label: "WhatsApp templates" },
           ]}
         />
         {tab === "chats" && canWrite && chats.data?.connected ? (
@@ -519,7 +538,14 @@ function WhatsAppView() {
           <div className="grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
             <div className={cn("min-w-0 border-border lg:border-r", selected && "hidden lg:block")}>
               <QueryState query={chats} loading={<SkeletonRows rows={5} className="p-3" />}>
-                {(d: Schemas["ChatsOut"]) => <ChatList chats={d.chats} selected={selected} onSelect={select} />}
+                {(d: Schemas["ChatsOut"]) => (
+                  <ChatList
+                    chats={d.chats}
+                    selected={selected}
+                    onSelect={select}
+                    showChannel={Boolean(d.telegram_bot) || d.chats.some((c) => c.channel === "telegram")}
+                  />
+                )}
               </QueryState>
             </div>
             <div className={cn("min-w-0", !selected && "hidden lg:block")}>
@@ -553,10 +579,10 @@ function WhatsAppView() {
   );
 }
 
-export default function WhatsAppPage() {
+export default function ChatsPage() {
   return (
     <Suspense>
-      <WhatsAppView />
+      <ChatsView />
     </Suspense>
   );
 }

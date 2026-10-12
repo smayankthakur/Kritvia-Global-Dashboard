@@ -19,6 +19,7 @@ from sqlalchemy import text
 
 from kritvia_api.services import wa_inbox
 from kritvia_api.services.google import SCOPES, GoogleClient
+from kritvia_api.services.telegram import TelegramClient, TelegramError, load_telegram
 from kritvia_api.services.whatsapp import WhatsAppClient, WhatsAppError, load_whatsapp
 
 if TYPE_CHECKING:
@@ -51,10 +52,10 @@ async def load_google(ctx: RunContext, conn) -> GoogleConn | None:
 
 class Messaging:
     def __init__(self, google: GoogleClient | None, fallback: str = "log",
-                 whatsapp: WhatsAppClient | None = None) -> None:
+                 whatsapp: WhatsAppClient | None = None, telegram: TelegramClient | None = None) -> None:
         if fallback not in ("log", "none"):
             raise ValueError("messaging fallback must be 'log' or 'none'")
-        self.google, self.fallback, self.whatsapp = google, fallback, whatsapp
+        self.google, self.fallback, self.whatsapp, self.telegram = google, fallback, whatsapp, telegram
 
     async def _google_token(self, ctx: RunContext, scope: str) -> tuple[str, GoogleConn] | None:
         if self.google is None or not self.google.configured:
@@ -79,12 +80,14 @@ class Messaging:
                  "e": error})
 
     async def _chat(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, body: str, status: str,
-                    provider_id: str | None = None, error: str | None = None, kind: str = "text") -> None:
-        """The reply also goes into the customer's WhatsApp chat, as sent by Kritvia."""
+                    provider_id: str | None = None, error: str | None = None, kind: str = "text",
+                    channel: str = "whatsapp") -> None:
+        """The reply also goes into the customer's chat, as sent by Kritvia."""
         async with ctx.tx() as conn:
             await wa_inbox.record_outbound(conn, ctx.crypto(conn), org_id=ctx.org_id, venture_id=ctx.venture_id,
                                            phone=to, body=body, sent_by="kritvia", status=status,
-                                           provider_id=provider_id, error=error, approval_id=approval_id, kind=kind)
+                                           provider_id=provider_id, error=error, approval_id=approval_id, kind=kind,
+                                           channel=channel)
 
     async def send_email(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, subject: str, body: str,
                          cc: list[str] | None = None, thread_id: str | None = None,
@@ -164,6 +167,42 @@ class Messaging:
                                transport="log", status="logged")
             return {"transport": "log", "status": "logged"}
         raise MessagingError("no WhatsApp connector for this venture (connect WhatsApp in Settings)")
+
+    async def send_telegram(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, body: str) -> dict[str, Any]:
+        """A reply from the business's Telegram bot. `to` is the chat id; a bot can only answer people
+        who wrote to it, so the chat must exist."""
+        to = wa_inbox.digits(to)
+        if not to:
+            raise MessagingError("the Telegram chat is missing")
+        async with ctx.tx() as conn:
+            tg = await load_telegram(ctx, conn)
+            contact = await wa_inbox.find_contact(conn, ctx.venture_id, to, channel="telegram")
+        if tg and self.telegram is not None:
+            error = None
+            if contact is None:
+                error = "a Telegram bot can only answer people who wrote to it first"
+            elif contact.opted_out:
+                error = "the customer asked not to receive messages (they wrote STOP)"
+            try:
+                if error:
+                    raise TelegramError(error)
+                mid = await self.telegram.send_message(tg, chat_id=to, body=body)
+            except TelegramError as exc:
+                await self._record(ctx, approval_id, channel="telegram", recipient=to, subject=None, body=body,
+                                   transport="telegram", status="failed", error=str(exc)[:300])
+                if contact is not None:
+                    await self._chat(ctx, approval_id, to=to, body=body, status="failed", error=str(exc),
+                                     channel="telegram")
+                raise MessagingError(str(exc)) from exc
+            await self._record(ctx, approval_id, channel="telegram", recipient=to, subject=None, body=body,
+                               transport="telegram", status="sent", provider_id=mid)
+            await self._chat(ctx, approval_id, to=to, body=body, status="sent", provider_id=mid, channel="telegram")
+            return {"transport": "telegram", "status": "sent", "message_id": mid}
+        if self.fallback == "log":
+            await self._record(ctx, approval_id, channel="telegram", recipient=to, subject=None, body=body,
+                               transport="log", status="logged")
+            return {"transport": "log", "status": "logged"}
+        raise MessagingError("no Telegram bot for this business (connect one in Settings → Connectors)")
 
     async def send_whatsapp_template(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str,
                                      template_id: str, params: list[Any]) -> dict[str, Any]:

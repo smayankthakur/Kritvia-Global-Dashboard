@@ -1,4 +1,6 @@
-"""WhatsApp conversations: one thread per customer number, every message kept (encrypted).
+"""Customer chats (WhatsApp, and Telegram since 0038): one thread per customer, every message kept
+(encrypted). The tables keep their WhatsApp names; `channel` says which app a chat is on, and for
+Telegram `phone` holds the chat id.
 
 The webhook records each inbound message here before anything else happens; agent replies and
 replies typed by a person are recorded when they are sent. Agents read the recent thread so a
@@ -28,7 +30,7 @@ from kritvia_api.services.crypto import EnvelopeCrypto
 PURPOSE = "whatsapp.message"
 WINDOW = timedelta(hours=24)
 HISTORY = 12                    # messages an agent sees when drafting
-_STOP = re.compile(r"^\s*(stop|unsubscribe|band karo|mat bhejo|message mat karo|no more messages)\s*[.!]*\s*$", re.I)
+_STOP = re.compile(r"^\s*(/?stop|unsubscribe|band karo|mat bhejo|message mat karo|no more messages)\s*[.!]*\s*$", re.I)
 
 
 def digits(phone: str | None) -> str:
@@ -39,7 +41,13 @@ def is_stop(body: str) -> bool:
     return bool(_STOP.match(body or ""))
 
 
-def window_open(last_inbound_at: datetime | None, now: datetime | None = None) -> bool:
+CHANNELS = ("whatsapp", "telegram")
+
+
+def window_open(last_inbound_at: datetime | None, now: datetime | None = None, channel: str = "whatsapp") -> bool:
+    """WhatsApp's 24 hours for typed messages. Telegram has no such window."""
+    if channel == "telegram":
+        return True
     if last_inbound_at is None:
         return False
     return (now or datetime.now(timezone.utc)) - last_inbound_at < WINDOW
@@ -55,6 +63,17 @@ class Contact:
     last_inbound_at: datetime | None
     lead_id: uuid.UUID | None
     opted_in: bool = False       # they wrote first, or the team confirmed they agreed to hear from us
+    channel: str = "whatsapp"
+    handle: str | None = None    # Telegram @username
+
+    @property
+    def label(self) -> str:
+        """How the team knows this customer: name, else @username or number."""
+        if self.name:
+            return self.name
+        if self.channel == "telegram":
+            return f"@{self.handle}" if self.handle else "a Telegram customer"
+        return "+" + self.phone
 
     @property
     def automatic(self) -> bool:
@@ -64,29 +83,31 @@ class Contact:
 
 def _contact(r) -> Contact:
     return Contact(r.id, r.phone, r.name, r.handled_by, r.opted_out_at is not None, r.last_inbound_at, r.lead_id,
-                   r.opted_in_at is not None)
+                   r.opted_in_at is not None, r.channel, r.handle)
 
 
-COLS = "id, phone, name, handled_by, opted_out_at, last_inbound_at, lead_id, opted_in_at"
+COLS = "id, phone, name, handled_by, opted_out_at, last_inbound_at, lead_id, opted_in_at, channel, handle"
 
 
-async def find_contact(conn, venture_id: uuid.UUID, phone: str) -> Contact | None:
-    r = (await conn.execute(text(f"SELECT {COLS} FROM wa_contacts WHERE venture_id = :v AND phone = :p"),
-                            {"v": venture_id, "p": digits(phone)})).first()
+async def find_contact(conn, venture_id: uuid.UUID, phone: str, channel: str = "whatsapp") -> Contact | None:
+    r = (await conn.execute(text(f"SELECT {COLS} FROM wa_contacts WHERE venture_id = :v AND channel = :ch"
+                                 " AND phone = :p"), {"v": venture_id, "ch": channel, "p": digits(phone)})).first()
     return _contact(r) if r else None
 
 
 async def record_inbound(conn, crypto: EnvelopeCrypto, *, org_id: uuid.UUID, venture_id: uuid.UUID, phone: str,
-                         name: str | None, body: str, kind: str, provider_id: str) -> tuple[Contact, bool]:
+                         name: str | None, body: str, kind: str, provider_id: str, channel: str = "whatsapp",
+                         handle: str | None = None) -> tuple[Contact, bool]:
     """Stores one inbound message. Returns the contact and False when it was already stored (redelivery)."""
     phone = digits(phone)
     stop = is_stop(body)
     r = (await conn.execute(text(
-        "INSERT INTO wa_contacts (org_id, venture_id, phone, name, last_inbound_at, last_message_at)"
-        " VALUES (:o, :v, :p, :n, now(), now())"
-        " ON CONFLICT (venture_id, phone) DO UPDATE SET name = coalesce(EXCLUDED.name, wa_contacts.name),"
-        " updated_at = now()"
-        f" RETURNING {COLS}"), {"o": org_id, "v": venture_id, "p": phone, "n": (name or None) and name[:120]})).first()
+        "INSERT INTO wa_contacts (org_id, venture_id, channel, phone, name, handle, last_inbound_at, last_message_at)"
+        " VALUES (:o, :v, :ch, :p, :n, :h, now(), now())"
+        " ON CONFLICT (venture_id, channel, phone) DO UPDATE SET name = coalesce(EXCLUDED.name, wa_contacts.name),"
+        " handle = coalesce(EXCLUDED.handle, wa_contacts.handle), updated_at = now()"
+        f" RETURNING {COLS}"), {"o": org_id, "v": venture_id, "ch": channel, "p": phone,
+                                "n": (name or None) and name[:120], "h": handle or None})).first()
     enc = await crypto.encrypt(venture_id, PURPOSE, body[:20000])
     mid = (await conn.execute(text(
         "INSERT INTO wa_messages (org_id, venture_id, contact_id, direction, sent_by, kind, body_enc,"
@@ -110,14 +131,17 @@ async def record_inbound(conn, crypto: EnvelopeCrypto, *, org_id: uuid.UUID, ven
 async def record_outbound(conn, crypto: EnvelopeCrypto, *, org_id: uuid.UUID, venture_id: uuid.UUID, phone: str,
                           body: str, sent_by: str, status: str, provider_id: str | None = None,
                           error: str | None = None, approval_id: uuid.UUID | None = None,
-                          user_id: uuid.UUID | None = None, kind: str = "text", name: str | None = None) -> bool:
+                          user_id: uuid.UUID | None = None, kind: str = "text", name: str | None = None,
+                          channel: str = "whatsapp") -> bool:
     """Stores one outgoing message. False when that provider message id was already stored."""
     phone = digits(phone)
     cid = (await conn.execute(text(
-        "INSERT INTO wa_contacts (org_id, venture_id, phone, name, last_message_at) VALUES (:o, :v, :p, :n, now())"
-        " ON CONFLICT (venture_id, phone) DO UPDATE SET last_message_at = now(),"
+        "INSERT INTO wa_contacts (org_id, venture_id, channel, phone, name, last_message_at)"
+        " VALUES (:o, :v, :ch, :p, :n, now())"
+        " ON CONFLICT (venture_id, channel, phone) DO UPDATE SET last_message_at = now(),"
         " name = coalesce(wa_contacts.name, EXCLUDED.name), updated_at = now() RETURNING id"),
-        {"o": org_id, "v": venture_id, "p": phone, "n": (name or None) and name.strip()[:120] or None})).scalar_one()
+        {"o": org_id, "v": venture_id, "ch": channel, "p": phone,
+         "n": (name or None) and name.strip()[:120] or None})).scalar_one()
     enc = await crypto.encrypt(venture_id, PURPOSE, body[:20000])
     mid = (await conn.execute(text(
         "INSERT INTO wa_messages (org_id, venture_id, contact_id, direction, sent_by, kind, body_enc,"
@@ -158,15 +182,16 @@ def transcript(messages: list[dict[str, Any]], business: str) -> str:
     return "\n".join(lines)
 
 
-async def newer_inbound(conn, venture_id: uuid.UUID, phone: str, provider_id: str | None) -> bool:
+async def newer_inbound(conn, venture_id: uuid.UUID, phone: str, provider_id: str | None,
+                        channel: str = "whatsapp") -> bool:
     """True when the customer has written again after `provider_id`: that later message's run answers both."""
     if not provider_id:
         return False
     return (await conn.execute(text(
         "SELECT 1 FROM wa_messages m JOIN wa_contacts c ON c.id = m.contact_id"
-        " WHERE m.venture_id = :v AND c.phone = :p AND m.direction = 'in'"
+        " WHERE m.venture_id = :v AND c.channel = :ch AND c.phone = :p AND m.direction = 'in'"
         "   AND m.created_at > (SELECT created_at FROM wa_messages WHERE venture_id = :v AND provider_message_id = :m)"
-        " LIMIT 1"), {"v": venture_id, "p": digits(phone), "m": provider_id})).first() is not None
+        " LIMIT 1"), {"v": venture_id, "ch": channel, "p": digits(phone), "m": provider_id})).first() is not None
 
 
 async def confirm_opt_in(conn, venture_id: uuid.UUID, contact_id: uuid.UUID) -> None:
@@ -185,18 +210,22 @@ async def hand_to_person(conn, venture_id: uuid.UUID, contact_id: uuid.UUID, rea
 
 async def link_lead(conn, *, org_id: uuid.UUID, venture_id: uuid.UUID, contact: Contact,
                     run_id: uuid.UUID | None) -> uuid.UUID:
-    """The chat's lead: the one already linked, one with the same phone, or a new one (source whatsapp)."""
+    """The chat's lead: the one already linked, one with the same phone, or a new one (source whatsapp
+    or telegram). A Telegram chat has no phone number, so it always gets its own lead."""
     if contact.lead_id:
         return contact.lead_id
-    lead_id = (await conn.execute(text(
+    telegram = contact.channel == "telegram"
+    lead_id = None if telegram else (await conn.execute(text(
         "SELECT id FROM leads WHERE venture_id = :v AND regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g') = :p"
         " ORDER BY created_at DESC LIMIT 1"), {"v": venture_id, "p": contact.phone})).scalar()
     if lead_id is None:
+        name = contact.name or (f"Telegram @{contact.handle}" if contact.handle else "Telegram customer") \
+            if telegram else contact.name or f"WhatsApp +{contact.phone}"
         lead_id = (await conn.execute(text(
             "INSERT INTO leads (org_id, venture_id, name, source, phone, last_run_id)"
-            " VALUES (:o, :v, :n, 'whatsapp', :p, :r) RETURNING id"),
-            {"o": org_id, "v": venture_id, "n": (contact.name or f"WhatsApp +{contact.phone}")[:200],
-             "p": "+" + contact.phone, "r": run_id})).scalar_one()
+            " VALUES (:o, :v, :n, :s, :p, :r) RETURNING id"),
+            {"o": org_id, "v": venture_id, "n": name[:200], "s": contact.channel,
+             "p": None if telegram else "+" + contact.phone, "r": run_id})).scalar_one()
     await conn.execute(text("UPDATE wa_contacts SET lead_id = :l, updated_at = now() WHERE id = :id"),
                        {"l": lead_id, "id": contact.id})
     return lead_id
@@ -208,7 +237,7 @@ async def waiting_runs(conn, venture_id: uuid.UUID, contact_id: uuid.UUID,
     rows = (await conn.execute(text(
         "SELECT DISTINCT r.id FROM workflow_runs r"
         " JOIN wa_messages i ON i.venture_id = r.venture_id AND i.provider_message_id = r.trigger_ref"
-        " WHERE r.venture_id = :v AND i.contact_id = :c AND r.trigger_kind = 'whatsapp'"
+        " WHERE r.venture_id = :v AND i.contact_id = :c AND r.trigger_kind IN ('whatsapp', 'telegram')"
         "   AND r.workflow = 'inbox_assistant' AND r.status = 'waiting'"
         "   AND (CAST(:me AS uuid) IS NULL OR r.id <> CAST(:me AS uuid))"),
         {"v": venture_id, "c": contact_id, "me": exclude})).all()

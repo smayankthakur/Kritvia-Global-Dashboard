@@ -46,7 +46,7 @@ describe("invoice money", () => {
   it("is in every business's menu, after WhatsApp", () => {
     for (const kind of ["general", "software", "finance", "kitchen"] as const) {
       const labels = ventureNav("v1", kind).common.map((i) => i.label);
-      expect(labels.indexOf("Invoices")).toBe(labels.indexOf("WhatsApp") + 1);
+      expect(labels.indexOf("Invoices")).toBe(labels.indexOf("Chats") + 1);
     }
   });
 });

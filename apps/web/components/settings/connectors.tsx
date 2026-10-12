@@ -2,7 +2,7 @@
 
 import { csrfHeaders } from "@/lib/bff/csrf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenCheck, FolderDown, Forward, Mail, MessageCircle, RefreshCw, Trash2, Upload, Webhook } from "lucide-react";
+import { BookOpenCheck, FolderDown, Forward, Mail, MessageCircle, RefreshCw, Send, Trash2, Upload, Webhook } from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -234,6 +234,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   const hook = q.data.find((c) => c.provider === "webhook");
   const wa = q.data.find((c) => c.provider === "whatsapp");
   const tallyConn = q.data.find((c) => c.provider === "tally");
+  const tg = q.data.find((c) => c.provider === "telegram");
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -361,6 +362,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
           </div>
         </div>
       </Card>
+      <TelegramCard ventureId={ventureId} canAdmin={canAdmin} bot={tg} onRemove={() => tg && setRemoving(tg)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
       <Card>
         <CardHeader
           title={
@@ -419,13 +421,23 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
         onClose={() => setRemoving(null)}
         onConfirm={() => removing && remove.mutate(removing.id)}
         loading={remove.isPending}
-        title={removing?.provider === "google" ? "Disconnect Google?" : removing?.provider === "whatsapp" ? "Disconnect WhatsApp?" : "Remove webhook?"}
+        title={
+          removing?.provider === "google"
+            ? "Disconnect Google?"
+            : removing?.provider === "whatsapp"
+              ? "Disconnect WhatsApp?"
+              : removing?.provider === "telegram"
+                ? "Disconnect the Telegram bot?"
+                : "Remove webhook?"
+        }
         description={
           removing?.provider === "google"
             ? "Gmail polling and sending stop. Stored tokens are deleted."
             : removing?.provider === "whatsapp"
               ? "Incoming WhatsApp messages will be ignored and the stored token deleted."
-              : "Submissions to the current URL will be refused."
+              : removing?.provider === "telegram"
+                ? "The bot stops sending messages to Kritvia and its token is deleted. Its chats stay on the Chats page."
+                : "Submissions to the current URL will be refused."
         }
         confirmLabel="Remove"
       />
@@ -433,6 +445,127 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   );
 }
 
+
+/** The business's Telegram bot: customers chat with it, Kritvia drafts the replies. */
+function TelegramCard({ ventureId, canAdmin, bot, onRemove, onChanged }: {
+  ventureId: string;
+  canAdmin: boolean;
+  bot: Connector | undefined;
+  onRemove: () => void;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const connect = useMutation({
+    mutationFn: () =>
+      unwrap(api.POST("/ventures/{venture_id}/connectors/telegram", { params: { path: { venture_id: ventureId } }, body: { token: token.trim() } })),
+    onSuccess: (out) => {
+      setOpen(false);
+      setToken("");
+      setError(null);
+      toast.success(`@${out.username} is connected`, "Customers who message it will appear on the Chats page.");
+      onChanged();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const username = bot?.account_email?.replace(/^@/, "") ?? "";
+  const close = () => {
+    setOpen(false);
+    setToken("");
+    setError(null);
+  };
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Send className="h-4 w-4 text-subtle" aria-hidden /> Telegram bot
+          </span>
+        }
+        description="Customers chat with your business's bot; Kritvia drafts the replies and your team approves or answers them on the Chats page."
+        actions={bot ? <StatusBadge status={bot.status} /> : <Badge>not connected</Badge>}
+      />
+      <div className="space-y-4 p-4">
+        {bot ? (
+          <>
+            <CopyField label="Link for customers" value={`https://t.me/${username}`} />
+            <KeyValue
+              items={[
+                ["Bot", bot.account_email ?? "—"],
+                ["Updated", formatRelative(bot.updated_at)],
+              ]}
+            />
+          </>
+        ) : (
+          <p className="text-sm text-muted">Make a free bot with Telegram&apos;s @BotFather (about a minute), then paste its token here.</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant={bot ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => setOpen(true)}>
+            {bot ? "Change bot" : "Connect a bot"}
+          </Button>
+          {bot ? (
+            <Button variant="ghost" className="text-danger" icon={<Trash2 className="h-4 w-4" />} disabled={!canAdmin} onClick={onRemove}>
+              Disconnect
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      <Dialog
+        open={open}
+        onClose={close}
+        title="Connect a Telegram bot"
+        description="Kritvia checks the token with Telegram and stores it encrypted; it is never shown again."
+        footer={
+          <>
+            <Button variant="ghost" onClick={close}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={connect.isPending} onClick={() => (token.trim() ? connect.mutate() : setError("Paste the bot's token first."))}>
+              Connect
+            </Button>
+          </>
+        }
+      >
+        <form
+          className="space-y-3"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (token.trim()) connect.mutate();
+            else setError("Paste the bot's token first.");
+          }}
+        >
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+            <li>
+              In Telegram, open{" "}
+              <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">
+                @BotFather
+              </a>{" "}
+              and send <code className="font-mono">/newbot</code>.
+            </li>
+            <li>Give it your business&apos;s name, then a username ending in &ldquo;bot&rdquo;.</li>
+            <li>BotFather replies with a token like <code className="font-mono">123456789:AA…</code>. Paste it below.</li>
+          </ol>
+          <Field label="Bot token" required>
+            <Input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={120}
+              className="font-mono"
+            />
+          </Field>
+          <FormError message={error} />
+          <button type="submit" hidden />
+        </form>
+      </Dialog>
+    </Card>
+  );
+}
 
 /** Incoming mail by forwarding to the business's own Kritvia address (no Gmail read access needed). */
 function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {

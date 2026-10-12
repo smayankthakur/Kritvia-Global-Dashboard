@@ -71,7 +71,7 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
           : software;
   const common: NavItem[] = [
     { label: "Assistant", href: `${v}/assistant`, icon: MessageSquareText },
-    { label: "WhatsApp", href: `${v}/whatsapp`, icon: MessageCircle },
+    { label: "Chats", href: `${v}/whatsapp`, icon: MessageCircle },
     { label: "Invoices", href: `${v}/invoices`, icon: IndianRupee },
     { label: "Board", href: `${v}/board`, icon: LayoutDashboard },
     { label: "Agents", href: `${v}/agents`, icon: Bot },

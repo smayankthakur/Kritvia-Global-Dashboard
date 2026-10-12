@@ -34,6 +34,11 @@ def build_tools() -> ToolRegistry:
         assert ok is not None
         return await ctx.services.messaging.send_whatsapp(ctx, ok.id, to=p["to"], body=p["body"])
 
+    @reg.tool("telegram.send", Capability.SEND, "Answer a customer from the business's Telegram bot")
+    async def telegram_send(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        assert ok is not None
+        return await ctx.services.messaging.send_telegram(ctx, ok.id, to=str(p["to"]), body=p["body"])
+
     @reg.tool("whatsapp.template", Capability.SEND,
               "Send one of the business's approved WhatsApp templates to someone who agreed to hear from it")
     async def whatsapp_template(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
