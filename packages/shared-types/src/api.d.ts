@@ -363,7 +363,8 @@ export interface paths {
         put?: never;
         /**
          * Whatsapp Inbound
-         * @description Inbound WhatsApp messages → one inbox_assistant run each (deduped by message id).
+         * @description Inbound WhatsApp messages → one inbox_assistant run each (deduped by message id). Also takes
+         *     messages the owner sent from the WhatsApp Business app (echoes) and Meta's template reviews.
          *     Always answers 200 once the signature checks out, so Meta does not retry.
          */
         post: operations["whatsapp_inbound_hooks_whatsapp_post"];
@@ -2966,7 +2967,12 @@ export interface paths {
         /** List Chats */
         get: operations["list_chats_ventures__venture_id__whatsapp_chats_get"];
         put?: never;
-        post?: never;
+        /**
+         * New Chat
+         * @description Writes first to someone who agreed to hear from the business, with an approved template.
+         *     When they answer, Kritvia drafts the replies like in any other chat.
+         */
+        post: operations["new_chat_ventures__venture_id__whatsapp_chats_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3029,6 +3035,70 @@ export interface paths {
          */
         post: operations["reply_ventures__venture_id__whatsapp_chats__chat_id__reply_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Template
+         * @description Sends an approved template in a chat, e.g. after the 24 hours have passed.
+         */
+        post: operations["send_template_ventures__venture_id__whatsapp_chats__chat_id__template_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/whatsapp/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Templates
+         * @description The business's templates. `refresh` reads the latest from WhatsApp first (team members who can write).
+         */
+        get: operations["list_templates_ventures__venture_id__whatsapp_templates_get"];
+        put?: never;
+        /**
+         * Create Template
+         * @description Writes a template and sends it to Meta for review (usually minutes, at most a day).
+         */
+        post: operations["create_template_ventures__venture_id__whatsapp_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/whatsapp/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Template
+         * @description Deletes the template from the WhatsApp account too. Meta keeps the name blocked for 30 days.
+         */
+        delete: operations["delete_template_ventures__venture_id__whatsapp_templates__template_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5188,7 +5258,7 @@ export interface components {
              * Sent By
              * @enum {string}
              */
-            sent_by: "customer" | "kritvia" | "person";
+            sent_by: "customer" | "kritvia" | "person" | "phone";
             /**
              * Status
              * @enum {string}
@@ -5221,6 +5291,29 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** NewChatIn */
+        NewChatIn: {
+            /**
+             * Consent
+             * @description this person agreed to get WhatsApp messages from the business
+             * @constant
+             */
+            consent: true;
+            /** Name */
+            name?: string | null;
+            /** Params */
+            params?: string[];
+            /**
+             * Phone
+             * @description with country code, e.g. +91 98111 22233
+             */
+            phone: string;
+            /**
+             * Template Id
+             * Format: uuid
+             */
+            template_id: string;
         };
         /** NoteIn */
         NoteIn: {
@@ -5859,6 +5952,16 @@ export interface components {
             /** Workflow */
             workflow: string;
         };
+        /** SendTemplateIn */
+        SendTemplateIn: {
+            /** Params */
+            params?: string[];
+            /**
+             * Template Id
+             * Format: uuid
+             */
+            template_id: string;
+        };
         /** ServiceKeyIn */
         ServiceKeyIn: {
             /** Api Key */
@@ -6268,6 +6371,90 @@ export interface components {
             name?: string | null;
             /** Position */
             position?: number | null;
+        };
+        /** TemplateIn */
+        TemplateIn: {
+            /** Body */
+            body: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "UTILITY" | "MARKETING";
+            /**
+             * Examples
+             * @description a sample for each blank, in order; Meta's reviewers read them
+             */
+            examples?: string[];
+            /**
+             * Label
+             * @description a name for the team, e.g. 'Order ready'
+             */
+            label: string;
+            /**
+             * Language
+             * @default en
+             * @enum {string}
+             */
+            language: "en" | "en_US" | "en_GB" | "hi";
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Body */
+            body: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+            /** Examples */
+            examples: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Language */
+            language: string;
+            /** Name */
+            name: string;
+            /**
+             * Params
+             * @description number of blanks to fill in: {{1}}, {{2}}, …
+             */
+            params: number;
+            /**
+             * Reason
+             * @description why Meta rejected or paused it
+             */
+            reason: string | null;
+            /**
+             * Sendable
+             * @description false when it needs a photo, link blank or code; send those from WhatsApp Manager
+             */
+            sendable: boolean;
+            /**
+             * Status
+             * @description PENDING while Meta reviews it; only APPROVED templates can be sent
+             */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TemplatesOut */
+        TemplatesOut: {
+            /** Connected */
+            connected: boolean;
+            /**
+             * Manageable
+             * @description false when Kritvia doesn't know the WhatsApp account; reconnect with the button
+             */
+            manageable: boolean;
+            /** Templates */
+            templates: components["schemas"]["TemplateOut"][];
         };
         /** TermIn */
         TermIn: {
@@ -6807,6 +6994,11 @@ export interface components {
              * @description from Meta → WhatsApp → API setup
              */
             phone_number_id: string;
+            /**
+             * Waba Id
+             * @description WhatsApp Business Account id; needed to write templates in Kritvia
+             */
+            waba_id?: string | null;
         };
         /** WhatsAppConnectOut */
         WhatsAppConnectOut: {
@@ -13405,6 +13597,41 @@ export interface operations {
             };
         };
     };
+    new_chat_ventures__venture_id__whatsapp_chats_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewChatIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_chat_ventures__venture_id__whatsapp_chats__chat_id__get: {
         parameters: {
             query?: never;
@@ -13527,6 +13754,140 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MessageOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_template_ventures__venture_id__whatsapp_chats__chat_id__template_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendTemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_ventures__venture_id__whatsapp_templates_get: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplatesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_template_ventures__venture_id__whatsapp_templates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_ventures__venture_id__whatsapp_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -4,7 +4,7 @@ Customers message a business's WhatsApp Business number. Kritvia keeps every cha
 with the whole chat in mind, and waits for a person's yes. The team reads and answers chats on the
 **WhatsApp** page. Code: `services/wa_inbox.py`, `routers/whatsapp_chats.py`, the WhatsApp parts of
 `workflows/inbox.py` and `routers/connectors.py` (`/hooks/whatsapp`); web: `app/(app)/v/[ventureId]/whatsapp`.
-Migration `0034_whatsapp_front_door.sql`.
+Migrations `0034_whatsapp_front_door.sql`, `0035_whatsapp_templates.sql`.
 
 ## What happens to a message
 
@@ -35,11 +35,42 @@ Migration `0034_whatsapp_front_door.sql`.
 - Admins can delete a chat and all its messages (for a customer's erasure request).
 - Read-only roles (approver, viewer) can read chats but not answer or switch them.
 
+## Templates (writing first, or after 24 hours)
+
+WhatsApp only lets a business start a chat, or answer after the 24 hours, with a message template
+Meta approved in advance. On the WhatsApp page, **Templates** tab:
+
+- **New template:** a name for the team, the kind of message (*Update*: about an order, booking or
+  payment, Meta's UTILITY; *Offer or news*: MARKETING, which costs more), the language, and the text
+  with blanks `{{1}}`, `{{2}}` plus a sample for each. Meta's wording rules are checked first (blanks
+  numbered in order, not at the start or end, enough words around them). Kritvia sends it for review;
+  Meta's answer arrives at the webhook (`message_template_status_update`) and the team gets a push
+  notification. Rejected templates show Meta's reason.
+- **Refresh** picks up templates written in WhatsApp Manager and drops ones deleted there. Templates
+  that need a photo, a link with a blank or a code show as approved but are sent from WhatsApp Manager.
+- **Sending:** in a chat whose 24 hours are over, the composer becomes a template picker with the
+  blanks and a preview. **New chat** writes first to a number, with a template, after the team member
+  confirms the person agreed to get WhatsApp messages. Their answer is drafted like any other chat.
+- Only admins delete templates (also from the WhatsApp account; Meta blocks the name for 30 days).
+- Templates are tied to the WhatsApp Business Account (WABA). The one-click signup stores it; a number
+  connected with a token needs its WABA id too (optional field) to write templates in Kritvia.
+
+API: `GET/POST /ventures/{v}/whatsapp/templates` (`?refresh=true`), `DELETE …/templates/{id}`,
+`POST …/whatsapp/chats/{id}/template`, `POST …/whatsapp/chats` (new chat).
+
+## Messages sent from the phone
+
+A number kept on the **WhatsApp Business app** (coexistence) can still be used on the phone. Meta sends
+those messages to the webhook as `smb_message_echoes`; Kritvia stores them in the chat as "You, from the
+phone", takes the chat over for the team ("Answered from the WhatsApp Business app") and withdraws any
+draft still waiting, so the customer never gets a second answer. Replying on the WhatsApp page does the
+same.
+
 ## Rules
 
 - **24-hour window:** WhatsApp only allows free-form messages within 24 hours of the customer's
   last message. Kritvia checks this before sending (agent replies and the page) and says so clearly;
-  Meta is not asked. Messages outside the window need an approved template (not built yet).
+  Meta is not asked. Outside the window the team sends an approved template.
 - **STOP:** "stop", "unsubscribe", "band karo", "mat bhejo" and similar opt the customer out. Their
   messages are still kept; nothing more is drafted or sent to them.
 - **Privacy:** push notifications name who needs attention, never what they wrote. Chat text is
@@ -67,7 +98,7 @@ The manual way (phone number id + permanent token) stays on that page under "Adv
 
 - `.env`: `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_ID` and `WHATSAPP_SIGNUP_CONFIG_ID`.
 - Meta app (Kritvia's): WhatsApp product with the webhook `https://api.<domain>/hooks/whatsapp`
-  (`messages`; also `smb_message_echoes` for app numbers); Facebook Login for Business → Configurations →
+  (fields `messages`, `message_template_status_update`, and `smb_message_echoes` for app numbers); Facebook Login for Business → Configurations →
   a "WhatsApp Embedded Signup" configuration (its id is `WHATSAPP_SIGNUP_CONFIG_ID`); allowed domain
   `app.<domain>`.
 - Meta requires Kritvia to be a **Tech Provider** (business verification and app review for
@@ -77,6 +108,7 @@ The manual way (phone number id + permanent token) stays on that page under "Adv
 
 ## Not built yet
 
-Message templates (to write first or after 24 hours), offering meeting slots from the calendar,
-media (photos, voice notes) beyond their captions, read receipts, and showing messages the owner sends
-from the WhatsApp Business app (`smb_message_echoes`) in the chat.
+Agents proposing templates themselves (e.g. a Prospector first touch or a payment reminder waiting for
+approval), templates with photos or buttons, offering meeting slots from the calendar, media (photos,
+voice notes) beyond their captions, read receipts, and importing chat history from the WhatsApp
+Business app.

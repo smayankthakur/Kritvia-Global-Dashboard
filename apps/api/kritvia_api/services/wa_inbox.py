@@ -10,6 +10,8 @@ Rules this module enforces:
   * A chat a person has taken over (`handled_by = 'person'`) gets no automatic replies.
   * A customer who writes STOP (or similar) is opted out: messages are still kept, nobody is
     drafted a reply, and nothing more is sent to them.
+  * Messages the owner sends from the WhatsApp Business app on the phone (coexistence) are kept
+    too (sent_by 'phone'); answering from the phone takes the chat over like answering here.
 """
 from __future__ import annotations
 
@@ -104,20 +106,25 @@ async def record_inbound(conn, crypto: EnvelopeCrypto, *, org_id: uuid.UUID, ven
 async def record_outbound(conn, crypto: EnvelopeCrypto, *, org_id: uuid.UUID, venture_id: uuid.UUID, phone: str,
                           body: str, sent_by: str, status: str, provider_id: str | None = None,
                           error: str | None = None, approval_id: uuid.UUID | None = None,
-                          user_id: uuid.UUID | None = None) -> None:
+                          user_id: uuid.UUID | None = None, kind: str = "text", name: str | None = None) -> bool:
+    """Stores one outgoing message. False when that provider message id was already stored."""
     phone = digits(phone)
     cid = (await conn.execute(text(
-        "INSERT INTO wa_contacts (org_id, venture_id, phone, last_message_at) VALUES (:o, :v, :p, now())"
-        " ON CONFLICT (venture_id, phone) DO UPDATE SET last_message_at = now(), updated_at = now() RETURNING id"),
-        {"o": org_id, "v": venture_id, "p": phone})).scalar_one()
+        "INSERT INTO wa_contacts (org_id, venture_id, phone, name, last_message_at) VALUES (:o, :v, :p, :n, now())"
+        " ON CONFLICT (venture_id, phone) DO UPDATE SET last_message_at = now(),"
+        " name = coalesce(wa_contacts.name, EXCLUDED.name), updated_at = now() RETURNING id"),
+        {"o": org_id, "v": venture_id, "p": phone, "n": (name or None) and name.strip()[:120] or None})).scalar_one()
     enc = await crypto.encrypt(venture_id, PURPOSE, body[:20000])
-    await conn.execute(text(
-        "INSERT INTO wa_messages (org_id, venture_id, contact_id, direction, sent_by, body_enc, provider_message_id,"
-        " status, error, approval_id, user_id) VALUES (:o, :v, :c, 'out', :by, :b, :m, :st, :e, :a, :u)"
+    mid = (await conn.execute(text(
+        "INSERT INTO wa_messages (org_id, venture_id, contact_id, direction, sent_by, kind, body_enc,"
+        " provider_message_id, status, error, approval_id, user_id)"
+        " VALUES (:o, :v, :c, 'out', :by, :k, :b, :m, :st, :e, :a, :u)"
         " ON CONFLICT (venture_id, provider_message_id)"
-        " WHERE provider_message_id IS NOT NULL AND provider_message_id <> '' DO NOTHING"),
-        {"o": org_id, "v": venture_id, "c": cid, "by": sent_by, "b": enc, "m": provider_id or None, "st": status,
-         "e": (error or None) and error[:300], "a": approval_id, "u": user_id})
+        " WHERE provider_message_id IS NOT NULL AND provider_message_id <> '' DO NOTHING RETURNING id"),
+        {"o": org_id, "v": venture_id, "c": cid, "by": sent_by, "k": (kind or "text")[:20], "b": enc,
+         "m": provider_id or None, "st": status, "e": (error or None) and error[:300], "a": approval_id,
+         "u": user_id})).scalar()
+    return mid is not None
 
 
 async def thread(conn, crypto: EnvelopeCrypto, venture_id: uuid.UUID, contact_id: uuid.UUID,
@@ -141,7 +148,8 @@ def transcript(messages: list[dict[str, Any]], business: str) -> str:
     for m in messages:
         if m["status"] == "failed":
             continue
-        who = "Customer" if m["direction"] == "in" else f"{business} ({'a person' if m['sent_by'] == 'person' else 'Kritvia'})"
+        who = "Customer" if m["direction"] == "in" else \
+            f"{business} ({'Kritvia' if m['sent_by'] == 'kritvia' else 'a person'})"
         lines.append(f"[{m['created_at']:%d %b %H:%M}] {who}: {m['body'][:1500]}")
     return "\n".join(lines)
 
@@ -182,14 +190,30 @@ async def link_lead(conn, *, org_id: uuid.UUID, venture_id: uuid.UUID, contact: 
     return lead_id
 
 
-async def earlier_waiting_runs(conn, venture_id: uuid.UUID, contact_id: uuid.UUID,
-                               current_run: uuid.UUID) -> list[uuid.UUID]:
-    """Runs for this chat's earlier messages whose draft still waits for a yes. A new draft answers
-    the whole chat, so those older drafts are withdrawn and the customer never gets two answers."""
+async def waiting_runs(conn, venture_id: uuid.UUID, contact_id: uuid.UUID,
+                       exclude: uuid.UUID | None = None) -> list[uuid.UUID]:
+    """Runs for this chat's messages whose draft still waits for a yes."""
     rows = (await conn.execute(text(
         "SELECT DISTINCT r.id FROM workflow_runs r"
         " JOIN wa_messages i ON i.venture_id = r.venture_id AND i.provider_message_id = r.trigger_ref"
         " WHERE r.venture_id = :v AND i.contact_id = :c AND r.trigger_kind = 'whatsapp'"
-        "   AND r.workflow = 'inbox_assistant' AND r.status = 'waiting' AND r.id <> :me"),
-        {"v": venture_id, "c": contact_id, "me": current_run})).all()
+        "   AND r.workflow = 'inbox_assistant' AND r.status = 'waiting'"
+        "   AND (CAST(:me AS uuid) IS NULL OR r.id <> CAST(:me AS uuid))"),
+        {"v": venture_id, "c": contact_id, "me": exclude})).all()
     return [r.id for r in rows]
+
+
+async def earlier_waiting_runs(conn, venture_id: uuid.UUID, contact_id: uuid.UUID,
+                               current_run: uuid.UUID) -> list[uuid.UUID]:
+    """A new draft answers the whole chat, so older drafts still waiting are withdrawn and the
+    customer never gets two answers."""
+    return await waiting_runs(conn, venture_id, contact_id, exclude=current_run)
+
+
+async def withdraw_drafts(run_as: uuid.UUID, run_ids: list[uuid.UUID]) -> int:
+    """Withdraws Kritvia's waiting drafts once a person has answered the chat themselves."""
+    from kritvia_api.engine.runner import cancel_run
+    n = 0
+    for run_id in run_ids:
+        n += bool(await cancel_run(run_as, run_id))
+    return n

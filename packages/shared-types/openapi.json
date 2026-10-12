@@ -5616,7 +5616,8 @@
             "enum": [
               "customer",
               "kritvia",
-              "person"
+              "person",
+              "phone"
             ],
             "title": "Sent By",
             "type": "string"
@@ -5693,6 +5694,55 @@
           "updated_at"
         ],
         "title": "MissionOut",
+        "type": "object"
+      },
+      "NewChatIn": {
+        "properties": {
+          "consent": {
+            "const": true,
+            "description": "this person agreed to get WhatsApp messages from the business",
+            "title": "Consent",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "params": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Params",
+            "type": "array"
+          },
+          "phone": {
+            "description": "with country code, e.g. +91 98111 22233",
+            "maxLength": 24,
+            "minLength": 8,
+            "title": "Phone",
+            "type": "string"
+          },
+          "template_id": {
+            "format": "uuid",
+            "title": "Template Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template_id",
+          "phone",
+          "consent"
+        ],
+        "title": "NewChatIn",
         "type": "object"
       },
       "NoteIn": {
@@ -7241,6 +7291,28 @@
         "title": "SampleOut",
         "type": "object"
       },
+      "SendTemplateIn": {
+        "properties": {
+          "params": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Params",
+            "type": "array"
+          },
+          "template_id": {
+            "format": "uuid",
+            "title": "Template Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template_id"
+        ],
+        "title": "SendTemplateIn",
+        "type": "object"
+      },
       "ServiceKeyIn": {
         "properties": {
           "api_key": {
@@ -8364,6 +8436,169 @@
           }
         },
         "title": "TaskListPatch",
+        "type": "object"
+      },
+      "TemplateIn": {
+        "properties": {
+          "body": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "UTILITY",
+              "MARKETING"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "examples": {
+            "description": "a sample for each blank, in order; Meta's reviewers read them",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Examples",
+            "type": "array"
+          },
+          "label": {
+            "description": "a name for the team, e.g. 'Order ready'",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "language": {
+            "default": "en",
+            "enum": [
+              "en",
+              "en_US",
+              "en_GB",
+              "hi"
+            ],
+            "title": "Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "category",
+          "body"
+        ],
+        "title": "TemplateIn",
+        "type": "object"
+      },
+      "TemplateOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "MARKETING",
+              "UTILITY",
+              "AUTHENTICATION"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "examples": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Examples",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "description": "number of blanks to fill in: {{1}}, {{2}}, \u2026",
+            "title": "Params",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "why Meta rejected or paused it",
+            "title": "Reason"
+          },
+          "sendable": {
+            "description": "false when it needs a photo, link blank or code; send those from WhatsApp Manager",
+            "title": "Sendable",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "PENDING while Meta reviews it; only APPROVED templates can be sent",
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "language",
+          "category",
+          "body",
+          "params",
+          "examples",
+          "status",
+          "reason",
+          "sendable",
+          "updated_at"
+        ],
+        "title": "TemplateOut",
+        "type": "object"
+      },
+      "TemplatesOut": {
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "manageable": {
+            "description": "false when Kritvia doesn't know the WhatsApp account; reconnect with the button",
+            "title": "Manageable",
+            "type": "boolean"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateOut"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "connected",
+          "manageable",
+          "templates"
+        ],
+        "title": "TemplatesOut",
         "type": "object"
       },
       "TermIn": {
@@ -9740,6 +9975,21 @@
             "pattern": "^\\d+$",
             "title": "Phone Number Id",
             "type": "string"
+          },
+          "waba_id": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 5,
+                "pattern": "^\\d+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WhatsApp Business Account id; needed to write templates in Kritvia",
+            "title": "Waba Id"
           }
         },
         "required": [
@@ -10916,7 +11166,7 @@
         ]
       },
       "post": {
-        "description": "Inbound WhatsApp messages \u2192 one inbox_assistant run each (deduped by message id).\nAlways answers 200 once the signature checks out, so Meta does not retry.",
+        "description": "Inbound WhatsApp messages \u2192 one inbox_assistant run each (deduped by message id). Also takes\nmessages the owner sent from the WhatsApp Business app (echoes) and Meta's template reviews.\nAlways answers 200 once the signature checks out, so Meta does not retry.",
         "operationId": "whatsapp_inbound_hooks_whatsapp_post",
         "responses": {
           "200": {
@@ -21070,6 +21320,63 @@
         "tags": [
           "whatsapp"
         ]
+      },
+      "post": {
+        "description": "Writes first to someone who agreed to hear from the business, with an approved template.\nWhen they answer, Kritvia drafts the replies like in any other chat.",
+        "operationId": "new_chat_ventures__venture_id__whatsapp_chats_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewChatIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "New Chat",
+        "tags": [
+          "whatsapp"
+        ]
       }
     },
     "/ventures/{venture_id}/whatsapp/chats/{chat_id}": {
@@ -21313,6 +21620,243 @@
           }
         ],
         "summary": "Reply",
+        "tags": [
+          "whatsapp"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/whatsapp/chats/{chat_id}/template": {
+      "post": {
+        "description": "Sends an approved template in a chat, e.g. after the 24 hours have passed.",
+        "operationId": "send_template_ventures__venture_id__whatsapp_chats__chat_id__template_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Template",
+        "tags": [
+          "whatsapp"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/whatsapp/templates": {
+      "get": {
+        "description": "The business's templates. `refresh` reads the latest from WhatsApp first (team members who can write).",
+        "operationId": "list_templates_ventures__venture_id__whatsapp_templates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Refresh",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplatesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Templates",
+        "tags": [
+          "whatsapp"
+        ]
+      },
+      "post": {
+        "description": "Writes a template and sends it to Meta for review (usually minutes, at most a day).",
+        "operationId": "create_template_ventures__venture_id__whatsapp_templates_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Template",
+        "tags": [
+          "whatsapp"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/whatsapp/templates/{template_id}": {
+      "delete": {
+        "description": "Deletes the template from the WhatsApp account too. Meta keeps the name blocked for 30 days.",
+        "operationId": "delete_template_ventures__venture_id__whatsapp_templates__template_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Template",
         "tags": [
           "whatsapp"
         ]

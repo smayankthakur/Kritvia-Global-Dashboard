@@ -1,20 +1,24 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Bot, CornerDownLeft, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, Bot, CornerDownLeft, FileText, MessageSquarePlus, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/dialog";
-import { FormError, Textarea } from "@/components/ui/field";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
+import { Checkbox, Field, FormError, Input, Textarea } from "@/components/ui/field";
 import { Notice, PageHeader } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
+import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/components/ui/cn";
-import { cannotSend, chatName, formatPhone, senderLabel } from "@/components/whatsapp/chat";
+import { cannotSend, chatName, formatPhone, needsTemplate, normalisePhone, senderLabel } from "@/components/whatsapp/chat";
+import { TemplateFields, useTemplates, type TemplateChoice } from "@/components/whatsapp/send-template";
+import { paramProblem, sendableTemplates } from "@/components/whatsapp/templates";
+import { TemplatesPanel } from "@/components/whatsapp/templates-panel";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative, formatTime } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
@@ -80,11 +84,75 @@ function Bubble({ m, customer }: { m: Message; customer: string }) {
       >
         <p className="mb-0.5 text-xs text-subtle">
           {senderLabel(m.sent_by, customer)} · {formatTime(m.created_at)}
+          {m.kind === "template" ? " · template" : ""}
         </p>
         <p className="whitespace-pre-wrap break-words">{m.body}</p>
         {m.status === "failed" ? <p className="mt-1 text-xs text-danger">Not delivered: {m.error ?? "WhatsApp refused it"}</p> : null}
       </div>
     </li>
+  );
+}
+
+/** Problem with a template choice before it is sent, or null. */
+function choiceProblem(choice: TemplateChoice, count: number): string | null {
+  if (!choice.templateId) return "Choose a template.";
+  for (let i = 0; i < count; i++) {
+    const p = paramProblem(choice.params[i] ?? "");
+    if (p) return p;
+  }
+  return null;
+}
+
+/** Shown in a chat when the 24 hours are over: the only way to write is an approved template. */
+function TemplateComposer({ ventureId, chatId, onSent }: { ventureId: string; chatId: string; onSent: () => void }) {
+  const templates = useTemplates(ventureId);
+  const [choice, setChoice] = useState<TemplateChoice>({ templateId: "", params: [] });
+  const [error, setError] = useState<string | null>(null);
+  const send = useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.POST("/ventures/{venture_id}/whatsapp/chats/{chat_id}/template", {
+          params: { path: { venture_id: ventureId, chat_id: chatId } },
+          body: { template_id: choice.templateId, params: choice.params.map((p) => p.trim()) },
+        }),
+      ),
+    onSuccess: () => {
+      setChoice({ templateId: "", params: [] });
+      setError(null);
+      onSent();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const all = templates.data?.templates ?? [];
+  if (templates.isPending) return <SkeletonRows rows={1} />;
+  if (!sendableTemplates(all).length)
+    return (
+      <p className="text-sm text-muted">
+        No approved template yet.{" "}
+        <Link href={`/v/${ventureId}/whatsapp?tab=templates`} className="font-medium underline underline-offset-2">
+          Write one
+        </Link>{" "}
+        (approval usually takes minutes).
+      </p>
+    );
+  const count = all.find((t) => t.id === choice.templateId)?.params ?? 0;
+  return (
+    <div className="space-y-3">
+      <TemplateFields templates={all} value={choice} onChange={setChoice} idPrefix={`chat-${chatId}`} />
+      <FormError message={error} />
+      <Button
+        variant="primary"
+        loading={send.isPending}
+        icon={<FileText className="h-4 w-4" />}
+        onClick={() => {
+          const p = choiceProblem(choice, count);
+          if (p) return setError(p);
+          send.mutate();
+        }}
+      >
+        Send template
+      </Button>
+    </div>
   );
 }
 
@@ -241,37 +309,44 @@ function Conversation({ ventureId, chatId, canWrite, canAdmin, onClose }: {
                 </Notice>
               </div>
             ) : null}
-            <form onSubmit={submit} className="space-y-2 border-t border-border p-3" noValidate>
-              {blocked ? (
+            {blocked && needsTemplate(c, canWrite) ? (
+              <div className="space-y-3 border-t border-border p-3">
                 <p className="text-sm text-muted">{blocked}</p>
-              ) : (
-                <>
-                  <label htmlFor="wa-reply" className="sr-only">
-                    Reply to {name}
-                  </label>
-                  <Textarea
-                    id="wa-reply"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit();
-                    }}
-                    rows={2}
-                    maxLength={4096}
-                    placeholder="Type a reply…"
-                  />
-                  <FormError message={error} />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button type="submit" variant="primary" loading={send.isPending} icon={<CornerDownLeft className="h-4 w-4" />}>
-                      Send now
-                    </Button>
-                    <span className="text-xs text-subtle">
-                      {c.handled_by === "kritvia" ? "Sending takes this chat over from Kritvia. " : ""}Ctrl + Enter
-                    </span>
-                  </div>
-                </>
-              )}
-            </form>
+                <TemplateComposer ventureId={ventureId} chatId={chatId} onSent={refresh} />
+              </div>
+            ) : (
+              <form onSubmit={submit} className="space-y-2 border-t border-border p-3" noValidate>
+                {blocked ? (
+                  <p className="text-sm text-muted">{blocked}</p>
+                ) : (
+                  <>
+                    <label htmlFor="wa-reply" className="sr-only">
+                      Reply to {name}
+                    </label>
+                    <Textarea
+                      id="wa-reply"
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit();
+                      }}
+                      rows={2}
+                      maxLength={4096}
+                      placeholder="Type a reply…"
+                    />
+                    <FormError message={error} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="submit" variant="primary" loading={send.isPending} icon={<CornerDownLeft className="h-4 w-4" />}>
+                        Send now
+                      </Button>
+                      <span className="text-xs text-subtle">
+                        {c.handled_by === "kritvia" ? "Sending takes this chat over from Kritvia. " : ""}Ctrl + Enter
+                      </span>
+                    </div>
+                  </>
+                )}
+              </form>
+            )}
             <ConfirmDialog
               open={confirmDelete}
               onClose={() => setConfirmDelete(false)}
@@ -288,17 +363,120 @@ function Conversation({ ventureId, chatId, canWrite, canAdmin, onClose }: {
   );
 }
 
+function NewChatDialog({ ventureId, open, onClose, onCreated }: {
+  ventureId: string;
+  open: boolean;
+  onClose: () => void;
+  onCreated: (chatId: string) => void;
+}) {
+  const templates = useTemplates(ventureId);
+  const [phone, setPhone] = useState("+91 ");
+  const [name, setName] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [choice, setChoice] = useState<TemplateChoice>({ templateId: "", params: [] });
+  const [error, setError] = useState<string | null>(null);
+  const all = templates.data?.templates ?? [];
+  const create = useMutation({
+    mutationFn: (digits: string) =>
+      unwrap(
+        api.POST("/ventures/{venture_id}/whatsapp/chats", {
+          params: { path: { venture_id: ventureId } },
+          body: {
+            phone: `+${digits}`,
+            name: name.trim() || null,
+            consent: true,
+            template_id: choice.templateId,
+            params: choice.params.map((p) => p.trim()),
+          },
+        }),
+      ),
+    onSuccess: (c) => {
+      setPhone("+91 ");
+      setName("");
+      setConsent(false);
+      setChoice({ templateId: "", params: [] });
+      setError(null);
+      onCreated(c.id);
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const submit = (e?: FormEvent) => {
+    e?.preventDefault();
+    const digits = normalisePhone(phone);
+    if (!digits) return setError("Write the number with its country code, e.g. +91 98111 22233.");
+    const p = choiceProblem(choice, all.find((t) => t.id === choice.templateId)?.params ?? 0);
+    if (p) return setError(p);
+    if (!consent) return setError("Only message people who agreed to hear from you on WhatsApp.");
+    setError(null);
+    create.mutate(digits);
+  };
+  const none = templates.data && !sendableTemplates(all).length;
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="New WhatsApp chat"
+      description="Write first with an approved template. When they answer, Kritvia drafts the replies like in any other chat."
+      footer={
+        none ? null : (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={create.isPending} onClick={() => submit()}>
+              Send
+            </Button>
+          </>
+        )
+      }
+    >
+      {none ? (
+        <Notice tone="info" title="No approved template yet">
+          WhatsApp only lets a business write first with a message it approved in advance.{" "}
+          <Link href={`/v/${ventureId}/whatsapp?tab=templates`} onClick={onClose} className="font-medium underline underline-offset-2">
+            Write a template
+          </Link>
+          ; approval usually takes minutes.
+        </Notice>
+      ) : (
+        <form onSubmit={submit} className="space-y-3" noValidate>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="WhatsApp number" hint="With country code" required>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="off" maxLength={24} />
+            </Field>
+            <Field label="Name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+            </Field>
+          </div>
+          <TemplateFields templates={all} value={choice} onChange={setChoice} idPrefix="new-chat" />
+          <Checkbox
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            label="This person agreed to get WhatsApp messages from us"
+            hint="WhatsApp blocks numbers that message people who didn't ask for it."
+          />
+          <FormError message={error} />
+          <button type="submit" hidden />
+        </form>
+      )}
+    </Dialog>
+  );
+}
+
 function WhatsAppView() {
   const v = useVenture();
   const router = useRouter();
   const params = useSearchParams();
   const selected = params.get("c");
+  const tab = params.get("tab") === "templates" ? "templates" : "chats";
+  const [newChat, setNewChat] = useState(false);
   const chats = useQuery({
     queryKey: ["whatsapp", v.id],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/whatsapp/chats", { params: { path: { venture_id: v.id } } })),
     refetchInterval: 10000,
   });
   const select = (id: string | null) => router.replace(id ? `/v/${v.id}/whatsapp?c=${id}` : `/v/${v.id}/whatsapp`, { scroll: false });
+  const setTab = (t: string) => router.replace(t === "templates" ? `/v/${v.id}/whatsapp?tab=templates` : `/v/${v.id}/whatsapp`, { scroll: false });
   const canWrite = v.access === "write";
   const canAdmin = Boolean(v.can_admin || v.is_owner);
 
@@ -318,29 +496,59 @@ function WhatsAppView() {
           by logging in with Facebook (about 2 minutes), and new customer messages will appear here.
         </Notice>
       ) : null}
-      <Card className="overflow-hidden p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
-          <div className={cn("min-w-0 border-border lg:border-r", selected && "hidden lg:block")}>
-            <QueryState query={chats} loading={<SkeletonRows rows={5} className="p-3" />}>
-              {(d: Schemas["ChatsOut"]) => <ChatList chats={d.chats} selected={selected} onSelect={select} />}
-            </QueryState>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <Tabs
+          label="WhatsApp"
+          value={tab}
+          onChange={setTab}
+          items={[
+            { id: "chats", label: "Chats" },
+            { id: "templates", label: "Templates" },
+          ]}
+        />
+        {tab === "chats" && canWrite && chats.data?.connected ? (
+          <Button size="sm" onClick={() => setNewChat(true)} icon={<MessageSquarePlus className="h-4 w-4" />}>
+            New chat
+          </Button>
+        ) : null}
+      </div>
+      {tab === "templates" ? (
+        <TemplatesPanel ventureId={v.id} canWrite={canWrite} canAdmin={canAdmin} />
+      ) : (
+        <Card className="overflow-hidden p-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
+            <div className={cn("min-w-0 border-border lg:border-r", selected && "hidden lg:block")}>
+              <QueryState query={chats} loading={<SkeletonRows rows={5} className="p-3" />}>
+                {(d: Schemas["ChatsOut"]) => <ChatList chats={d.chats} selected={selected} onSelect={select} />}
+              </QueryState>
+            </div>
+            <div className={cn("min-w-0", !selected && "hidden lg:block")}>
+              {selected ? (
+                <Conversation
+                  key={selected}
+                  ventureId={v.id}
+                  chatId={selected}
+                  canWrite={canWrite}
+                  canAdmin={canAdmin}
+                  onClose={() => select(null)}
+                />
+              ) : (
+                <EmptyState title="Pick a chat" description="Choose a customer on the left to read the chat and reply." />
+              )}
+            </div>
           </div>
-          <div className={cn("min-w-0", !selected && "hidden lg:block")}>
-            {selected ? (
-              <Conversation
-                key={selected}
-                ventureId={v.id}
-                chatId={selected}
-                canWrite={canWrite}
-                canAdmin={canAdmin}
-                onClose={() => select(null)}
-              />
-            ) : (
-              <EmptyState title="Pick a chat" description="Choose a customer on the left to read the chat and reply." />
-            )}
-          </div>
-        </div>
-      </Card>
+        </Card>
+      )}
+      <NewChatDialog
+        ventureId={v.id}
+        open={newChat}
+        onClose={() => setNewChat(false)}
+        onCreated={(id) => {
+          setNewChat(false);
+          void chats.refetch();
+          select(id);
+        }}
+      />
     </div>
   );
 }

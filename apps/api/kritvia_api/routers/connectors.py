@@ -332,6 +332,8 @@ class WhatsAppConnectIn(BaseModel):
     phone_number_id: str = Field(min_length=5, max_length=40, pattern=r"^\d+$",
                                  description="from Meta → WhatsApp → API setup")
     access_token: str = Field(min_length=20, max_length=1000, description="permanent system-user token")
+    waba_id: str | None = Field(default=None, min_length=5, max_length=40, pattern=r"^\d+$",
+                                description="WhatsApp Business Account id; needed to write templates in Kritvia")
 
 
 class WhatsAppConnectOut(BaseModel):
@@ -383,8 +385,12 @@ async def connect_whatsapp(venture_id: uuid.UUID, body: WhatsAppConnectIn, user_
         info = await svc.whatsapp.check_number(body.phone_number_id, body.access_token)
     except WhatsAppError as exc:
         raise HTTPException(422, str(exc)) from None
+    # The account id is only stored when the token proves the number belongs to it.
+    if body.waba_id and body.phone_number_id not in await svc.whatsapp.number_ids(body.waba_id, body.access_token):
+        raise HTTPException(422, "this phone number id isn't in that WhatsApp Business Account")
     return await _store_whatsapp(db, svc, org=org, venture_id=venture_id, user_id=user_id,
-                                 phone_number_id=body.phone_number_id, token=body.access_token, info=info)
+                                 phone_number_id=body.phone_number_id, token=body.access_token, info=info,
+                                 waba_id=body.waba_id)
 
 
 class WhatsAppSignupConfigOut(BaseModel):
@@ -463,9 +469,12 @@ async def _plan_allows(run_as: uuid.UUID, venture_id: uuid.UUID, integration: st
 
 @router.post("/hooks/whatsapp", response_model=WhatsAppHookOut)
 async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
-    """Inbound WhatsApp messages → one inbox_assistant run each (deduped by message id).
+    """Inbound WhatsApp messages → one inbox_assistant run each (deduped by message id). Also takes
+    messages the owner sent from the WhatsApp Business app (echoes) and Meta's template reviews.
     Always answers 200 once the signature checks out, so Meta does not retry."""
-    from kritvia_api.services.whatsapp import parse_inbound, verify_signature
+    from kritvia_api.routers.whatsapp_chats import notify_template, record_echo, record_template_status
+    from kritvia_api.services.whatsapp import (parse_echoes, parse_inbound, parse_template_statuses,
+                                               verify_signature)
     from kritvia_api.workflows.inbox import message_input
     await limiter.hit(f"hook-ip:{client_ip(request)}", per_minute=600)
     body = await request.body()
@@ -517,6 +526,37 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
             ignored += 1
         except ValueError:   # workflow disabled or venture kind mismatch: ignore, don't make Meta retry
             ignored += 1
+    for e in parse_echoes(payload if isinstance(payload, dict) else {}):
+        if e.phone_number_id not in principals:
+            async with tenant_tx(None, "system") as conn:
+                principals[e.phone_number_id] = (await conn.execute(
+                    text("SELECT * FROM private.whatsapp_principal(:p)"), {"p": e.phone_number_id})).first()
+        p = principals[e.phone_number_id]
+        if p is None:
+            ignored += 1
+            continue
+        async with tenant_tx(p.run_as, "agent", "whatsapp") as conn:
+            waiting = await record_echo(conn, EnvelopeCrypto(conn, svc.keys), org_id=p.org_id,
+                                        venture_id=p.venture_id, to=e.to, body=e.text, kind=e.kind,
+                                        provider_id=e.message_id)
+        if waiting is None:
+            ignored += 1
+            continue
+        await wa_inbox.withdraw_drafts(p.run_as, waiting)
+        accepted += 1
+    for t in parse_template_statuses(payload if isinstance(payload, dict) else {}):
+        async with tenant_tx(None, "system") as conn:
+            owners = (await conn.execute(text("SELECT * FROM private.whatsapp_waba_principals(:w)"),
+                                         {"w": t.waba_id})).all()
+        if not owners:
+            ignored += 1
+        for p in owners:
+            async with tenant_tx(p.run_as, "agent", "whatsapp") as conn:
+                changed = await record_template_status(conn, p.venture_id, meta_id=t.meta_id, name=t.name,
+                                                       language=t.language, status_=t.status, reason=t.reason)
+            if changed:
+                await notify_template(p.venture_id, changed, t.status, t.reason)
+            accepted += 1
     return WhatsAppHookOut(accepted=accepted, ignored=ignored)
 
 @router.post("/hooks/{connector_id}", response_model=HookOut, status_code=202)
