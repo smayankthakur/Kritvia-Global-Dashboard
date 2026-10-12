@@ -46,18 +46,37 @@ Migration `0034_whatsapp_front_door.sql`.
   treated as the customer's words, never as instructions to the agent. An ID, card or account number
   anywhere in the recent chat keeps the draft on the private model.
 
-## Set-up
+## Connecting a number (Settings → Connectors → Connect WhatsApp)
 
-- Server `.env`: `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN` of Kritvia's Meta app. In the Meta
-  app, the webhook is `https://api.<domain>/hooks/whatsapp` with the `messages` field subscribed.
-- Each business connects its number in Settings → Connectors → WhatsApp with the phone number id and
-  a permanent access token. The number must belong to a WhatsApp Business account that has Kritvia's
-  Meta app added, because Meta sends webhooks only to that app.
-- Today that link is made by hand (for the pilot, on the set-up call). Self-serve connection needs
-  Meta's Embedded Signup, which requires Kritvia to be a Meta Tech Provider: the next step for this
-  feature.
+The owner presses **Connect WhatsApp** on `/v/<business>/whatsapp-connect`, logs in with Facebook in
+Meta's window (Embedded Signup) and picks or adds their number; a new number is verified by SMS or call.
+A number already on the **WhatsApp Business app** can be connected and stays usable on the phone
+(coexistence). Kritvia then, on the server (`POST /ventures/{v}/connectors/whatsapp/signup`):
+
+1. exchanges Meta's 30-second code for the business's token (app id + app secret);
+2. finds the number when Meta's window didn't name it, and checks the token reaches it (ids from the
+   browser are never trusted alone);
+3. subscribes Kritvia's app to the WhatsApp account, so messages arrive at `/hooks/whatsapp`;
+4. registers a new number on the Cloud API with a random two-step PIN (skipped for app numbers; reset the
+   PIN in WhatsApp Manager if it is ever needed);
+5. saves the number and the token (encrypted).
+
+The manual way (phone number id + permanent token) stays on that page under "Advanced".
+
+## Server set-up (once)
+
+- `.env`: `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_ID` and `WHATSAPP_SIGNUP_CONFIG_ID`.
+- Meta app (Kritvia's): WhatsApp product with the webhook `https://api.<domain>/hooks/whatsapp`
+  (`messages`; also `smb_message_echoes` for app numbers); Facebook Login for Business → Configurations →
+  a "WhatsApp Embedded Signup" configuration (its id is `WHATSAPP_SIGNUP_CONFIG_ID`); allowed domain
+  `app.<domain>`.
+- Meta requires Kritvia to be a **Tech Provider** (business verification and app review for
+  `whatsapp_business_management` and `whatsapp_business_messaging`) before other businesses can use
+  the signup. Until then only people with a role on Kritvia's Meta app can complete it.
+- The connect page alone allows Meta's hosts and popups (`docs/compliance/third-party-register.md`).
 
 ## Not built yet
 
 Message templates (to write first or after 24 hours), offering meeting slots from the calendar,
-media (photos, voice notes) beyond their captions, and read receipts.
+media (photos, voice notes) beyond their captions, read receipts, and showing messages the owner sends
+from the WhatsApp Business app (`smb_message_echoes`) in the chat.

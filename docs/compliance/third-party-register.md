@@ -22,6 +22,15 @@ section 4 is the public list of processors; this register is the internal record
    `trust-scan.mjs` fails the build if the block holds a non-Google origin or the middleware applies it
    anywhere else. Google already receives this data as the customer's connected provider; the picker
    sets no cookies of ours and loads only when the owner opens that page.
+
+   **The second exception (12 October 2026): Meta's WhatsApp signup**, on the page
+   `/v/<business>/whatsapp-connect` only. A business connects its WhatsApp number by logging in with
+   Facebook in Meta's own window (Embedded Signup) instead of copying ids and tokens. That needs
+   Facebook's SDK and login frame in our page and a popup that reports back, so the CSP adds Meta's hosts
+   (`META_SIGNUP` in `lib/csp.ts`) and the Cross-Origin-Opener-Policy relaxes to
+   `same-origin-allow-popups` (`next.config.ts`) for that one path and no other. `trust-scan.mjs` fails
+   the build if the block holds another origin or the middleware applies it anywhere else. The SDK loads
+   only when an admin presses Connect WhatsApp; Meta already processes this data as the WhatsApp provider.
 3. **Review quarterly**: re-run `node apps/web/scripts/trust-scan.mjs --licences`, `pnpm audit --prod`, and
    `pip-audit` for the API; remove anything unused; check each processor's terms (training, retention,
    location) still match what the Privacy Policy says.
@@ -41,7 +50,7 @@ section 4 is the public list of processors; this register is the internal record
 ## Code we ship (5 October 2026)
 
 **Web app (browser and Next.js server)** — no third-party network calls from the browser, except
-Google's Drive picker on its own page (above).
+Google's Drive picker and Meta's WhatsApp signup, each on its own page (above).
 
 | Package | Purpose | Sends data anywhere? | Licence |
 | --- | --- | --- | --- |

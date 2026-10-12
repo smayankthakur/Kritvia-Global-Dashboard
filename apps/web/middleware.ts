@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE, cookieSecure } from "@/lib/bff/cookies";
 import { csrfCookie, csrfCookieName, newCsrfToken } from "@/lib/bff/csrf";
-import { PICKER_PAGE, buildCsp, makeNonce } from "@/lib/csp";
+import { PICKER_PAGE, WHATSAPP_CONNECT_PAGE, buildCsp, makeNonce } from "@/lib/csp";
 
 const PUBLIC_PAGES = [
   "/welcome",
@@ -52,7 +52,10 @@ export function middleware(req: NextRequest) {
 
 function withCsp(req: NextRequest, rewriteTo?: URL) {
   const nonce = makeNonce();
-  const csp = buildCsp(nonce, process.env.NODE_ENV !== "production", { googlePicker: PICKER_PAGE.test(req.nextUrl.pathname) });
+  const csp = buildCsp(nonce, process.env.NODE_ENV !== "production", {
+    googlePicker: PICKER_PAGE.test(req.nextUrl.pathname),
+    metaSignup: WHATSAPP_CONNECT_PAGE.test(req.nextUrl.pathname),
+  });
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);

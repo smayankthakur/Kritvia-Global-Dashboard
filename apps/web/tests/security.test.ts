@@ -52,3 +52,18 @@ describe("Google picker CSP", () => {
     expect(PICKER_PAGE.test("/v/x/drive-picker/evil")).toBe(false);
   });
 });
+
+describe("Meta signup CSP", () => {
+  it("names Meta's hosts only on the Connect WhatsApp page", async () => {
+    const { buildCsp, WHATSAPP_CONNECT_PAGE } = await import("@/lib/csp");
+    expect(buildCsp("n")).not.toMatch(/facebook|fbcdn/);
+    expect(buildCsp("n", false, { googlePicker: true })).not.toMatch(/facebook/);
+    const meta = buildCsp("n", false, { metaSignup: true });
+    expect(meta).toContain("frame-src 'self' https://www.facebook.com");
+    expect(meta).toContain("https://graph.facebook.com");
+    expect(meta).not.toMatch(/google/);
+    expect(WHATSAPP_CONNECT_PAGE.test("/v/3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90/whatsapp-connect")).toBe(true);
+    expect(WHATSAPP_CONNECT_PAGE.test("/v/3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90/whatsapp")).toBe(false);
+    expect(WHATSAPP_CONNECT_PAGE.test("/v/x/whatsapp-connect/evil")).toBe(false);
+  });
+});

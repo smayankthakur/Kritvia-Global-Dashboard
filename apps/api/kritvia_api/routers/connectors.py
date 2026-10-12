@@ -342,28 +342,21 @@ class WhatsAppConnectOut(BaseModel):
     webhook_ready: bool = Field(description="false until WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN are set")
 
 
-@router.post("/ventures/{venture_id}/connectors/whatsapp", response_model=WhatsAppConnectOut, status_code=201)
-async def connect_whatsapp(venture_id: uuid.UUID, body: WhatsAppConnectIn, user_id: UserId, db: TenantDB,
-                           svc: Svc) -> WhatsAppConnectOut:
-    """Connect the venture's WhatsApp Business number. The token is checked against Meta
-    before it is stored (encrypted); it is never returned."""
-    org = await _require_admin(db, venture_id)
-    await require_integration(db, venture_id, "whatsapp")
-    from kritvia_api.services.whatsapp import WhatsAppError
-    try:
-        info = await svc.whatsapp.check_number(body.phone_number_id, body.access_token)
-    except WhatsAppError as exc:
-        raise HTTPException(422, str(exc)) from None
+async def _store_whatsapp(db, svc, *, org: uuid.UUID, venture_id: uuid.UUID, user_id: uuid.UUID,
+                          phone_number_id: str, token: str, info: dict[str, Any],
+                          waba_id: str | None = None) -> WhatsAppConnectOut:
     display = info.get("display_phone_number")
     try:
         async with db.begin_nested():
             cid = (await db.execute(text(
-                "INSERT INTO connectors (org_id, venture_id, provider, account_email, external_id, scopes, created_by)"
-                " VALUES (:o, :v, 'whatsapp', :d, :x, ARRAY['messages'], :u)"
+                "INSERT INTO connectors (org_id, venture_id, provider, account_email, external_id, scopes, meta, created_by)"
+                " VALUES (:o, :v, 'whatsapp', :d, :x, ARRAY['messages'], CAST(:m AS jsonb), :u)"
                 " ON CONFLICT (venture_id, provider) DO UPDATE SET status = 'active', account_email = EXCLUDED.account_email,"
-                " external_id = EXCLUDED.external_id, last_error = NULL, updated_at = now() RETURNING id"),
-                {"o": org, "v": venture_id, "d": display, "x": body.phone_number_id, "u": user_id})).scalar_one()
-            enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, SECRET, body.access_token)
+                " external_id = EXCLUDED.external_id, meta = connectors.meta || EXCLUDED.meta, last_error = NULL,"
+                " updated_at = now() RETURNING id"),
+                {"o": org, "v": venture_id, "d": display, "x": phone_number_id, "u": user_id,
+                 "m": json.dumps({"waba_id": waba_id} if waba_id else {})})).scalar_one()
+            enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, SECRET, token)
             await db.execute(text(
                 "INSERT INTO connector_tokens (connector_id, org_id, venture_id, secret_enc) VALUES (:c, :o, :v, :s)"
                 " ON CONFLICT (connector_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, updated_at = now()"),
@@ -375,6 +368,75 @@ async def connect_whatsapp(venture_id: uuid.UUID, body: WhatsAppConnectIn, user_
     return WhatsAppConnectOut(connector_id=cid, display_phone_number=display, verified_name=info.get("verified_name"),
                               webhook_url=f"{get_settings().public_api_url}/hooks/whatsapp",
                               webhook_ready=svc.whatsapp.configured)
+
+
+@router.post("/ventures/{venture_id}/connectors/whatsapp", response_model=WhatsAppConnectOut, status_code=201)
+async def connect_whatsapp(venture_id: uuid.UUID, body: WhatsAppConnectIn, user_id: UserId, db: TenantDB,
+                           svc: Svc) -> WhatsAppConnectOut:
+    """Connect the venture's WhatsApp Business number with a pasted id and token (the advanced way;
+    most businesses use the signup below). The token is checked against Meta before it is stored
+    (encrypted); it is never returned."""
+    org = await _require_admin(db, venture_id)
+    await require_integration(db, venture_id, "whatsapp")
+    from kritvia_api.services.whatsapp import WhatsAppError
+    try:
+        info = await svc.whatsapp.check_number(body.phone_number_id, body.access_token)
+    except WhatsAppError as exc:
+        raise HTTPException(422, str(exc)) from None
+    return await _store_whatsapp(db, svc, org=org, venture_id=venture_id, user_id=user_id,
+                                 phone_number_id=body.phone_number_id, token=body.access_token, info=info)
+
+
+class WhatsAppSignupConfigOut(BaseModel):
+    ready: bool = Field(description="false until the server has the Meta app id, signup configuration and app secret")
+    app_id: str
+    config_id: str
+    graph_version: str
+
+
+class WhatsAppSignupIn(BaseModel):
+    code: str = Field(min_length=10, max_length=2000, description="from Meta's signup window (valid 30 seconds)")
+    phone_number_id: str | None = Field(default=None, min_length=5, max_length=40, pattern=r"^\d+$",
+                                        description="missing when Meta's window doesn't name it; looked up then")
+    waba_id: str = Field(min_length=5, max_length=40, pattern=r"^\d+$")
+    business_app: bool = Field(default=False, description="the number stays on the WhatsApp Business app (coexistence)")
+
+
+@router.get("/ventures/{venture_id}/connectors/whatsapp/signup", response_model=WhatsAppSignupConfigOut)
+async def whatsapp_signup_config(venture_id: uuid.UUID, db: TenantDB, svc: Svc) -> WhatsAppSignupConfigOut:
+    """What the "Connect WhatsApp" button needs to open Meta's signup window."""
+    from kritvia_api.services.whatsapp import GRAPH_VERSION
+    await venture_org(db, venture_id)
+    s = get_settings()
+    ready = bool(s.meta_app_id and s.whatsapp_signup_config_id and svc.whatsapp.app_secret)
+    return WhatsAppSignupConfigOut(ready=ready, app_id=s.meta_app_id if ready else "",
+                                   config_id=s.whatsapp_signup_config_id if ready else "", graph_version=GRAPH_VERSION)
+
+
+@router.post("/ventures/{venture_id}/connectors/whatsapp/signup", response_model=WhatsAppConnectOut, status_code=201)
+async def whatsapp_signup(venture_id: uuid.UUID, body: WhatsAppSignupIn, user_id: UserId, db: TenantDB,
+                          svc: Svc) -> WhatsAppConnectOut:
+    """Finish "Connect WhatsApp": the owner logged in with Facebook and chose (or added) their number
+    in Meta's window. Kritvia turns the code into access for this business, switches on incoming
+    messages, activates the number and saves it, so nothing has to be copied by hand."""
+    org = await _require_admin(db, venture_id)
+    await require_integration(db, venture_id, "whatsapp")
+    s = get_settings()
+    if not (s.meta_app_id and s.whatsapp_signup_config_id and svc.whatsapp.app_secret):
+        raise HTTPException(status.HTTP_409_CONFLICT, "WhatsApp sign-up isn't switched on for this server yet")
+    from kritvia_api.services.whatsapp import WhatsAppError
+    try:
+        token = await svc.whatsapp.exchange_code(s.meta_app_id, body.code)
+        pnid = body.phone_number_id or await svc.whatsapp.first_number(body.waba_id, token)
+        # Proves the token reaches this number: the ids from the browser are never trusted alone.
+        info = await svc.whatsapp.check_number(pnid, token)
+        await svc.whatsapp.subscribe_app(body.waba_id, token)
+        if not body.business_app:     # a number kept on the WhatsApp Business app is registered already
+            await svc.whatsapp.register_number(pnid, token, f"{secrets.randbelow(10**6):06d}")
+    except WhatsAppError as exc:
+        raise HTTPException(422, str(exc)) from None
+    return await _store_whatsapp(db, svc, org=org, venture_id=venture_id, user_id=user_id,
+                                 phone_number_id=pnid, token=token, info=info, waba_id=body.waba_id)
 
 
 @router.get("/hooks/whatsapp", response_model=None)

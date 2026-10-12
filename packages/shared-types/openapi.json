@@ -9814,6 +9814,80 @@
         "title": "WhatsAppHookOut",
         "type": "object"
       },
+      "WhatsAppSignupConfigOut": {
+        "properties": {
+          "app_id": {
+            "title": "App Id",
+            "type": "string"
+          },
+          "config_id": {
+            "title": "Config Id",
+            "type": "string"
+          },
+          "graph_version": {
+            "title": "Graph Version",
+            "type": "string"
+          },
+          "ready": {
+            "description": "false until the server has the Meta app id, signup configuration and app secret",
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ready",
+          "app_id",
+          "config_id",
+          "graph_version"
+        ],
+        "title": "WhatsAppSignupConfigOut",
+        "type": "object"
+      },
+      "WhatsAppSignupIn": {
+        "properties": {
+          "business_app": {
+            "default": false,
+            "description": "the number stays on the WhatsApp Business app (coexistence)",
+            "title": "Business App",
+            "type": "boolean"
+          },
+          "code": {
+            "description": "from Meta's signup window (valid 30 seconds)",
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Code",
+            "type": "string"
+          },
+          "phone_number_id": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 5,
+                "pattern": "^\\d+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "missing when Meta's window doesn't name it; looked up then",
+            "title": "Phone Number Id"
+          },
+          "waba_id": {
+            "maxLength": 40,
+            "minLength": 5,
+            "pattern": "^\\d+$",
+            "title": "Waba Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "waba_id"
+        ],
+        "title": "WhatsAppSignupIn",
+        "type": "object"
+      },
       "WorkflowConfigIn": {
         "properties": {
           "enabled": {
@@ -15649,7 +15723,7 @@
     },
     "/ventures/{venture_id}/connectors/whatsapp": {
       "post": {
-        "description": "Connect the venture's WhatsApp Business number. The token is checked against Meta\nbefore it is stored (encrypted); it is never returned.",
+        "description": "Connect the venture's WhatsApp Business number with a pasted id and token (the advanced way;\nmost businesses use the signup below). The token is checked against Meta before it is stored\n(encrypted); it is never returned.",
         "operationId": "connect_whatsapp_ventures__venture_id__connectors_whatsapp_post",
         "parameters": [
           {
@@ -15701,6 +15775,112 @@
           }
         ],
         "summary": "Connect Whatsapp",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/whatsapp/signup": {
+      "get": {
+        "description": "What the \"Connect WhatsApp\" button needs to open Meta's signup window.",
+        "operationId": "whatsapp_signup_config_ventures__venture_id__connectors_whatsapp_signup_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppSignupConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Whatsapp Signup Config",
+        "tags": [
+          "connectors"
+        ]
+      },
+      "post": {
+        "description": "Finish \"Connect WhatsApp\": the owner logged in with Facebook and chose (or added) their number\nin Meta's window. Kritvia turns the code into access for this business, switches on incoming\nmessages, activates the number and saves it, so nothing has to be copied by hand.",
+        "operationId": "whatsapp_signup_ventures__venture_id__connectors_whatsapp_signup_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppSignupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppConnectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Whatsapp Signup",
         "tags": [
           "connectors"
         ]

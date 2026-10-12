@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     # verify token is what you type into Meta's webhook setup. Per-number tokens live in connectors.
     whatsapp_app_secret: str = ""
     whatsapp_verify_token: str = ""
+    # Embedded Signup ("Connect WhatsApp" with a Facebook login): the Meta app's id (public) and the
+    # Facebook Login for Business configuration id (WhatsApp Embedded Signup). Empty = only the manual form.
+    meta_app_id: str = ""
+    whatsapp_signup_config_id: str = ""
 
     # Plan for organisations without one (see plans.py). Tests use "internal".
     default_plan: str = "free"

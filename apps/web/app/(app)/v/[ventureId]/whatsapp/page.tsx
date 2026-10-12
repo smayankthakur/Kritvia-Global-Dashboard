@@ -311,11 +311,11 @@ function WhatsAppView() {
       />
       {chats.data && !chats.data.connected ? (
         <Notice tone="warning" title="WhatsApp isn't connected">
-          Connect your WhatsApp Business number in{" "}
-          <Link href="/settings/connectors" className="font-medium underline underline-offset-2">
-            Settings → Connectors
-          </Link>{" "}
-          and new customer messages will appear here.
+          {/* A full page load (not a client-side link): only that page may open Meta's signup window. */}
+          <a href={`/v/${v.id}/whatsapp-connect`} className="font-medium underline underline-offset-2">
+            Connect WhatsApp
+          </a>{" "}
+          by logging in with Facebook (about 2 minutes), and new customer messages will appear here.
         </Notice>
       ) : null}
       <Card className="overflow-hidden p-0">

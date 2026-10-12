@@ -6,8 +6,12 @@
  * The one exception to "no outside origins": the Drive picker page (PICKER_PAGE, opened from
  * Settings → Connectors) runs Google's file picker, which loads Google's scripts from our nonce'd
  * code ('strict-dynamic' admits them), opens a Google frame and talks to Google's APIs. Only that
- * page gets these hosts (middleware.ts); every other page keeps the strict policy. */
+ * page gets these hosts (middleware.ts); every other page keeps the strict policy. The "Connect
+ * WhatsApp" page is the second, for Meta's signup (WHATSAPP_CONNECT_PAGE below). */
 export const PICKER_PAGE = /^\/v\/[0-9a-f-]{36}\/drive-picker$/;
+/** The second exception: the "Connect WhatsApp" page runs Meta's signup (Facebook's SDK, its login
+ * frame and popup). Only that page gets Meta's hosts. */
+export const WHATSAPP_CONNECT_PAGE = /^\/v\/[0-9a-f-]{36}\/whatsapp-connect$/;
 // trust-scan: allowed-origins-start
 export const GOOGLE_PICKER = {
   frame: ["https://docs.google.com", "https://accounts.google.com", "https://content.googleapis.com"],
@@ -15,10 +19,16 @@ export const GOOGLE_PICKER = {
   img: ["https://*.googleusercontent.com", "https://ssl.gstatic.com", "https://www.gstatic.com"],
   style: ["https://accounts.google.com"],
 };
+export const META_SIGNUP = {
+  frame: ["https://www.facebook.com", "https://web.facebook.com", "https://business.facebook.com"],
+  connect: ["https://graph.facebook.com", "https://www.facebook.com", "https://connect.facebook.net"],
+  img: ["https://*.facebook.com", "https://*.fbcdn.net"],
+  style: [] as string[],
+};
 // trust-scan: allowed-origins-end
 
-export function buildCsp(nonce: string, dev = false, opts: { googlePicker?: boolean } = {}): string {
-  const g = opts.googlePicker ? GOOGLE_PICKER : { frame: [] as string[], connect: [] as string[], img: [] as string[], style: [] as string[] };
+export function buildCsp(nonce: string, dev = false, opts: { googlePicker?: boolean; metaSignup?: boolean } = {}): string {
+  const g = opts.googlePicker ? GOOGLE_PICKER : opts.metaSignup ? META_SIGNUP : { frame: [] as string[], connect: [] as string[], img: [] as string[], style: [] as string[] };
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])],

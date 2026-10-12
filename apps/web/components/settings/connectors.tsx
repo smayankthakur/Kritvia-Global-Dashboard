@@ -89,79 +89,6 @@ function DriveImportDialog({ open, onClose, ventureId }: { open: boolean; onClos
   );
 }
 
-function WhatsAppDialog({ open, onClose, ventureId, onDone }: { open: boolean; onClose: () => void; ventureId: string; onDone: () => void }) {
-  const toast = useToast();
-  const [phoneId, setPhoneId] = useState("");
-  const [token, setToken] = useState("");
-  const [result, setResult] = useState<Schemas["WhatsAppConnectOut"] | null>(null);
-  const m = useMutation({
-    mutationFn: () =>
-      unwrap(api.POST("/ventures/{venture_id}/connectors/whatsapp", { params: { path: { venture_id: ventureId } }, body: { phone_number_id: phoneId.trim(), access_token: token.trim() } })),
-    onSuccess: (out) => {
-      setResult(out);
-      setToken("");
-      toast.success("WhatsApp connected", out.display_phone_number ?? undefined);
-      onDone();
-    },
-  });
-  const close = () => {
-    m.reset();
-    setResult(null);
-    setToken("");
-    onClose();
-  };
-  const valid = /^\d{5,40}$/.test(phoneId.trim()) && token.trim().length >= 20;
-  return (
-    <Dialog
-      open={open}
-      onClose={close}
-      size="lg"
-      title="Connect WhatsApp Business"
-      description="Customers message your business number; the inbox assistant drafts replies for approval."
-      footer={
-        result ? (
-          <Button variant="primary" onClick={close}>Done</Button>
-        ) : (
-          <>
-            <Button onClick={close}>Cancel</Button>
-            <Button variant="primary" loading={m.isPending} disabled={!valid} onClick={() => m.mutate()}>
-              Connect
-            </Button>
-          </>
-        )
-      }
-    >
-      {result ? (
-        <div className="space-y-4">
-          <Notice tone="success" title={`Connected ${result.display_phone_number ?? ""}`}>
-            {result.verified_name ? `Verified name: ${result.verified_name}. ` : null}The token was checked with Meta and stored encrypted.
-          </Notice>
-          <p className="text-sm text-muted">Last step, once per Meta app: in Meta for Developers → WhatsApp → Configuration, set the webhook to this URL and subscribe to <code className="font-mono">messages</code>.</p>
-          <CopyField label="Webhook URL" value={result.webhook_url} />
-          {!result.webhook_ready ? (
-            <Notice tone="warning">The server has no WhatsApp app secret yet, so Meta&apos;s webhook will be refused. Ask your administrator to set WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN.</Notice>
-          ) : null}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <FormError message={m.isError ? errorMessage(m.error) : null} />
-          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
-            <li>In Meta Business Manager, add your business number to a WhatsApp Business app.</li>
-            <li>Create a system user with the <em>whatsapp_business_messaging</em> permission and generate a permanent token.</li>
-            <li>Paste the number&apos;s <strong>phone number id</strong> and that token below. Kritvia checks them with Meta before saving.</li>
-          </ol>
-          <Field label="Phone number id" hint="A long number from WhatsApp → API setup, not the phone number itself." required>
-            <Input value={phoneId} inputMode="numeric" placeholder="123456789012345" onChange={(e) => setPhoneId(e.target.value)} />
-          </Field>
-          <Field label="Permanent access token" hint="Stored encrypted; never shown again." required>
-            <Input type="password" value={token} autoComplete="off" onChange={(e) => setToken(e.target.value)} />
-          </Field>
-        </div>
-      )}
-    </Dialog>
-  );
-}
-
 function TallyImportDialog({ open, onClose, ventureId, onDone }: { open: boolean; onClose: () => void; ventureId: string; onDone: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Schemas["TallyImportOut"] | null>(null);
@@ -249,7 +176,6 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   const q = useQuery({ queryKey: key, queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors", { params: { path: { venture_id: ventureId } } })) });
   const [secret, setSecret] = useState<Schemas["WebhookOut"] | null>(null);
   const [drive, setDrive] = useState(false);
-  const [whatsapp, setWhatsapp] = useState(false);
   const [tally, setTally] = useState(false);
   const [removing, setRemoving] = useState<Connector | null>(null);
 
@@ -420,10 +346,11 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
               ]}
             />
           ) : (
-            <p className="text-sm text-muted">Needs a WhatsApp Business (Meta Cloud API) number. Free-form replies are allowed within 24 hours of the customer&apos;s message.</p>
+            <p className="text-sm text-muted">Log in with Facebook and pick your business number; it takes about 2 minutes. Already on the WhatsApp Business app? You can keep using it.</p>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button variant={wa ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => setWhatsapp(true)}>
+            {/* A full page load: only that page may run Meta's signup window (lib/csp.ts). */}
+            <Button variant={wa ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => window.location.assign(`/v/${ventureId}/whatsapp-connect`)}>
               {wa ? "Reconnect" : "Connect WhatsApp"}
             </Button>
             {wa ? (
@@ -458,7 +385,6 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
         </div>
       </Card>
 
-      <WhatsAppDialog open={whatsapp} onClose={() => setWhatsapp(false)} ventureId={ventureId} onDone={() => void qc.invalidateQueries({ queryKey: key })} />
       <TallyImportDialog open={tally} onClose={() => setTally(false)} ventureId={ventureId} onDone={() => void qc.invalidateQueries({ queryKey: key })} />
       <Dialog
         open={Boolean(secret)}

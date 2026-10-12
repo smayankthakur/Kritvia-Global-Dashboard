@@ -24,7 +24,8 @@ from sqlalchemy import text
 if TYPE_CHECKING:
     from kritvia_api.engine.context import RunContext
 
-GRAPH = "https://graph.facebook.com/v20.0"
+GRAPH_VERSION = "v25.0"
+GRAPH = f"https://graph.facebook.com/{GRAPH_VERSION}"
 
 
 class WhatsAppError(Exception):
@@ -127,6 +128,50 @@ class WhatsAppClient:
             raise WhatsAppError(f"WhatsApp send failed: {msg[:300]}")
         data = r.json()
         return str((data.get("messages") or [{}])[0].get("id") or "")
+
+    # --- Embedded Signup: "Connect WhatsApp" with a Facebook login, no tokens to copy ----------
+    async def exchange_code(self, app_id: str, code: str) -> str:
+        """The code Meta's signup popup returns (valid 30 seconds) → the business's token for our app."""
+        r = await self._http.get(f"{GRAPH}/oauth/access_token",
+                                 params={"client_id": app_id, "client_secret": self.app_secret, "code": code})
+        if r.status_code >= 400:
+            raise WhatsAppError("Meta did not accept the sign-in; please try connecting again")
+        try:
+            data = r.json()
+            token = data.get("access_token") if isinstance(data, dict) else None
+        except ValueError:
+            token = r.text.strip()
+        if not token:
+            raise WhatsAppError("Meta did not return access for this business; please try connecting again")
+        return str(token)
+
+    async def subscribe_app(self, waba_id: str, token: str) -> None:
+        """Messages for the customer's WhatsApp account come to our webhook from now on."""
+        r = await self._http.post(f"{GRAPH}/{waba_id}/subscribed_apps", headers={"Authorization": f"Bearer {token}"})
+        if r.status_code >= 400:
+            raise WhatsAppError("could not switch on incoming messages for this WhatsApp account")
+
+    async def first_number(self, waba_id: str, token: str) -> str:
+        """The phone number id of a WhatsApp account, when the signup window did not name one."""
+        r = await self._http.get(f"{GRAPH}/{waba_id}/phone_numbers", headers={"Authorization": f"Bearer {token}"},
+                                 params={"fields": "id"})
+        ids = [str(n.get("id")) for n in (r.json().get("data") or [])] if r.status_code < 400 else []
+        if not ids:
+            raise WhatsAppError("this WhatsApp account has no phone number yet; add one in the window and try again")
+        return ids[0]
+
+    async def register_number(self, phone_number_id: str, token: str, pin: str) -> None:
+        """Puts a number added in the signup on the Cloud API. `pin` becomes its two-step verification PIN.
+        A number that is already registered is fine."""
+        r = await self._http.post(f"{GRAPH}/{phone_number_id}/register", headers={"Authorization": f"Bearer {token}"},
+                                  json={"messaging_product": "whatsapp", "pin": pin})
+        if r.status_code >= 400:
+            try:
+                msg = str((r.json().get("error") or {}).get("message") or "")
+            except (ValueError, AttributeError):
+                msg = ""
+            if "already registered" not in msg.lower():
+                raise WhatsAppError("could not activate this number on WhatsApp; check it in WhatsApp Manager and try again")
 
     async def check_number(self, phone_number_id: str, access_token: str) -> dict[str, Any]:
         """Validate a pasted phone number id + token by reading the number's profile."""

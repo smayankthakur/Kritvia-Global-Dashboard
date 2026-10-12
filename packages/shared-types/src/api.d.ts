@@ -1770,10 +1770,37 @@ export interface paths {
         put?: never;
         /**
          * Connect Whatsapp
-         * @description Connect the venture's WhatsApp Business number. The token is checked against Meta
-         *     before it is stored (encrypted); it is never returned.
+         * @description Connect the venture's WhatsApp Business number with a pasted id and token (the advanced way;
+         *     most businesses use the signup below). The token is checked against Meta before it is stored
+         *     (encrypted); it is never returned.
          */
         post: operations["connect_whatsapp_ventures__venture_id__connectors_whatsapp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/whatsapp/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whatsapp Signup Config
+         * @description What the "Connect WhatsApp" button needs to open Meta's signup window.
+         */
+        get: operations["whatsapp_signup_config_ventures__venture_id__connectors_whatsapp_signup_get"];
+        put?: never;
+        /**
+         * Whatsapp Signup
+         * @description Finish "Connect WhatsApp": the owner logged in with Facebook and chose (or added) their number
+         *     in Meta's window. Kritvia turns the code into access for this business, switches on incoming
+         *     messages, activates the number and saves it, so nothing has to be copied by hand.
+         */
+        post: operations["whatsapp_signup_ventures__venture_id__connectors_whatsapp_signup_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6810,6 +6837,41 @@ export interface components {
              */
             ignored: number;
         };
+        /** WhatsAppSignupConfigOut */
+        WhatsAppSignupConfigOut: {
+            /** App Id */
+            app_id: string;
+            /** Config Id */
+            config_id: string;
+            /** Graph Version */
+            graph_version: string;
+            /**
+             * Ready
+             * @description false until the server has the Meta app id, signup configuration and app secret
+             */
+            ready: boolean;
+        };
+        /** WhatsAppSignupIn */
+        WhatsAppSignupIn: {
+            /**
+             * Business App
+             * @description the number stays on the WhatsApp Business app (coexistence)
+             * @default false
+             */
+            business_app: boolean;
+            /**
+             * Code
+             * @description from Meta's signup window (valid 30 seconds)
+             */
+            code: string;
+            /**
+             * Phone Number Id
+             * @description missing when Meta's window doesn't name it; looked up then
+             */
+            phone_number_id?: string | null;
+            /** Waba Id */
+            waba_id: string;
+        };
         /** WorkflowConfigIn */
         WorkflowConfigIn: {
             /**
@@ -10452,6 +10514,72 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["WhatsAppConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    whatsapp_signup_config_ventures__venture_id__connectors_whatsapp_signup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppSignupConfigOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    whatsapp_signup_ventures__venture_id__connectors_whatsapp_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppSignupIn"];
             };
         };
         responses: {

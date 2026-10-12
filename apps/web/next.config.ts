@@ -10,7 +10,6 @@ const baseHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "no-referrer" },
-  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
   { key: "Permissions-Policy", value: "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" },
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
@@ -27,6 +26,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: baseHeaders },
+      // Meta's signup popup must be able to report back to the page that opened it, so only the
+      // "Connect WhatsApp" page allows popups to keep their opener; every other page isolates fully.
+      { source: "/:path((?!v/[^/]+/whatsapp-connect$).*)", headers: [{ key: "Cross-Origin-Opener-Policy", value: "same-origin" }] },
+      { source: "/v/:id/whatsapp-connect", headers: [{ key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" }] },
       {
         source: "/api/:path*",
         headers: [
