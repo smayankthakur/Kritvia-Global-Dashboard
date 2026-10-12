@@ -38,6 +38,7 @@ RESULT_CHARS = 3000
 # an approval is created). Sandbox code tools are never offered here.
 TOOL_FIELDS: dict[str, dict[str, str]] = {
     "knowledge.search": {"query": "what to look for in the business's documents and notes"},
+    "invoices.search": {"show": "unpaid (default), overdue or paid", "customer": "optional: part of a customer's name"},
     "leads.search": {"query": "a name, company, email or phone to look for (may be empty)",
                      "status": "optional: new, qualified, proposal, contacted, replied, won or lost"},
     "crm.update_lead": {"lead_id": "the lead's id from leads.search",
@@ -54,7 +55,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
                               "description": "optional"},
 }
 REQUIRED: dict[str, tuple[str, ...]] = {
-    "knowledge.search": ("query",), "leads.search": (), "crm.update_lead": ("lead_id",),
+    "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "crm.update_lead": ("lead_id",),
     "gmail.send": ("to", "subject", "body"), "whatsapp.send": ("to", "body"),
     "whatsapp.templates": (), "whatsapp.template": ("to", "template"),
     "calendar.create_event": ("summary", "start", "end"),

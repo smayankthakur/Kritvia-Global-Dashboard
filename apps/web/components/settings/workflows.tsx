@@ -19,6 +19,7 @@ const SCHEDULED: Record<string, { at: string; label: string }> = {
   kitchen_daily: { at: "23:30", label: "Runs every night at (IST)" },
   prospector: { at: "10:30", label: "Finds leads and sends messages every day at (IST)" },
   whatsapp_followup: { at: "11:00", label: "Looks for quiet chats every day at (IST)" },
+  collections: { at: "10:00", label: "Drafts reminders every day at (IST)" },
 };
 const INSTRUCTION_HINTS: Record<string, string> = {
   inbox_assistant: "e.g. Reply in Hinglish. Delivery takes 3–5 days. Never quote prices; say we will share a quote.",
@@ -27,6 +28,7 @@ const INSTRUCTION_HINTS: Record<string, string> = {
   kitchen_daily: "e.g. Buy paneer only from Amul distributor. Keep 20% extra on weekends.",
   prospector: "e.g. Mention we built the site for Annapurna Rasoi. Skip hotels and big chains. Offer a free demo page.",
   whatsapp_followup: "e.g. Keep it light. Mention the weekend slots if they asked about bookings.",
+  collections: "e.g. Write in Hinglish. Mention that GST invoices are attached on request. Be extra polite with Kapoor Sweets.",
 };
 
 export function parseSettingsJson(text: string): { value: Record<string, unknown> | null; error: string | null } {

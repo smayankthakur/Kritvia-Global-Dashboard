@@ -50,6 +50,34 @@ def build_tools() -> ToolRegistry:
         return {"templates": [{"template": t.title, "language": t.language, "blanks": t.params,
                                "text": t.body, "example_blanks": t.examples} for t in found]}
 
+    @reg.tool("invoices.search", Capability.READ, "Look up the business's invoices: who owes how much, and since when")
+    async def invoices_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from datetime import datetime
+
+        from kritvia_api.workflows.collections import nice_date, rupees
+        from kritvia_api.workflows.common import IST
+        show = str(p.get("show") or "unpaid")
+        where = {"overdue": "status = 'open' AND due_on < :today", "paid": "status = 'paid'"}.get(show, "status = 'open'")
+        q = str(p.get("customer") or "").strip()
+        params: dict[str, Any] = {"v": ctx.venture_id, "today": datetime.now(IST).date()}
+        if q:
+            where += " AND customer_name ILIKE :q"
+            params["q"] = f"%{q}%"
+        async with ctx.tx() as conn:
+            rows = (await conn.execute(text(
+                "SELECT number, customer_name, amount_paise, paid_paise, due_on, status, paid_on, reminders_sent,"
+                f" reminders_paused FROM invoices WHERE venture_id = :v AND {where} ORDER BY due_on LIMIT 30"),
+                params)).all()
+        today = params["today"]
+        return {"invoices": [{
+            "customer": r.customer_name, "invoice": r.number or "(no number)", "total": rupees(r.amount_paise),
+            "still_due": rupees(r.amount_paise - r.paid_paise), "due": nice_date(r.due_on),
+            "days_overdue": max(0, (today - r.due_on).days) if r.status == "open" else 0, "status": r.status,
+            "paid_on": nice_date(r.paid_on) if r.paid_on else None, "reminders_sent": r.reminders_sent,
+            "reminders_paused": r.reminders_paused} for r in rows],
+            "total_still_due": rupees(sum(r.amount_paise - r.paid_paise for r in rows if r.status == "open"))
+            if rows else rupees(0)}
+
     @reg.tool("places.search", Capability.READ, "Search Google Maps (Places API) for businesses")
     async def places_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
         from kritvia_api.services.places import PlacesError

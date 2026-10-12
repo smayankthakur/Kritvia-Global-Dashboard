@@ -2063,6 +2063,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invoices */
+        get: operations["list_invoices_ventures__venture_id__invoices_get"];
+        put?: never;
+        /** Create Invoice */
+        post: operations["create_invoice_ventures__venture_id__invoices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/invoices/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Invoice
+         * @description Reads an invoice photo or PDF and returns the fields for a person to check. Nothing is saved, and
+         *     the file is not kept. The text is read on the server; an invoice carrying an ID or account number
+         *     is only shown to the private model.
+         */
+        post: operations["read_invoice_ventures__venture_id__invoices_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/invoices/{invoice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Invoice */
+        delete: operations["delete_invoice_ventures__venture_id__invoices__invoice_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Invoice */
+        patch: operations["update_invoice_ventures__venture_id__invoices__invoice_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/invoices/{invoice_id}/payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Payment
+         * @description Records money received. Paid in full: the invoice is paid and reminders stop.
+         */
+        post: operations["record_payment_ventures__venture_id__invoices__invoice_id__payment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/kitchen/accuracy": {
         parameters: {
             query?: never;
@@ -3683,6 +3761,11 @@ export interface components {
             /** Files */
             files: string[];
         };
+        /** Body_read_invoice_ventures__venture_id__invoices_read_post */
+        Body_read_invoice_ventures__venture_id__invoices_read_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_document_ventures__venture_id__documents_post */
         Body_upload_document_ventures__venture_id__documents_post: {
             /**
@@ -4894,6 +4977,158 @@ export interface components {
             /** Venture Id */
             venture_id: string | null;
         };
+        /**
+         * InvoiceDraft
+         * @description Fields read from an invoice file, for a person to check before saving. Nothing is saved.
+         */
+        InvoiceDraft: {
+            /** Amount Paise */
+            amount_paise?: number | null;
+            /** Customer Email */
+            customer_email?: string | null;
+            /**
+             * Customer Name
+             * @default
+             */
+            customer_name: string;
+            /** Customer Phone */
+            customer_phone?: string | null;
+            /** Due On */
+            due_on?: string | null;
+            /** Issued On */
+            issued_on?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Number
+             * @default
+             */
+            number: string;
+            /**
+             * Unsure
+             * @description fields the reader wasn't sure about
+             */
+            unsure?: string[];
+        };
+        /** InvoiceIn */
+        InvoiceIn: {
+            /** Amount Paise */
+            amount_paise: number;
+            /** Customer Email */
+            customer_email?: string | null;
+            /** Customer Name */
+            customer_name: string;
+            /** Customer Phone */
+            customer_phone?: string | null;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /** Issued On */
+            issued_on?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Number
+             * @default
+             */
+            number: string;
+            /**
+             * Source
+             * @default manual
+             * @enum {string}
+             */
+            source: "manual" | "file" | "tally";
+        };
+        /** InvoiceOut */
+        InvoiceOut: {
+            /** Amount Paise */
+            amount_paise: number;
+            /** Balance Paise */
+            balance_paise: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Customer Email */
+            customer_email: string | null;
+            /** Customer Name */
+            customer_name: string;
+            /** Customer Phone */
+            customer_phone: string | null;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issued On */
+            issued_on: string | null;
+            /** Last Reminder At */
+            last_reminder_at: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Overdue Days
+             * @description days past the due date while unpaid; 0 when not overdue
+             */
+            overdue_days: number;
+            /** Paid On */
+            paid_on: string | null;
+            /** Paid Paise */
+            paid_paise: number;
+            /** Reminders Paused */
+            reminders_paused: boolean;
+            /** Reminders Sent */
+            reminders_sent: number;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "paid" | "cancelled";
+        };
+        /** InvoicePatch */
+        InvoicePatch: {
+            /** Amount Paise */
+            amount_paise?: number | null;
+            /** Customer Email */
+            customer_email?: string | null;
+            /** Customer Name */
+            customer_name?: string | null;
+            /** Customer Phone */
+            customer_phone?: string | null;
+            /** Due On */
+            due_on?: string | null;
+            /** Issued On */
+            issued_on?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Number */
+            number?: string | null;
+            /** Reminders Paused */
+            reminders_paused?: boolean | null;
+            /**
+             * Status
+             * @description record payments with /payment
+             */
+            status?: ("open" | "cancelled") | null;
+        };
+        /** InvoicesOut */
+        InvoicesOut: {
+            /** Invoices */
+            invoices: components["schemas"]["InvoiceOut"][];
+            totals: components["schemas"]["Totals"];
+        };
         /** KeyIn */
         KeyIn: {
             /**
@@ -5436,6 +5671,16 @@ export interface components {
             email: string;
             /** New Password */
             new_password: string;
+        };
+        /** PaymentIn */
+        PaymentIn: {
+            /** Amount Paise */
+            amount_paise: number;
+            /**
+             * Paid On
+             * @description defaults to today (IST)
+             */
+            paid_on?: string | null;
         };
         /** PickerConfigOut */
         PickerConfigOut: {
@@ -6603,6 +6848,19 @@ export interface components {
              * @constant
              */
             token_type: "bearer";
+        };
+        /** Totals */
+        Totals: {
+            /** Open Count */
+            open_count: number;
+            /** Outstanding Paise */
+            outstanding_paise: number;
+            /** Overdue Count */
+            overdue_count: number;
+            /** Overdue Paise */
+            overdue_paise: number;
+            /** Paid This Month Paise */
+            paid_this_month_paise: number;
         };
         /** TranscriptOut */
         TranscriptOut: {
@@ -11390,6 +11648,213 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invoices_ventures__venture_id__invoices_get: {
+        parameters: {
+            query?: {
+                show?: "open" | "overdue" | "paid" | "all";
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invoice_ventures__venture_id__invoices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_invoice_ventures__venture_id__invoices_read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_read_invoice_ventures__venture_id__invoices_read_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDraft"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_invoice_ventures__venture_id__invoices__invoice_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_invoice_ventures__venture_id__invoices__invoice_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoicePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_payment_ventures__venture_id__invoices__invoice_id__payment_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceOut"];
                 };
             };
             /** @description Validation Error */
