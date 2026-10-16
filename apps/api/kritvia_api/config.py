@@ -129,6 +129,9 @@ class Settings(BaseSettings):
 
     # Self-signup. Google sign-in reuses the Google client above (same redirect URI).
     signup_open: bool = True            # false: only existing accounts and invitees can sign in
+    # Razorpay offer (Dashboard → Subscriptions → Offers: 10% off, first 3 billing cycles) applied when a
+    # business signed up with a partner's code. Empty: no discount is applied at checkout.
+    razorpay_partner_offer_id: str = ""
     # Kritvia's own team (comma-separated sign-in emails): they see Pilot health across organisations.
     staff_emails: str = ""
     terms_version: str = "2026-10-13"   # Terms of Service + Privacy Policy in force; bump when they change

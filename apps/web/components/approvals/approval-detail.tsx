@@ -95,6 +95,20 @@ const LABELS: Record<string, string> = { to: "To", subject: "Subject", body: "Bo
 const label = (k: string) => LABELS[k] ?? titleCase(k);
 
 function PayloadView({ action, payload }: { action: string; payload: Payload }) {
+  const booking = payload.booking && typeof payload.booking === "object" ? (payload.booking as Record<string, unknown>) : null;
+  if (!booking) return <PayloadBody action={action} payload={payload} />;
+  return (
+    <div className="space-y-3">
+      <p className="rounded-lg border border-info/30 bg-info-soft px-3 py-2 text-sm text-info-fg">
+        Approving also books <strong>{displayValue(booking.service)}</strong>, {displayValue(booking.when)}. If that time was
+        taken meanwhile, nothing is sent and a new reply with other times is drafted.
+      </p>
+      <PayloadBody action={action} payload={payload} />
+    </div>
+  );
+}
+
+function PayloadBody({ action, payload }: { action: string; payload: Payload }) {
   if (action === "gmail.send") {
     return (
       <div className="overflow-hidden rounded-lg border border-border">

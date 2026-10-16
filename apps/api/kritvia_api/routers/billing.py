@@ -142,8 +142,12 @@ async def subscribe(org_id: uuid.UUID, body: SubscribeIn, db: TenantDB) -> Subsc
     if prof:
         notes.update({"legal_name": prof.legal_name[:200], "gstin": prof.gstin or ""})
     count = 120 if body.period == "monthly" else 10      # ten years either way
-    sub = await _razorpay("POST", "/subscriptions", {"plan_id": plan_id, "total_count": count, "quantity": 1,
-                                                      "customer_notify": 1, "notes": notes})
+    body_: dict = {"plan_id": plan_id, "total_count": count, "quantity": 1, "customer_notify": 1, "notes": notes}
+    # Came through a partner: their 10%-off-for-3-months offer (set up once in Razorpay).
+    offer = get_settings().razorpay_partner_offer_id
+    if offer and (await db.execute(text("SELECT private.org_has_partner_discount(:o)"), {"o": org_id})).scalar():
+        body_["offer_id"] = offer
+    sub = await _razorpay("POST", "/subscriptions", body_)
     return SubscribeOut(subscription_id=sub["id"], checkout_url=sub["short_url"])
 
 
@@ -165,6 +169,16 @@ def minimum_paise(plan: str, annual: bool) -> int:
     p = plan_of(plan)
     rupees = (p.price_annual_inr or 0) if annual else p.price_inr
     return max(rupees * 100 - 100, 0)
+
+
+async def _minimum(org_id: uuid.UUID, plan: str, annual: bool) -> int:
+    """The listed price, or 90% of it while a partner's discount offer can apply."""
+    low = minimum_paise(plan, annual)
+    if get_settings().razorpay_partner_offer_id:
+        async with tenant_tx(None, "system") as conn:
+            if (await conn.execute(text("SELECT private.org_has_partner_discount(:o)"), {"o": org_id})).scalar():
+                low = low * 9 // 10 - 100
+    return low
 
 
 PLAN_FOR_STATUS = {"activated": True, "charged": True, "resumed": True, "authenticated": False,
@@ -215,7 +229,7 @@ async def razorpay_webhook(request: Request) -> dict:
                     await security_event("billing.unknown_plan", "warning", request=request, org_id=org_id,
                                          razorpay_plan=str(sub.get("plan_id"))[:40], event_name=name)
                 plan = None   # only plans sold through checkout change here; Enterprise is set by hand
-            elif amount is not None and int(amount) < minimum_paise(plan, key.endswith("_annual")):
+            elif amount is not None and int(amount) < await _minimum(org_id, plan, key.endswith("_annual")):
                 await security_event("billing.amount_mismatch", "critical", request=request, org_id=org_id,
                                      plan=key, paid_paise=int(amount), minimum_paise=minimum_paise(plan, key.endswith("_annual")))
                 plan = None   # paid less than the plan costs: record the payment, don't grant the plan
@@ -227,6 +241,11 @@ async def razorpay_webhook(request: Request) -> dict:
             "SELECT billing_record(:o, :e, :i, :s, :p, :st, :r, :a, :u)"),
             {"o": org_id, "e": name, "i": event_id, "s": sub.get("id") or inv.get("subscription_id"),
              "p": plan, "st": status_, "r": renews, "a": amount, "u": inv.get("short_url")})).scalar()
+    if fresh and name == "subscription.charged" and pay.get("id") and amount:
+        # A business that came through a partner: 20% of this payment to the partner (once per payment).
+        async with tenant_tx(None, "system") as conn:
+            await conn.execute(text("SELECT private.partner_commission(:o, :p, :a)"),
+                               {"o": org_id, "p": str(pay["id"])[:120], "a": int(amount)})
     if fresh and plan:
         await security_event("billing.plan_changed", "info", request=request, org_id=org_id, plan=plan, event_name=name)
         from kritvia_api.engine.context import get_services

@@ -204,6 +204,18 @@ class GoogleClient:
                               params={"sendUpdates": "all"}, json=body)
         return {"id": res.get("id", ""), "link": res.get("htmlLink", "")}
 
+    async def busy(self, token: str, start: str, end: str) -> list[dict[str, str]]:
+        """Timed, non-transparent events on the primary calendar between two RFC 3339 times."""
+        body = await self._req("GET", f"{CALENDAR}/calendars/primary/events", token, params={
+            "timeMin": start, "timeMax": end, "singleEvents": "true", "maxResults": 250,
+            "fields": "items(id,start/dateTime,end/dateTime,transparency,status)"})
+        out = []
+        for e in body.get("items", []):
+            st, en = (e.get("start") or {}).get("dateTime"), (e.get("end") or {}).get("dateTime")
+            if st and en and e.get("transparency") != "transparent" and e.get("status") != "cancelled":
+                out.append({"id": e.get("id", ""), "start": st, "end": en})
+        return out
+
     # --- Drive ------------------------------------------------------------------
     async def list_drive_files(self, token: str, query: str = "trashed = false",
                                page_size: int = 50) -> list[dict[str, Any]]:

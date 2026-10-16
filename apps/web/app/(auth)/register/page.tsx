@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmailCodeForm, GoogleButton, OrDivider } from "@/components/auth/sign-in";
 import { AuthCard } from "@/components/shell/auth-card";
 import { Checkbox, FormError } from "@/components/ui/field";
 import { safeNext } from "@/lib/auth-client";
+import { rememberReferral } from "@/lib/referral";
 import { markTermsIntent } from "@/lib/terms";
 
 export default function RegisterPage() {
@@ -13,6 +14,7 @@ export default function RegisterPage() {
   const [terms, setTerms] = useState(false);
   const [adult, setAdult] = useState(false);
   const agreed = terms && adult;
+  useEffect(() => rememberReferral(window.location.search), []);
   const done = () => {
     const next = new URLSearchParams(window.location.search).get("next");
     window.location.assign(next ? safeNext(next) : "/onboarding");

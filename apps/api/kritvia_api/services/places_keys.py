@@ -20,7 +20,7 @@ from kritvia_api.services.places import PlacesClient
 
 SERVICE = "google_places"
 SERVER_KEY_PLANS = frozenset({"internal"})
-NO_KEY = ("add your Google Maps key in Settings → AI models so the Prospector can look businesses up "
+NO_KEY = ("add your Google Maps key in Settings → AI models so Kritvia can use Google Maps (Prospector, reviews) "
           "(Google bills these lookups to your own Google Cloud account, mostly inside its free monthly calls)")
 
 

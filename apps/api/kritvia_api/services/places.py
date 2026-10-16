@@ -128,6 +128,35 @@ class PlacesClient:
             raise PlacesError(f"Google Places returned {r.status_code}: {msg[:200]}")
         return _place(r.json())
 
+    async def reviews(self, place_id: str, *, language: str = "en") -> dict[str, Any]:
+        """The place's rating and its (up to 5) reviews Google shows, live. Nothing here may be stored but
+        the place ID: callers keep at most a hash of a review's resource name."""
+        if not self.configured:
+            raise PlacesError("the Google Places API key is not set (GOOGLE_PLACES_API_KEY)")
+        if not place_id or "/" in place_id or len(place_id) > 300:
+            raise PlacesError("invalid place id")
+        async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
+            try:
+                r = await client.get(PLACE_URL.format(id=place_id), params={"languageCode": language}, headers={
+                    "X-Goog-Api-Key": self.api_key,
+                    "X-Goog-FieldMask": "id,displayName,rating,userRatingCount,googleMapsUri,reviews"})
+            except httpx.TransportError as exc:
+                raise PlacesError(f"could not reach Google Places ({type(exc).__name__})") from exc
+        if r.status_code != 200:
+            raise PlacesError(f"Google Places returned {r.status_code}")
+        p = r.json()
+        out = []
+        for rv in p.get("reviews") or []:
+            if not rv.get("name"):
+                continue
+            text_ = (rv.get("text") or rv.get("originalText") or {}).get("text") or ""
+            out.append({"name": rv["name"], "rating": int(rv.get("rating") or 0), "text": text_,
+                        "author": (rv.get("authorAttribution") or {}).get("displayName") or "A customer",
+                        "author_uri": (rv.get("authorAttribution") or {}).get("uri"),
+                        "when": rv.get("relativePublishTimeDescription") or "", "published": rv.get("publishTime")})
+        return {"name": (p.get("displayName") or {}).get("text") or "", "rating": p.get("rating"),
+                "count": p.get("userRatingCount"), "maps_url": p.get("googleMapsUri"), "reviews": out}
+
     async def verify(self) -> str | None:
         """None if this key can use the Places API (New); otherwise a short reason for the owner.
 

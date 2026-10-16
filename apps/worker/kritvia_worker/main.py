@@ -6,6 +6,7 @@ Cron (IST)
   every minute            fire_schedules   start workflows whose configured HH:MM is now (kitchen 23:30)
                           sweep            re-dispatch queued runs and runs with expired leases
                           expire_approvals expire overdue drafts and wake their runs
+                          fire_automations automations made in plain words whose time has come
   every 5 minutes         poll_gmail       new inquiries, aggregator reports, emailed loan documents
   every 15 minutes        reembed          embed chunks whose embedding was deferred (Ollama down)
   03:15 daily             purge_expired    retention: delete documents past their deadline
@@ -84,6 +85,12 @@ async def fire_schedules(ctx: dict, now: datetime | None = None) -> int:
         except Exception:
             log.exception("could not start scheduled %s for %s", d.workflow, d.venture_id)
     return started
+
+
+async def fire_automations(ctx: dict) -> int:
+    """Automations made in plain words ("every Monday send me last week's sales") whose time has come."""
+    from kritvia_api.services.automations import fire_due
+    return await fire_due(ctx["services"])
 
 
 async def sweep(ctx: dict) -> int:
@@ -168,6 +175,7 @@ class WorkerSettings:
     functions = [execute_run]
     cron_jobs = [
         cron(fire_schedules, second=5, run_at_startup=False),
+        cron(fire_automations, second=10, run_at_startup=False),
         cron(sweep, second=35),
         cron(expire_approvals, second=50),
         cron(poll_gmail, minute=_every(5), second=20),

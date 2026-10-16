@@ -979,6 +979,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/partner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Org Partner */
+        get: operations["org_partner_orgs__org_id__partner_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/partner-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Use Code */
+        post: operations["use_code_orgs__org_id__partner_code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/plan": {
         parameters: {
             query?: never;
@@ -1093,6 +1127,41 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/partners/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply */
+        post: operations["apply_partners_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partners/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_partners_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit */
+        patch: operations["edit_partners_me_patch"];
         trace?: never;
     };
     "/public/billing/razorpay": {
@@ -1311,6 +1380,57 @@ export interface paths {
         get: operations["readyz_readyz_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/partners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff List */
+        get: operations["staff_list_staff_partners_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/partners/{partner_id}/payout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff Payout */
+        post: operations["staff_payout_staff_partners__partner_id__payout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/partners/{partner_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff Status */
+        post: operations["staff_status_staff_partners__partner_id__status_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1598,6 +1718,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/automations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List */
+        get: operations["list__ventures__venture_id__automations_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_ventures__venture_id__automations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/automations/understand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Understand */
+        post: operations["understand_ventures__venture_id__automations_understand_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/automations/{automation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete */
+        delete: operations["delete_ventures__venture_id__automations__automation_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch */
+        patch: operations["patch_ventures__venture_id__automations__automation_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/automations/{automation_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Results */
+        get: operations["results_ventures__venture_id__automations__automation_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/automations/{automation_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Now */
+        post: operations["run_now_ventures__venture_id__automations__automation_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/board": {
         parameters: {
             query?: never;
@@ -1707,6 +1914,118 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/booking-services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Services */
+        get: operations["list_services_ventures__venture_id__booking_services_get"];
+        put?: never;
+        /** Add Service */
+        post: operations["add_service_ventures__venture_id__booking_services_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/booking-services/{service_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Service
+         * @description Stops offering it; bookings already made keep its name.
+         */
+        delete: operations["remove_service_ventures__venture_id__booking_services__service_id__delete"];
+        options?: never;
+        head?: never;
+        /** Edit Service */
+        patch: operations["edit_service_ventures__venture_id__booking_services__service_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/booking-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings__ventures__venture_id__booking_settings_get"];
+        /** Put Settings */
+        put: operations["put_settings_ventures__venture_id__booking_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/booking-slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Slots
+         * @description Free times from opening hours and bookings (Google Calendar is checked when a chat books).
+         */
+        get: operations["slots_ventures__venture_id__booking_slots_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Bookings */
+        get: operations["list_bookings_ventures__venture_id__bookings_get"];
+        put?: never;
+        /** Add Booking */
+        post: operations["add_booking_ventures__venture_id__bookings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bookings/{booking_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Booking */
+        patch: operations["edit_booking_ventures__venture_id__bookings__booking_id__patch"];
         trace?: never;
     };
     "/ventures/{venture_id}/breaches": {
@@ -3138,6 +3457,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/review-replies/{reply_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Reply */
+        patch: operations["edit_reply_ventures__venture_id__review_replies__reply_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/review-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Settings */
+        put: operations["put_settings_ventures__venture_id__review_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reviews */
+        get: operations["reviews_ventures__venture_id__reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/reviews/find-place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find Place */
+        get: operations["find_place_ventures__venture_id__reviews_find_place_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/runs": {
         parameters: {
             query?: never;
@@ -3914,6 +4301,32 @@ export interface components {
             /** Upload Link Expires */
             upload_link_expires: string | null;
         };
+        /** ApplyIn */
+        ApplyIn: {
+            /** City */
+            city?: string | null;
+            /**
+             * Code
+             * @description the code you'd like (letters and digits)
+             */
+            code?: string | null;
+            /** Firm */
+            firm?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ca" | "agency" | "consultant" | "other";
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Upi Id
+             * @description where payouts go
+             */
+            upi_id?: string | null;
+        };
         /** ApprovalBrief */
         ApprovalBrief: {
             /** Action */
@@ -4141,6 +4554,134 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** AutomationIn */
+        AutomationIn: {
+            /**
+             * At Time
+             * @default 09:00
+             */
+            at_time: string;
+            /**
+             * Channel
+             * @default email
+             * @enum {string}
+             */
+            channel: "email" | "telegram" | "slack" | "app";
+            /**
+             * Day Of Month
+             * @description for monthly
+             */
+            day_of_month?: number | null;
+            /**
+             * Freq
+             * @enum {string}
+             */
+            freq: "daily" | "weekly" | "monthly";
+            /**
+             * Name
+             * @description a short name, e.g. 'Weekly sales'
+             */
+            name: string;
+            /**
+             * Period
+             * @description the time the report covers
+             * @enum {string}
+             */
+            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days";
+            /**
+             * Recipients
+             * @description other people's email addresses; empty when it's for the person asking
+             */
+            recipients?: string[];
+            /** Said */
+            said: string;
+            /**
+             * Task
+             * @description what to produce, as an instruction
+             */
+            task: string;
+            /**
+             * Weekdays
+             * @description 0=Monday … 6=Sunday, for weekly
+             */
+            weekdays?: number[];
+        };
+        /** AutomationOut */
+        AutomationOut: {
+            /**
+             * At Time
+             * @default 09:00
+             */
+            at_time: string;
+            /**
+             * Channel
+             * @default email
+             * @enum {string}
+             */
+            channel: "email" | "telegram" | "slack" | "app";
+            /**
+             * Day Of Month
+             * @description for monthly
+             */
+            day_of_month?: number | null;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Freq
+             * @enum {string}
+             */
+            freq: "daily" | "weekly" | "monthly";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Mine */
+            mine: boolean;
+            /**
+             * Name
+             * @description a short name, e.g. 'Weekly sales'
+             */
+            name: string;
+            /** Next Run At */
+            next_run_at: string | null;
+            /** Owner */
+            owner: string;
+            /**
+             * Period
+             * @description the time the report covers
+             * @enum {string}
+             */
+            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days";
+            /**
+             * Recipients
+             * @description other people's email addresses; empty when it's for the person asking
+             */
+            recipients?: string[];
+            /** Said */
+            said: string;
+            /**
+             * Task
+             * @description what to produce, as an instruction
+             */
+            task: string;
+            /**
+             * Weekdays
+             * @description 0=Monday … 6=Sunday, for weekly
+             */
+            weekdays?: number[];
+            /** When */
+            when: string;
+        };
+        /** AutomationPatch */
+        AutomationPatch: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** AutonomyIn */
         AutonomyIn: {
             /** Auto Run */
@@ -4320,6 +4861,167 @@ export interface components {
              * @default false
              */
             sensitive: boolean;
+        };
+        /** BookingIn */
+        BookingIn: {
+            /** Customer Name */
+            customer_name: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Outside Hours
+             * @description book even outside opening hours (still never overbooked)
+             * @default false
+             */
+            outside_hours: boolean;
+            /**
+             * Phone
+             * @description for a WhatsApp reminder (customers who chat)
+             */
+            phone?: string | null;
+            /**
+             * Service Id
+             * Format: uuid
+             */
+            service_id: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+        };
+        /** BookingOut */
+        BookingOut: {
+            /** Address */
+            address: string | null;
+            /** Channel */
+            channel: string;
+            /** Customer Name */
+            customer_name: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** From Chat */
+            from_chat: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** In Calendar */
+            in_calendar: boolean;
+            /** Notes */
+            notes: string | null;
+            /** Reminded At */
+            reminded_at: string | null;
+            /** Service Name */
+            service_name: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Status */
+            status: string;
+        };
+        /** BookingPatch */
+        BookingPatch: {
+            /** Notes */
+            notes?: string | null;
+            /** Status */
+            status?: ("confirmed" | "cancelled" | "done" | "no_show") | null;
+        };
+        /** BookingSettings */
+        BookingSettings: {
+            /**
+             * Capacity
+             * @description bookings at the same time (chairs, rooms, staff)
+             * @default 1
+             */
+            capacity: number;
+            /**
+             * Days Ahead
+             * @default 14
+             */
+            days_ahead: number;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Hours
+             * @description {"mon": [["10:00","13:00"],["14:00","19:00"]], ...}
+             */
+            hours?: {
+                [key: string]: string[][];
+            };
+            /**
+             * Notice Hours
+             * @default 2
+             */
+            notice_hours: number;
+            /**
+             * Slot Minutes
+             * @default 30
+             * @enum {integer}
+             */
+            slot_minutes: 10 | 15 | 20 | 30 | 45 | 60 | 90 | 120;
+            /**
+             * Use Calendar
+             * @description skip times busy on Google Calendar and add bookings to it
+             * @default true
+             */
+            use_calendar: boolean;
+        };
+        /** BookingSettingsOut */
+        BookingSettingsOut: {
+            /** Can Edit */
+            can_edit: boolean;
+            /**
+             * Capacity
+             * @description bookings at the same time (chairs, rooms, staff)
+             * @default 1
+             */
+            capacity: number;
+            /** Configured */
+            configured: boolean;
+            /**
+             * Days Ahead
+             * @default 14
+             */
+            days_ahead: number;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Hours
+             * @description {"mon": [["10:00","13:00"],["14:00","19:00"]], ...}
+             */
+            hours?: {
+                [key: string]: string[][];
+            };
+            /**
+             * Notice Hours
+             * @default 2
+             */
+            notice_hours: number;
+            /**
+             * Slot Minutes
+             * @default 30
+             * @enum {integer}
+             */
+            slot_minutes: 10 | 15 | 20 | 30 | 45 | 60 | 90 | 120;
+            /**
+             * Use Calendar
+             * @description skip times busy on Google Calendar and add bookings to it
+             * @default true
+             */
+            use_calendar: boolean;
         };
         /** BreachIn */
         BreachIn: {
@@ -4618,6 +5320,25 @@ export interface components {
              * Format: uuid
              */
             venture_id: string;
+        };
+        /** CodeIn */
+        CodeIn: {
+            /** Code */
+            code: string;
+        };
+        /** Commission */
+        Commission: {
+            /** Commission Paise */
+            commission_paise: number;
+            /**
+             * Earned At
+             * Format: date-time
+             */
+            earned_at: string;
+            /** Paid Out */
+            paid_out: boolean;
+            /** Paid Paise */
+            paid_paise: number;
         };
         /** ConnectorOut */
         ConnectorOut: {
@@ -5982,7 +6703,7 @@ export interface components {
             /** Phone */
             phone?: string | null;
             /** @description live from Google Maps (single lead, or list?live=true) */
-            place?: components["schemas"]["PlaceOut"] | null;
+            place?: components["schemas"]["kritvia_api__schemas__PlaceOut"] | null;
             /** Place Error */
             place_error?: string | null;
             /** Place Id */
@@ -6370,6 +7091,16 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** OrgPartnerOut */
+        OrgPartnerOut: {
+            /** Discount */
+            discount: string | null;
+            /**
+             * Partner
+             * @description the partner's name or firm, when the organisation came through one
+             */
+            partner: string | null;
+        };
         /** OrgSummary */
         OrgSummary: {
             /**
@@ -6391,6 +7122,69 @@ export interface components {
              * @description the UPI reference (UTR), if handy
              */
             reference?: string | null;
+        };
+        /** PartnerDetails */
+        PartnerDetails: {
+            /** City */
+            city?: string | null;
+            /** Firm */
+            firm?: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Upi Id
+             * @description where payouts go
+             */
+            upi_id?: string | null;
+        };
+        /** PartnerOut */
+        PartnerOut: {
+            /** City */
+            city?: string | null;
+            /** Code */
+            code: string;
+            /** Firm */
+            firm?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Link */
+            link: string;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Upi Id
+             * @description where payouts go
+             */
+            upi_id?: string | null;
+        };
+        /** PartnerPage */
+        PartnerPage: {
+            /** Commissions */
+            commissions: components["schemas"]["Commission"][];
+            /** Due Paise */
+            due_paise: number;
+            /** Earned Paise */
+            earned_paise: number;
+            /** Paid Paise */
+            paid_paise: number;
+            partner: components["schemas"]["PartnerOut"] | null;
+            /** Payouts */
+            payouts: components["schemas"]["Payout"][];
+            /** Referrals */
+            referrals: components["schemas"]["ReferredOrg"][];
+            /** Terms */
+            terms: string;
         };
         /** Party */
         Party: {
@@ -6526,6 +7320,31 @@ export interface components {
              */
             upi_id?: string | null;
         };
+        /** Payout */
+        Payout: {
+            /** Amount Paise */
+            amount_paise: number;
+            /**
+             * Paid At
+             * Format: date-time
+             */
+            paid_at: string;
+            /** Reference */
+            reference: string;
+        };
+        /** PayoutIn */
+        PayoutIn: {
+            /**
+             * Reference
+             * @description the UPI or bank transfer reference
+             */
+            reference: string;
+        };
+        /** PayoutOut */
+        PayoutOut: {
+            /** Paid Paise */
+            paid_paise: number;
+        };
         /** PickerConfigOut */
         PickerConfigOut: {
             /** Account Email */
@@ -6608,29 +7427,18 @@ export interface components {
             /** Won */
             won: number;
         };
-        /**
-         * PlaceOut
-         * @description A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).
-         */
-        PlaceOut: {
+        /** PlaceHit */
+        PlaceHit: {
             /** Address */
-            address?: string | null;
-            /** Category */
-            category?: string | null;
-            /** Maps Url */
-            maps_url?: string | null;
+            address: string | null;
+            /** Count */
+            count: number | null;
             /** Name */
             name: string;
-            /** Phone */
-            phone?: string | null;
+            /** Place Id */
+            place_id: string;
             /** Rating */
-            rating?: number | null;
-            /** Review Count */
-            review_count?: number | null;
-            /** Status */
-            status?: string | null;
-            /** Website */
-            website?: string | null;
+            rating: number | null;
         };
         /** PlanOut */
         PlanOut: {
@@ -6927,6 +7735,25 @@ export interface components {
                 [key: string]: components["schemas"]["RecipeLine"][];
             };
         };
+        /** ReferredOrg */
+        ReferredOrg: {
+            /**
+             * Commission Until
+             * Format: date-time
+             */
+            commission_until: string;
+            /** Earned Paise */
+            earned_paise: number;
+            /** Name */
+            name: string;
+            /** Plan */
+            plan: string;
+            /**
+             * Referred At
+             * Format: date-time
+             */
+            referred_at: string;
+        };
         /** RefreshIn */
         RefreshIn: {
             /** Refresh Token */
@@ -6984,6 +7811,42 @@ export interface components {
             /** Body */
             body: string;
         };
+        /** ReplyOut */
+        ReplyOut: {
+            /** Draft */
+            draft: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+        };
+        /** ReplyPatch */
+        ReplyPatch: {
+            /** Draft */
+            draft?: string | null;
+            /** Status */
+            status?: ("drafted" | "posted" | "dismissed") | null;
+        };
+        /** ResultOut */
+        ResultOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delivered */
+            delivered: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Text */
+            text: string;
+        };
         /** RetentionIn */
         RetentionIn: {
             /**
@@ -6995,6 +7858,49 @@ export interface components {
             note?: string | null;
             /** Retain Days */
             retain_days: number;
+        };
+        /** ReviewOut */
+        ReviewOut: {
+            /** Author */
+            author: string;
+            /** Rating */
+            rating: number;
+            reply: components["schemas"]["ReplyOut"] | null;
+            /** Text */
+            text: string;
+            /** When */
+            when: string;
+        };
+        /** ReviewSettings */
+        ReviewSettings: {
+            /**
+             * Ask After Booking
+             * @default true
+             */
+            ask_after_booking: boolean;
+            /**
+             * Ask After Payment
+             * @default true
+             */
+            ask_after_payment: boolean;
+            /** Place Id */
+            place_id?: string | null;
+        };
+        /** ReviewsOut */
+        ReviewsOut: {
+            /** Agent On */
+            agent_on: boolean;
+            /** Can Edit */
+            can_edit: boolean;
+            place: components["schemas"]["kritvia_api__routers__reviews__PlaceOut"] | null;
+            /**
+             * Problem
+             * @description why Google couldn't be read, in words the owner can act on
+             */
+            problem: string | null;
+            /** Reviews */
+            reviews: components["schemas"]["ReviewOut"][];
+            settings: components["schemas"]["ReviewSettings"];
         };
         /** RoleOut */
         RoleOut: {
@@ -7089,56 +7995,6 @@ export interface components {
             /** Workflow */
             workflow: string;
         };
-        /** RunOut */
-        RunOut: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Current Step */
-            current_step: string;
-            /** Error */
-            error: string | null;
-            /** Finished At */
-            finished_at: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Outcome */
-            outcome: string | null;
-            /**
-             * Pending Approvals
-             * @default 0
-             */
-            pending_approvals: number;
-            /** Status */
-            status: string;
-            /** Step Count */
-            step_count: number;
-            /** Summary */
-            summary: {
-                [key: string]: unknown;
-            };
-            /** Title */
-            title: string;
-            /** Trigger Kind */
-            trigger_kind: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-            /**
-             * Venture Id
-             * Format: uuid
-             */
-            venture_id: string;
-            /** Workflow */
-            workflow: string;
-        };
         /** SampleOut */
         SampleOut: {
             /**
@@ -7159,6 +8015,15 @@ export interface components {
              */
             template_id: string;
         };
+        /** ServiceIn */
+        ServiceIn: {
+            /** Minutes */
+            minutes: number;
+            /** Name */
+            name: string;
+            /** Price Paise */
+            price_paise?: number | null;
+        };
         /** ServiceKeyIn */
         ServiceKeyIn: {
             /** Api Key */
@@ -7172,6 +8037,22 @@ export interface components {
             last_error: string | null;
             /** Last Ok At */
             last_ok_at: string | null;
+        };
+        /** ServiceOut */
+        ServiceOut: {
+            /** Active */
+            active: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Minutes */
+            minutes: number;
+            /** Name */
+            name: string;
+            /** Price Paise */
+            price_paise?: number | null;
         };
         /** SettingsIn */
         SettingsIn: {
@@ -7240,6 +8121,55 @@ export interface components {
              */
             sent_to: string;
         };
+        /** SlotsOut */
+        SlotsOut: {
+            /**
+             * Service Id
+             * Format: uuid
+             */
+            service_id: string;
+            /** Slots */
+            slots: string[];
+        };
+        /** StaffPartner */
+        StaffPartner: {
+            /** City */
+            city: string | null;
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Due Paise */
+            due_paise: number;
+            /** Earned Paise */
+            earned_paise: number;
+            /** Email */
+            email: string;
+            /** Firm */
+            firm: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Paid Paise */
+            paid_paise: number;
+            /** Phone */
+            phone: string | null;
+            /** Referrals */
+            referrals: number;
+            /** Status */
+            status: string;
+            /** Upi Id */
+            upi_id: string | null;
+        };
         /** StartedOut */
         StartedOut: {
             /**
@@ -7254,6 +8184,14 @@ export interface components {
             code: string;
             /** Name */
             name: string;
+        };
+        /** StatusIn */
+        StatusIn: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "paused" | "rejected";
         };
         /** Step */
         Step: {
@@ -7977,6 +8915,68 @@ export interface components {
             /** Threshold */
             threshold: number;
         };
+        /** UnderstandIn */
+        UnderstandIn: {
+            /** Text */
+            text: string;
+        };
+        /** UnderstandOut */
+        UnderstandOut: {
+            /**
+             * At Time
+             * @default 09:00
+             */
+            at_time: string;
+            /**
+             * Channel
+             * @default email
+             * @enum {string}
+             */
+            channel: "email" | "telegram" | "slack" | "app";
+            /**
+             * Day Of Month
+             * @description for monthly
+             */
+            day_of_month?: number | null;
+            /**
+             * Freq
+             * @enum {string}
+             */
+            freq: "daily" | "weekly" | "monthly";
+            /**
+             * Name
+             * @description a short name, e.g. 'Weekly sales'
+             */
+            name: string;
+            /**
+             * Period
+             * @description the time the report covers
+             * @enum {string}
+             */
+            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days";
+            /**
+             * Recipients
+             * @description other people's email addresses; empty when it's for the person asking
+             */
+            recipients?: string[];
+            /** Said */
+            said: string;
+            /**
+             * Task
+             * @description what to produce, as an instruction
+             */
+            task: string;
+            /**
+             * Weekdays
+             * @description 0=Monday … 6=Sunday, for weekly
+             */
+            weekdays?: number[];
+            /**
+             * When
+             * @description the schedule in words
+             */
+            when: string;
+        };
         /** UpiOut */
         UpiOut: {
             /**
@@ -8492,6 +9492,14 @@ export interface components {
             /** Request */
             request: string;
         };
+        /** RunOut */
+        kritvia_api__routers__automations__RunOut: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+        };
         /** ConsentIn */
         kritvia_api__routers__compliance__ConsentIn: {
             /**
@@ -8553,6 +9561,19 @@ export interface components {
             /** Endpoint */
             endpoint: string;
         };
+        /** PlaceOut */
+        kritvia_api__routers__reviews__PlaceOut: {
+            /** Count */
+            count: number | null;
+            /** Maps Url */
+            maps_url: string | null;
+            /** Name */
+            name: string;
+            /** Rating */
+            rating: number | null;
+            /** Write Review Url */
+            write_review_url: string;
+        };
         /** ConsentIn */
         kritvia_api__routers__truhome__ConsentIn: {
             /**
@@ -8563,6 +9584,80 @@ export interface components {
             channel: "web" | "email" | "paper" | "whatsapp" | "verbal";
             /** Notice Version */
             notice_version: string;
+        };
+        /** RunOut */
+        kritvia_api__routers__workflows__RunOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Current Step */
+            current_step: string;
+            /** Error */
+            error: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Pending Approvals
+             * @default 0
+             */
+            pending_approvals: number;
+            /** Status */
+            status: string;
+            /** Step Count */
+            step_count: number;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Title */
+            title: string;
+            /** Trigger Kind */
+            trigger_kind: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Venture Id
+             * Format: uuid
+             */
+            venture_id: string;
+            /** Workflow */
+            workflow: string;
+        };
+        /**
+         * PlaceOut
+         * @description A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).
+         */
+        kritvia_api__schemas__PlaceOut: {
+            /** Address */
+            address?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Maps Url */
+            maps_url?: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Rating */
+            rating?: number | null;
+            /** Review Count */
+            review_count?: number | null;
+            /** Status */
+            status?: string | null;
+            /** Website */
+            website?: string | null;
         };
     };
     responses: never;
@@ -10371,6 +11466,72 @@ export interface operations {
             };
         };
     };
+    org_partner_orgs__org_id__partner_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgPartnerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    use_code_orgs__org_id__partner_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgPartnerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_plan_orgs__org_id__plan_get: {
         parameters: {
             query?: never;
@@ -10590,6 +11751,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_partners_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_partners_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerPage"];
+                };
+            };
+        };
+    };
+    edit_partners_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerDetails"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerOut"];
                 };
             };
             /** @description Validation Error */
@@ -10991,6 +12238,96 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    staff_list_staff_partners_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPartner"][];
+                };
+            };
+        };
+    };
+    staff_payout_staff_partners__partner_id__payout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partner_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_status_staff_partners__partner_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partner_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPartner"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -11545,6 +12882,237 @@ export interface operations {
             };
         };
     };
+    list__ventures__venture_id__automations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_ventures__venture_id__automations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutomationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    understand_ventures__venture_id__automations_understand_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnderstandIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnderstandOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_ventures__venture_id__automations__automation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                automation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_ventures__venture_id__automations__automation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                automation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutomationPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    results_ventures__venture_id__automations__automation_id__results_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                automation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_now_ventures__venture_id__automations__automation_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                automation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["kritvia_api__routers__automations__RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     board_ventures__venture_id__board_get: {
         parameters: {
             query?: never;
@@ -11836,6 +13404,344 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_services_ventures__venture_id__booking_services_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_service_ventures__venture_id__booking_services_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_service_ventures__venture_id__booking_services__service_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_service_ventures__venture_id__booking_services__service_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings__ventures__venture_id__booking_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_ventures__venture_id__booking_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    slots_ventures__venture_id__booking_slots_get: {
+        parameters: {
+            query: {
+                service_id: string;
+                days?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlotsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bookings_ventures__venture_id__bookings_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                days?: number;
+                show?: "upcoming" | "all";
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_booking_ventures__venture_id__bookings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_booking_ventures__venture_id__bookings__booking_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingOut"];
                 };
             };
             /** @description Validation Error */
@@ -15187,6 +17093,141 @@ export interface operations {
             };
         };
     };
+    edit_reply_ventures__venture_id__review_replies__reply_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                reply_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_ventures__venture_id__review_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reviews_ventures__venture_id__reviews_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    find_place_ventures__venture_id__reviews_find_place_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceHit"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_runs_ventures__venture_id__runs_get: {
         parameters: {
             query?: {
@@ -15208,7 +17249,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunOut"][];
+                    "application/json": components["schemas"]["kritvia_api__routers__workflows__RunOut"][];
                 };
             };
             /** @description Validation Error */
@@ -15243,7 +17284,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__workflows__RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -15307,7 +17348,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__workflows__RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -15339,7 +17380,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__workflows__RunOut"];
                 };
             };
             /** @description Validation Error */

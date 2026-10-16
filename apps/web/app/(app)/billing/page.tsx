@@ -14,6 +14,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap } from "@/lib/api";
 import { useAccess } from "@/lib/access";
+import { PartnerCodeCard } from "@/components/partners/partner-code-card";
 import { formatDate, formatDateTime, formatINR } from "@/lib/format";
 import { PricingTable } from "@/components/public/pricing-table";
 import { rupees, type Period, type PlanCard } from "@/lib/pricing";
@@ -188,6 +189,7 @@ export default function BillingPage() {
 
       {isOwner ? (
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
+          <PartnerCodeCard orgId={org.id} />
           <Card>
             <CardHeader title="Billing details" description={GST_REGISTERED ? "Shown on your GST invoices. Add your GSTIN to claim input tax credit." : "Shown on your invoices."} />
             <form

@@ -84,6 +84,9 @@ def card_text(title: str, summary: str, payload: dict[str, Any], business: str |
         shown = preview(payload)
         if shown:
             parts += ["", shown]
+        b = payload.get("booking")
+        if isinstance(b, dict) and b.get("service"):
+            parts += ["", f"Approving also books: {b.get('service')}, {b.get('when') or b.get('starts_at')}"]
     return "\n".join(parts)[:4000]
 
 

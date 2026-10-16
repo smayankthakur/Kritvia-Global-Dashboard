@@ -11,8 +11,8 @@ from kritvia_api.bodylimit import BodyLimitMiddleware
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import dispose_engine
 from kritvia_api.errors import sqlstate
-from kritvia_api.routers import (ai_models, chat_approvals, email_in, first_win, gst, approvals, assistant, audit, auth, billing, board, compliance, connectors, dashboard, invoices, kitchen, knowledge, leads,
-                                 notice, orgs, payments, privacy, push, sitelytc, support, tally, task_boards, truhome, ventures, voice, whatsapp_chats, workflows)
+from kritvia_api.routers import (ai_models, automations, bookings, chat_approvals, email_in, first_win, gst, approvals, assistant, audit, auth, billing, board, compliance, connectors, dashboard, invoices, kitchen, knowledge, leads,
+                                 notice, orgs, partners, payments, privacy, push, reviews, sitelytc, support, tally, task_boards, truhome, ventures, voice, whatsapp_chats, workflows)
 
 UNSAFE_DEFAULTS = ("dev-only-secret",)
 
@@ -96,7 +96,7 @@ def create_app() -> FastAPI:
               approvals.router, sitelytc.router, knowledge.router, truhome.router, kitchen.router,
               compliance.router, connectors.router, dashboard.router, voice.router, billing.router, support.router, assistant.router, tally.router,
               board.router, push.router, notice.router, ai_models.router, task_boards.router, privacy.router,
-              email_in.router, whatsapp_chats.router, invoices.router, chat_approvals.router, payments.router, first_win.router, gst.router):
+              email_in.router, whatsapp_chats.router, invoices.router, chat_approvals.router, payments.router, first_win.router, gst.router, bookings.router, reviews.router, automations.router, partners.router):
         app.include_router(r)
 
     @app.get("/healthz", tags=["ops"])

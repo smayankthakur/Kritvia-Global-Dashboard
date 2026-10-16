@@ -42,6 +42,7 @@ export const ALLOW = [
   { file: "lib/legal/", rule: "hidden-fee", why: "policies state there are no other fees" },
   { file: "lib/consent.ts", rule: "pre-ticked", why: "comment describing the rule" },
   { file: "app/upload/[token]/page.tsx", rule: "false-urgency", why: "true statement: upload links do expire (security), shown only after one has" },
+  { file: "app/(app)/v/[ventureId]/reviews/page.tsx", rule: "social-proof", why: "the business's own Google reviews, read live from Google; not claims about Kritvia" },
 ];
 
 function walk(dir, out = []) {

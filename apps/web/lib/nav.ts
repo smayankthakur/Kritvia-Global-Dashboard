@@ -5,12 +5,14 @@ import {
   AudioLines,
   BookOpen,
   Bot,
+  CalendarCheck,
   CalendarDays,
   ChefHat,
   ClipboardCheck,
   Database,
   FileText,
   Gauge,
+  Handshake,
   HeartPulse,
   LifeBuoy,
   MessageCircle,
@@ -25,10 +27,12 @@ import {
   Mic,
   Network,
   Receipt,
+  Repeat,
   ScrollText,
   Settings,
   ShieldCheck,
   Sparkles,
+  Star,
   TrendingUp,
   Users,
   type LucideIcon,
@@ -74,6 +78,9 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
     { label: "Assistant", href: `${v}/assistant`, icon: MessageSquareText },
     { label: "Chats", href: `${v}/whatsapp`, icon: MessageCircle },
     { label: "Invoices", href: `${v}/invoices`, icon: IndianRupee },
+    { label: "Bookings", href: `${v}/bookings`, icon: CalendarCheck },
+    { label: "Reviews", href: `${v}/reviews`, icon: Star },
+    { label: "Automations", href: `${v}/automations`, icon: Repeat },
     { label: "Board", href: `${v}/board`, icon: LayoutDashboard },
     { label: "Agents", href: `${v}/agents`, icon: Bot },
     { label: "Runs", href: `${v}/runs`, icon: Activity },
@@ -101,10 +108,14 @@ export const ownerNav: NavItem[] = [
   { label: "Audit log", href: "/audit", icon: ScrollText },
 ];
 
-export const staffNav: NavItem[] = [{ label: "Pilot health", href: "/staff", icon: HeartPulse }];
+export const staffNav: NavItem[] = [
+  { label: "Pilot health", href: "/staff", icon: HeartPulse },
+  { label: "Partners", href: "/staff/partners", icon: Handshake },
+];
 
 export const accountNav: NavItem[] = [
   { label: "Your account", href: "/account", icon: CircleUser },
+  { label: "Partner programme", href: "/partners", icon: Handshake },
   { label: "Help & contact", href: "/help", icon: LifeBuoy },
 ];
 

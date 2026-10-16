@@ -617,6 +617,94 @@
         "title": "ApplicationOut",
         "type": "object"
       },
+      "ApplyIn": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the code you'd like (letters and digits)",
+            "title": "Code"
+          },
+          "firm": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm"
+          },
+          "kind": {
+            "enum": [
+              "ca",
+              "agency",
+              "consultant",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "where payouts go",
+            "title": "Upi Id"
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "ApplyIn",
+        "type": "object"
+      },
       "ApprovalBrief": {
         "properties": {
           "action": {
@@ -1218,6 +1306,291 @@
         "title": "AuthUrlOut",
         "type": "object"
       },
+      "AutomationIn": {
+        "properties": {
+          "at_time": {
+            "default": "09:00",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "title": "At Time",
+            "type": "string"
+          },
+          "channel": {
+            "default": "email",
+            "enum": [
+              "email",
+              "telegram",
+              "slack",
+              "app"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "maximum": 28.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "for monthly",
+            "title": "Day Of Month"
+          },
+          "freq": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "title": "Freq",
+            "type": "string"
+          },
+          "name": {
+            "description": "a short name, e.g. 'Weekly sales'",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "period": {
+            "description": "the time the report covers",
+            "enum": [
+              "today",
+              "yesterday",
+              "last_7_days",
+              "last_week",
+              "this_month",
+              "last_month",
+              "last_30_days"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "recipients": {
+            "description": "other people's email addresses; empty when it's for the person asking",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Recipients",
+            "type": "array"
+          },
+          "said": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Said",
+            "type": "string"
+          },
+          "task": {
+            "description": "what to produce, as an instruction",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Task",
+            "type": "string"
+          },
+          "weekdays": {
+            "description": "0=Monday \u2026 6=Sunday, for weekly",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "task",
+          "period",
+          "freq",
+          "said"
+        ],
+        "title": "AutomationIn",
+        "type": "object"
+      },
+      "AutomationOut": {
+        "properties": {
+          "at_time": {
+            "default": "09:00",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "title": "At Time",
+            "type": "string"
+          },
+          "channel": {
+            "default": "email",
+            "enum": [
+              "email",
+              "telegram",
+              "slack",
+              "app"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "maximum": 28.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "for monthly",
+            "title": "Day Of Month"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "freq": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "title": "Freq",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "a short name, e.g. 'Weekly sales'",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "period": {
+            "description": "the time the report covers",
+            "enum": [
+              "today",
+              "yesterday",
+              "last_7_days",
+              "last_week",
+              "this_month",
+              "last_month",
+              "last_30_days"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "recipients": {
+            "description": "other people's email addresses; empty when it's for the person asking",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Recipients",
+            "type": "array"
+          },
+          "said": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Said",
+            "type": "string"
+          },
+          "task": {
+            "description": "what to produce, as an instruction",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Task",
+            "type": "string"
+          },
+          "weekdays": {
+            "description": "0=Monday \u2026 6=Sunday, for weekly",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          },
+          "when": {
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "task",
+          "period",
+          "freq",
+          "said",
+          "id",
+          "when",
+          "enabled",
+          "next_run_at",
+          "last_run_at",
+          "last_error",
+          "mine",
+          "owner"
+        ],
+        "title": "AutomationOut",
+        "type": "object"
+      },
+      "AutomationPatch": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "AutomationPatch",
+        "type": "object"
+      },
       "AutonomyIn": {
         "properties": {
           "auto_run": {
@@ -1750,6 +2123,340 @@
           "file"
         ],
         "title": "Body_voice_input_ventures__venture_id__transcribe_post",
+        "type": "object"
+      },
+      "BookingIn": {
+        "properties": {
+          "customer_name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Customer Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "outside_hours": {
+            "default": false,
+            "description": "book even outside opening hours (still never overbooked)",
+            "title": "Outside Hours",
+            "type": "boolean"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "for a WhatsApp reminder (customers who chat)",
+            "title": "Phone"
+          },
+          "service_id": {
+            "format": "uuid",
+            "title": "Service Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service_id",
+          "starts_at",
+          "customer_name"
+        ],
+        "title": "BookingIn",
+        "type": "object"
+      },
+      "BookingOut": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "customer_name": {
+            "title": "Customer Name",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "from_chat": {
+            "title": "From Chat",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "in_calendar": {
+            "title": "In Calendar",
+            "type": "boolean"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "reminded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminded At"
+          },
+          "service_name": {
+            "title": "Service Name",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "service_name",
+          "customer_name",
+          "channel",
+          "address",
+          "starts_at",
+          "ends_at",
+          "status",
+          "notes",
+          "from_chat",
+          "in_calendar",
+          "reminded_at"
+        ],
+        "title": "BookingOut",
+        "type": "object"
+      },
+      "BookingPatch": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "confirmed",
+                  "cancelled",
+                  "done",
+                  "no_show"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "BookingPatch",
+        "type": "object"
+      },
+      "BookingSettings": {
+        "properties": {
+          "capacity": {
+            "default": 1,
+            "description": "bookings at the same time (chairs, rooms, staff)",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Capacity",
+            "type": "integer"
+          },
+          "days_ahead": {
+            "default": 14,
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Days Ahead",
+            "type": "integer"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hours": {
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "{\"mon\": [[\"10:00\",\"13:00\"],[\"14:00\",\"19:00\"]], ...}",
+            "title": "Hours",
+            "type": "object"
+          },
+          "notice_hours": {
+            "default": 2,
+            "maximum": 168.0,
+            "minimum": 0.0,
+            "title": "Notice Hours",
+            "type": "integer"
+          },
+          "slot_minutes": {
+            "default": 30,
+            "enum": [
+              10,
+              15,
+              20,
+              30,
+              45,
+              60,
+              90,
+              120
+            ],
+            "title": "Slot Minutes",
+            "type": "integer"
+          },
+          "use_calendar": {
+            "default": true,
+            "description": "skip times busy on Google Calendar and add bookings to it",
+            "title": "Use Calendar",
+            "type": "boolean"
+          }
+        },
+        "title": "BookingSettings",
+        "type": "object"
+      },
+      "BookingSettingsOut": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "capacity": {
+            "default": 1,
+            "description": "bookings at the same time (chairs, rooms, staff)",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Capacity",
+            "type": "integer"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "days_ahead": {
+            "default": 14,
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Days Ahead",
+            "type": "integer"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hours": {
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "{\"mon\": [[\"10:00\",\"13:00\"],[\"14:00\",\"19:00\"]], ...}",
+            "title": "Hours",
+            "type": "object"
+          },
+          "notice_hours": {
+            "default": 2,
+            "maximum": 168.0,
+            "minimum": 0.0,
+            "title": "Notice Hours",
+            "type": "integer"
+          },
+          "slot_minutes": {
+            "default": 30,
+            "enum": [
+              10,
+              15,
+              20,
+              30,
+              45,
+              60,
+              90,
+              120
+            ],
+            "title": "Slot Minutes",
+            "type": "integer"
+          },
+          "use_calendar": {
+            "default": true,
+            "description": "skip times busy on Google Calendar and add bookings to it",
+            "title": "Use Calendar",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured",
+          "can_edit"
+        ],
+        "title": "BookingSettingsOut",
         "type": "object"
       },
       "BreachIn": {
@@ -2564,6 +3271,50 @@
           "source_uri"
         ],
         "title": "Citation",
+        "type": "object"
+      },
+      "CodeIn": {
+        "properties": {
+          "code": {
+            "maxLength": 20,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeIn",
+        "type": "object"
+      },
+      "Commission": {
+        "properties": {
+          "commission_paise": {
+            "title": "Commission Paise",
+            "type": "integer"
+          },
+          "earned_at": {
+            "format": "date-time",
+            "title": "Earned At",
+            "type": "string"
+          },
+          "paid_out": {
+            "title": "Paid Out",
+            "type": "boolean"
+          },
+          "paid_paise": {
+            "title": "Paid Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "paid_paise",
+          "commission_paise",
+          "earned_at",
+          "paid_out"
+        ],
+        "title": "Commission",
         "type": "object"
       },
       "ConnectorOut": {
@@ -6265,7 +7016,7 @@
           "place": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/PlaceOut"
+                "$ref": "#/components/schemas/kritvia_api__schemas__PlaceOut"
               },
               {
                 "type": "null"
@@ -7259,6 +8010,39 @@
         "title": "OrgIn",
         "type": "object"
       },
+      "OrgPartnerOut": {
+        "properties": {
+          "discount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount"
+          },
+          "partner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the partner's name or firm, when the organisation came through one",
+            "title": "Partner"
+          }
+        },
+        "required": [
+          "partner",
+          "discount"
+        ],
+        "title": "OrgPartnerOut",
+        "type": "object"
+      },
       "OrgSummary": {
         "properties": {
           "id": {
@@ -7305,6 +8089,223 @@
           }
         },
         "title": "PaidClaimIn",
+        "type": "object"
+      },
+      "PartnerDetails": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "firm": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "where payouts go",
+            "title": "Upi Id"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PartnerDetails",
+        "type": "object"
+      },
+      "PartnerOut": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "firm": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "where payouts go",
+            "title": "Upi Id"
+          }
+        },
+        "required": [
+          "name",
+          "id",
+          "kind",
+          "code",
+          "status",
+          "link"
+        ],
+        "title": "PartnerOut",
+        "type": "object"
+      },
+      "PartnerPage": {
+        "properties": {
+          "commissions": {
+            "items": {
+              "$ref": "#/components/schemas/Commission"
+            },
+            "title": "Commissions",
+            "type": "array"
+          },
+          "due_paise": {
+            "title": "Due Paise",
+            "type": "integer"
+          },
+          "earned_paise": {
+            "title": "Earned Paise",
+            "type": "integer"
+          },
+          "paid_paise": {
+            "title": "Paid Paise",
+            "type": "integer"
+          },
+          "partner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartnerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payouts": {
+            "items": {
+              "$ref": "#/components/schemas/Payout"
+            },
+            "title": "Payouts",
+            "type": "array"
+          },
+          "referrals": {
+            "items": {
+              "$ref": "#/components/schemas/ReferredOrg"
+            },
+            "title": "Referrals",
+            "type": "array"
+          },
+          "terms": {
+            "title": "Terms",
+            "type": "string"
+          }
+        },
+        "required": [
+          "partner",
+          "referrals",
+          "commissions",
+          "payouts",
+          "earned_paise",
+          "paid_paise",
+          "due_paise",
+          "terms"
+        ],
+        "title": "PartnerPage",
         "type": "object"
       },
       "Party": {
@@ -7681,6 +8682,59 @@
         "title": "PaymentSettingsOut",
         "type": "object"
       },
+      "Payout": {
+        "properties": {
+          "amount_paise": {
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "paid_at": {
+            "format": "date-time",
+            "title": "Paid At",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_paise",
+          "reference",
+          "paid_at"
+        ],
+        "title": "Payout",
+        "type": "object"
+      },
+      "PayoutIn": {
+        "properties": {
+          "reference": {
+            "description": "the UPI or bank transfer reference",
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "PayoutIn",
+        "type": "object"
+      },
+      "PayoutOut": {
+        "properties": {
+          "paid_paise": {
+            "title": "Paid Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "paid_paise"
+        ],
+        "title": "PayoutOut",
+        "type": "object"
+      },
       "PickerConfigOut": {
         "properties": {
           "account_email": {
@@ -7884,8 +8938,7 @@
         "title": "PilotsOut",
         "type": "object"
       },
-      "PlaceOut": {
-        "description": "A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).",
+      "PlaceHit": {
         "properties": {
           "address": {
             "anyOf": [
@@ -7898,42 +8951,24 @@
             ],
             "title": "Address"
           },
-          "category": {
+          "count": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Category"
-          },
-          "maps_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Maps Url"
+            "title": "Count"
           },
           "name": {
             "title": "Name",
             "type": "string"
           },
-          "phone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
+          "place_id": {
+            "title": "Place Id",
+            "type": "string"
           },
           "rating": {
             "anyOf": [
@@ -7945,45 +8980,16 @@
               }
             ],
             "title": "Rating"
-          },
-          "review_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Review Count"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
-          },
-          "website": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Website"
           }
         },
         "required": [
-          "name"
+          "place_id",
+          "name",
+          "address",
+          "rating",
+          "count"
         ],
-        "title": "PlaceOut",
+        "title": "PlaceHit",
         "type": "object"
       },
       "PlanOut": {
@@ -8690,6 +9696,41 @@
         "title": "RecipesIn",
         "type": "object"
       },
+      "ReferredOrg": {
+        "properties": {
+          "commission_until": {
+            "format": "date-time",
+            "title": "Commission Until",
+            "type": "string"
+          },
+          "earned_paise": {
+            "title": "Earned Paise",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "referred_at": {
+            "format": "date-time",
+            "title": "Referred At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "plan",
+          "referred_at",
+          "commission_until",
+          "earned_paise"
+        ],
+        "title": "ReferredOrg",
+        "type": "object"
+      },
       "RefreshIn": {
         "properties": {
           "refresh_token": {
@@ -8814,6 +9855,102 @@
         "title": "ReplyIn",
         "type": "object"
       },
+      "ReplyOut": {
+        "properties": {
+          "draft": {
+            "title": "Draft",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "draft",
+          "status"
+        ],
+        "title": "ReplyOut",
+        "type": "object"
+      },
+      "ReplyPatch": {
+        "properties": {
+          "draft": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "drafted",
+                  "posted",
+                  "dismissed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "ReplyPatch",
+        "type": "object"
+      },
+      "ResultOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delivered": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "delivered",
+          "created_at"
+        ],
+        "title": "ResultOut",
+        "type": "object"
+      },
       "RetentionIn": {
         "properties": {
           "data_class": {
@@ -8855,6 +9992,127 @@
           "retain_days"
         ],
         "title": "RetentionIn",
+        "type": "object"
+      },
+      "ReviewOut": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "reply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplyOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "when": {
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating",
+          "text",
+          "author",
+          "when",
+          "reply"
+        ],
+        "title": "ReviewOut",
+        "type": "object"
+      },
+      "ReviewSettings": {
+        "properties": {
+          "ask_after_booking": {
+            "default": true,
+            "title": "Ask After Booking",
+            "type": "boolean"
+          },
+          "ask_after_payment": {
+            "default": true,
+            "title": "Ask After Payment",
+            "type": "boolean"
+          },
+          "place_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{10,300}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Id"
+          }
+        },
+        "title": "ReviewSettings",
+        "type": "object"
+      },
+      "ReviewsOut": {
+        "properties": {
+          "agent_on": {
+            "title": "Agent On",
+            "type": "boolean"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/kritvia_api__routers__reviews__PlaceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "why Google couldn't be read, in words the owner can act on",
+            "title": "Problem"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewOut"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/ReviewSettings"
+          }
+        },
+        "required": [
+          "settings",
+          "place",
+          "reviews",
+          "problem",
+          "can_edit",
+          "agent_on"
+        ],
+        "title": "ReviewsOut",
         "type": "object"
       },
       "RoleOut": {
@@ -9077,116 +10335,6 @@
         "title": "RunIn",
         "type": "object"
       },
-      "RunOut": {
-        "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "current_step": {
-            "title": "Current Step",
-            "type": "string"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "finished_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Finished At"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "outcome": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Outcome"
-          },
-          "pending_approvals": {
-            "default": 0,
-            "title": "Pending Approvals",
-            "type": "integer"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "step_count": {
-            "title": "Step Count",
-            "type": "integer"
-          },
-          "summary": {
-            "additionalProperties": true,
-            "title": "Summary",
-            "type": "object"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          },
-          "trigger_kind": {
-            "title": "Trigger Kind",
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          },
-          "venture_id": {
-            "format": "uuid",
-            "title": "Venture Id",
-            "type": "string"
-          },
-          "workflow": {
-            "title": "Workflow",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "venture_id",
-          "workflow",
-          "title",
-          "status",
-          "current_step",
-          "outcome",
-          "trigger_kind",
-          "summary",
-          "error",
-          "step_count",
-          "created_at",
-          "updated_at",
-          "finished_at"
-        ],
-        "title": "RunOut",
-        "type": "object"
-      },
       "SampleOut": {
         "properties": {
           "run_id": {
@@ -9226,6 +10374,41 @@
           "template_id"
         ],
         "title": "SendTemplateIn",
+        "type": "object"
+      },
+      "ServiceIn": {
+        "properties": {
+          "minutes": {
+            "maximum": 600.0,
+            "minimum": 5.0,
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "price_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Paise"
+          }
+        },
+        "required": [
+          "name",
+          "minutes"
+        ],
+        "title": "ServiceIn",
         "type": "object"
       },
       "ServiceKeyIn": {
@@ -9280,6 +10463,52 @@
           "last_error"
         ],
         "title": "ServiceKeyOut",
+        "type": "object"
+      },
+      "ServiceOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "minutes": {
+            "maximum": 600.0,
+            "minimum": 5.0,
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "price_paise": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Paise"
+          }
+        },
+        "required": [
+          "name",
+          "minutes",
+          "id",
+          "active"
+        ],
+        "title": "ServiceOut",
         "type": "object"
       },
       "SettingsIn": {
@@ -9459,6 +10688,142 @@
         "title": "SlackLinkOut",
         "type": "object"
       },
+      "SlotsOut": {
+        "properties": {
+          "service_id": {
+            "format": "uuid",
+            "title": "Service Id",
+            "type": "string"
+          },
+          "slots": {
+            "items": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "title": "Slots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "service_id",
+          "slots"
+        ],
+        "title": "SlotsOut",
+        "type": "object"
+      },
+      "StaffPartner": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "due_paise": {
+            "title": "Due Paise",
+            "type": "integer"
+          },
+          "earned_paise": {
+            "title": "Earned Paise",
+            "type": "integer"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "firm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paid_paise": {
+            "title": "Paid Paise",
+            "type": "integer"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "referrals": {
+            "title": "Referrals",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upi Id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "firm",
+          "kind",
+          "city",
+          "email",
+          "phone",
+          "upi_id",
+          "code",
+          "status",
+          "created_at",
+          "referrals",
+          "earned_paise",
+          "paid_paise",
+          "due_paise"
+        ],
+        "title": "StaffPartner",
+        "type": "object"
+      },
       "StartedOut": {
         "properties": {
           "run_id": {
@@ -9489,6 +10854,24 @@
           "name"
         ],
         "title": "State",
+        "type": "object"
+      },
+      "StatusIn": {
+        "properties": {
+          "status": {
+            "enum": [
+              "active",
+              "paused",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "StatusIn",
         "type": "object"
       },
       "Step": {
@@ -11354,6 +12737,129 @@
         "title": "TrustOut",
         "type": "object"
       },
+      "UnderstandIn": {
+        "properties": {
+          "text": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "UnderstandIn",
+        "type": "object"
+      },
+      "UnderstandOut": {
+        "properties": {
+          "at_time": {
+            "default": "09:00",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "title": "At Time",
+            "type": "string"
+          },
+          "channel": {
+            "default": "email",
+            "enum": [
+              "email",
+              "telegram",
+              "slack",
+              "app"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "maximum": 28.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "for monthly",
+            "title": "Day Of Month"
+          },
+          "freq": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "title": "Freq",
+            "type": "string"
+          },
+          "name": {
+            "description": "a short name, e.g. 'Weekly sales'",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "period": {
+            "description": "the time the report covers",
+            "enum": [
+              "today",
+              "yesterday",
+              "last_7_days",
+              "last_week",
+              "this_month",
+              "last_month",
+              "last_30_days"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "recipients": {
+            "description": "other people's email addresses; empty when it's for the person asking",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Recipients",
+            "type": "array"
+          },
+          "said": {
+            "title": "Said",
+            "type": "string"
+          },
+          "task": {
+            "description": "what to produce, as an instruction",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Task",
+            "type": "string"
+          },
+          "weekdays": {
+            "description": "0=Monday \u2026 6=Sunday, for weekly",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          },
+          "when": {
+            "description": "the schedule in words",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "task",
+          "period",
+          "freq",
+          "when",
+          "said"
+        ],
+        "title": "UnderstandOut",
+        "type": "object"
+      },
       "UpiOut": {
         "properties": {
           "link": {
@@ -12585,6 +14091,20 @@
         "title": "AskIn",
         "type": "object"
       },
+      "kritvia_api__routers__automations__RunOut": {
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
       "kritvia_api__routers__compliance__ConsentIn": {
         "properties": {
           "channel": {
@@ -12728,6 +14248,60 @@
         "title": "UnsubscribeIn",
         "type": "object"
       },
+      "kritvia_api__routers__reviews__PlaceOut": {
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "maps_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maps Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "write_review_url": {
+            "title": "Write Review Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "rating",
+          "count",
+          "maps_url",
+          "write_review_url"
+        ],
+        "title": "PlaceOut",
+        "type": "object"
+      },
       "kritvia_api__routers__truhome__ConsentIn": {
         "properties": {
           "channel": {
@@ -12753,6 +14327,218 @@
           "notice_version"
         ],
         "title": "ConsentIn",
+        "type": "object"
+      },
+      "kritvia_api__routers__workflows__RunOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_step": {
+            "title": "Current Step",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "pending_approvals": {
+            "default": 0,
+            "title": "Pending Approvals",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "trigger_kind": {
+            "title": "Trigger Kind",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "venture_id": {
+            "format": "uuid",
+            "title": "Venture Id",
+            "type": "string"
+          },
+          "workflow": {
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "venture_id",
+          "workflow",
+          "title",
+          "status",
+          "current_step",
+          "outcome",
+          "trigger_kind",
+          "summary",
+          "error",
+          "step_count",
+          "created_at",
+          "updated_at",
+          "finished_at"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "kritvia_api__schemas__PlaceOut": {
+        "description": "A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "maps_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maps Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "review_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Count"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PlaceOut",
         "type": "object"
       }
     },
@@ -15442,6 +17228,112 @@
         ]
       }
     },
+    "/orgs/{org_id}/partner": {
+      "get": {
+        "operationId": "org_partner_orgs__org_id__partner_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgPartnerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Org Partner",
+        "tags": [
+          "partners"
+        ]
+      }
+    },
+    "/orgs/{org_id}/partner-code": {
+      "post": {
+        "operationId": "use_code_orgs__org_id__partner_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgPartnerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Use Code",
+        "tags": [
+          "partners"
+        ]
+      }
+    },
     "/orgs/{org_id}/plan": {
       "get": {
         "description": "The organisation's plan, its limits and this month's usage.",
@@ -15840,6 +17732,122 @@
         "summary": "Restore Venture",
         "tags": [
           "organisations"
+        ]
+      }
+    },
+    "/partners/apply": {
+      "post": {
+        "operationId": "apply_partners_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply",
+        "tags": [
+          "partners"
+        ]
+      }
+    },
+    "/partners/me": {
+      "get": {
+        "operationId": "me_partners_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Me",
+        "tags": [
+          "partners"
+        ]
+      },
+      "patch": {
+        "operationId": "edit_partners_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerDetails"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit",
+        "tags": [
+          "partners"
         ]
       }
     },
@@ -16352,6 +18360,156 @@
         "summary": "Readyz",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/staff/partners": {
+      "get": {
+        "operationId": "staff_list_staff_partners_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffPartner"
+                  },
+                  "title": "Response Staff List Staff Partners Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff List",
+        "tags": [
+          "partners"
+        ]
+      }
+    },
+    "/staff/partners/{partner_id}/payout": {
+      "post": {
+        "operationId": "staff_payout_staff_partners__partner_id__payout_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "partner_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Partner Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Payout",
+        "tags": [
+          "partners"
+        ]
+      }
+    },
+    "/staff/partners/{partner_id}/status": {
+      "post": {
+        "operationId": "staff_status_staff_partners__partner_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "partner_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Partner Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffPartner"
+                  },
+                  "title": "Response Staff Status Staff Partners  Partner Id  Status Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Status",
+        "tags": [
+          "partners"
         ]
       }
     },
@@ -17295,6 +19453,409 @@
         ]
       }
     },
+    "/ventures/{venture_id}/automations": {
+      "get": {
+        "operationId": "list__ventures__venture_id__automations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AutomationOut"
+                  },
+                  "title": "Response List  Ventures  Venture Id  Automations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List ",
+        "tags": [
+          "automations"
+        ]
+      },
+      "post": {
+        "operationId": "create_ventures__venture_id__automations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create",
+        "tags": [
+          "automations"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/automations/understand": {
+      "post": {
+        "operationId": "understand_ventures__venture_id__automations_understand_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnderstandIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnderstandOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Understand",
+        "tags": [
+          "automations"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/automations/{automation_id}": {
+      "delete": {
+        "operationId": "delete_ventures__venture_id__automations__automation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "automation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Automation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete",
+        "tags": [
+          "automations"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_ventures__venture_id__automations__automation_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "automation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Automation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch",
+        "tags": [
+          "automations"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/automations/{automation_id}/results": {
+      "get": {
+        "operationId": "results_ventures__venture_id__automations__automation_id__results_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "automation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Automation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ResultOut"
+                  },
+                  "title": "Response Results Ventures  Venture Id  Automations  Automation Id  Results Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Results",
+        "tags": [
+          "automations"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/automations/{automation_id}/run": {
+      "post": {
+        "operationId": "run_now_ventures__venture_id__automations__automation_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "automation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Automation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/kritvia_api__routers__automations__RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Now",
+        "tags": [
+          "automations"
+        ]
+      }
+    },
     "/ventures/{venture_id}/board": {
       "get": {
         "operationId": "board_ventures__venture_id__board_get",
@@ -17826,6 +20387,626 @@
         "summary": "Create List",
         "tags": [
           "tasks"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/booking-services": {
+      "get": {
+        "operationId": "list_services_ventures__venture_id__booking_services_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceOut"
+                  },
+                  "title": "Response List Services Ventures  Venture Id  Booking Services Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Services",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "post": {
+        "operationId": "add_service_ventures__venture_id__booking_services_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Service",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/booking-services/{service_id}": {
+      "delete": {
+        "description": "Stops offering it; bookings already made keep its name.",
+        "operationId": "remove_service_ventures__venture_id__booking_services__service_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "service_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Service Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Service",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "patch": {
+        "operationId": "edit_service_ventures__venture_id__booking_services__service_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "service_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Service Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit Service",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/booking-settings": {
+      "get": {
+        "operationId": "get_settings__ventures__venture_id__booking_settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Settings ",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "put": {
+        "operationId": "put_settings_ventures__venture_id__booking_settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Settings",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/booking-slots": {
+      "get": {
+        "description": "Free times from opening hours and bookings (Google Calendar is checked when a chat books).",
+        "operationId": "slots_ventures__venture_id__booking_slots_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "service_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Service Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Slots",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bookings": {
+      "get": {
+        "operationId": "list_bookings_ventures__venture_id__bookings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "show",
+            "required": false,
+            "schema": {
+              "default": "upcoming",
+              "enum": [
+                "upcoming",
+                "all"
+              ],
+              "title": "Show",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookingOut"
+                  },
+                  "title": "Response List Bookings Ventures  Venture Id  Bookings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Bookings",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "post": {
+        "operationId": "add_booking_ventures__venture_id__bookings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Booking",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bookings/{booking_id}": {
+      "patch": {
+        "operationId": "edit_booking_ventures__venture_id__bookings__booking_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "booking_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Booking Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit Booking",
+        "tags": [
+          "bookings"
         ]
       }
     },
@@ -23812,6 +26993,243 @@
         ]
       }
     },
+    "/ventures/{venture_id}/review-replies/{reply_id}": {
+      "patch": {
+        "operationId": "edit_reply_ventures__venture_id__review_replies__reply_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reply_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reply Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit Reply",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/review-settings": {
+      "put": {
+        "operationId": "put_settings_ventures__venture_id__review_settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Settings",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/reviews": {
+      "get": {
+        "operationId": "reviews_ventures__venture_id__reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reviews",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/reviews/find-place": {
+      "get": {
+        "operationId": "find_place_ventures__venture_id__reviews_find_place_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 3,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlaceHit"
+                  },
+                  "title": "Response Find Place Ventures  Venture Id  Reviews Find Place Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Find Place",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/ventures/{venture_id}/runs": {
       "get": {
         "operationId": "list_runs_ventures__venture_id__runs_get",
@@ -23883,7 +27301,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RunOut"
+                    "$ref": "#/components/schemas/kritvia_api__routers__workflows__RunOut"
                   },
                   "title": "Response List Runs Ventures  Venture Id  Runs Get",
                   "type": "array"
@@ -23942,7 +27360,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__workflows__RunOut"
                 }
               }
             },
@@ -24058,7 +27476,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__workflows__RunOut"
                 }
               }
             },
@@ -24116,7 +27534,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__workflows__RunOut"
                 }
               }
             },

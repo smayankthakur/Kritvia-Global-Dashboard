@@ -16,6 +16,7 @@ import { ErrorState } from "@/components/ui/states";
 import { ApiError, api, errorMessage, unwrap } from "@/lib/api";
 import { accessKey, meKey, useAccessQuery, type VentureKind } from "@/lib/access";
 import { agentAllowed } from "@/lib/pricing";
+import { takeReferral } from "@/lib/referral";
 import { SLUG_RE, slugify } from "@/lib/slug";
 
 
@@ -279,6 +280,9 @@ function BusinessStep({
         const orgName = (many ? group : rows[0]!.name).trim();
         org = await createOrg(orgName);
         onOrg(org);
+        // Came through a partner's link: link the organisation to them (best effort; Plan & billing can add it later).
+        const ref = takeReferral();
+        if (ref) await api.POST("/orgs/{org_id}/partner-code", { params: { path: { org_id: org } }, body: { code: ref } }).catch(() => undefined);
       }
       const ids = { ...done };
       const out: CreatedVenture[] = [];

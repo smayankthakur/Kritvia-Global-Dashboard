@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import text
 
 from kritvia_api.services import wa_inbox
-from kritvia_api.services.google import SCOPES, GoogleClient
+from kritvia_api.services.google import SCOPES, GoogleClient, GoogleError
 from kritvia_api.services.telegram import TelegramClient, TelegramError, load_telegram
 from kritvia_api.services.whatsapp import WhatsAppClient, WhatsAppError, load_whatsapp
 
@@ -65,6 +65,16 @@ class Messaging:
         if g is None or SCOPES[scope] not in g.scopes:
             return None
         return await self.google.access_token(g.id, g.refresh_token), g
+
+    async def calendar_busy(self, ctx: RunContext, start: str, end: str) -> list[dict[str, str]] | None:
+        """Busy times on the business's Google Calendar; None when it isn't connected (or can't be read)."""
+        google = await self._google_token(ctx, "calendar.events")
+        if google is None:
+            return None
+        try:
+            return await self.google.busy(google[0], start, end)
+        except GoogleError:
+            return None
 
     async def _record(self, ctx: RunContext, approval_id: uuid.UUID, *, channel: str, recipient: str,
                       subject: str | None, body: str, transport: str, status: str,
