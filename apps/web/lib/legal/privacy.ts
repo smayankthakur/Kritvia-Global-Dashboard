@@ -1,10 +1,10 @@
 /**
- * Privacy Policy, version 2026-10-13. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Privacy Policy, version 2026-10-16. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Privacy Policy). Every factual statement here was checked against the code;
  * if routing, retention or providers change (infra/litellm/tiers.yaml, migrations, worker purges),
  * change this text too and bump terms_version in the API settings.
  */
-export const PRIVACY_UPDATED = "13 October 2026";
+export const PRIVACY_UPDATED = "16 October 2026";
 
 export const PRIVACY_MD = `## 1. Who we are and what this policy covers
 
@@ -36,10 +36,12 @@ This policy is published under the Digital Personal Data Protection Act, 2023 an
 | Usage metadata: features used, agent runs, AI-model usage counts and costs, error records | Your use of Kritvia | To operate, secure and bill the service, enforce plan limits, and fix faults | Data you provided for this purpose |
 | Voice dictation: audio while you dictate | You, when you use dictation | To turn speech into text | Consent (you start each dictation) |
 | Notification subscription: the browser push address and keys | Your browser, when you switch on notifications | To alert you when a draft needs approval | Consent (you can switch it off) |
+| Chat links for approvals: your Telegram chat ID or Slack user ID, and the approvals you give there | You, when you link Telegram or Slack under **Your account** | To send you approval cards and record your answer | Consent (you can unlink at any time) |
+| Partner details, only if you join our partner programme: name, firm, type, city, phone, UPI ID; the names, Plans and sign-up dates of businesses you refer; commissions and payouts | You; our billing records | To run the programme and pay you commission | Data you provided for this purpose; compliance with tax law |
 
 We do not keep dictation audio. We keep the length, language and word count of each dictation; the text is kept only where you save it as a note. The Kritvia desktop app's auto-learn feature, if you switch it on, briefly holds your keystrokes in memory for up to 8 seconds after you paste dictated text, only to learn your corrections; it does not store or send those keystrokes.
 
-**Customer Data (we are a Data Processor).** Businesses using Kritvia put in or connect data that may include personal data of their own customers and contacts: emails and attachments, WhatsApp and Telegram messages, calendar events, Drive files, uploaded documents (including loan papers and identity documents), meeting recordings and transcripts, leads, proposals and accounting entries. We process this only to provide Kritvia to that business: to store and search it, extract facts, and run the agents it switches on. We do not use it for our own purposes, sell it, use it for advertising, or use it to train AI models.
+**Customer Data (we are a Data Processor).** Businesses using Kritvia put in or connect data that may include personal data of their own customers and contacts: emails and attachments, WhatsApp and Telegram messages, calendar events, Drive files, uploaded documents (including loan papers and identity documents), meeting recordings and transcripts, leads, proposals, accounting entries, invoices (including customers' GSTINs and addresses) and payments, bookings, and review requests. We process this only to provide Kritvia to that business: to store and search it, extract facts, and run the agents it switches on. We do not use it for our own purposes, sell it, use it for advertising, or use it to train AI models.
 
 ## 3. How AI is used
 
@@ -48,10 +50,10 @@ Kritvia uses AI models to read Customer Data and draft replies, summaries, propo
 1. **Sensitive records stay on our servers.** A document or message marked sensitive, kept in a role-restricted area, uploaded as a loan document, or in which we detect an Aadhaar, PAN, passport, bank-account or card number, is processed only by AI models running on our own servers in India. Search indexes (embeddings) and text recognition (OCR) always run on our own servers.
 2. **By default, only models that do not train.** Other tasks go to the free hosted AI providers in section 4 whose terms do not let them use the content to train their models (they keep it, if at all, only briefly for abuse monitoring). A business's owner may also switch on free models whose providers may learn from the content they receive (Google Gemini free tier, OpenRouter free models, Mistral free tier). We never use those for sensitive records, or for a business that has connected Google Workspace. The business's privacy notice to its customers then says so.
 3. **A business may use its own AI provider.** If a business adds its own key for a provider such as OpenAI, Anthropic or Google, its ordinary tasks go to that provider under the business's own agreement with it. Sensitive records still stay on our servers.
-4. **A person approves before anything is sent.** Drafts wait for a person's approval before they leave Kritvia, unless the business has expressly allowed a specific agent to act on its own.
+4. **A person approves before anything is sent.** Drafts wait for a person's approval before they leave Kritvia, unless the business has expressly allowed a specific agent to act on its own. A person can approve in Kritvia or, if they have linked it, from Telegram or Slack.
 5. **No automated decisions about you.** Kritvia does not make decisions with legal or similarly significant effects about individuals; the business makes them, and outputs are suggestions only.
 
-**Google user data.** If a business connects Google, Kritvia accesses Gmail (to send replies the business approves and, where the business grants read access, to read incoming mail), Google Calendar (to create events) and Google Drive (only the files the business chooses in Google's file picker or, where it grants wider access, the files it chooses to import). A business can instead forward its mail to its own Kritvia address; Kritvia handles forwarded mail the same way as mail it reads. Kritvia's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. The use of information received from Google Workspace APIs will adhere to the Google User Data Policy, including the Limited Use requirements. In particular:
+**Google user data.** If a business connects Google, Kritvia accesses Gmail (to send replies the business approves and, where the business grants read access, to read incoming mail), Google Calendar (to create events and, for bookings, to read only the start and end times of events so Kritvia can offer free slots) and Google Drive (only the files the business chooses in Google's file picker or, where it grants wider access, the files it chooses to import). A business can instead forward its mail to its own Kritvia address; Kritvia handles forwarded mail the same way as mail it reads. Kritvia's use and transfer to any other app of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. The use of information received from Google Workspace APIs will adhere to the Google User Data Policy, including the Limited Use requirements. In particular:
 
 - we use Google user data only to provide the features the business switches on, which are visible in Kritvia;
 - we transfer it to others only as needed to provide those features (for example, to an AI provider in section 4 that does not train on it, to draft a reply), for security, or to comply with law, and never to an AI model whose provider may train on it;
@@ -73,9 +75,12 @@ We share personal data only with the service providers below, who process it on 
 | Only if a business opts in: Google (Gemini free tier), OpenRouter free models, Mistral | Extra free AI capacity | Text of the specific task, never sensitive records and never Google Workspace data; may be used to improve the provider's models | United States, European Union and other provider locations |
 | The AI provider a business connects with its own key | Drafting for that business | Text of the specific task, never sensitive records; under the business's agreement with that provider | Where that provider operates |
 | Razorpay | Subscription payments | Billing name, GSTIN, email, plan; you enter card or UPI details directly with Razorpay | India |
+| Google (Maps Places API) | Finding businesses for the prospecting agent, and showing a business its own Google reviews, when a business uses those features | The search text a business types and Google place IDs. Listings and reviews are fetched live each time and not stored; we keep only place IDs and a one-way fingerprint of each review, to know which are new | United States and Google's global network |
 | Browser push services (Google, Apple, Mozilla, Microsoft) | Delivering notifications you switched on | An encrypted notification with the draft's title | Global |
 
-**Services a business connects.** When a business connects Google Workspace, the WhatsApp Business Platform (Meta) or its own Telegram bot, Kritvia reads from and sends through the business's own account with that provider. When a business connects Slack, Kritvia posts short notices to the channel it chose: who needs attention and a link back to Kritvia, never what a customer wrote. When a business connects another app through its MCP server, the Kritvia assistant sends that app only what a task needs, and anything that changes the app waits for a person's approval. Each provider handles the data under its agreement with the business.
+**Services a business connects.** When a business connects Google Workspace, the WhatsApp Business Platform (Meta) or its own Telegram bot, Kritvia reads from and sends through the business's own account with that provider. When a business connects Slack, Kritvia posts short notices to the channel it chose: who needs attention and a link back to Kritvia, never what a customer wrote. If a person links their own Telegram or Slack account for approvals, Kritvia sends that person, privately, a card with a preview of each draft (who it goes to and up to 700 characters of what it says) so they can approve or reject it there; drafts marked sensitive are never previewed and are reviewed only in Kritvia. Scheduled reports a business sets up are delivered to the email address, Telegram chat or Slack channel it chooses. When a business connects its own Razorpay account, Kritvia creates payment links for its invoices in that account and receives Razorpay's notice when one is paid; the money goes straight to the business, and Kritvia never holds it. When a business connects another app through its MCP server, the Kritvia assistant sends that app only what a task needs, and anything that changes the app waits for a person's approval. Each provider handles the data under its agreement with the business.
+
+**Payment pages.** A business can share a payment page for an invoice through a private link. Anyone with the link can see that one invoice (the business's and the customer's names, items, amounts and tax details) and pay it; the page shows nothing else. The business chooses whom to send it to, and the link is long and random so it cannot be guessed.
 
 **Other disclosures.** We may disclose personal data (a) where the law, a court order or a government agency with lawful authority requires it, after checking the request is valid and disclosing no more than required; (b) to protect the security of Kritvia, our customers or the public; or (c) to a buyer or successor if our business is reorganised or sold, who must honour this policy.
 
@@ -95,6 +100,7 @@ We keep personal data only as long as the purpose needs it or the law requires, 
 | Support messages | Two years. |
 | Privacy requests (section 6) | Three years after we close the request, as a record of how we handled it. |
 | Tax invoices and billing records | Eight years, as tax and company law require. |
+| Partner programme records | Your partner details while you are a partner; commission and payout records for eight years, as tax law requires. |
 | Audit log of actions in a workspace | For the life of the organisation and as a tamper-evident legal record after it. It records who did what and when, by internal ID, and never the content of documents. |
 
 **Security.** We protect personal data with reasonable security safeguards, including:
@@ -136,7 +142,7 @@ A business that puts children's personal data into Kritvia (for example a parent
 
 ## 8. Cookies and similar technology
 
-We use only cookies and browser storage that Kritvia needs to work: to keep you signed in, protect sign-in, and remember your theme and the business you last used. We use no advertising or analytics cookies and no third-party trackers, so we do not ask for cookie consent. Our [Cookie Policy](/cookies) lists every cookie and storage key. We honour the Global Privacy Control signal from your browser.
+We use only cookies and browser storage that Kritvia needs to work: to keep you signed in, protect sign-in, and remember your theme, your language and the business you last used. We use no advertising or analytics cookies and no third-party trackers, so we do not ask for cookie consent. Our [Cookie Policy](/cookies) lists every cookie and storage key. We honour the Global Privacy Control signal from your browser.
 
 ## 9. If you are in the European Economic Area, the United Kingdom or Switzerland
 
@@ -159,6 +165,8 @@ We may not meet the thresholds that make the California Consumer Privacy Act (as
 - **Your rights.** You can ask to know what we collect, use and disclose; to delete it; and to correct it, through section 6. An authorised agent can ask for you with your signed permission. We verify requests by email, and we will not discriminate against you for using these rights.
 
 ## 11. Changes to this policy
+
+This policy is written in English, and the English text is the binding version. Kritvia can show its interface in Hindi, but that translation does not cover this policy.
 
 We will update this policy when our practices or the law change, and change the date at the top. For a material change we will tell you by email or in the app at least 15 days before it takes effect. Where a change needs your consent, we will ask for it.
 `;

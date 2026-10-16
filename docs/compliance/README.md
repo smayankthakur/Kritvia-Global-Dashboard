@@ -12,10 +12,10 @@ Protection Act 2019 and the CCPA (India) Guidelines for Prevention and Regulatio
 
 | Item | Where it lives | Status |
 | --- | --- | --- |
-| Privacy Policy (DPDP; GDPR and California sections) | `apps/web/lib/legal/privacy.ts` → `/privacy` | Done; 2026-10-13 adds Telegram, Slack and MCP apps to "Services a business connects" (version bumped, everyone re-accepts) |
-| Terms of Service (18+, "Coming soon" clause, refund link) | `apps/web/lib/legal/terms.ts` → `/terms` | Done; version bumped to 2026-10-05, so everyone re-accepts |
+| Privacy Policy (DPDP; GDPR and California sections) | `apps/web/lib/legal/privacy.ts` → `/privacy` | Done; 2026-10-16 adds approvals from Telegram/Slack with draft previews, the business's own Razorpay and payment pages, Google Places for reviews, Calendar busy times for bookings, partner data, and "English is binding" (version bumped, everyone re-accepts) |
+| Terms of Service (18+, "Coming soon" clause, refund link) | `apps/web/lib/legal/terms.ts` → `/terms` | Done; 2026-10-16 adds clauses 7.8–7.11 (GST invoices, customer payments, reviews, automations), 10.9 (partner discount), 20.8 (English is binding) and section 21 (partner programme); version bumped, so everyone re-accepts |
 | Cancellation, Refund and Delivery Policy | `apps/web/lib/legal/refunds.ts` → `/refunds` | Done (Razorpay needs this page) |
-| Cookie Policy | `apps/web/lib/legal/cookies.ts` → `/cookies` | Done |
+| Cookie Policy | `apps/web/lib/legal/cookies.ts` → `/cookies` | Done; 2026-10-16 adds `kv-lang` (interface language) and `kv-ref` (partner referral code) |
 | Cookie consent | `apps/web/lib/consent.ts`, `components/legal/consent.tsx` | Consent-ready: no banner while every cookie is strictly necessary; the banner, settings and `<ConsentGate>` switch on when an optional tool is registered. Honours Global Privacy Control |
 | Data deletion and other rights | In-app: Your account → Download my data / Delete my account. Anyone: `/privacy-request` → `POST /public/privacy-requests` → `privacy_requests` table | Done. Handling steps: [privacy-requests-runbook.md](privacy-requests-runbook.md) |
 | Age (children) | 18+ confirmation at sign-up and in the terms dialog; `users.adult_confirmed_at`; the API refuses acceptance without it | Done. No date of birth collected (data minimisation) |

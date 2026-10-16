@@ -51,6 +51,11 @@ describe("cookie consent", () => {
         // file moved: the names below still have to be listed
       }
     }
+    for (const f of ["lib/i18n/translate.ts", "lib/referral.ts"]) {
+      for (const m of read(f).matchAll(/"(kv-[a-z]+)"/g)) names.add(m[1]!);
+    }
+    expect(names).toContain("kv-lang");
+    expect(names).toContain("kv-ref");
     for (const n of ["kv_at", "kv_rt", "kv_theme", "kv_org", ...names]) expect(COOKIES_MD, n).toContain(n);
     for (const t of OPTIONAL_TOOLS) for (const c of t.cookies) expect(COOKIES_MD, c).toContain(c);
   });

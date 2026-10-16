@@ -1,9 +1,9 @@
 /**
- * Cookie Policy, version 2026-10-06. Lists every cookie and storage key Kritvia sets. When you add
+ * Cookie Policy, version 2026-10-16. Lists every cookie and storage key Kritvia sets. When you add
  * one, add it here and, if it is not strictly necessary, register it in lib/consent.ts so the
  * consent banner asks first (tests/consent.test.ts checks the two lists agree).
  */
-export const COOKIES_UPDATED = "6 October 2026";
+export const COOKIES_UPDATED = "16 October 2026";
 
 export const COOKIES_MD = `## 1. What this policy covers
 
@@ -13,7 +13,7 @@ A cookie is a small text file a website stores in your browser. Similar technolo
 
 ## 2. The short version
 
-- **We only use what Kritvia needs to work**: keeping you signed in, protecting sign-in, and remembering your theme and the business you last used.
+- **We only use what Kritvia needs to work**: keeping you signed in, protecting sign-in, and remembering your theme, your language and the business you last used.
 - **We use no advertising cookies, no analytics or tracking cookies, and no third-party trackers.** No other company sets cookies through Kritvia.
 - Because every cookie we use is strictly necessary, the law does not require your consent for them, so we do not show a consent banner. If we ever add a cookie that is not strictly necessary, we will ask you first and you will be able to change your mind at any time.
 - We honour the **Global Privacy Control** signal: if your browser sends it, we treat it as a refusal of any optional cookie we might add.
@@ -28,6 +28,7 @@ A cookie is a small text file a website stores in your browser. Similar technolo
 | \\_\\_Host-kv_csrf | A random security token that proves a change really came from a Kritvia page (protection against cross-site request forgery). | Strictly necessary, first party | 1 year |
 | kv_org, kv_venture | Remember the organisation and business you last opened. | Strictly necessary (functional), first party | 1 year |
 | kv_theme | Remembers light or dark mode. | Strictly necessary (functional), first party | 1 year |
+| kv-lang | Remembers whether you chose the Hindi or English interface. | Strictly necessary (functional), first party | 1 year |
 
 All our cookies are first-party, sent only to app.sitelytc.com over an encrypted connection, and marked SameSite to stop other sites using them.
 
@@ -36,6 +37,8 @@ All our cookies are first-party, sent only to app.sitelytc.com over an encrypted
 | Key | What it does | How long |
 | --- | --- | --- |
 | kv_voice_* (local storage) | Your dictation settings on this device. | Until you clear it |
+| kv-lang (local storage) | Your interface language (Hindi or English). | Until you clear it |
+| kv-ref (local storage) | A partner's referral code from the sign-up link you used, so that your discount applies to the organisation you create. Removed as soon as it is used. | Until you create your organisation |
 | kv_terms_intent (session storage) | Carries your acceptance of the Terms from the sign-up page to your new account. | Until the tab closes |
 | kv_consent (local storage) | Your choice about optional cookies. Only written if we ever ask. | 12 months, then we ask again |
 | App cache (installable app) | The app's layout and code, so it opens quickly. Never your business data. | Until the app updates |

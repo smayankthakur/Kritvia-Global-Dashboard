@@ -43,6 +43,13 @@ function Apply({ terms }: { terms: string }) {
   return (
     <Card>
       <CardHeader title="Become a Kritvia partner" description={terms} />
+      <p className="px-4 text-xs text-subtle">
+        By applying you agree to the partner programme terms in section 21 of our{" "}
+        <a href="/terms" className="underline">
+          Terms of Service
+        </a>
+        .
+      </p>
       <form
         className="grid gap-3 p-4 sm:grid-cols-2"
         onSubmit={(e) => {
@@ -115,7 +122,12 @@ export default function PartnersPage() {
                   </div>
                   <CopyField className="min-w-64 flex-1" label="Your sign-up link" value={d.partner.link} />
                 </div>
-                <p className="mt-3 text-xs text-subtle">{d.terms}</p>
+                <p className="mt-3 text-xs text-subtle">
+                  {d.terms}{" "}
+                  <a href="/terms" className="underline">
+                    Full terms (section 21)
+                  </a>
+                </p>
               </Card>
               <Card className="p-4">
                 <StatGrid>
