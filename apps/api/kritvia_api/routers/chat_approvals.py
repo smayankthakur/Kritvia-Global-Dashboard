@@ -184,7 +184,7 @@ async def slack_install(venture_id: uuid.UUID, body: SlackInstallIn, user_id: Us
     state = jwt.encode({"typ": "slack", "v": str(venture_id), "u": str(user_id), "nh": _nonce_hash(body.nonce),
                         "exp": datetime.now(UTC) + timedelta(minutes=10)}, s.jwt_secret, algorithm=s.jwt_algorithm)
     query = urlencode({"client_id": s.slack_client_id, "scope": slack.APP_SCOPES, "state": state,
-                       "redirect_uri": s.slack_redirect_uri})
+                       "redirect_uri": s.slack_redirect})
     return AuthUrlOut(url=f"https://slack.com/oauth/v2/authorize?{query}")
 
 

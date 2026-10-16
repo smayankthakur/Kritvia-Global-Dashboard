@@ -15,7 +15,7 @@ These terms are shown on the partner page (`TERMS` in `routers/partners.py`).
    - name, firm, kind, city and phone;
    - a UPI ID for payouts;
    - optionally the code they'd like (otherwise one is made).
-2. **Approve.** Kritvia's team (`STAFF_EMAILS`) uses **Kritvia team → Partners** to approve, pause or
+2. **Approve.** Kritvia's team (`STAFF_EMAILS`, or the founder when it is empty) uses **Kritvia team → Partners** to approve, pause or
    reject. A code works only while the partner is active.
 3. **Refer.** The partner shares `https://app…/register?ref=CODE`.
    - The code is remembered in the browser and linked to the organisation when it is created at

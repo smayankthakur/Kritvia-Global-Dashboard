@@ -27,7 +27,7 @@ Progress is read from what the business has done; nothing extra is stored.
 
 ## Pilot health (Kritvia's team)
 
-People whose sign-in email is in `STAFF_EMAILS` see **Kritvia team → Pilot health**. It lists every
+People whose sign-in email is in `STAFF_EMAILS` (empty = the founder, `FOUNDER_EMAIL` in config.py) see **Kritvia team → Pilot health**. It lists every
 organisation with:
 
 - its owner's email and plan;

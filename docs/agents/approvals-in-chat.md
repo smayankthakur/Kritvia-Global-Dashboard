@@ -57,7 +57,7 @@ This needs Kritvia's Slack app, set up once per server:
    - `SLACK_CLIENT_ID`
    - `SLACK_CLIENT_SECRET`
    - `SLACK_SIGNING_SECRET`
-   - `SLACK_REDIRECT_URI=https://app.sitelytc.com/api/oauth/slack/callback`
+   - `SLACK_REDIRECT_URI` is optional: when empty it is `PUBLIC_WEB_URL` + `/api/oauth/slack/callback`.
 3. Turn on **Manage Distribution**, so other businesses' workspaces can add it.
 4. Restart the API.
 

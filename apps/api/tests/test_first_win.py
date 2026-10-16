@@ -6,6 +6,7 @@ import uuid
 
 import pytest
 
+from kritvia_api.config import get_settings
 from conftest import join, make_actor
 from test_whatsapp_front_door import script
 
@@ -58,3 +59,23 @@ async def test_pilot_health_is_staff_only(world, client, monkeypatch):
     assert mine["businesses"] >= 1 and mine["health"] in ("won", "getting_started", "stuck", "quiet")
     assert 0 <= mine["steps_done"] <= 6
     assert (await world["mallory"].get("/staff/pilots")).status_code == 404
+
+
+def test_founder_is_staff_when_staff_emails_is_empty(monkeypatch):
+    from kritvia_api.config import FOUNDER_EMAIL
+    from kritvia_api.routers.first_win import is_staff
+
+    monkeypatch.setattr(get_settings(), "staff_emails", "")
+    assert is_staff(FOUNDER_EMAIL.upper())
+    assert not is_staff("someone@else.in")
+    monkeypatch.setattr(get_settings(), "staff_emails", "ops@sitelytc.com")
+    assert not is_staff(FOUNDER_EMAIL)
+
+
+def test_slack_redirect_defaults_to_the_web_app(monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "slack_redirect_uri", "")
+    monkeypatch.setattr(s, "public_web_url", "https://app.sitelytc.com/")
+    assert s.slack_redirect == "https://app.sitelytc.com/api/oauth/slack/callback"
+    monkeypatch.setattr(s, "slack_redirect_uri", "https://x.test/cb")
+    assert s.slack_redirect == "https://x.test/cb"

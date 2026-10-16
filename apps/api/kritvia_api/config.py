@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     slack_client_id: str = ""
     slack_client_secret: str = ""
     slack_signing_secret: str = ""
-    slack_redirect_uri: str = "http://localhost:3000/api/oauth/slack/callback"  # the WEB app route
+    slack_redirect_uri: str = ""  # the WEB app route; empty = PUBLIC_WEB_URL + /api/oauth/slack/callback
     # Google Places API (New), used by the Prospector agent to find businesses on Maps. A server key
     # from Google Cloud (Places API (New) enabled, restricted to this server's IP). Empty: the
     # Prospector says it is not set up instead of searching.
@@ -133,6 +133,7 @@ class Settings(BaseSettings):
     # business signed up with a partner's code. Empty: no discount is applied at checkout.
     razorpay_partner_offer_id: str = ""
     # Kritvia's own team (comma-separated sign-in emails): they see Pilot health across organisations.
+    # Empty (or unset) = the founder, FOUNDER_EMAIL below. STAFF_EMAILS in .env replaces that list.
     staff_emails: str = ""
     terms_version: str = "2026-10-16"   # Terms of Service + Privacy Policy in force; bump when they change
     email_code_minutes: int = Field(default=10, ge=5, le=15)   # sign-in and password-reset codes
@@ -165,6 +166,11 @@ class Settings(BaseSettings):
     inbound_email_domain: str = ""
     inbound_email_secret: str = ""
 
+    @property
+    def slack_redirect(self) -> str:
+        """Where Slack sends people back after "Add to Slack" (the web app's callback route)."""
+        return self.slack_redirect_uri or f"{self.public_web_url.rstrip('/')}/api/oauth/slack/callback"
+
     @model_validator(mode="before")
     @classmethod
     def _empty_means_unset(cls, data: Any) -> Any:
@@ -182,6 +188,10 @@ class Settings(BaseSettings):
                 continue
             out[key] = value
         return out
+
+
+# Kritvia's founder: on Kritvia's team (Pilot health, Partners) unless STAFF_EMAILS says otherwise.
+FOUNDER_EMAIL = "smayankthakur25@gmail.com"
 
 
 @lru_cache

@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
-from kritvia_api.config import get_settings
+from kritvia_api.config import FOUNDER_EMAIL, get_settings
 from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.runner import DuplicateTrigger, start_run
 from kritvia_api.ratelimit import limiter
@@ -55,7 +55,8 @@ class FirstWinOut(BaseModel):
 
 
 def is_staff(email: str | None) -> bool:
-    staff = {e.strip().lower() for e in get_settings().staff_emails.split(",") if e.strip()}
+    raw = get_settings().staff_emails.strip() or FOUNDER_EMAIL
+    staff = {e.strip().lower() for e in raw.split(",") if e.strip()}
     return bool(email) and email.lower() in staff
 
 

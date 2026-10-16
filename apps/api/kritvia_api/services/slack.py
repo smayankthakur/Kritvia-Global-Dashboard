@@ -103,7 +103,7 @@ class SlackClient:
         s = get_settings()
         try:
             r = await self._http.post(f"{WEB_API}/oauth.v2.access", auth=(s.slack_client_id, s.slack_client_secret),
-                                      data={"code": code, "redirect_uri": s.slack_redirect_uri})
+                                      data={"code": code, "redirect_uri": s.slack_redirect})
             data = r.json()
         except (httpx.HTTPError, ValueError):
             raise SlackError("couldn't reach Slack; try again in a minute") from None
