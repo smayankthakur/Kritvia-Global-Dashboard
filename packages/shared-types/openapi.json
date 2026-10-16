@@ -617,94 +617,6 @@
         "title": "ApplicationOut",
         "type": "object"
       },
-      "ApplyIn": {
-        "properties": {
-          "city": {
-            "anyOf": [
-              {
-                "maxLength": 80,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "City"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "maxLength": 12,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "the code you'd like (letters and digits)",
-            "title": "Code"
-          },
-          "firm": {
-            "anyOf": [
-              {
-                "maxLength": 160,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firm"
-          },
-          "kind": {
-            "enum": [
-              "ca",
-              "agency",
-              "consultant",
-              "other"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "maxLength": 24,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
-          },
-          "upi_id": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "where payouts go",
-            "title": "Upi Id"
-          }
-        },
-        "required": [
-          "name",
-          "kind"
-        ],
-        "title": "ApplyIn",
-        "type": "object"
-      },
       "ApprovalBrief": {
         "properties": {
           "action": {
@@ -3487,6 +3399,112 @@
           "withdrawn_at"
         ],
         "title": "ConsentOut",
+        "type": "object"
+      },
+      "CouponInfo": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "months": {
+            "title": "Months",
+            "type": "integer"
+          },
+          "offer": {
+            "description": "e.g. 'Scale plan free for 3 months'",
+            "title": "Offer",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "places_left": {
+            "title": "Places Left",
+            "type": "integer"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "plan_name": {
+            "title": "Plan Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "plan",
+          "plan_name",
+          "months",
+          "places_left",
+          "open",
+          "offer"
+        ],
+        "title": "CouponInfo",
+        "type": "object"
+      },
+      "CouponUse": {
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          },
+          "owner_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Email"
+          },
+          "paid_plan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Plan"
+          },
+          "redeemed_at": {
+            "format": "date-time",
+            "title": "Redeemed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "org_id",
+          "org_name",
+          "owner_email",
+          "redeemed_at",
+          "ends_at",
+          "paid_plan"
+        ],
+        "title": "CouponUse",
         "type": "object"
       },
       "DPDPIn": {
@@ -8132,6 +8150,75 @@
         "title": "OptionOut",
         "type": "object"
       },
+      "OrgCouponOut": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "plan_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Name"
+          },
+          "running": {
+            "description": "the coupon's plan applies now",
+            "title": "Running",
+            "type": "boolean"
+          },
+          "superseded": {
+            "description": "a paid plan was chosen, so the coupon no longer matters",
+            "title": "Superseded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "plan",
+          "plan_name",
+          "ends_at",
+          "running",
+          "superseded"
+        ],
+        "title": "OrgCouponOut",
+        "type": "object"
+      },
       "OrgIn": {
         "properties": {
           "name": {
@@ -10981,6 +11068,98 @@
           "slots"
         ],
         "title": "SlotsOut",
+        "type": "object"
+      },
+      "StaffCoupon": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "max_uses": {
+            "title": "Max Uses",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "offer": {
+            "title": "Offer",
+            "type": "string"
+          },
+          "used_by": {
+            "items": {
+              "$ref": "#/components/schemas/CouponUse"
+            },
+            "title": "Used By",
+            "type": "array"
+          },
+          "uses": {
+            "title": "Uses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "offer",
+          "max_uses",
+          "uses",
+          "active",
+          "expires_at",
+          "note",
+          "used_by"
+        ],
+        "title": "StaffCoupon",
+        "type": "object"
+      },
+      "StaffCouponIn": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "max_uses": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Uses"
+          }
+        },
+        "required": [
+          "active"
+        ],
+        "title": "StaffCouponIn",
         "type": "object"
       },
       "StaffPartner": {
@@ -14473,6 +14652,20 @@
         "title": "HookOut",
         "type": "object"
       },
+      "kritvia_api__routers__coupons__ApplyIn": {
+        "properties": {
+          "code": {
+            "pattern": "^[A-Za-z0-9]{4,20}$",
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "ApplyIn",
+        "type": "object"
+      },
       "kritvia_api__routers__knowledge__AskIn": {
         "properties": {
           "question": {
@@ -14486,6 +14679,94 @@
           "question"
         ],
         "title": "AskIn",
+        "type": "object"
+      },
+      "kritvia_api__routers__partners__ApplyIn": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the code you'd like (letters and digits)",
+            "title": "Code"
+          },
+          "firm": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firm"
+          },
+          "kind": {
+            "enum": [
+              "ca",
+              "agency",
+              "consultant",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "where payouts go",
+            "title": "Upi Id"
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "ApplyIn",
         "type": "object"
       },
       "kritvia_api__routers__payments__HookOut": {
@@ -17393,6 +17674,110 @@
         ]
       }
     },
+    "/orgs/{org_id}/coupon": {
+      "get": {
+        "operationId": "org_coupon_orgs__org_id__coupon_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgCouponOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Org Coupon",
+        "tags": [
+          "coupons"
+        ]
+      },
+      "post": {
+        "operationId": "apply_coupon_orgs__org_id__coupon_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/kritvia_api__routers__coupons__ApplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgCouponOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Coupon",
+        "tags": [
+          "coupons"
+        ]
+      }
+    },
     "/orgs/{org_id}/dashboard": {
       "get": {
         "operationId": "dashboard_orgs__org_id__dashboard_get",
@@ -18432,7 +18817,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ApplyIn"
+                "$ref": "#/components/schemas/kritvia_api__routers__partners__ApplyIn"
               }
             }
           },
@@ -18562,6 +18947,48 @@
         "summary": "Razorpay Webhook",
         "tags": [
           "billing"
+        ]
+      }
+    },
+    "/public/coupons/{code}": {
+      "get": {
+        "operationId": "coupon_info_public_coupons__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CouponInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Coupon Info",
+        "tags": [
+          "coupons"
         ]
       }
     },
@@ -19050,6 +19477,97 @@
         "summary": "Readyz",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/staff/coupons": {
+      "get": {
+        "operationId": "staff_coupons_staff_coupons_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffCoupon"
+                  },
+                  "title": "Response Staff Coupons Staff Coupons Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Coupons",
+        "tags": [
+          "coupons"
+        ]
+      }
+    },
+    "/staff/coupons/{code}": {
+      "patch": {
+        "operationId": "staff_set_staff_coupons__code__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffCouponIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffCoupon"
+                  },
+                  "title": "Response Staff Set Staff Coupons  Code  Patch",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Set",
+        "tags": [
+          "coupons"
         ]
       }
     },

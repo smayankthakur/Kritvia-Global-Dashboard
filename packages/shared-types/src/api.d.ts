@@ -1027,6 +1027,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/coupon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Org Coupon */
+        get: operations["org_coupon_orgs__org_id__coupon_get"];
+        put?: never;
+        /** Apply Coupon */
+        post: operations["apply_coupon_orgs__org_id__coupon_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/dashboard": {
         parameters: {
             query?: never;
@@ -1355,6 +1373,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/coupons/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coupon Info */
+        get: operations["coupon_info_public_coupons__code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/email-in": {
         parameters: {
             query?: never;
@@ -1554,6 +1589,40 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/staff/coupons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff Coupons */
+        get: operations["staff_coupons_staff_coupons_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/coupons/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Staff Set */
+        patch: operations["staff_set_staff_coupons__code__patch"];
         trace?: never;
     };
     "/staff/partners": {
@@ -4471,32 +4540,6 @@ export interface components {
             /** Upload Link Expires */
             upload_link_expires: string | null;
         };
-        /** ApplyIn */
-        ApplyIn: {
-            /** City */
-            city?: string | null;
-            /**
-             * Code
-             * @description the code you'd like (letters and digits)
-             */
-            code?: string | null;
-            /** Firm */
-            firm?: string | null;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "ca" | "agency" | "consultant" | "other";
-            /** Name */
-            name: string;
-            /** Phone */
-            phone?: string | null;
-            /**
-             * Upi Id
-             * @description where payouts go
-             */
-            upi_id?: string | null;
-        };
         /** ApprovalBrief */
         ApprovalBrief: {
             /** Action */
@@ -5576,6 +5619,50 @@ export interface components {
             purpose: string;
             /** Withdrawn At */
             withdrawn_at: string | null;
+        };
+        /** CouponInfo */
+        CouponInfo: {
+            /** Code */
+            code: string;
+            /** Months */
+            months: number;
+            /**
+             * Offer
+             * @description e.g. 'Scale plan free for 3 months'
+             */
+            offer: string;
+            /** Open */
+            open: boolean;
+            /** Places Left */
+            places_left: number;
+            /** Plan */
+            plan: string;
+            /** Plan Name */
+            plan_name: string;
+        };
+        /** CouponUse */
+        CouponUse: {
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Org Id
+             * Format: uuid
+             */
+            org_id: string;
+            /** Org Name */
+            org_name: string | null;
+            /** Owner Email */
+            owner_email: string | null;
+            /** Paid Plan */
+            paid_plan: string | null;
+            /**
+             * Redeemed At
+             * Format: date-time
+             */
+            redeemed_at: string;
         };
         /** DPDPIn */
         DPDPIn: {
@@ -7322,6 +7409,27 @@ export interface components {
              */
             type: "boolean" | "number" | "text";
         };
+        /** OrgCouponOut */
+        OrgCouponOut: {
+            /** Code */
+            code: string | null;
+            /** Ends At */
+            ends_at: string | null;
+            /** Plan */
+            plan: string | null;
+            /** Plan Name */
+            plan_name: string | null;
+            /**
+             * Running
+             * @description the coupon's plan applies now
+             */
+            running: boolean;
+            /**
+             * Superseded
+             * @description a paid plan was chosen, so the coupon no longer matters
+             */
+            superseded: boolean;
+        };
         /** OrgIn */
         OrgIn: {
             /** Name */
@@ -8440,6 +8548,32 @@ export interface components {
             service_id: string;
             /** Slots */
             slots: string[];
+        };
+        /** StaffCoupon */
+        StaffCoupon: {
+            /** Active */
+            active: boolean;
+            /** Code */
+            code: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Max Uses */
+            max_uses: number;
+            /** Note */
+            note: string | null;
+            /** Offer */
+            offer: string;
+            /** Used By */
+            used_by: components["schemas"]["CouponUse"][];
+            /** Uses */
+            uses: number;
+        };
+        /** StaffCouponIn */
+        StaffCouponIn: {
+            /** Active */
+            active: boolean;
+            /** Max Uses */
+            max_uses?: number | null;
         };
         /** StaffPartner */
         StaffPartner: {
@@ -9851,10 +9985,41 @@ export interface components {
             /** Run Id */
             run_id?: string | null;
         };
+        /** ApplyIn */
+        kritvia_api__routers__coupons__ApplyIn: {
+            /** Code */
+            code: string;
+        };
         /** AskIn */
         kritvia_api__routers__knowledge__AskIn: {
             /** Question */
             question: string;
+        };
+        /** ApplyIn */
+        kritvia_api__routers__partners__ApplyIn: {
+            /** City */
+            city?: string | null;
+            /**
+             * Code
+             * @description the code you'd like (letters and digits)
+             */
+            code?: string | null;
+            /** Firm */
+            firm?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ca" | "agency" | "consultant" | "other";
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Upi Id
+             * @description where payouts go
+             */
+            upi_id?: string | null;
         };
         /** HookOut */
         kritvia_api__routers__payments__HookOut: {
@@ -11770,6 +11935,72 @@ export interface operations {
             };
         };
     };
+    org_coupon_orgs__org_id__coupon_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgCouponOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_coupon_orgs__org_id__coupon_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["kritvia_api__routers__coupons__ApplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgCouponOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dashboard_orgs__org_id__dashboard_get: {
         parameters: {
             query?: never;
@@ -12396,7 +12627,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ApplyIn"];
+                "application/json": components["schemas"]["kritvia_api__routers__partners__ApplyIn"];
             };
         };
         responses: {
@@ -12491,6 +12722,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    coupon_info_public_coupons__code__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CouponInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -12861,6 +13123,61 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    staff_coupons_staff_coupons_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffCoupon"][];
+                };
+            };
+        };
+    };
+    staff_set_staff_coupons__code__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffCouponIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffCoupon"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -14,6 +14,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap } from "@/lib/api";
 import { useAccess } from "@/lib/access";
+import { CouponCard, couponNote } from "@/components/billing/coupon-card";
 import { PartnerCodeCard } from "@/components/partners/partner-code-card";
 import { formatDate, formatDateTime, formatINR } from "@/lib/format";
 import { PricingTable } from "@/components/public/pricing-table";
@@ -70,6 +71,11 @@ export default function BillingPage() {
   const { org, isOwner } = useAccess();
   const qc = useQueryClient();
   const toast = useToast();
+  const coupon = useQuery({
+    queryKey: ["org-coupon", org?.id],
+    enabled: Boolean(org),
+    queryFn: () => unwrap(api.GET("/orgs/{org_id}/coupon", { params: { path: { org_id: org!.id } } })),
+  });
   const plan = useQuery({
     queryKey: ["plan", org?.id],
     queryFn: async () => (await unwrap(api.GET("/orgs/{org_id}/plan", { params: { path: { org_id: org!.id } } }))) as unknown as PlanOut,
@@ -127,7 +133,7 @@ export default function BillingPage() {
       <PageHeader eyebrow={org.name} title="Plan & billing" description={`Your plan, this month's usage, and payments. ${PRICE_TAX_NOTE} Pay monthly, or yearly and get two months free.`} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
-          <CardHeader title={p.plan.code === "free" || p.plan.code === "expired" ? p.plan.name : `${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : p.plan.code === "free" ? trialNote(p.trial) : p.plan.code === "expired" ? "Read-only until you choose a plan" : undefined} />
+          <CardHeader title={p.plan.code === "free" || p.plan.code === "expired" ? p.plan.name : `${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : coupon.data?.running ? (couponNote(coupon.data) ?? undefined) : p.plan.code === "free" ? trialNote(p.trial) : p.plan.code === "expired" ? "Read-only until you choose a plan" : undefined} />
           <div className="space-y-4 p-4">
             <Meter label="AI this month" used={p.tokens} limit={p.plan.monthly_tokens} unit="tokens" />
             <Meter label="Businesses" used={p.ventures} limit={p.plan.max_ventures} />
@@ -167,7 +173,7 @@ export default function BillingPage() {
           plans={p.available.filter((a) => a.code !== "enterprise")}
           current={p.plan.code}
           action={(a, period) => {
-            if (a.code === p.plan.code) return <Button className="w-full" disabled>Your plan</Button>;
+            if (a.code === p.plan.code) return <Button className="w-full" disabled>{coupon.data?.running ? "Yours, free for now" : "Your plan"}</Button>;
             if (p.plan.code === "internal") return <Button className="w-full" disabled>Included</Button>;
             if (!SELF_SERVE.includes(a.code)) return null;
             const live = Boolean(billing.data?.configured);
@@ -189,6 +195,7 @@ export default function BillingPage() {
 
       {isOwner ? (
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
+          <CouponCard orgId={org.id} isOwner={isOwner} />
           <PartnerCodeCard orgId={org.id} />
           <Card>
             <CardHeader title="Billing details" description={GST_REGISTERED ? "Shown on your GST invoices. Add your GSTIN to claim input tax credit." : "Shown on your invoices."} />

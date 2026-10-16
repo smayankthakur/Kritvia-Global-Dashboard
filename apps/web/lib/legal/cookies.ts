@@ -3,7 +3,7 @@
  * one, add it here and, if it is not strictly necessary, register it in lib/consent.ts so the
  * consent banner asks first (tests/consent.test.ts checks the two lists agree).
  */
-export const COOKIES_UPDATED = "16 October 2026";
+export const COOKIES_UPDATED = "17 October 2026";
 
 export const COOKIES_MD = `## 1. What this policy covers
 
@@ -39,6 +39,7 @@ All our cookies are first-party, sent only to app.sitelytc.com over an encrypted
 | --- | --- | --- |
 | kv_voice_* (local storage) | Your dictation settings on this device. | Until you clear it |
 | kv-lang (local storage) | Your interface language (Hindi or English). | Until you clear it |
+| kv-coupon (local storage) | A coupon code from the sign-up link you used, so that it applies to the organisation you create. Removed as soon as it is used. | Until you create your organisation |
 | kv-ref (local storage) | A partner's referral code from the sign-up link you used, so that your discount applies to the organisation you create. Removed as soon as it is used. | Until you create your organisation |
 | kv-link-token (session storage) | Remembers a QR code you scanned while you sign in on this phone, so the sign-in can carry on. | Until the tab closes |
 | kv_terms_intent (session storage) | Carries your acceptance of the Terms from the sign-up page to your new account. | Until the tab closes |

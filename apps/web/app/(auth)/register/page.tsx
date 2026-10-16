@@ -6,6 +6,8 @@ import { EmailCodeForm, GoogleButton, OrDivider } from "@/components/auth/sign-i
 import { AuthCard } from "@/components/shell/auth-card";
 import { Checkbox, FormError } from "@/components/ui/field";
 import { safeNext } from "@/lib/auth-client";
+import { api } from "@/lib/api";
+import { rememberCoupon } from "@/lib/coupon";
 import { rememberReferral } from "@/lib/referral";
 import { markTermsIntent } from "@/lib/terms";
 
@@ -14,7 +16,15 @@ export default function RegisterPage() {
   const [terms, setTerms] = useState(false);
   const [adult, setAdult] = useState(false);
   const agreed = terms && adult;
+  const [offer, setOffer] = useState<{ code: string; offer: string; places_left: number; open: boolean } | null>(null);
   useEffect(() => rememberReferral(window.location.search), []);
+  useEffect(() => {
+    const code = rememberCoupon(window.location.search);
+    if (!code) return;
+    void api.GET("/public/coupons/{code}", { params: { path: { code } } }).then((r) => {
+      if (r.data) setOffer(r.data);
+    });
+  }, []);
   const done = () => {
     const next = new URLSearchParams(window.location.search).get("next");
     window.location.assign(next ? safeNext(next) : "/onboarding");
@@ -33,6 +43,17 @@ export default function RegisterPage() {
         </>
       }
     >
+      {offer ? (
+        <p className={`mb-4 rounded-lg border px-3 py-2 text-sm ${offer.open ? "border-success/40 bg-success-soft" : "border-border bg-surface-2"}`}>
+          {offer.open ? (
+            <>
+              <strong>{offer.code}</strong>: {offer.offer}. {offer.places_left} {offer.places_left === 1 ? "place" : "places"} left; it&apos;s applied when you create your organisation (Terms, clause 10.10).
+            </>
+          ) : (
+            <>All the places for {offer.code} have been taken. You still get 15 days free.</>
+          )}
+        </p>
+      ) : null}
       <Checkbox
         className="mb-3"
         checked={adult}

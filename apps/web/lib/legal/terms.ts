@@ -2,8 +2,10 @@
  * Terms of Service, version 2026-10-16. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Terms of Service). Keep the two in step; when the text changes, bump
  * TERMS_VERSION in the API settings (terms_version) so everyone is asked to accept again.
+ * 17 October 2026 added clause 10.10 (optional coupons) without a new version: it only applies to
+ * organisations that use a coupon, and the coupon form asks for agreement to it at that moment.
  */
-export const TERMS_UPDATED = "16 October 2026";
+export const TERMS_UPDATED = "17 October 2026";
 
 export const TERMS_MD = `These Terms of Service are an agreement between your business and Sitelytc Digital Media Private Limited for the use of Kritvia. Please read them with our [Privacy Policy](/privacy).
 
@@ -169,6 +171,8 @@ Features marked "Coming soon" on the pricing page are not yet available and are 
 10.8 **Disputed charges.** Tell us at support@sitelytc.com within 30 days of a charge you dispute. We will investigate in good faith. Please contact us before raising a chargeback with your bank.
 
 10.9 **Partner discount.** If your organisation signs up through a partner's referral link, in its first 30 days and before it first pays, you get 10% off your Plan's price for your first 3 paid months. The partner then sees your organisation's name, Plan and sign-up date, but never your data, and earns a commission from us that does not change what you pay.
+
+10.10 **Coupons.** We may offer coupons that give a Plan free for a period, such as our launch coupon FIRST50 (the Scale Plan free for 3 months for the first 50 organisations). A coupon can be used once per organisation and once per person. It can only be used by an organisation that is not on a paid Plan, and only while places last. While it runs, your organisation has that Plan's features and limits. Nothing is charged because of a coupon. When the free period ends, your organisation goes back to the Free plan. You then have 7 days to choose a paid Plan before it becomes read-only, as when a free trial ends. If you choose a paid Plan earlier, the paid Plan applies from then on. Coupons have no cash value and cannot be transferred. We may withdraw a coupon that was obtained by abuse, for example through accounts or organisations created to use it more than once.
 
 ## 11. Confidentiality
 
