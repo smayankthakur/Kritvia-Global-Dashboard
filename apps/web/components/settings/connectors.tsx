@@ -14,6 +14,7 @@ import { KeyValue, Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { ConnectVideo } from "@/components/settings/how-to-video";
+import { GstCard } from "@/components/settings/gst";
 import { PaymentsCard } from "@/components/settings/payments";
 import { approverLinksKey } from "@/components/account/chat-approvals";
 import { api, errorMessage, multipart, unwrap, type Schemas } from "@/lib/api";
@@ -373,6 +374,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
       <TelegramCard ventureId={ventureId} canAdmin={canAdmin} bot={tg} onRemove={() => tg && setRemoving(tg)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
       <SlackCard ventureId={ventureId} canAdmin={canAdmin} conn={slack} onRemove={() => slack && setRemoving(slack)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
       <PaymentsCard ventureId={ventureId} />
+      <GstCard ventureId={ventureId} />
       <Card>
         <CardHeader
           title={

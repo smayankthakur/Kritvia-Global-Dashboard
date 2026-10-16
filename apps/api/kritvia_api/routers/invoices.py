@@ -121,6 +121,7 @@ class InvoiceOut(BaseModel):
     pay_url: str = Field(description="the invoice's payment page, to share with the customer")
     customer_says_paid_at: datetime | None = Field(description="the customer said on the payment page they paid")
     customer_paid_ref: str | None
+    kind: Literal["simple", "gst"] = Field(description="gst: a numbered tax invoice made in Kritvia")
 
 
 class Totals(BaseModel):
@@ -151,7 +152,7 @@ class InvoiceDraft(BaseModel):
 
 COLS = ("id, number, customer_name, customer_email, customer_phone, amount_paise, paid_paise, issued_on, due_on,"
         " status, paid_on, notes, source, reminders_paused, reminders_sent, last_reminder_at, created_at,"
-        " pay_token, customer_says_paid_at, customer_paid_ref")
+        " pay_token, customer_says_paid_at, customer_paid_ref, kind")
 
 
 def pay_url(token: str) -> str:
@@ -249,6 +250,10 @@ async def update_invoice(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: Inv
     fields = body.model_dump(exclude_unset=True)
     if not fields:
         return _out(cur)
+    locked = {"number", "customer_name", "amount_paise", "issued_on"} & {k for k, v in fields.items() if v != getattr(cur, k)}
+    if cur.kind == "gst" and locked:
+        raise HTTPException(status.HTTP_409_CONFLICT, "a tax invoice can't be changed once issued; cancel it and "
+                                                      "issue a new one")
     if cur.status == "paid" and fields.get("status") is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "this invoice is paid")
     if "amount_paise" in fields and fields["amount_paise"] < cur.paid_paise:

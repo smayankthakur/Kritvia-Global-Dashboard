@@ -3037,6 +3037,88 @@
         "title": "DictationOut",
         "type": "object"
       },
+      "DocItem": {
+        "properties": {
+          "cgst_paise": {
+            "title": "Cgst Paise",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "discount_paise": {
+            "title": "Discount Paise",
+            "type": "integer"
+          },
+          "gst_rate": {
+            "title": "Gst Rate",
+            "type": "string"
+          },
+          "hsn_sac": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hsn Sac"
+          },
+          "igst_paise": {
+            "title": "Igst Paise",
+            "type": "integer"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "string"
+          },
+          "rate_paise": {
+            "title": "Rate Paise",
+            "type": "integer"
+          },
+          "sgst_paise": {
+            "title": "Sgst Paise",
+            "type": "integer"
+          },
+          "taxable_paise": {
+            "title": "Taxable Paise",
+            "type": "integer"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "position",
+          "description",
+          "hsn_sac",
+          "qty",
+          "unit",
+          "rate_paise",
+          "discount_paise",
+          "taxable_paise",
+          "gst_rate",
+          "cgst_paise",
+          "sgst_paise",
+          "igst_paise"
+        ],
+        "title": "DocItem",
+        "type": "object"
+      },
       "DocumentDetailOut": {
         "properties": {
           "access_roles": {
@@ -4317,6 +4399,278 @@
         "title": "GraphOut",
         "type": "object"
       },
+      "GstInvoiceIn": {
+        "properties": {
+          "customer_address": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Address"
+          },
+          "customer_email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Email"
+          },
+          "customer_gstin": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "when the customer is GST-registered",
+            "title": "Customer Gstin"
+          },
+          "customer_name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Customer Name",
+            "type": "string"
+          },
+          "customer_phone": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Phone"
+          },
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "defaults to the invoice date",
+            "title": "Due On"
+          },
+          "issued_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "defaults to today (IST)",
+            "title": "Issued On"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemIn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "place_of_supply": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "state code; defaults to the customer's GSTIN state, else yours",
+            "title": "Place Of Supply"
+          },
+          "reverse_charge": {
+            "default": false,
+            "title": "Reverse Charge",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "customer_name",
+          "items"
+        ],
+        "title": "GstInvoiceIn",
+        "type": "object"
+      },
+      "GstProfile": {
+        "properties": {
+          "address": {
+            "maxLength": 400,
+            "minLength": 5,
+            "title": "Address",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "gstin": {
+            "maxLength": 20,
+            "minLength": 15,
+            "title": "Gstin",
+            "type": "string"
+          },
+          "legal_name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Legal Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "prefix": {
+            "default": "INV",
+            "maxLength": 5,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9]+$",
+            "title": "Prefix",
+            "type": "string"
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "bank details, payment terms; printed at the foot",
+            "title": "Terms"
+          },
+          "trade_name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Name"
+          }
+        },
+        "required": [
+          "legal_name",
+          "gstin",
+          "address"
+        ],
+        "title": "GstProfile",
+        "type": "object"
+      },
+      "GstProfileOut": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "next_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the number the next tax invoice will get",
+            "title": "Next Number"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GstProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/State"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/State"
+            },
+            "title": "States",
+            "type": "array"
+          }
+        },
+        "required": [
+          "profile",
+          "state",
+          "can_edit",
+          "states",
+          "next_number"
+        ],
+        "title": "GstProfileOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4747,6 +5101,170 @@
         "title": "InvitationOut",
         "type": "object"
       },
+      "InvoiceDocument": {
+        "properties": {
+          "amount_in_words": {
+            "title": "Amount In Words",
+            "type": "string"
+          },
+          "balance_paise": {
+            "title": "Balance Paise",
+            "type": "integer"
+          },
+          "cgst_paise": {
+            "title": "Cgst Paise",
+            "type": "integer"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/Party"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "igst_paise": {
+            "title": "Igst Paise",
+            "type": "integer"
+          },
+          "issued_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued On"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "paid_paise": {
+            "title": "Paid Paise",
+            "type": "integer"
+          },
+          "pay_url": {
+            "title": "Pay Url",
+            "type": "string"
+          },
+          "place_of_supply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/State"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reverse_charge": {
+            "title": "Reverse Charge",
+            "type": "boolean"
+          },
+          "sgst_paise": {
+            "title": "Sgst Paise",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supplier": {
+            "$ref": "#/components/schemas/Party"
+          },
+          "tax_summary": {
+            "items": {
+              "$ref": "#/components/schemas/TaxRow"
+            },
+            "title": "Tax Summary",
+            "type": "array"
+          },
+          "taxable_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxable Paise"
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terms"
+          },
+          "title": {
+            "description": "'Tax Invoice' or 'Invoice'",
+            "title": "Title",
+            "type": "string"
+          },
+          "total_paise": {
+            "title": "Total Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title",
+          "kind",
+          "number",
+          "issued_on",
+          "due_on",
+          "status",
+          "supplier",
+          "customer",
+          "place_of_supply",
+          "reverse_charge",
+          "items",
+          "tax_summary",
+          "taxable_paise",
+          "cgst_paise",
+          "sgst_paise",
+          "igst_paise",
+          "total_paise",
+          "paid_paise",
+          "balance_paise",
+          "amount_in_words",
+          "terms",
+          "notes",
+          "pay_url"
+        ],
+        "title": "InvoiceDocument",
+        "type": "object"
+      },
       "InvoiceDraft": {
         "description": "Fields read from an invoice file, for a person to check before saving. Nothing is saved.",
         "properties": {
@@ -5019,6 +5537,15 @@
             ],
             "title": "Issued On"
           },
+          "kind": {
+            "description": "gst: a numbered tax invoice made in Kritvia",
+            "enum": [
+              "simple",
+              "gst"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "last_reminder_at": {
             "anyOf": [
               {
@@ -5116,7 +5643,8 @@
           "created_at",
           "pay_url",
           "customer_says_paid_at",
-          "customer_paid_ref"
+          "customer_paid_ref",
+          "kind"
         ],
         "title": "InvoiceOut",
         "type": "object"
@@ -5270,6 +5798,88 @@
           "totals"
         ],
         "title": "InvoicesOut",
+        "type": "object"
+      },
+      "ItemIn": {
+        "properties": {
+          "description": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "discount_paise": {
+            "default": 0,
+            "maximum": 9999999999999.0,
+            "minimum": 0.0,
+            "title": "Discount Paise",
+            "type": "integer"
+          },
+          "gst_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Gst Rate"
+          },
+          "hsn_sac": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HSN (goods) or SAC (services) code, 4-8 digits",
+            "title": "Hsn Sac"
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 999999999.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Qty"
+          },
+          "rate_paise": {
+            "description": "price per unit before GST",
+            "maximum": 9999999999999.0,
+            "minimum": 0.0,
+            "title": "Rate Paise",
+            "type": "integer"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "e.g. pcs, hrs, kg",
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "description",
+          "qty",
+          "rate_paise",
+          "gst_rate"
+        ],
+        "title": "ItemIn",
         "type": "object"
       },
       "KeyIn": {
@@ -6695,6 +7305,96 @@
           }
         },
         "title": "PaidClaimIn",
+        "type": "object"
+      },
+      "Party": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "gstin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gstin"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "trade_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Name"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Party",
         "type": "object"
       },
       "PartyBalance": {
@@ -8773,6 +9473,24 @@
         "title": "StartedOut",
         "type": "object"
       },
+      "State": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "State",
+        "type": "object"
+      },
       "Step": {
         "properties": {
           "detail": {
@@ -9839,6 +10557,51 @@
           }
         },
         "title": "TaskListPatch",
+        "type": "object"
+      },
+      "TaxRow": {
+        "properties": {
+          "cgst_paise": {
+            "title": "Cgst Paise",
+            "type": "integer"
+          },
+          "gst_rate": {
+            "title": "Gst Rate",
+            "type": "string"
+          },
+          "hsn_sac": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hsn Sac"
+          },
+          "igst_paise": {
+            "title": "Igst Paise",
+            "type": "integer"
+          },
+          "sgst_paise": {
+            "title": "Sgst Paise",
+            "type": "integer"
+          },
+          "taxable_paise": {
+            "title": "Taxable Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hsn_sac",
+          "gst_rate",
+          "taxable_paise",
+          "cgst_paise",
+          "sgst_paise",
+          "igst_paise"
+        ],
+        "title": "TaxRow",
         "type": "object"
       },
       "TelegramConnectIn": {
@@ -15211,6 +15974,48 @@
         ]
       }
     },
+    "/public/pay/{token}/document": {
+      "get": {
+        "operationId": "public_document_public_pay__token__document_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public Document",
+        "tags": [
+          "gst"
+        ]
+      }
+    },
     "/public/pay/{token}/online": {
       "post": {
         "description": "A Razorpay payment link for exactly what is still owed (made once, and again only if that changes).",
@@ -19766,6 +20571,110 @@
         ]
       }
     },
+    "/ventures/{venture_id}/gst-profile": {
+      "get": {
+        "operationId": "get_profile_ventures__venture_id__gst_profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GstProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Profile",
+        "tags": [
+          "gst"
+        ]
+      },
+      "put": {
+        "operationId": "put_profile_ventures__venture_id__gst_profile_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GstProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GstProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Profile",
+        "tags": [
+          "gst"
+        ]
+      }
+    },
     "/ventures/{venture_id}/invoices": {
       "get": {
         "operationId": "list_invoices_ventures__venture_id__invoices_get",
@@ -19912,6 +20821,64 @@
         "summary": "Create Invoice",
         "tags": [
           "invoices"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/invoices/gst": {
+      "post": {
+        "operationId": "issue_ventures__venture_id__invoices_gst_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GstInvoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Issue",
+        "tags": [
+          "gst"
         ]
       }
     },
@@ -20088,6 +21055,64 @@
         "summary": "Update Invoice",
         "tags": [
           "invoices"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/invoices/{invoice_id}/document": {
+      "get": {
+        "operationId": "document_ventures__venture_id__invoices__invoice_id__document_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Document",
+        "tags": [
+          "gst"
         ]
       }
     },

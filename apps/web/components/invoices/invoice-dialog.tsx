@@ -328,6 +328,14 @@ export function InvoiceDialog({
               <a className="text-sm font-medium text-accent underline underline-offset-2" href={invoice.pay_url} target="_blank" rel="noreferrer">
                 Open the page
               </a>
+              <a
+                className="text-sm font-medium text-accent underline underline-offset-2"
+                href={`/print/invoice/${ventureId}/${invoice.id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {invoice.kind === "gst" ? "Print or save the tax invoice" : "Print or save as PDF"}
+              </a>
               {invoice.customer_phone ? (
                 <a
                   className="text-sm font-medium text-accent underline underline-offset-2"

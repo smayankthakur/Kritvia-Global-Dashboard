@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
+import { Plus, ReceiptIndianRupee, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { GstInvoiceDialog } from "@/components/invoices/gst-invoice-dialog";
 import { InvoiceDialog, type Invoice } from "@/components/invoices/invoice-dialog";
 import { dueLabel, reminderLabel, rupees } from "@/components/invoices/money";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ export default function InvoicesPage() {
   const [show, setShow] = useState<Show>("open");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Invoice | "new" | null>(null);
+  const [gstOpen, setGstOpen] = useState(false);
   const canWrite = v.access === "write";
   const canAdmin = Boolean(v.can_admin || v.is_owner);
   const invoices = useQuery({
@@ -77,9 +79,14 @@ export default function InvoicesPage() {
         description="What customers owe you. Payment reminders go out by email or WhatsApp after you approve them, and stop when you record the payment."
         actions={
           canWrite ? (
-            <Button variant="primary" onClick={() => setOpen("new")} icon={<Plus className="h-4 w-4" />}>
-              Add invoice
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setGstOpen(true)} icon={<ReceiptIndianRupee className="h-4 w-4" />}>
+                New GST invoice
+              </Button>
+              <Button variant="primary" onClick={() => setOpen("new")} icon={<Plus className="h-4 w-4" />}>
+                Add invoice
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -144,6 +151,7 @@ export default function InvoicesPage() {
           }
         </QueryState>
       </Card>
+      {gstOpen ? <GstInvoiceDialog ventureId={v.id} open onClose={() => setGstOpen(false)} /> : null}
       {open ? (
         <InvoiceDialog
           key={open === "new" ? "new" : open.id}

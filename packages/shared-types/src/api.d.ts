@@ -1170,6 +1170,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/pay/{token}/document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Document */
+        get: operations["public_document_public_pay__token__document_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/pay/{token}/online": {
         parameters: {
             query?: never;
@@ -2415,6 +2432,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/gst-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_ventures__venture_id__gst_profile_get"];
+        /** Put Profile */
+        put: operations["put_profile_ventures__venture_id__gst_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/invoices": {
         parameters: {
             query?: never;
@@ -2427,6 +2462,23 @@ export interface paths {
         put?: never;
         /** Create Invoice */
         post: operations["create_invoice_ventures__venture_id__invoices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/invoices/gst": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue */
+        post: operations["issue_ventures__venture_id__invoices_gst_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2471,6 +2523,23 @@ export interface paths {
         head?: never;
         /** Update Invoice */
         patch: operations["update_invoice_ventures__venture_id__invoices__invoice_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/invoices/{invoice_id}/document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Document */
+        get: operations["document_ventures__venture_id__invoices__invoice_id__document_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/ventures/{venture_id}/invoices/{invoice_id}/payment": {
@@ -4745,6 +4814,33 @@ export interface components {
             /** Words */
             words: number;
         };
+        /** DocItem */
+        DocItem: {
+            /** Cgst Paise */
+            cgst_paise: number;
+            /** Description */
+            description: string;
+            /** Discount Paise */
+            discount_paise: number;
+            /** Gst Rate */
+            gst_rate: string;
+            /** Hsn Sac */
+            hsn_sac: string | null;
+            /** Igst Paise */
+            igst_paise: number;
+            /** Position */
+            position: number;
+            /** Qty */
+            qty: string;
+            /** Rate Paise */
+            rate_paise: number;
+            /** Sgst Paise */
+            sgst_paise: number;
+            /** Taxable Paise */
+            taxable_paise: number;
+            /** Unit */
+            unit: string | null;
+        };
         /** DocumentDetailOut */
         DocumentDetailOut: {
             /** Access Roles */
@@ -5273,6 +5369,85 @@ export interface components {
             /** Truncated */
             truncated: boolean;
         };
+        /** GstInvoiceIn */
+        GstInvoiceIn: {
+            /** Customer Address */
+            customer_address?: string | null;
+            /** Customer Email */
+            customer_email?: string | null;
+            /**
+             * Customer Gstin
+             * @description when the customer is GST-registered
+             */
+            customer_gstin?: string | null;
+            /** Customer Name */
+            customer_name: string;
+            /** Customer Phone */
+            customer_phone?: string | null;
+            /**
+             * Due On
+             * @description defaults to the invoice date
+             */
+            due_on?: string | null;
+            /**
+             * Issued On
+             * @description defaults to today (IST)
+             */
+            issued_on?: string | null;
+            /** Items */
+            items: components["schemas"]["ItemIn"][];
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Place Of Supply
+             * @description state code; defaults to the customer's GSTIN state, else yours
+             */
+            place_of_supply?: string | null;
+            /**
+             * Reverse Charge
+             * @default false
+             */
+            reverse_charge: boolean;
+        };
+        /** GstProfile */
+        GstProfile: {
+            /** Address */
+            address: string;
+            /** Email */
+            email?: string | null;
+            /** Gstin */
+            gstin: string;
+            /** Legal Name */
+            legal_name: string;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Prefix
+             * @default INV
+             */
+            prefix: string;
+            /**
+             * Terms
+             * @description bank details, payment terms; printed at the foot
+             */
+            terms?: string | null;
+            /** Trade Name */
+            trade_name?: string | null;
+        };
+        /** GstProfileOut */
+        GstProfileOut: {
+            /** Can Edit */
+            can_edit: boolean;
+            /**
+             * Next Number
+             * @description the number the next tax invoice will get
+             */
+            next_number: string | null;
+            profile: components["schemas"]["GstProfile"] | null;
+            state: components["schemas"]["State"] | null;
+            /** States */
+            states: components["schemas"]["State"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5439,6 +5614,58 @@ export interface components {
             /** Venture Id */
             venture_id: string | null;
         };
+        /** InvoiceDocument */
+        InvoiceDocument: {
+            /** Amount In Words */
+            amount_in_words: string;
+            /** Balance Paise */
+            balance_paise: number;
+            /** Cgst Paise */
+            cgst_paise: number;
+            customer: components["schemas"]["Party"];
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /** Igst Paise */
+            igst_paise: number;
+            /** Issued On */
+            issued_on: string | null;
+            /** Items */
+            items: components["schemas"]["DocItem"][];
+            /** Kind */
+            kind: string;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: string;
+            /** Paid Paise */
+            paid_paise: number;
+            /** Pay Url */
+            pay_url: string;
+            place_of_supply: components["schemas"]["State"] | null;
+            /** Reverse Charge */
+            reverse_charge: boolean;
+            /** Sgst Paise */
+            sgst_paise: number;
+            /** Status */
+            status: string;
+            supplier: components["schemas"]["Party"];
+            /** Tax Summary */
+            tax_summary: components["schemas"]["TaxRow"][];
+            /** Taxable Paise */
+            taxable_paise: number | null;
+            /** Terms */
+            terms: string | null;
+            /**
+             * Title
+             * @description 'Tax Invoice' or 'Invoice'
+             */
+            title: string;
+            /** Total Paise */
+            total_paise: number;
+        };
         /**
          * InvoiceDraft
          * @description Fields read from an invoice file, for a person to check before saving. Nothing is saved.
@@ -5539,6 +5766,12 @@ export interface components {
             id: string;
             /** Issued On */
             issued_on: string | null;
+            /**
+             * Kind
+             * @description gst: a numbered tax invoice made in Kritvia
+             * @enum {string}
+             */
+            kind: "simple" | "gst";
             /** Last Reminder At */
             last_reminder_at: string | null;
             /** Notes */
@@ -5602,6 +5835,35 @@ export interface components {
             /** Invoices */
             invoices: components["schemas"]["InvoiceOut"][];
             totals: components["schemas"]["Totals"];
+        };
+        /** ItemIn */
+        ItemIn: {
+            /** Description */
+            description: string;
+            /**
+             * Discount Paise
+             * @default 0
+             */
+            discount_paise: number;
+            /** Gst Rate */
+            gst_rate: number | string;
+            /**
+             * Hsn Sac
+             * @description HSN (goods) or SAC (services) code, 4-8 digits
+             */
+            hsn_sac?: string | null;
+            /** Qty */
+            qty: number | string;
+            /**
+             * Rate Paise
+             * @description price per unit before GST
+             */
+            rate_paise: number;
+            /**
+             * Unit
+             * @description e.g. pcs, hrs, kg
+             */
+            unit?: string | null;
         };
         /** KeyIn */
         KeyIn: {
@@ -6129,6 +6391,25 @@ export interface components {
              * @description the UPI reference (UTR), if handy
              */
             reference?: string | null;
+        };
+        /** Party */
+        Party: {
+            /** Address */
+            address?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Gstin */
+            gstin?: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** State */
+            state?: string | null;
+            /** State Code */
+            state_code?: string | null;
+            /** Trade Name */
+            trade_name?: string | null;
         };
         /** PartyBalance */
         PartyBalance: {
@@ -6967,6 +7248,13 @@ export interface components {
              */
             run_id: string;
         };
+        /** State */
+        State: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
         /** Step */
         Step: {
             /** Detail */
@@ -7362,6 +7650,21 @@ export interface components {
             name?: string | null;
             /** Position */
             position?: number | null;
+        };
+        /** TaxRow */
+        TaxRow: {
+            /** Cgst Paise */
+            cgst_paise: number;
+            /** Gst Rate */
+            gst_rate: string;
+            /** Hsn Sac */
+            hsn_sac: string | null;
+            /** Igst Paise */
+            igst_paise: number;
+            /** Sgst Paise */
+            sgst_paise: number;
+            /** Taxable Paise */
+            taxable_paise: number;
         };
         /** TelegramConnectIn */
         TelegramConnectIn: {
@@ -10404,6 +10707,37 @@ export interface operations {
             };
         };
     };
+    public_document_public_pay__token__document_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDocument"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     pay_online_public_pay__token__online_post: {
         parameters: {
             query?: never;
@@ -13023,6 +13357,72 @@ export interface operations {
             };
         };
     };
+    get_profile_ventures__venture_id__gst_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GstProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_profile_ventures__venture_id__gst_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GstProfile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GstProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_invoices_ventures__venture_id__invoices_get: {
         parameters: {
             query?: {
@@ -13070,6 +13470,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["InvoiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_ventures__venture_id__invoices_gst_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GstInvoiceIn"];
             };
         };
         responses: {
@@ -13181,6 +13616,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    document_ventures__venture_id__invoices__invoice_id__document_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDocument"];
                 };
             };
             /** @description Validation Error */

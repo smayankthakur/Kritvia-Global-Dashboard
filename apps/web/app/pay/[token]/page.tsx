@@ -86,6 +86,9 @@ export default function PayPage() {
           </p>
           <p className="mt-1 text-3xl font-semibold tabular-nums">{d.amount_text}</p>
           <p className="text-sm text-muted">Due {formatDate(d.due_on)}</p>
+          <a className="mt-1 inline-block text-sm font-medium text-accent underline underline-offset-2" href={`/pay/${token}/invoice`}>
+            View the invoice
+          </a>
         </div>
 
         {d.customer_says_paid ? (
