@@ -1,8 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Play, Repeat, Sparkles, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Bot, Plus, Play, Repeat, Sparkles, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { PageHeader } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
+import { AGENT_SUGGESTIONS, GROUPS, SUGGESTIONS, describeSchedule, type Suggestion, type SuggestionGroup } from "@/lib/automation-suggestions";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
 
@@ -26,7 +28,9 @@ const EXAMPLES = [
 const PERIODS: Record<string, string> = {
   today: "Today", yesterday: "Yesterday", last_7_days: "Last 7 days", last_week: "Last week (Mon–Sun)",
   this_month: "This month so far", last_month: "Last month", last_30_days: "Last 30 days",
+  tomorrow: "Tomorrow", next_7_days: "Next 7 days",
 };
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const CHANNELS: Record<string, string> = { email: "Email to me", telegram: "My Telegram", slack: "The business's Slack", app: "Only in Kritvia" };
 
 function Results({ ventureId, a, onClose }: { ventureId: string; a: Auto; onClose: () => void }) {
@@ -58,6 +62,77 @@ function Results({ ventureId, a, onClose }: { ventureId: string; a: Auto; onClos
   );
 }
 
+/** Ready-made automations: one tap fills the form below the request box. */
+function Suggestions({ taken, onPick }: { taken: Set<string>; onPick: (s: Suggestion) => void }) {
+  const groups = Object.keys(GROUPS) as SuggestionGroup[];
+  const left = SUGGESTIONS.filter((x) => !taken.has(x.title.toLowerCase()));
+  if (!left.length) return null;
+  return (
+    <Card>
+      <CardHeader title="Suggestions" description="Ready to use: tap Add, check the time and where it goes, then save." />
+      <div className="space-y-5 p-4 pt-0">
+        {groups.map((g) => {
+          const items = left.filter((x) => x.group === g);
+          if (!items.length) return null;
+          return (
+            <section key={g}>
+              <h3 className="mb-2 text-xs font-semibold tracking-wide text-subtle uppercase">{GROUPS[g]}</h3>
+              <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {items.map((x) => (
+                  <li key={x.id} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{x.title}</p>
+                      <p className="text-xs text-muted">{x.why}</p>
+                      <p className="mt-1 text-xs text-subtle">{describeSchedule(x.draft)}</p>
+                    </div>
+                    <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => onPick(x)} aria-label={`Add ${x.title}`}>
+                      Add
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+/** Agents that already work on their own, with whether each is on for this business. */
+function AgentIdeas({ ventureId, kind }: { ventureId: string; kind: string }) {
+  const configs = useQuery({
+    queryKey: ["workflow-configs", ventureId],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/workflow-configs", { params: { path: { venture_id: ventureId } } })),
+  });
+  const on = new Set((configs.data ?? []).filter((c) => c.enabled).map((c) => c.workflow));
+  const items = AGENT_SUGGESTIONS.filter((a) => !a.kinds || a.kinds.includes(kind) || on.has(a.workflow));
+  return (
+    <Card>
+      <CardHeader
+        title={<span className="flex items-center gap-2"><Bot className="h-4 w-4 text-accent" aria-hidden /> Agents that run by themselves</span>}
+        description="These need no schedule from you: switch one on and it works every day, drafting for your yes."
+      />
+      <ul className="grid gap-2 p-4 pt-0 sm:grid-cols-2 xl:grid-cols-3">
+        {items.map((a) => (
+          <li key={a.workflow} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                {a.title}
+                {on.has(a.workflow) ? <Badge tone="success">on</Badge> : null}
+              </p>
+              <p className="text-xs text-muted">{a.what}</p>
+            </div>
+            <Link href={a.href(ventureId)} className="shrink-0 text-sm text-accent hover:underline">
+              {on.has(a.workflow) ? "Settings" : "Set up"}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 export default function AutomationsPage() {
   const v = useVenture();
   const qc = useQueryClient();
@@ -69,11 +144,30 @@ export default function AutomationsPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Auto | null>(null);
+  const [also, setAlso] = useState("");
+  const panel = useRef<HTMLDivElement>(null);
+  const links = useQuery({
+    queryKey: ["approver-links", v.id],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/approver-links", { params: { path: { venture_id: v.id } } })),
+    enabled: canWrite,
+  });
+  const myTelegram = (links.data?.links ?? []).some((l) => l.mine && l.channel === "telegram");
+  const pick = (x: Suggestion) => {
+    // Telegram only when this person has linked their chat; otherwise email, so nothing goes unread.
+    const channel = x.draft.channel === "telegram" && !myTelegram ? "email" : x.draft.channel;
+    setDraft({ ...x.draft, channel, recipients: [], when: describeSchedule(x.draft) });
+    setAlso("");
+    setError(null);
+    setTimeout(() => panel.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
+  const recipients = also.split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+  const badEmail = recipients.find((x) => !EMAIL.test(x));
 
   const understand = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/automations/understand", { params: { path: { venture_id: v.id } }, body: { text: said.trim() } })),
     onSuccess: (d) => {
       setDraft(d);
+      setAlso((d.recipients ?? []).join(", "));
       setError(null);
     },
     onError: (e) => setError(errorMessage(e)),
@@ -83,13 +177,14 @@ export default function AutomationsPage() {
       unwrap(
         api.POST("/ventures/{venture_id}/automations", {
           params: { path: { venture_id: v.id } },
-          body: { name: d.name, task: d.task, period: d.period, freq: d.freq, weekdays: d.weekdays, day_of_month: d.day_of_month, at_time: d.at_time, channel: d.channel, recipients: d.recipients ?? [], said: d.said },
+          body: { name: d.name, task: d.task, period: d.period, freq: d.freq, weekdays: d.weekdays, day_of_month: d.day_of_month, at_time: d.at_time, channel: d.channel, recipients, said: d.said },
         }),
       ),
     onSuccess: (a) => {
       toast.success("Automation saved", `${a.when}. First run ${a.next_run_at ? formatRelative(a.next_run_at) : "soon"}.`);
       setDraft(null);
       setSaid("");
+      setAlso("");
       void qc.invalidateQueries({ queryKey: key });
     },
     onError: (e) => setError(errorMessage(e)),
@@ -139,7 +234,7 @@ export default function AutomationsPage() {
             <FormError message={error} />
           </form>
           {draft ? (
-            <div className="space-y-3 border-t border-border p-4">
+            <div ref={panel} className="space-y-3 border-t border-border p-4">
               <p className="text-sm">
                 <strong>{draft.when}</strong>: {draft.task} ({PERIODS[draft.period]?.toLowerCase()}).
               </p>
@@ -169,11 +264,11 @@ export default function AutomationsPage() {
                   </Select>
                 </Field>
               </div>
-              {draft.recipients?.length ? (
-                <p className="text-sm text-muted">Also emailed to {(draft.recipients ?? []).join(", ")}, after your yes each time.</p>
-              ) : null}
+              <Field label="Also email it to (optional)" hint="Your accountant or partner. Each email to someone else waits for your yes." error={badEmail ? `Not an email address: ${badEmail}` : undefined}>
+                <Input value={also} onChange={(e) => setAlso(e.target.value)} placeholder="ca@example.com" maxLength={600} />
+              </Field>
               <div className="flex gap-2">
-                <Button variant="primary" loading={save.isPending} onClick={() => save.mutate(draft)}>
+                <Button variant="primary" loading={save.isPending} disabled={Boolean(badEmail) || recipients.length > 10} onClick={() => save.mutate(draft)}>
                   Save automation
                 </Button>
                 <Button variant="ghost" onClick={() => setDraft(null)}>
@@ -221,11 +316,13 @@ export default function AutomationsPage() {
                 ))}
               </ul>
             ) : (
-              <EmptyState title="No automations yet" description="Try: every Monday at 9 send me last week's sales." />
+              <EmptyState title="No automations yet" description="Pick one from the suggestions below, or write your own above." />
             )
           }
         </QueryState>
       </Card>
+      {canWrite ? <Suggestions taken={new Set((list.data ?? []).map((a) => a.name.toLowerCase()))} onPick={pick} /> : null}
+      <AgentIdeas ventureId={v.id} kind={v.kind} />
       {viewing ? <Results ventureId={v.id} a={viewing} onClose={() => setViewing(null)} /> : null}
     </div>
   );

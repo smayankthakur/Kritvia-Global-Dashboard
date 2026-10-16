@@ -34,6 +34,9 @@ const BLOCKED = new Set([
   "auth/google/complete",
   "auth/password",
   "auth/password/reset",
+  "auth/link/request",
+  "auth/link/claim",
+  "auth/link/redeem",
 ]);
 const FORWARD_REQUEST_HEADERS = ["content-type", "accept", "accept-language", "user-agent", "cf-connecting-ip", "x-request-id"];
 const DROP_RESPONSE_HEADERS = new Set([

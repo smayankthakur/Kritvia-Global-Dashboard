@@ -96,7 +96,7 @@ We keep personal data only as long as the purpose needs it or the law requires, 
 | Customer Data | Until the business deletes it, or for any shorter period the business sets for a type of document. When a business closes its organisation, all its Customer Data is deleted 30 days later. |
 | Encrypted backups | Up to 30 days, for disaster recovery only. |
 | Security and system logs | One year, then deleted, as Indian cyber-security rules require. |
-| Sign-in codes | One day. |
+| Sign-in codes, including QR-code sign-ins between your devices | One day. |
 | Support messages | Two years. |
 | Privacy requests (section 6) | Three years after we close the request, as a record of how we handled it. |
 | Tax invoices and billing records | Eight years, as tax and company law require. |

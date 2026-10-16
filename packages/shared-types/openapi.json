@@ -1364,7 +1364,9 @@
               "last_week",
               "this_month",
               "last_month",
-              "last_30_days"
+              "last_30_days",
+              "tomorrow",
+              "next_7_days"
             ],
             "title": "Period",
             "type": "string"
@@ -1520,7 +1522,9 @@
               "last_week",
               "this_month",
               "last_month",
-              "last_30_days"
+              "last_30_days",
+              "tomorrow",
+              "next_7_days"
             ],
             "title": "Period",
             "type": "string"
@@ -3273,6 +3277,25 @@
         "title": "Citation",
         "type": "object"
       },
+      "ClaimOut": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "secret": {
+            "description": "kept by the web app in an httpOnly cookie, never shown to the page",
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "device"
+        ],
+        "title": "ClaimOut",
+        "type": "object"
+      },
       "CodeIn": {
         "properties": {
           "code": {
@@ -3657,6 +3680,19 @@
           "dictations"
         ],
         "title": "DayCount",
+        "type": "object"
+      },
+      "DecideIn": {
+        "properties": {
+          "approve": {
+            "title": "Approve",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approve"
+        ],
+        "title": "DecideIn",
         "type": "object"
       },
       "DecisionIn": {
@@ -7390,6 +7426,82 @@
         "title": "LearnOut",
         "type": "object"
       },
+      "LinkAnswerIn": {
+        "properties": {
+          "approve": {
+            "title": "Approve",
+            "type": "boolean"
+          },
+          "token": {
+            "pattern": "^[A-Za-z0-9_-]{32,64}$",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "approve"
+        ],
+        "title": "LinkAnswerIn",
+        "type": "object"
+      },
+      "LinkAnswerOut": {
+        "properties": {
+          "status": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "LinkAnswerOut",
+        "type": "object"
+      },
+      "LinkStateOut": {
+        "properties": {
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the device that scanned the code",
+            "title": "Device"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "waiting",
+              "claimed",
+              "approved",
+              "rejected",
+              "used",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "device",
+          "expires_at"
+        ],
+        "title": "LinkStateOut",
+        "type": "object"
+      },
       "LoanDocOut": {
         "properties": {
           "confidence": {
@@ -7915,6 +8027,37 @@
           "updated_at"
         ],
         "title": "NoticeOut",
+        "type": "object"
+      },
+      "OfferOut": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "url": {
+            "description": "what the QR code holds",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "url",
+          "expires_at"
+        ],
+        "title": "OfferOut",
         "type": "object"
       },
       "OnlineOut": {
@@ -8733,6 +8876,47 @@
           "paid_paise"
         ],
         "title": "PayoutOut",
+        "type": "object"
+      },
+      "PeekOut": {
+        "properties": {
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "offer: the device showing the code; request: the device asking to sign in",
+            "title": "Device"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "offer",
+              "request"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "status",
+          "device",
+          "expires_at"
+        ],
+        "title": "PeekOut",
         "type": "object"
       },
       "PickerConfigOut": {
@@ -9696,6 +9880,26 @@
         "title": "RecipesIn",
         "type": "object"
       },
+      "RedeemIn": {
+        "properties": {
+          "secret": {
+            "pattern": "^[A-Za-z0-9_-]{32,64}$",
+            "title": "Secret",
+            "type": "string"
+          },
+          "token": {
+            "pattern": "^[A-Za-z0-9_-]{32,64}$",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "secret"
+        ],
+        "title": "RedeemIn",
+        "type": "object"
+      },
       "ReferredOrg": {
         "properties": {
           "commission_until": {
@@ -9912,6 +10116,37 @@
           }
         },
         "title": "ReplyPatch",
+        "type": "object"
+      },
+      "RequestOut": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "secret": {
+            "description": "kept by the web app in an httpOnly cookie, never shown to the page",
+            "title": "Secret",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "url": {
+            "description": "what the QR code holds",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "secret",
+          "url",
+          "expires_at"
+        ],
+        "title": "RequestOut",
         "type": "object"
       },
       "ResultOut": {
@@ -10509,6 +10744,43 @@
           "active"
         ],
         "title": "ServiceOut",
+        "type": "object"
+      },
+      "SessionOut": {
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "signed_in_at": {
+            "format": "date-time",
+            "title": "Signed In At",
+            "type": "string"
+          },
+          "this_device": {
+            "description": "best guess: the same browser as this request, most recently seen",
+            "title": "This Device",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "device",
+          "signed_in_at",
+          "last_seen_at",
+          "this_device"
+        ],
+        "title": "SessionOut",
         "type": "object"
       },
       "SettingsIn": {
@@ -12556,6 +12828,20 @@
         "title": "TierOut",
         "type": "object"
       },
+      "TokenIn": {
+        "properties": {
+          "token": {
+            "pattern": "^[A-Za-z0-9_-]{32,64}$",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "TokenIn",
+        "type": "object"
+      },
       "TokenOut": {
         "properties": {
           "access_token": {
@@ -12810,7 +13096,9 @@
               "last_week",
               "this_month",
               "last_month",
-              "last_30_days"
+              "last_30_days",
+              "tomorrow",
+              "next_7_days"
             ],
             "title": "Period",
             "type": "string"
@@ -14774,6 +15062,337 @@
         ]
       }
     },
+    "/auth/link/answer": {
+      "post": {
+        "operationId": "answer_auth_link_answer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkAnswerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkAnswerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Answer",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/link/claim": {
+      "post": {
+        "operationId": "claim_auth_link_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Claim",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/link/offer": {
+      "post": {
+        "operationId": "offer_auth_link_offer_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Offer",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/link/peek": {
+      "post": {
+        "operationId": "peek_auth_link_peek_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeekOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Peek",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/link/redeem": {
+      "post": {
+        "operationId": "redeem_auth_link_redeem_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "description": "still waiting for a yes"
+          },
+          "403": {
+            "description": "refused"
+          },
+          "410": {
+            "description": "expired or already used"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Redeem",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/link/request": {
+      "post": {
+        "operationId": "request_link_auth_link_request_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Request Link",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/link/{link_id}": {
+      "get": {
+        "operationId": "link_state_auth_link__link_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link State",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/link/{link_id}/decide": {
+      "post": {
+        "operationId": "decide_auth_link__link_id__decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "operationId": "login_auth_login_post",
@@ -15159,6 +15778,77 @@
           }
         },
         "summary": "Register",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "operationId": "sessions_auth_sessions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionOut"
+                  },
+                  "title": "Response Sessions Auth Sessions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sessions",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sessions/{family_id}": {
+      "delete": {
+        "operationId": "end_session_auth_sessions__family_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "family_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Family Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "End Session",
         "tags": [
           "auth"
         ]

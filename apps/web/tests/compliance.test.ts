@@ -51,9 +51,11 @@ describe("cookie consent", () => {
         // file moved: the names below still have to be listed
       }
     }
-    for (const f of ["lib/i18n/translate.ts", "lib/referral.ts"]) {
-      for (const m of read(f).matchAll(/"(kv-[a-z]+)"/g)) names.add(m[1]!);
+    for (const f of ["lib/i18n/translate.ts", "lib/referral.ts", "app/(auth)/link/link-flow.tsx"]) {
+      for (const m of read(f).matchAll(/"(kv-[a-z-]+)"/g)) names.add(m[1]!);
     }
+    expect(names).toContain("kv_link");
+    expect(names).toContain("kv-link-token");
     expect(names).toContain("kv-lang");
     expect(names).toContain("kv-ref");
     for (const n of ["kv_at", "kv_rt", "kv_theme", "kv_org", ...names]) expect(COOKIES_MD, n).toContain(n);

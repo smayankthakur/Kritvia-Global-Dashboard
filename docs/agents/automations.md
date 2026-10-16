@@ -22,6 +22,25 @@
 A business can have up to 25 automations. Only the person who made one, or an admin, can switch it
 off, run it now or remove it.
 
+## Suggestions
+
+The Automations page also offers 16 ready-made automations, in three groups: money, customers and
+bookings, and you and your agents. **Add** fills in the confirm form with no AI call. The person can
+then change the time, where it goes, and anyone else to email, before saving.
+
+- Suggestions that would go to Telegram go by email if the person hasn't linked Telegram.
+- The list lives in `apps/web/lib/automation-suggestions.ts`. A suggestion may use only numbers that
+  `services/automations.py: facts` reports.
+- Those numbers now include:
+  - invoices falling due in the period;
+  - drafts waiting for a yes;
+  - the list of bookings, with time, customer and service.
+- There are two new periods: `tomorrow` and `next_7_days`.
+
+Below the suggestions, **Agents that run by themselves** lists the agents that need no schedule:
+payment reminders, booking reminders, reviews, WhatsApp follow-ups and so on. Each shows whether it
+is on and links to its settings.
+
 ## Running
 
 The worker's `fire_automations` runs every minute. It claims due automations with `FOR UPDATE SKIP

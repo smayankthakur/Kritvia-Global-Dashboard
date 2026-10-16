@@ -2,6 +2,8 @@
 export const ACCESS_COOKIE = "kv_at";
 export const REFRESH_COOKIE = "kv_rt";
 export const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
+/** A QR sign-in in progress: the new device's secret, so page JavaScript never holds it. */
+export const LINK_COOKIE = "kv_link";
 
 /** Non-sensitive preference cookies (readable by the page). */
 export const THEME_COOKIE = "kv_theme";

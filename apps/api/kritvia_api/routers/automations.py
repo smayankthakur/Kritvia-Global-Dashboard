@@ -30,7 +30,8 @@ from kritvia_api.services.model_router import CallContext
 from kritvia_api.workflows.automation import RESULT_PURPOSE
 
 router = APIRouter(tags=["automations"])
-Period = Literal["today", "yesterday", "last_7_days", "last_week", "this_month", "last_month", "last_30_days"]
+Period = Literal["today", "yesterday", "last_7_days", "last_week", "this_month", "last_month", "last_30_days",
+                 "tomorrow", "next_7_days"]
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -88,10 +89,12 @@ async def understand(venture_id: uuid.UUID, body: UnderstandIn, user_id: UserId,
             svc.router, CallContext(org_id=org, venture_id=venture_id, user_id=user_id, workflow="automation"),
             tier="extract", schema=AutomationDraft,
             system=("You turn a business owner's request (English, Hindi or Hinglish) into a schedule and a report task. "
-                    "Kritvia can report on: money received, invoices issued, money still to collect and overdue "
-                    "invoices, bookings, new leads, and drafts by its agents. 'Sales' means money received and "
+                    "Kritvia can report on: money received, invoices issued, money still to collect, overdue "
+                    "invoices and invoices falling due, bookings (with the list of appointments), new leads, drafts by "
+                    "its agents and drafts waiting for a yes. 'Sales' means money received and "
                     "invoices issued. Pick the period the request implies (e.g. 'last week's' -> last_week, "
-                    "'yesterday's' -> yesterday, 'this month' -> this_month); default last_7_days for weekly, yesterday "
+                    "'yesterday's' -> yesterday, 'this month' -> this_month, 'tomorrow's appointments' -> tomorrow, "
+                    "'dues this week' -> next_7_days); default last_7_days for weekly, yesterday "
                     "for daily, last_month for monthly. Times are 24-hour HH:MM in India time; default 09:00. "
                     "channel: email unless they say Telegram, Slack or 'in the app'. recipients: only email addresses "
                     "written in the request for OTHER people; 'me' means none."),

@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/components/ui/cn";
 import { api, unwrap } from "@/lib/api";
 import { kindOf, useAccess } from "@/lib/access";
+import { OpenOnPhone } from "@/components/devices/open-on-phone";
 import { LanguageSwitch } from "@/components/i18n/language";
 import { accountNav, ownerNav, staffNav, topNav, ventureNav, type NavItem } from "@/lib/nav";
 import { Logo } from "./logo";
@@ -217,6 +218,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
             <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
           ))}
           <LanguageSwitch className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg" />
+          <OpenOnPhone className="hidden w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg md:flex" />
         </div>
       </nav>
     </div>

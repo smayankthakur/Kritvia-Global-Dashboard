@@ -18,6 +18,7 @@ const PUBLIC_PAGES = [
   "/security",
   "/help",
   "/status",
+  "/link",
 ];
 
 export function isPublicPath(pathname: string): boolean {

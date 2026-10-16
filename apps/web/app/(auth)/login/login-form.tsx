@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { PhoneSigninButton } from "@/components/auth/phone-signin";
 import { EmailCodeForm, GoogleButton, OrDivider } from "@/components/auth/sign-in";
 import { AuthCard } from "@/components/shell/auth-card";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,9 @@ export function LoginForm() {
       <FormError message={googleError} />
       <div className={googleError ? "mt-4" : undefined}>
         <GoogleButton onError={setGoogleError} />
+      </div>
+      <div className="mt-2">
+        <PhoneSigninButton onSignedIn={done} />
       </div>
       <OrDivider />
       {usePassword ? <PasswordForm onDone={done} /> : <EmailCodeForm onSignedIn={done} />}

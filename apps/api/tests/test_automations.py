@@ -25,6 +25,10 @@ async def test_schedule_arithmetic():
     assert (s.date().isoformat(), e.date().isoformat()) == ("2026-10-05", "2026-10-12")
     s, e = period_range("last_month", IST, wed)
     assert (s.date().isoformat(), e.date().isoformat()) == ("2026-09-01", "2026-10-01")
+    s, e = period_range("tomorrow", IST, wed)
+    assert (s.date().isoformat(), e.date().isoformat()) == ("2026-10-15", "2026-10-16")
+    s, e = period_range("next_7_days", IST, wed)
+    assert (s.date().isoformat(), e.date().isoformat()) == ("2026-10-14", "2026-10-21")
     assert describe("weekly", [0, 4], None, "09:00") == "Every Monday and Friday at 9:00 AM"
     assert describe("monthly", [], 1, "18:15") == "On day 1 of every month at 6:15 PM"
 

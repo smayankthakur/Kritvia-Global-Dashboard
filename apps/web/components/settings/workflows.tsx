@@ -134,7 +134,7 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
     onError: (e) => toast.error("Could not save", errorMessage(e)),
   });
   return (
-    <li className="space-y-4 p-4">
+    <li id={`agent-${wf.name}`} className="scroll-mt-20 space-y-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

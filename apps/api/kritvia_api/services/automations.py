@@ -9,8 +9,10 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 
-PERIODS = ("today", "yesterday", "last_7_days", "last_week", "this_month", "last_month", "last_30_days")
+PERIODS = ("today", "yesterday", "last_7_days", "last_week", "this_month", "last_month", "last_30_days",
+           "tomorrow", "next_7_days")
 PERIOD_WORDS = {"today": "today", "yesterday": "yesterday", "last_7_days": "the last 7 days",
+                "tomorrow": "tomorrow", "next_7_days": "the next 7 days",
                 "last_week": "last week (Monday to Sunday)", "this_month": "this month so far",
                 "last_month": "last month", "last_30_days": "the last 30 days"}
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -40,6 +42,10 @@ def period_range(period: str, tz: ZoneInfo, now: datetime) -> tuple[datetime, da
         return datetime.combine(d, time(0, 0), tz)
     if period == "today":
         return at(today), at(today + timedelta(days=1))
+    if period == "tomorrow":
+        return at(today + timedelta(days=1)), at(today + timedelta(days=2))
+    if period == "next_7_days":
+        return at(today), at(today + timedelta(days=7))
     if period == "yesterday":
         return at(today - timedelta(days=1)), at(today)
     if period == "last_7_days":
@@ -102,6 +108,15 @@ async def facts(conn, venture_id: uuid.UUID, start: datetime, end: datetime) -> 
     drafts = (await conn.execute(text(
         "SELECT count(*) AS made, count(*) FILTER (WHERE status IN ('approved', 'edited', 'executed')) AS approved"
         " FROM approvals WHERE venture_id = :v AND created_at >= :s AND created_at < :e"), p)).first()
+    due = (await conn.execute(text(
+        "SELECT count(*) AS n, coalesce(sum(amount_paise - paid_paise), 0) AS owed FROM invoices"
+        " WHERE venture_id = :v AND status = 'open' AND due_on >= CAST(:s AS date) AND due_on < CAST(:e AS date)"), p)).first()
+    blist = (await conn.execute(text(
+        "SELECT starts_at, customer_name, service_name, status FROM bookings"
+        " WHERE venture_id = :v AND starts_at >= :s AND starts_at < :e AND status <> 'cancelled'"
+        " ORDER BY starts_at LIMIT 16"), p)).all()
+    waiting = (await conn.execute(text(
+        "SELECT count(*) FROM approvals WHERE venture_id = :v AND status = 'pending'"), p)).scalar()
     lines = [
         f"Period: {start.date().isoformat()} to {(end - timedelta(seconds=1)).date().isoformat()}",
         f"Money received (payments recorded): {_rs(paid.total)} in {paid.n} payment(s)",
@@ -116,7 +131,16 @@ async def facts(conn, venture_id: uuid.UUID, start: datetime, end: datetime) -> 
         f"Bookings in the period: {bk.booked} (done {bk.done}, no-shows {bk.no_show}, cancelled {bk.cancelled})",
         f"New leads: {leads.new} (won {leads.won})",
         f"Drafts by the agents: {drafts.made} (approved {drafts.approved})",
+        f"Drafts waiting for a yes right now: {waiting}",
+        f"Open invoices falling due in the period: {due.n}, {_rs(due.owed)}",
     ]
+    if blist:
+        tz = start.tzinfo
+        shown = blist[:15]
+        lines.append("Bookings (time, customer, service): " + "; ".join(
+            f"{b.starts_at.astimezone(tz):%a %d %b %I:%M %p} {b.customer_name} - {b.service_name}"
+            + (f" ({b.status.replace('_', '-')})" if b.status != "confirmed" else "") for b in shown)
+            + ("; and more" if len(blist) > 15 else ""))
     return "\n".join(lines)
 
 

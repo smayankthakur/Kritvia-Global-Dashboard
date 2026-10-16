@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ChatApprovals } from "@/components/account/chat-approvals";
+import { DevicesCard } from "@/components/devices/devices-card";
 import { PushToggle } from "@/components/notifications/push-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export default function AccountPage() {
     <>
       <PageHeader title="Your account" description={me.data ? `${me.data.full_name} · ${me.data.email}` : undefined} />
       <div className="grid max-w-3xl gap-4">
+        <DevicesCard />
         <PushToggle />
         {venture ? <ChatApprovals ventureId={venture.venture_id} ventureName={venture.venture_name} /> : null}
         <Card>

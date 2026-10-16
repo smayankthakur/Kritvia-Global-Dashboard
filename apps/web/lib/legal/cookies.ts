@@ -25,6 +25,7 @@ A cookie is a small text file a website stores in your browser. Similar technolo
 | kv_at | Keeps you signed in (a short-lived access token). Page scripts cannot read it. | Strictly necessary, first party | 60 minutes |
 | kv_rt | Renews your sign-in without asking again. Page scripts cannot read it. | Strictly necessary, first party | 30 days |
 | kv_oauth, kv_signin | Protect the Google sign-in and connection steps against forgery. | Strictly necessary, first party | 10 minutes |
+| kv_link | Holds a QR-code sign-in while it is in progress (a random secret), so only this browser can finish it. Page scripts cannot read it. | Strictly necessary, first party | 5 minutes |
 | \\_\\_Host-kv_csrf | A random security token that proves a change really came from a Kritvia page (protection against cross-site request forgery). | Strictly necessary, first party | 1 year |
 | kv_org, kv_venture | Remember the organisation and business you last opened. | Strictly necessary (functional), first party | 1 year |
 | kv_theme | Remembers light or dark mode. | Strictly necessary (functional), first party | 1 year |
@@ -39,6 +40,7 @@ All our cookies are first-party, sent only to app.sitelytc.com over an encrypted
 | kv_voice_* (local storage) | Your dictation settings on this device. | Until you clear it |
 | kv-lang (local storage) | Your interface language (Hindi or English). | Until you clear it |
 | kv-ref (local storage) | A partner's referral code from the sign-up link you used, so that your discount applies to the organisation you create. Removed as soon as it is used. | Until you create your organisation |
+| kv-link-token (session storage) | Remembers a QR code you scanned while you sign in on this phone, so the sign-in can carry on. | Until the tab closes |
 | kv_terms_intent (session storage) | Carries your acceptance of the Terms from the sign-up page to your new account. | Until the tab closes |
 | kv_consent (local storage) | Your choice about optional cookies. Only written if we ever ask. | 12 months, then we ask again |
 | App cache (installable app) | The app's layout and code, so it opens quickly. Never your business data. | Until the app updates |

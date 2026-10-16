@@ -100,6 +100,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/link/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer */
+        post: operations["answer_auth_link_answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/link/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim */
+        post: operations["claim_auth_link_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/link/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Offer */
+        post: operations["offer_auth_link_offer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/link/peek": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Peek */
+        post: operations["peek_auth_link_peek_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/link/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Redeem */
+        post: operations["redeem_auth_link_redeem_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/link/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Link */
+        post: operations["request_link_auth_link_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/link/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Link State */
+        get: operations["link_state_auth_link__link_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/link/{link_id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide */
+        post: operations["decide_auth_link__link_id__decide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -284,6 +420,40 @@ export interface paths {
          */
         post: operations["register_auth_register_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sessions */
+        get: operations["sessions_auth_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sessions/{family_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** End Session */
+        delete: operations["end_session_auth_sessions__family_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4587,7 +4757,7 @@ export interface components {
              * @description the time the report covers
              * @enum {string}
              */
-            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days";
+            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days" | "tomorrow" | "next_7_days";
             /**
              * Recipients
              * @description other people's email addresses; empty when it's for the person asking
@@ -4656,7 +4826,7 @@ export interface components {
              * @description the time the report covers
              * @enum {string}
              */
-            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days";
+            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days" | "tomorrow" | "next_7_days";
             /**
              * Recipients
              * @description other people's email addresses; empty when it's for the person asking
@@ -5321,6 +5491,16 @@ export interface components {
              */
             venture_id: string;
         };
+        /** ClaimOut */
+        ClaimOut: {
+            /** Device */
+            device: string;
+            /**
+             * Secret
+             * @description kept by the web app in an httpOnly cookie, never shown to the page
+             */
+            secret: string;
+        };
         /** CodeIn */
         CodeIn: {
             /** Code */
@@ -5481,6 +5661,11 @@ export interface components {
             dictations: number;
             /** Words */
             words: number;
+        };
+        /** DecideIn */
+        DecideIn: {
+            /** Approve */
+            approve: boolean;
         };
         /** DecisionIn */
         DecisionIn: {
@@ -6809,6 +6994,39 @@ export interface components {
             learned: boolean;
             term?: components["schemas"]["TermOut"] | null;
         };
+        /** LinkAnswerIn */
+        LinkAnswerIn: {
+            /** Approve */
+            approve: boolean;
+            /** Token */
+            token: string;
+        };
+        /** LinkAnswerOut */
+        LinkAnswerOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "approved" | "rejected";
+        };
+        /** LinkStateOut */
+        LinkStateOut: {
+            /**
+             * Device
+             * @description the device that scanned the code
+             */
+            device: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "waiting" | "claimed" | "approved" | "rejected" | "used" | "expired";
+        };
         /** LoanDocOut */
         LoanDocOut: {
             /** Confidence */
@@ -7055,6 +7273,26 @@ export interface components {
             updated_at: string;
             /** Workflows */
             workflows: string[];
+        };
+        /** OfferOut */
+        OfferOut: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Token */
+            token: string;
+            /**
+             * Url
+             * @description what the QR code holds
+             */
+            url: string;
         };
         /** OnlineOut */
         OnlineOut: {
@@ -7344,6 +7582,26 @@ export interface components {
         PayoutOut: {
             /** Paid Paise */
             paid_paise: number;
+        };
+        /** PeekOut */
+        PeekOut: {
+            /**
+             * Device
+             * @description offer: the device showing the code; request: the device asking to sign in
+             */
+            device: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "offer" | "request";
+            /** Status */
+            status: string;
         };
         /** PickerConfigOut */
         PickerConfigOut: {
@@ -7735,6 +7993,13 @@ export interface components {
                 [key: string]: components["schemas"]["RecipeLine"][];
             };
         };
+        /** RedeemIn */
+        RedeemIn: {
+            /** Secret */
+            secret: string;
+            /** Token */
+            token: string;
+        };
         /** ReferredOrg */
         ReferredOrg: {
             /**
@@ -7829,6 +8094,26 @@ export interface components {
             draft?: string | null;
             /** Status */
             status?: ("drafted" | "posted" | "dismissed") | null;
+        };
+        /** RequestOut */
+        RequestOut: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Secret
+             * @description kept by the web app in an httpOnly cookie, never shown to the page
+             */
+            secret: string;
+            /** Token */
+            token: string;
+            /**
+             * Url
+             * @description what the QR code holds
+             */
+            url: string;
         };
         /** ResultOut */
         ResultOut: {
@@ -8053,6 +8338,31 @@ export interface components {
             name: string;
             /** Price Paise */
             price_paise?: number | null;
+        };
+        /** SessionOut */
+        SessionOut: {
+            /** Device */
+            device: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /**
+             * Signed In At
+             * Format: date-time
+             */
+            signed_in_at: string;
+            /**
+             * This Device
+             * @description best guess: the same browser as this request, most recently seen
+             */
+            this_device: boolean;
         };
         /** SettingsIn */
         SettingsIn: {
@@ -8848,6 +9158,11 @@ export interface components {
             /** Tier */
             tier: string;
         };
+        /** TokenIn */
+        TokenIn: {
+            /** Token */
+            token: string;
+        };
         /** TokenOut */
         TokenOut: {
             /** Access Token */
@@ -8953,7 +9268,7 @@ export interface components {
              * @description the time the report covers
              * @enum {string}
              */
-            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days";
+            period: "today" | "yesterday" | "last_7_days" | "last_week" | "this_month" | "last_month" | "last_30_days" | "tomorrow" | "next_7_days";
             /**
              * Recipients
              * @description other people's email addresses; empty when it's for the person asking
@@ -9831,6 +10146,265 @@ export interface operations {
             };
         };
     };
+    answer_auth_link_answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkAnswerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_auth_link_claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    offer_auth_link_offer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferOut"];
+                };
+            };
+        };
+    };
+    peek_auth_link_peek_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeekOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redeem_auth_link_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedeemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenOut"];
+                };
+            };
+            /** @description still waiting for a yes */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description refused */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description expired or already used */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_link_auth_link_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestOut"];
+                };
+            };
+        };
+    };
+    link_state_auth_link__link_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_auth_link__link_id__decide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_auth_login_post: {
         parameters: {
             query?: never;
@@ -10123,6 +10697,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TokenOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sessions_auth_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"][];
+                };
+            };
+        };
+    };
+    end_session_auth_sessions__family_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                family_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
