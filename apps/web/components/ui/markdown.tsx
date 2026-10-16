@@ -5,7 +5,8 @@ import { cn } from "./cn";
 /** Markdown from agents/users. Raw HTML is never rendered (react-markdown escapes it). */
 export function Markdown({ children, className }: { children: string; className?: string }) {
   return (
-    <div className={cn("prose-kv text-sm", className)}>
+    // Written by people or agents (or legal text): never machine-translated by the Hindi interface.
+    <div className={cn("prose-kv text-sm", className)} translate="no">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -46,7 +47,7 @@ export function RichText({ text, className }: { text: string; className?: string
   }
   const asciiTable = /^[^\n|]+(\s\|\s[^\n|]+){2,}$/m.test(text) && /^-{8,}\s*$/m.test(text);
   return (
-    <div className={cn("text-sm leading-relaxed whitespace-pre-wrap", asciiTable && "overflow-x-auto font-mono text-[12.5px] leading-6", className)}>
+    <div translate="no" className={cn("text-sm leading-relaxed whitespace-pre-wrap", asciiTable && "overflow-x-auto font-mono text-[12.5px] leading-6", className)}>
       {text}
     </div>
   );

@@ -1,5 +1,6 @@
 import { CheckCircle2, Languages, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
+import { LanguageSwitch } from "@/components/i18n/language";
 import { ApprovalPreview } from "@/components/public/approval-preview";
 import { Logo } from "./logo";
 
@@ -42,6 +43,9 @@ export function AuthCard({ title, subtitle, children, footer }: { title: string;
             <div className="mt-6">{children}</div>
           </div>
           {footer ? <div className="mt-6 text-center text-sm text-muted">{footer}</div> : null}
+          <div className="mt-4 flex justify-center">
+            <LanguageSwitch />
+          </div>
         </div>
       </div>
     </main>

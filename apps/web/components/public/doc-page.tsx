@@ -1,3 +1,4 @@
+import { LanguageSwitch, LegalLanguageNote } from "@/components/i18n/language";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -36,6 +37,7 @@ export function PublicShell({ children, wide }: { children: ReactNode; wide?: bo
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <LanguageSwitch />
             <Link href="/login" className={buttonClass("ghost", "sm", "hidden sm:inline-flex")}>
               Sign in
             </Link>
@@ -94,8 +96,9 @@ export function LegalDoc({ title, updated, markdown }: { title: string; updated:
       <article className="animate-fade-up text-[15px] text-muted [&_h2]:text-fg [&_strong]:text-fg">
         <header className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
-          <p className="mt-1 text-sm text-subtle">Last updated {updated}</p>
+          <p className="mt-1 text-sm text-subtle" translate="no">Last updated {updated}</p>
         </header>
+        <LegalLanguageNote />
         <Markdown className="text-[15px] [&_td]:min-w-[8rem] [&_td]:[overflow-wrap:normal] [&_th]:min-w-[8rem] [&_th]:[overflow-wrap:normal]">{markdown}</Markdown>
       </article>
     </PublicShell>

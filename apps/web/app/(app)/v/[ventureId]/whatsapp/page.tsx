@@ -92,7 +92,7 @@ function Bubble({ m, customer }: { m: Message; customer: string }) {
           {senderLabel(m.sent_by, customer)} · {formatTime(m.created_at)}
           {m.kind === "template" ? " · template" : ""}
         </p>
-        <p className={cn("whitespace-pre-wrap break-words", m.kind === "start" && "italic text-muted")}>{messageText(m.body, m.kind)}</p>
+        <p translate="no" className={cn("whitespace-pre-wrap break-words", m.kind === "start" && "italic text-muted")}>{messageText(m.body, m.kind)}</p>
         {m.status === "failed" ? <p className="mt-1 text-xs text-danger">Not delivered: {m.error ?? "it was refused"}</p> : null}
       </div>
     </li>

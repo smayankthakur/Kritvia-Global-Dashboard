@@ -44,7 +44,7 @@ function TemplateRow({ t, canAdmin, onDelete }: { t: Template; canAdmin: boolean
           </Button>
         ) : null}
       </div>
-      <p className="text-sm whitespace-pre-wrap break-words text-muted">{fillTemplate(t.body, t.examples)}</p>
+      <p translate="no" className="text-sm whitespace-pre-wrap break-words text-muted">{fillTemplate(t.body, t.examples)}</p>
       {t.reason && t.status !== "APPROVED" ? <p className="text-xs text-danger">WhatsApp says: {t.reason.replace(/_/g, " ").toLowerCase()}</p> : null}
       {!t.sendable && t.status === "APPROVED" ? (
         <p className="text-xs text-subtle">Has a photo, link or code: send it from WhatsApp Manager.</p>
@@ -155,7 +155,7 @@ function NewTemplate({ ventureId, onDone }: { ventureId: string; onDone: () => v
       {body.trim() ? (
         <div>
           <p className="mb-1 text-xs font-medium text-subtle">Preview</p>
-          <p className="max-w-md rounded-lg bg-accent-soft px-3 py-2 text-sm whitespace-pre-wrap break-words text-accent-soft-fg">
+          <p translate="no" className="max-w-md rounded-lg bg-accent-soft px-3 py-2 text-sm whitespace-pre-wrap break-words text-accent-soft-fg">
             {fillTemplate(body, examples)}
           </p>
         </div>

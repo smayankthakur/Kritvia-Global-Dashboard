@@ -70,7 +70,7 @@ export function TemplateFields({
       {t ? (
         <div>
           <p className="mb-1 text-xs font-medium text-subtle">The customer gets</p>
-          <p className="rounded-lg bg-accent-soft px-3 py-2 text-sm whitespace-pre-wrap break-words text-accent-soft-fg">
+          <p translate="no" className="rounded-lg bg-accent-soft px-3 py-2 text-sm whitespace-pre-wrap break-words text-accent-soft-fg">
             {fillTemplate(t.body, value.params)}
           </p>
         </div>

@@ -3,6 +3,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
+import { LanguageRoot } from "@/components/i18n/language";
 import { ConsentProvider } from "@/components/legal/consent";
 import { ScrollActivity } from "@/components/shell/scroll-activity";
 import { ToastProvider } from "@/components/ui/toast";
@@ -20,6 +21,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <ConsentProvider>{children}</ConsentProvider>
         </ToastProvider>
         <ScrollActivity />
+        <LanguageRoot />
       </MotionConfig>
     </QueryClientProvider>
   );
