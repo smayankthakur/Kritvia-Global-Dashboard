@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from kritvia_api.config import get_settings
 from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services import pii
@@ -93,6 +94,8 @@ class InvoicePatch(BaseModel):
 class PaymentIn(BaseModel):
     amount_paise: int = Field(gt=0, le=MAX_PAISE)
     paid_on: date | None = Field(default=None, description="defaults to today (IST)")
+    method: Literal["manual", "upi"] = "manual"
+    reference: str | None = Field(default=None, max_length=80, description="e.g. the UPI reference (UTR)")
 
 
 class InvoiceOut(BaseModel):
@@ -115,6 +118,9 @@ class InvoiceOut(BaseModel):
     reminders_sent: int
     last_reminder_at: datetime | None
     created_at: datetime
+    pay_url: str = Field(description="the invoice's payment page, to share with the customer")
+    customer_says_paid_at: datetime | None = Field(description="the customer said on the payment page they paid")
+    customer_paid_ref: str | None
 
 
 class Totals(BaseModel):
@@ -144,7 +150,12 @@ class InvoiceDraft(BaseModel):
 
 
 COLS = ("id, number, customer_name, customer_email, customer_phone, amount_paise, paid_paise, issued_on, due_on,"
-        " status, paid_on, notes, source, reminders_paused, reminders_sent, last_reminder_at, created_at")
+        " status, paid_on, notes, source, reminders_paused, reminders_sent, last_reminder_at, created_at,"
+        " pay_token, customer_says_paid_at, customer_paid_ref")
+
+
+def pay_url(token: str) -> str:
+    return f"{get_settings().public_web_url.rstrip('/')}/pay/{token}"
 
 
 def today_ist() -> date:
@@ -154,7 +165,9 @@ def today_ist() -> date:
 def _out(r) -> InvoiceOut:
     today = today_ist()
     overdue = (today - r.due_on).days if r.status == "open" and r.due_on < today else 0
-    return InvoiceOut(**r._mapping, balance_paise=r.amount_paise - r.paid_paise, overdue_days=max(overdue, 0))
+    fields = {k: v for k, v in r._mapping.items() if k != "pay_token"}
+    return InvoiceOut(**fields, balance_paise=r.amount_paise - r.paid_paise, overdue_days=max(overdue, 0),
+                      pay_url=pay_url(r.pay_token))
 
 
 async def _can_write(db, venture_id: uuid.UUID) -> None:
@@ -261,7 +274,8 @@ async def update_invoice(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: Inv
 
 
 @router.post("/ventures/{venture_id}/invoices/{invoice_id}/payment", response_model=InvoiceOut)
-async def record_payment(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: PaymentIn, db: TenantDB) -> InvoiceOut:
+async def record_payment(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: PaymentIn, user_id: UserId,
+                         db: TenantDB) -> InvoiceOut:
     """Records money received. Paid in full: the invoice is paid and reminders stop."""
     cur = await _one(db, venture_id, invoice_id)
     await _can_write(db, venture_id)
@@ -274,11 +288,17 @@ async def record_payment(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: Pay
     full = body.amount_paise == balance
     r = (await db.execute(text(
         "UPDATE invoices SET paid_paise = paid_paise + :a, status = CASE WHEN :full THEN 'paid' ELSE status END,"
-        " paid_on = :d, updated_at = now() WHERE id = :id AND venture_id = :v AND status = 'open'"
+        " paid_on = :d, customer_says_paid_at = NULL, customer_paid_ref = NULL, updated_at = now()"
+        " WHERE id = :id AND venture_id = :v AND status = 'open'"
         f" RETURNING {COLS}"),
         {"a": body.amount_paise, "full": full, "d": paid_on, "id": invoice_id, "v": venture_id})).first()
     if r is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "this invoice changed; refresh and try again")
+    await db.execute(text(
+        "INSERT INTO invoice_payments (org_id, venture_id, invoice_id, amount_paise, paid_on, method, reference, recorded_by)"
+        " SELECT org_id, venture_id, id, :a, :d, :m, :ref, :u FROM invoices WHERE id = :id"),
+        {"a": body.amount_paise, "d": paid_on, "m": body.method, "ref": (body.reference or "").strip() or None,
+         "u": user_id, "id": invoice_id})
     return _out(r)
 
 

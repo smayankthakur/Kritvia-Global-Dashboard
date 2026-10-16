@@ -158,7 +158,11 @@ async def _invoice(ctx: RunContext, invoice_id: str):
     async with ctx.tx() as conn:
         return (await conn.execute(text(
             "SELECT id, number, customer_name, customer_email, customer_phone, amount_paise, paid_paise, issued_on,"
-            " due_on, status, reminders_paused, reminders_sent, last_reminder_at FROM invoices"
+            " due_on, status, reminders_paused, reminders_sent, last_reminder_at, pay_token,"
+            " EXISTS (SELECT 1 FROM venture_payment_settings s WHERE s.venture_id = invoices.venture_id"
+            "         AND s.upi_id IS NOT NULL)"
+            " OR EXISTS (SELECT 1 FROM connectors c WHERE c.venture_id = invoices.venture_id"
+            "            AND c.provider = 'razorpay' AND c.status = 'active') AS payable FROM invoices"
             " WHERE id = :id AND venture_id = :v"), {"id": uuid.UUID(invoice_id), "v": ctx.venture_id})).first()
 
 
@@ -191,6 +195,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
                  "rude or threatening." + (" This is the last reminder: ask them to reply if there is a problem "
                                            "with the invoice or if they need more time." if last else ""))
     how = str(cfg.get("how_to_pay") or "").strip()
+    # The invoice's payment page (UPI QR, and card/netbanking when the business has Razorpay).
+    from kritvia_api.routers.invoices import pay_url
+    link = pay_url(inv.pay_token) if inv.payable else None
     biz = await ctx.business()
     update = {"invoice_id": str(inv.id), "balance": balance}
 
@@ -202,9 +209,12 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         prompt = (f"{stage}\nCustomer: {facts['customer']}\nInvoice: {facts['invoice']}\n"
                   f"Amount still due: {facts['amount']}" + (" (part of it has been paid)" if facts["partly_paid"] else "")
                   + f"\nDue date: {facts['due']}\n" + (f"How to pay: {how}\n" if how else "")
+                  + (f"Payment link (paste it exactly): {link}\n" if link else "")
                   + f"Sign as {biz.sign_off}.")
         e = await ctx.llm_json(tier="reason", schema=Email, system=system, prompt=prompt)
         body = e.body.strip()
+        if link and link not in body:
+            body += f"\n\nPay online: {link}"
         if how and how not in body:
             body += f"\n\nHow to pay: {how}"
         body = biz.with_notice(f"{body}\n\n{biz.sign_off}")

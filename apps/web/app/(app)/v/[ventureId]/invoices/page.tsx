@@ -37,7 +37,8 @@ function Row({ inv, onOpen }: { inv: Invoice; onOpen: () => void }) {
           <span>{inv.status === "paid" && inv.paid_on ? `Paid ${formatDate(inv.paid_on)}` : `Due ${formatDate(inv.due_on)}`}</span>
           {reminders ? <span>· {reminders}</span> : null}
         </span>
-        <span className="flex justify-end">
+        <span className="flex justify-end gap-1">
+          {inv.status === "open" && inv.customer_says_paid_at ? <Badge tone="info">says paid</Badge> : null}
           <Badge tone={due.tone}>{due.text}</Badge>
         </span>
         {inv.status === "open" && inv.paid_paise ? (

@@ -36,6 +36,7 @@ class Services:
     telegram: Any = None
     slack: Any = None
     places: Any = None
+    razorpay: Any = None           # businesses' own Razorpay accounts (invoice payment links)
     worker_id: str = field(default_factory=lambda: f"w-{uuid.uuid4().hex[:8]}")
 
 

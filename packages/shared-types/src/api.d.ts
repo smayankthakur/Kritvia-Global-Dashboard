@@ -370,6 +370,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/razorpay/{connector_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Razorpay Hook
+         * @description payment_link.paid from the business's Razorpay, signed with the secret Kritvia gave it. Records
+         *     the payment once (Razorpay's payment id), marks the invoice paid when nothing is left, tells the team.
+         *     Answers 200 once the signature checks out, so Razorpay doesn't retry what was handled.
+         */
+        post: operations["razorpay_hook_hooks_razorpay__connector_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/slack/interact": {
         parameters: {
             query?: never;
@@ -1131,6 +1153,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/pay/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pay Page */
+        get: operations["pay_page_public_pay__token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/pay/{token}/online": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pay Online
+         * @description A Razorpay payment link for exactly what is still owed (made once, and again only if that changes).
+         */
+        post: operations["pay_online_public_pay__token__online_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/pay/{token}/paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Customer Paid
+         * @description The customer says they paid by UPI. Nothing is marked paid: the team is told and confirms it.
+         */
+        post: operations["customer_paid_public_pay__token__paid_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/privacy-requests": {
         parameters: {
             query?: never;
@@ -1851,6 +1930,27 @@ export interface paths {
          * @description Poll Gmail now instead of waiting for the 5-minute schedule.
          */
         post: operations["google_sync_ventures__venture_id__connectors_google_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/razorpay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Razorpay
+         * @description Connect the business's own Razorpay account. The keys are checked with Razorpay and stored
+         *     encrypted; Kritvia makes a webhook secret for Razorpay to sign its payment notices with.
+         */
+        post: operations["connect_razorpay_ventures__venture_id__connectors_razorpay_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2774,6 +2874,24 @@ export interface paths {
         put?: never;
         /** Add Note */
         post: operations["add_note_ventures__venture_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/payment-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings__ventures__venture_id__payment_settings_get"];
+        /** Put Settings */
+        put: operations["put_settings_ventures__venture_id__payment_settings_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5092,18 +5210,6 @@ export interface components {
              */
             handled_by: "kritvia" | "person";
         };
-        /** HookOut */
-        HookOut: {
-            /** Accepted */
-            accepted: boolean;
-            /**
-             * Duplicate
-             * @default false
-             */
-            duplicate: boolean;
-            /** Run Id */
-            run_id?: string | null;
-        };
         /** IdOut */
         IdOut: {
             /**
@@ -5336,8 +5442,15 @@ export interface components {
             customer_email: string | null;
             /** Customer Name */
             customer_name: string;
+            /** Customer Paid Ref */
+            customer_paid_ref: string | null;
             /** Customer Phone */
             customer_phone: string | null;
+            /**
+             * Customer Says Paid At
+             * @description the customer said on the payment page they paid
+             */
+            customer_says_paid_at: string | null;
             /**
              * Due On
              * Format: date
@@ -5365,6 +5478,11 @@ export interface components {
             paid_on: string | null;
             /** Paid Paise */
             paid_paise: number;
+            /**
+             * Pay Url
+             * @description the invoice's payment page, to share with the customer
+             */
+            pay_url: string;
             /** Reminders Paused */
             reminders_paused: boolean;
             /** Reminders Sent */
@@ -5873,6 +5991,11 @@ export interface components {
             /** Workflows */
             workflows: string[];
         };
+        /** OnlineOut */
+        OnlineOut: {
+            /** Url */
+            url: string;
+        };
         /** OptionOut */
         OptionOut: {
             /** Default */
@@ -5917,6 +6040,14 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** PaidClaimIn */
+        PaidClaimIn: {
+            /**
+             * Reference
+             * @description the UPI reference (UTR), if handy
+             */
+            reference?: string | null;
+        };
         /** PartyBalance */
         PartyBalance: {
             /** Billed Inr */
@@ -5952,15 +6083,85 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** PayPageOut */
+        PayPageOut: {
+            /** Amount Paise */
+            amount_paise: number;
+            /** Amount Text */
+            amount_text: string;
+            /** Balance Paise */
+            balance_paise: number;
+            /** Business */
+            business: string;
+            /** Customer Name */
+            customer_name: string;
+            /** Customer Says Paid */
+            customer_says_paid: boolean;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /** Number */
+            number: string;
+            /**
+             * Online
+             * @description card, netbanking and UPI through the business's Razorpay
+             */
+            online: boolean;
+            /** Status */
+            status: string;
+            upi: components["schemas"]["UpiOut"] | null;
+        };
         /** PaymentIn */
         PaymentIn: {
             /** Amount Paise */
             amount_paise: number;
             /**
+             * Method
+             * @default manual
+             * @enum {string}
+             */
+            method: "manual" | "upi";
+            /**
              * Paid On
              * @description defaults to today (IST)
              */
             paid_on?: string | null;
+            /**
+             * Reference
+             * @description e.g. the UPI reference (UTR)
+             */
+            reference?: string | null;
+        };
+        /** PaymentSettings */
+        PaymentSettings: {
+            /**
+             * Payee Name
+             * @description shown in the customer's UPI app
+             */
+            payee_name?: string | null;
+            /**
+             * Upi Id
+             * @description e.g. glowsalon@okicici
+             */
+            upi_id?: string | null;
+        };
+        /** PaymentSettingsOut */
+        PaymentSettingsOut: {
+            /** Can Edit */
+            can_edit: boolean;
+            /**
+             * Payee Name
+             * @description shown in the customer's UPI app
+             */
+            payee_name?: string | null;
+            razorpay: components["schemas"]["RazorpayInfo"] | null;
+            /**
+             * Upi Id
+             * @description e.g. glowsalon@okicici
+             */
+            upi_id?: string | null;
         };
         /** PickerConfigOut */
         PickerConfigOut: {
@@ -6237,6 +6438,45 @@ export interface components {
              * @enum {string}
              */
             unit: "project" | "page" | "screen" | "integration" | "hour" | "month" | "workflow" | "assessment" | "item";
+        };
+        /** RazorpayConnectIn */
+        RazorpayConnectIn: {
+            /**
+             * Key Id
+             * @description rzp_live_… or rzp_test_…
+             */
+            key_id: string;
+            /**
+             * Key Secret
+             * @description stored encrypted, never shown again
+             */
+            key_secret: string;
+        };
+        /** RazorpayConnectOut */
+        RazorpayConnectOut: {
+            /**
+             * Connector Id
+             * Format: uuid
+             */
+            connector_id: string;
+            /** Events */
+            events: string[];
+            /**
+             * Webhook Secret
+             * @description shown once: paste it in Razorpay with the webhook address
+             */
+            webhook_secret: string;
+            /** Webhook Url */
+            webhook_url: string;
+        };
+        /** RazorpayInfo */
+        RazorpayInfo: {
+            /** Key Id */
+            key_id: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Webhook Url */
+            webhook_url: string;
         };
         /** RecipeLine */
         RecipeLine: {
@@ -7270,6 +7510,18 @@ export interface components {
             /** Threshold */
             threshold: number;
         };
+        /** UpiOut */
+        UpiOut: {
+            /**
+             * Link
+             * @description upi://pay link with the amount; the page shows it as a QR too
+             */
+            link: string;
+            /** Payee Name */
+            payee_name: string;
+            /** Upi Id */
+            upi_id: string;
+        };
         /** UploadLinkOut */
         UploadLinkOut: {
             /**
@@ -7797,10 +8049,27 @@ export interface components {
             /** Purpose */
             purpose: string;
         };
+        /** HookOut */
+        kritvia_api__routers__connectors__HookOut: {
+            /** Accepted */
+            accepted: boolean;
+            /**
+             * Duplicate
+             * @default false
+             */
+            duplicate: boolean;
+            /** Run Id */
+            run_id?: string | null;
+        };
         /** AskIn */
         kritvia_api__routers__knowledge__AskIn: {
             /** Question */
             question: string;
+        };
+        /** HookOut */
+        kritvia_api__routers__payments__HookOut: {
+            /** Recorded */
+            recorded: boolean;
         };
         /** UnsubscribeIn */
         kritvia_api__routers__privacy__UnsubscribeIn: {
@@ -8412,6 +8681,37 @@ export interface operations {
             };
         };
     };
+    razorpay_hook_hooks_razorpay__connector_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["kritvia_api__routers__payments__HookOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     slack_interact_hooks_slack_interact_post: {
         parameters: {
             query?: never;
@@ -8520,7 +8820,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HookOut"];
+                    "application/json": components["schemas"]["kritvia_api__routers__connectors__HookOut"];
                 };
             };
             /** @description Validation Error */
@@ -9896,6 +10196,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoticeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pay_page_public_pay__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pay_online_public_pay__token__online_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnlineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    customer_paid_public_pay__token__paid_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaidClaimIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayPageOut"];
                 };
             };
             /** @description Validation Error */
@@ -11457,6 +11854,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_razorpay_ventures__venture_id__connectors_razorpay_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RazorpayConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RazorpayConnectOut"];
                 };
             };
             /** @description Validation Error */
@@ -13699,6 +14131,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IngestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings__ventures__venture_id__payment_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_ventures__venture_id__payment_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettingsOut"];
                 };
             };
             /** @description Validation Error */

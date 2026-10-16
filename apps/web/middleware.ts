@@ -24,6 +24,7 @@ export function isPublicPath(pathname: string): boolean {
   return (
     PUBLIC_PAGES.includes(pathname) ||
     pathname.startsWith("/upload/") ||
+    pathname.startsWith("/pay/") ||
     pathname.startsWith("/n/") ||
     pathname.startsWith("/api/")
   );

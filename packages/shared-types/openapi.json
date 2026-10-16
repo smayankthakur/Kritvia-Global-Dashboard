@@ -4289,36 +4289,6 @@
         "title": "HandlerIn",
         "type": "object"
       },
-      "HookOut": {
-        "properties": {
-          "accepted": {
-            "title": "Accepted",
-            "type": "boolean"
-          },
-          "duplicate": {
-            "default": false,
-            "title": "Duplicate",
-            "type": "boolean"
-          },
-          "run_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Run Id"
-          }
-        },
-        "required": [
-          "accepted"
-        ],
-        "title": "HookOut",
-        "type": "object"
-      },
       "IdOut": {
         "properties": {
           "id": {
@@ -4934,6 +4904,17 @@
             "title": "Customer Name",
             "type": "string"
           },
+          "customer_paid_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Paid Ref"
+          },
           "customer_phone": {
             "anyOf": [
               {
@@ -4944,6 +4925,19 @@
               }
             ],
             "title": "Customer Phone"
+          },
+          "customer_says_paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the customer said on the payment page they paid",
+            "title": "Customer Says Paid At"
           },
           "due_on": {
             "format": "date",
@@ -5015,6 +5009,11 @@
             "title": "Paid Paise",
             "type": "integer"
           },
+          "pay_url": {
+            "description": "the invoice's payment page, to share with the customer",
+            "title": "Pay Url",
+            "type": "string"
+          },
           "reminders_paused": {
             "title": "Reminders Paused",
             "type": "boolean"
@@ -5056,7 +5055,10 @@
           "reminders_paused",
           "reminders_sent",
           "last_reminder_at",
-          "created_at"
+          "created_at",
+          "pay_url",
+          "customer_says_paid_at",
+          "customer_paid_ref"
         ],
         "title": "InvoiceOut",
         "type": "object"
@@ -6490,6 +6492,19 @@
         "title": "NoticeOut",
         "type": "object"
       },
+      "OnlineOut": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "OnlineOut",
+        "type": "object"
+      },
       "OptionOut": {
         "properties": {
           "default": {
@@ -6599,6 +6614,25 @@
         "title": "OrgSummary",
         "type": "object"
       },
+      "PaidClaimIn": {
+        "properties": {
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the UPI reference (UTR), if handy",
+            "title": "Reference"
+          }
+        },
+        "title": "PaidClaimIn",
+        "type": "object"
+      },
       "PartyBalance": {
         "properties": {
           "billed_inr": {
@@ -6680,6 +6714,77 @@
         "title": "PasswordResetIn",
         "type": "object"
       },
+      "PayPageOut": {
+        "properties": {
+          "amount_paise": {
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "amount_text": {
+            "title": "Amount Text",
+            "type": "string"
+          },
+          "balance_paise": {
+            "title": "Balance Paise",
+            "type": "integer"
+          },
+          "business": {
+            "title": "Business",
+            "type": "string"
+          },
+          "customer_name": {
+            "title": "Customer Name",
+            "type": "string"
+          },
+          "customer_says_paid": {
+            "title": "Customer Says Paid",
+            "type": "boolean"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "online": {
+            "description": "card, netbanking and UPI through the business's Razorpay",
+            "title": "Online",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "upi": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpiOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "business",
+          "number",
+          "customer_name",
+          "amount_paise",
+          "balance_paise",
+          "amount_text",
+          "due_on",
+          "status",
+          "upi",
+          "online",
+          "customer_says_paid"
+        ],
+        "title": "PayPageOut",
+        "type": "object"
+      },
       "PaymentIn": {
         "properties": {
           "amount_paise": {
@@ -6687,6 +6792,15 @@
             "maximum": 9999999999999.0,
             "title": "Amount Paise",
             "type": "integer"
+          },
+          "method": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "upi"
+            ],
+            "title": "Method",
+            "type": "string"
           },
           "paid_on": {
             "anyOf": [
@@ -6700,12 +6814,107 @@
             ],
             "description": "defaults to today (IST)",
             "title": "Paid On"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "e.g. the UPI reference (UTR)",
+            "title": "Reference"
           }
         },
         "required": [
           "amount_paise"
         ],
         "title": "PaymentIn",
+        "type": "object"
+      },
+      "PaymentSettings": {
+        "properties": {
+          "payee_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "shown in the customer's UPI app",
+            "title": "Payee Name"
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "e.g. glowsalon@okicici",
+            "title": "Upi Id"
+          }
+        },
+        "title": "PaymentSettings",
+        "type": "object"
+      },
+      "PaymentSettingsOut": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "payee_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "shown in the customer's UPI app",
+            "title": "Payee Name"
+          },
+          "razorpay": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RazorpayInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "upi_id": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "e.g. glowsalon@okicici",
+            "title": "Upi Id"
+          }
+        },
+        "required": [
+          "razorpay",
+          "can_edit"
+        ],
+        "title": "PaymentSettingsOut",
         "type": "object"
       },
       "PickerConfigOut": {
@@ -7390,6 +7599,93 @@
           "rate_inr"
         ],
         "title": "RateItem",
+        "type": "object"
+      },
+      "RazorpayConnectIn": {
+        "properties": {
+          "key_id": {
+            "description": "rzp_live_\u2026 or rzp_test_\u2026",
+            "maxLength": 60,
+            "minLength": 12,
+            "title": "Key Id",
+            "type": "string"
+          },
+          "key_secret": {
+            "description": "stored encrypted, never shown again",
+            "maxLength": 100,
+            "minLength": 10,
+            "title": "Key Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id",
+          "key_secret"
+        ],
+        "title": "RazorpayConnectIn",
+        "type": "object"
+      },
+      "RazorpayConnectOut": {
+        "properties": {
+          "connector_id": {
+            "format": "uuid",
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "webhook_secret": {
+            "description": "shown once: paste it in Razorpay with the webhook address",
+            "title": "Webhook Secret",
+            "type": "string"
+          },
+          "webhook_url": {
+            "title": "Webhook Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connector_id",
+          "webhook_url",
+          "webhook_secret",
+          "events"
+        ],
+        "title": "RazorpayConnectOut",
+        "type": "object"
+      },
+      "RazorpayInfo": {
+        "properties": {
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "webhook_url": {
+            "title": "Webhook Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id",
+          "webhook_url",
+          "last_error"
+        ],
+        "title": "RazorpayInfo",
         "type": "object"
       },
       "RecipeLine": {
@@ -10016,6 +10312,30 @@
         "title": "TrustOut",
         "type": "object"
       },
+      "UpiOut": {
+        "properties": {
+          "link": {
+            "description": "upi://pay link with the amount; the page shows it as a QR too",
+            "title": "Link",
+            "type": "string"
+          },
+          "payee_name": {
+            "title": "Payee Name",
+            "type": "string"
+          },
+          "upi_id": {
+            "title": "Upi Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upi_id",
+          "payee_name",
+          "link"
+        ],
+        "title": "UpiOut",
+        "type": "object"
+      },
       "UploadLinkOut": {
         "properties": {
           "expires_at": {
@@ -11273,6 +11593,36 @@
         "title": "ConsentIn",
         "type": "object"
       },
+      "kritvia_api__routers__connectors__HookOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "duplicate": {
+            "default": false,
+            "title": "Duplicate",
+            "type": "boolean"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "HookOut",
+        "type": "object"
+      },
       "kritvia_api__routers__knowledge__AskIn": {
         "properties": {
           "question": {
@@ -11286,6 +11636,19 @@
           "question"
         ],
         "title": "AskIn",
+        "type": "object"
+      },
+      "kritvia_api__routers__payments__HookOut": {
+        "properties": {
+          "recorded": {
+            "title": "Recorded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "recorded"
+        ],
+        "title": "HookOut",
         "type": "object"
       },
       "kritvia_api__routers__privacy__UnsubscribeIn": {
@@ -12117,6 +12480,50 @@
         ]
       }
     },
+    "/hooks/razorpay/{connector_id}": {
+      "post": {
+        "description": "payment_link.paid from the business's Razorpay, signed with the secret Kritvia gave it. Records\nthe payment once (Razorpay's payment id), marks the invoice paid when nothing is left, tells the team.\nAnswers 200 once the signature checks out, so Razorpay doesn't retry what was handled.",
+        "operationId": "razorpay_hook_hooks_razorpay__connector_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/kritvia_api__routers__payments__HookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Razorpay Hook",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/hooks/slack/interact": {
       "post": {
         "description": "Kritvia's Slack app: a button press or a submitted form. Slack signs each request with the app's\nsigning secret; anything unsigned, stale or replayed outside five minutes is refused.",
@@ -12242,7 +12649,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HookOut"
+                  "$ref": "#/components/schemas/kritvia_api__routers__connectors__HookOut"
                 }
               }
             },
@@ -14480,6 +14887,144 @@
         "summary": "Public Notice",
         "tags": [
           "public"
+        ]
+      }
+    },
+    "/public/pay/{token}": {
+      "get": {
+        "operationId": "pay_page_public_pay__token__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pay Page",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/public/pay/{token}/online": {
+      "post": {
+        "description": "A Razorpay payment link for exactly what is still owed (made once, and again only if that changes).",
+        "operationId": "pay_online_public_pay__token__online_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnlineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pay Online",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/public/pay/{token}/paid": {
+      "post": {
+        "description": "The customer says they paid by UPI. Nothing is marked paid: the team is told and confirms it.",
+        "operationId": "customer_paid_public_pay__token__paid_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaidClaimIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customer Paid",
+        "tags": [
+          "payments"
         ]
       }
     },
@@ -17091,6 +17636,65 @@
         "summary": "Google Sync",
         "tags": [
           "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/razorpay": {
+      "post": {
+        "description": "Connect the business's own Razorpay account. The keys are checked with Razorpay and stored\nencrypted; Kritvia makes a webhook secret for Razorpay to sign its payment notices with.",
+        "operationId": "connect_razorpay_ventures__venture_id__connectors_razorpay_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RazorpayConnectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RazorpayConnectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Razorpay",
+        "tags": [
+          "payments"
         ]
       }
     },
@@ -21199,6 +21803,110 @@
         "summary": "Add Note",
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/payment-settings": {
+      "get": {
+        "operationId": "get_settings__ventures__venture_id__payment_settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Settings ",
+        "tags": [
+          "payments"
+        ]
+      },
+      "put": {
+        "operationId": "put_settings_ventures__venture_id__payment_settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Settings",
+        "tags": [
+          "payments"
         ]
       }
     },

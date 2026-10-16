@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUp, Landmark } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
+import { CopyField } from "@/components/ui/copy";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Checkbox, Field, FormError, Input, Select, Textarea } from "@/components/ui/field";
@@ -25,6 +26,12 @@ interface FormState {
   issued_on: string;
   due_on: string;
   notes: string;
+}
+
+/** A wa.me link that opens WhatsApp with the payment page ready to send (the person sends it). */
+export function whatsappShare(i: Invoice): string {
+  const text = `Hi ${i.customer_name}, here is ${i.number ? `invoice ${i.number}` : "your invoice"} for ${rupees(i.balance_paise)}. You can pay by UPI here: ${i.pay_url}`;
+  return `https://wa.me/${i.customer_phone}?text=${encodeURIComponent(text)}`;
 }
 
 function istToday(offsetDays = 0): string {
@@ -133,11 +140,11 @@ export function InvoiceDialog({
     onError: (e) => setError(errorMessage(e)),
   });
   const pay = useMutation({
-    mutationFn: (amount_paise: number) =>
+    mutationFn: (p: number | { amount_paise: number; method: "upi"; reference: string | null }) =>
       unwrap(
         api.POST("/ventures/{venture_id}/invoices/{invoice_id}/payment", {
           params: { path: { venture_id: ventureId, invoice_id: invoice!.id } },
-          body: { amount_paise },
+          body: typeof p === "number" ? { amount_paise: p, method: "manual" } : p,
         }),
       ),
     onSuccess: (i) => {
@@ -294,6 +301,46 @@ export function InvoiceDialog({
           <button type="submit" hidden />
         </form>
         <FormError message={error} />
+
+        {editing && invoice.status === "open" ? (
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            {invoice.customer_says_paid_at ? (
+              <Notice tone="warning" title="The customer says they paid">
+                On {formatDate(invoice.customer_says_paid_at)}
+                {invoice.customer_paid_ref ? `, UPI reference ${invoice.customer_paid_ref}` : ""}. Check your bank or UPI app, then
+                confirm it.
+                {canWrite ? (
+                  <div className="mt-2">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      loading={pay.isPending}
+                      onClick={() => pay.mutate({ amount_paise: invoice.balance_paise, method: "upi", reference: invoice.customer_paid_ref ?? null })}
+                    >
+                      It arrived: paid in full ({rupees(invoice.balance_paise)})
+                    </Button>
+                  </div>
+                ) : null}
+              </Notice>
+            ) : null}
+            <CopyField label="Payment page (UPI QR, and card or netbanking if you connected Razorpay)" value={invoice.pay_url} />
+            <div className="flex flex-wrap gap-2">
+              <a className="text-sm font-medium text-accent underline underline-offset-2" href={invoice.pay_url} target="_blank" rel="noreferrer">
+                Open the page
+              </a>
+              {invoice.customer_phone ? (
+                <a
+                  className="text-sm font-medium text-accent underline underline-offset-2"
+                  href={whatsappShare(invoice)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Send on WhatsApp
+                </a>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {editing && invoice.status === "open" && canWrite ? (
           <div className="space-y-3 rounded-lg border border-border p-3">

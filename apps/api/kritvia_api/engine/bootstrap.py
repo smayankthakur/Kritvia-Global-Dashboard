@@ -8,6 +8,7 @@ from kritvia_api.services.crypto import LocalKeyProvider
 from kritvia_api.services.google import GoogleClient
 from kritvia_api.services.messaging import Messaging
 from kritvia_api.services.model_router import ModelRouter, TierConfig
+from kritvia_api.services.payments import RazorpayClient
 from kritvia_api.services.places import PlacesClient
 from kritvia_api.services.sandbox import HttpSandbox, LocalSandbox
 from kritvia_api.services.slack import SlackClient
@@ -54,6 +55,7 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
         telegram=telegram,
         slack=slack or SlackClient(),
         places=places or PlacesClient(s.google_places_api_key),
+        razorpay=RazorpayClient(),
     )
     if isinstance(dispatcher, InlineDispatcher):
         dispatcher.services = services

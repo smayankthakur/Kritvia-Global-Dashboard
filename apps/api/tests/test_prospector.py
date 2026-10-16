@@ -213,8 +213,9 @@ async def test_finds_businesses_without_a_website_and_drafts_whatsapp(biz, place
     run_detail = json.dumps((await mayank.get(f"/ventures/{v}/runs/{r['id']}")).json(), ensure_ascii=False)
     assert "Ramesh" not in run_detail and "98737" not in run_detail
     # the model was told the facts and the offer, and that this is a first message
-    prompt = fake_llm.chat_calls("You write short, honest sales messages")[0]
-    text_ = json.dumps(prompt, ensure_ascii=False)
+    # (drafts are written concurrently, so find Ramesh Dhaba's by its facts)
+    text_ = next(t for t in (json.dumps(p, ensure_ascii=False)
+                             for p in fake_llm.chat_calls("You write short, honest sales messages")) if "1700 reviews" in t)
     assert "FIRST message" in text_ and "1700 reviews" in text_ and "₹9,999" in text_ and "Nangloi" in text_
 
     # the next day: nobody is added twice, and drafts waiting for the owner are not rewritten
