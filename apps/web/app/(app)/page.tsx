@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Building2 } from "lucide-react";
 import Link from "next/link";
+import { FirstWinCard } from "@/components/first-win/first-win-card";
 import { RetryRunButton, workflowLabel } from "@/components/runs/run-actions";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -186,7 +187,7 @@ function VentureCardView({ card }: { card: VCard }) {
 }
 
 export default function DashboardPage() {
-  const { org, me } = useAccess();
+  const { org, me, venture } = useAccess();
   const q = useQuery({
     queryKey: ["dashboard", org?.id],
     queryFn: () => unwrap(api.GET("/orgs/{org_id}/dashboard", { params: { path: { org_id: org!.id } } })),
@@ -207,6 +208,11 @@ export default function DashboardPage() {
           </ButtonLink>
         }
       />
+      {venture ? (
+        <div className="mb-6">
+          <FirstWinCard ventureId={venture.venture_id} ventureName={venture.venture_name} canWrite={venture.access === "write"} />
+        </div>
+      ) : null}
       {q.isPending ? (
         <div className="space-y-4">
           <Skeleton className="h-20" />

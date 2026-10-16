@@ -45,6 +45,7 @@ class OrgSummary(BaseModel):
 class MeAccessOut(BaseModel):
     orgs: list[OrgSummary]
     ventures: list[AccessOut]
+    is_staff: bool = Field(default=False, description="Kritvia's own team (sees Pilot health)")
 
 
 @router.get("/me/access", response_model=MeAccessOut)
@@ -55,8 +56,10 @@ async def my_access(db: TenantDB) -> MeAccessOut:
     rows = (await db.execute(text(
         "SELECT a.*, a.org_id = ANY (private.owned_orgs()) AS is_owner,"
         " private.can_admin_venture(a.venture_id) AS can_admin FROM my_access() a"))).all()
+    from kritvia_api.routers.first_win import is_staff
+    email = (await db.execute(text("SELECT email FROM users WHERE id = private.current_user_id()"))).scalar()
     return MeAccessOut(orgs=[OrgSummary(**r._mapping) for r in orgs],
-                       ventures=[AccessOut(**r._mapping) for r in rows])
+                       ventures=[AccessOut(**r._mapping) for r in rows], is_staff=is_staff(email))
 
 
 class VentureSettingsIn(BaseModel):

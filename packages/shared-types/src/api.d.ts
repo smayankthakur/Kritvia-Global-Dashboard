@@ -1300,6 +1300,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/staff/pilots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pilots */
+        get: operations["pilots_staff_pilots_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tiers": {
         parameters: {
             query?: never;
@@ -2336,6 +2353,44 @@ export interface paths {
         head?: never;
         /** Update Fact */
         patch: operations["update_fact_ventures__venture_id__facts__fact_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/first-win": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** First Win */
+        get: operations["first_win_ventures__venture_id__first_win_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/first-win/practice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Practice
+         * @description A pretend customer email for the Inbox assistant. It is addressed from the person who asked, so
+         *     the reply (after their yes) lands in their own inbox and never reaches a stranger.
+         */
+        post: operations["practice_ventures__venture_id__first_win_practice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/ventures/{venture_id}/graph": {
@@ -5020,6 +5075,27 @@ export interface components {
             /** Unified */
             unified?: string | null;
         };
+        /** FirstWinOut */
+        FirstWinOut: {
+            /** Done */
+            done: number;
+            /** Minutes To Win */
+            minutes_to_win: number | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Steps */
+            steps: components["schemas"]["Step"][];
+            /** Total */
+            total: number;
+            /**
+             * Won At
+             * @description when the business's first draft was approved
+             */
+            won_at: string | null;
+        };
         /** ForwardingOut */
         ForwardingOut: {
             /** Address */
@@ -5794,6 +5870,12 @@ export interface components {
         };
         /** MeAccessOut */
         MeAccessOut: {
+            /**
+             * Is Staff
+             * @description Kritvia's own team (sees Pilot health)
+             * @default false
+             */
+            is_staff: boolean;
             /** Orgs */
             orgs: components["schemas"]["OrgSummary"][];
             /** Ventures */
@@ -6191,6 +6273,60 @@ export interface components {
             /** Ready */
             ready: boolean;
         };
+        /** PilotOut */
+        PilotOut: {
+            /** Businesses */
+            businesses: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided 7D */
+            decided_7d: number;
+            /** Drafts 7D */
+            drafts_7d: number;
+            /** First Yes At */
+            first_yes_at: string | null;
+            /**
+             * Health
+             * @description won, getting_started, stuck or quiet
+             */
+            health: string;
+            /** Hours To First Yes */
+            hours_to_first_yes: number | null;
+            /** Last Active At */
+            last_active_at: string | null;
+            /** Members */
+            members: number;
+            /**
+             * Org Id
+             * Format: uuid
+             */
+            org_id: string;
+            /** Org Name */
+            org_name: string;
+            /** Owner Email */
+            owner_email: string | null;
+            /** Plan */
+            plan: string | null;
+            /**
+             * Steps Done
+             * @description of 6: profile, agent, draft, yes, phone, channel
+             */
+            steps_done: number;
+            /** Trial Ends At */
+            trial_ends_at: string | null;
+        };
+        /** PilotsOut */
+        PilotsOut: {
+            /** Pilots */
+            pilots: components["schemas"]["PilotOut"][];
+            /** Stuck */
+            stuck: number;
+            /** Won */
+            won: number;
+        };
         /**
          * PlaceOut
          * @description A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).
@@ -6238,6 +6374,16 @@ export interface components {
              * Format: date
              */
             target_date: string;
+        };
+        /** PracticeOut */
+        PracticeOut: {
+            /** Reply To */
+            reply_to: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
         };
         /** PrivacyRequestIn */
         PrivacyRequestIn: {
@@ -6820,6 +6966,24 @@ export interface components {
              * Format: uuid
              */
             run_id: string;
+        };
+        /** Step */
+        Step: {
+            /** Detail */
+            detail: string;
+            /** Done */
+            done: boolean;
+            /** Href */
+            href: string;
+            /** Id */
+            id: string;
+            /**
+             * Optional
+             * @default false
+             */
+            optional: boolean;
+            /** Title */
+            title: string;
         };
         /** StepOut */
         StepOut: {
@@ -10497,6 +10661,26 @@ export interface operations {
             };
         };
     };
+    pilots_staff_pilots_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PilotsOut"];
+                };
+            };
+        };
+    };
     tiers_tiers_get: {
         parameters: {
             query?: never;
@@ -12729,6 +12913,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    first_win_ventures__venture_id__first_win_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FirstWinOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    practice_ventures__venture_id__first_win_practice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeOut"];
                 };
             };
             /** @description Validation Error */

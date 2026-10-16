@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/components/ui/cn";
 import { api, unwrap } from "@/lib/api";
 import { kindOf, useAccess } from "@/lib/access";
-import { accountNav, ownerNav, topNav, ventureNav, type NavItem } from "@/lib/nav";
+import { accountNav, ownerNav, staffNav, topNav, ventureNav, type NavItem } from "@/lib/nav";
 import { Logo } from "./logo";
 
 export const inboxKey = ["approvals", "inbox"] as const;
@@ -82,7 +82,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
-  const { orgs, org, ventures, venture, setOrg, rememberVenture, isOwner } = useAccess();
+  const { orgs, org, ventures, venture, setOrg, rememberVenture, isOwner, isStaff } = useAccess();
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const inbox = useInbox();
@@ -196,6 +196,16 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
             <SectionLabel>Organisation</SectionLabel>
             <div className="space-y-0.5">
               {ownerNav.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+              ))}
+            </div>
+          </>
+        ) : null}
+        {isStaff ? (
+          <>
+            <SectionLabel>Kritvia team</SectionLabel>
+            <div className="space-y-0.5">
+              {staffNav.map((item) => (
                 <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
               ))}
             </div>

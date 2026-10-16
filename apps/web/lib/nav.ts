@@ -11,6 +11,7 @@ import {
   Database,
   FileText,
   Gauge,
+  HeartPulse,
   LifeBuoy,
   MessageCircle,
   MessageSquareText,
@@ -99,6 +100,8 @@ export const ownerNav: NavItem[] = [
   { label: "AI models", href: "/ai", icon: BrainCircuit },
   { label: "Audit log", href: "/audit", icon: ScrollText },
 ];
+
+export const staffNav: NavItem[] = [{ label: "Pilot health", href: "/staff", icon: HeartPulse }];
 
 export const accountNav: NavItem[] = [
   { label: "Your account", href: "/account", icon: CircleUser },

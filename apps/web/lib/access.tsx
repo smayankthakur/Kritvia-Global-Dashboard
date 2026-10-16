@@ -25,6 +25,8 @@ interface AccessCtx {
   setOrg: (id: string) => void;
   rememberVenture: (id: string) => void;
   isOwner: boolean;
+  /** Kritvia's own team: sees Pilot health. */
+  isStaff: boolean;
 }
 
 const Ctx = createContext<AccessCtx | null>(null);
@@ -70,8 +72,9 @@ export function AccessProvider({ access, children }: { access: Schemas["MeAccess
       setOrg,
       rememberVenture,
       isOwner: Boolean(org?.is_owner),
+      isStaff: Boolean(access.is_staff),
     }),
-    [me.data, access.orgs, org, ventures, venture, setOrg, rememberVenture],
+    [me.data, access.orgs, access.is_staff, org, ventures, venture, setOrg, rememberVenture],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -3858,6 +3858,64 @@
         "title": "FieldDiff",
         "type": "object"
       },
+      "FirstWinOut": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "minutes_to_win": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes To Win"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/Step"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "won_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "when the business's first draft was approved",
+            "title": "Won At"
+          }
+        },
+        "required": [
+          "steps",
+          "done",
+          "total",
+          "started_at",
+          "won_at",
+          "minutes_to_win"
+        ],
+        "title": "FirstWinOut",
+        "type": "object"
+      },
       "ForwardingOut": {
         "properties": {
           "address": {
@@ -6069,6 +6127,12 @@
       },
       "MeAccessOut": {
         "properties": {
+          "is_staff": {
+            "default": false,
+            "description": "Kritvia's own team (sees Pilot health)",
+            "title": "Is Staff",
+            "type": "boolean"
+          },
           "orgs": {
             "items": {
               "$ref": "#/components/schemas/OrgSummary"
@@ -6962,6 +7026,164 @@
         "title": "PickerConfigOut",
         "type": "object"
       },
+      "PilotOut": {
+        "properties": {
+          "businesses": {
+            "title": "Businesses",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_7d": {
+            "title": "Decided 7D",
+            "type": "integer"
+          },
+          "drafts_7d": {
+            "title": "Drafts 7D",
+            "type": "integer"
+          },
+          "first_yes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Yes At"
+          },
+          "health": {
+            "description": "won, getting_started, stuck or quiet",
+            "title": "Health",
+            "type": "string"
+          },
+          "hours_to_first_yes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours To First Yes"
+          },
+          "last_active_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Active At"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          },
+          "org_name": {
+            "title": "Org Name",
+            "type": "string"
+          },
+          "owner_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Email"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "steps_done": {
+            "description": "of 6: profile, agent, draft, yes, phone, channel",
+            "title": "Steps Done",
+            "type": "integer"
+          },
+          "trial_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Ends At"
+          }
+        },
+        "required": [
+          "org_id",
+          "org_name",
+          "owner_email",
+          "plan",
+          "trial_ends_at",
+          "created_at",
+          "businesses",
+          "members",
+          "steps_done",
+          "first_yes_at",
+          "hours_to_first_yes",
+          "drafts_7d",
+          "decided_7d",
+          "last_active_at",
+          "health"
+        ],
+        "title": "PilotOut",
+        "type": "object"
+      },
+      "PilotsOut": {
+        "properties": {
+          "pilots": {
+            "items": {
+              "$ref": "#/components/schemas/PilotOut"
+            },
+            "title": "Pilots",
+            "type": "array"
+          },
+          "stuck": {
+            "title": "Stuck",
+            "type": "integer"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pilots",
+          "won",
+          "stuck"
+        ],
+        "title": "PilotsOut",
+        "type": "object"
+      },
       "PlaceOut": {
         "description": "A business as Google Maps shows it right now. Never stored (Google Maps Platform terms).",
         "properties": {
@@ -7132,6 +7354,25 @@
           "purchase_orders"
         ],
         "title": "PlanOut",
+        "type": "object"
+      },
+      "PracticeOut": {
+        "properties": {
+          "reply_to": {
+            "title": "Reply To",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "reply_to"
+        ],
+        "title": "PracticeOut",
         "type": "object"
       },
       "PrivacyRequestIn": {
@@ -8530,6 +8771,44 @@
           "run_id"
         ],
         "title": "StartedOut",
+        "type": "object"
+      },
+      "Step": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "optional": {
+            "default": false,
+            "title": "Optional",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "detail",
+          "done",
+          "href"
+        ],
+        "title": "Step",
         "type": "object"
       },
       "StepOut": {
@@ -15271,6 +15550,32 @@
         ]
       }
     },
+    "/staff/pilots": {
+      "get": {
+        "operationId": "pilots_staff_pilots_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pilots",
+        "tags": [
+          "first-win"
+        ]
+      }
+    },
     "/tiers": {
       "get": {
         "description": "Capability tiers and their fallback chains (no secrets): what 'private' really means.",
@@ -19269,6 +19574,103 @@
         "summary": "Update Fact",
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/first-win": {
+      "get": {
+        "operationId": "first_win_ventures__venture_id__first_win_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirstWinOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "First Win",
+        "tags": [
+          "first-win"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/first-win/practice": {
+      "post": {
+        "description": "A pretend customer email for the Inbox assistant. It is addressed from the person who asked, so\nthe reply (after their yes) lands in their own inbox and never reaches a stranger.",
+        "operationId": "practice_ventures__venture_id__first_win_practice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Practice",
+        "tags": [
+          "first-win"
         ]
       }
     },
