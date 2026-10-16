@@ -331,6 +331,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connectors/slack/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Slack Complete
+         * @description Called by the web app's OAuth callback with the code, the state and the nonce from ITS httpOnly
+         *     cookie, as the signed-in user. Stores the bot token encrypted, keeps the channel the installer picked
+         *     for notices, and links the installer's own Slack account (they just proved it by adding the app).
+         */
+        post: operations["slack_complete_connectors_slack_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -342,6 +364,27 @@ export interface paths {
         get: operations["healthz_healthz_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/slack/interact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Slack Interact
+         * @description Kritvia's Slack app: a button press or a submitted form. Slack signs each request with the app's
+         *     signing secret; anything unsigned, stale or replayed outside five minutes is refused.
+         */
+        post: operations["slack_interact_hooks_slack_interact_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1266,6 +1309,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/approver-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Links */
+        get: operations["list_links_ventures__venture_id__approver_links_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/approver-links/slack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link Slack
+         * @description Finds the Slack member with your Kritvia email and sends them a "Link to Kritvia" button. Pressing
+         *     it from that Slack account links it, so an email match alone never links anyone.
+         */
+        post: operations["link_slack_ventures__venture_id__approver_links_slack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/approver-links/telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Telegram */
+        post: operations["link_telegram_ventures__venture_id__approver_links_telegram_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/approver-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink */
+        delete: operations["unlink_ventures__venture_id__approver_links__link_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/apps": {
         parameters: {
             query?: never;
@@ -1757,6 +1872,23 @@ export interface paths {
          *     encrypted; from then on the channel hears when a draft waits for a yes or a chat needs a person.
          */
         post: operations["connect_slack_ventures__venture_id__connectors_slack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/slack/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Slack Install */
+        post: operations["slack_install_ventures__venture_id__connectors_slack_install_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3633,6 +3765,57 @@ export interface components {
             venture_name: string;
             /** Workflow */
             workflow: string;
+        };
+        /** ApproverLinkOut */
+        ApproverLinkOut: {
+            /** Channel */
+            channel: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string | null;
+            /** Mine */
+            mine: boolean;
+            /** Person */
+            person: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** ApproverLinksOut */
+        ApproverLinksOut: {
+            /**
+             * Can Add Slack
+             * @description the caller may add Kritvia to Slack (business admins)
+             */
+            can_add_slack: boolean;
+            /** Links */
+            links: components["schemas"]["ApproverLinkOut"][];
+            /**
+             * Slack App
+             * @description Kritvia's Slack app is added to this business's Slack
+             */
+            slack_app: boolean;
+            /**
+             * Slack Available
+             * @description this server has Kritvia's Slack app, so it can be added
+             */
+            slack_available: boolean;
+            /**
+             * Telegram Bot
+             * @description the business's bot (@username) when Telegram is connected
+             */
+            telegram_bot: string | null;
         };
         /** AssistantItem */
         AssistantItem: {
@@ -6333,6 +6516,27 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** SlackCompleteIn */
+        SlackCompleteIn: {
+            /** Code */
+            code: string;
+            /** Nonce */
+            nonce: string;
+            /** State */
+            state: string;
+        };
+        /** SlackCompleteOut */
+        SlackCompleteOut: {
+            /** Channel */
+            channel: string | null;
+            /** Team */
+            team: string | null;
+            /**
+             * Venture Id
+             * Format: uuid
+             */
+            venture_id: string;
+        };
         /** SlackConnectIn */
         SlackConnectIn: {
             /**
@@ -6355,6 +6559,19 @@ export interface components {
              * Format: uuid
              */
             connector_id: string;
+        };
+        /** SlackInstallIn */
+        SlackInstallIn: {
+            /** Nonce */
+            nonce: string;
+        };
+        /** SlackLinkOut */
+        SlackLinkOut: {
+            /**
+             * Sent To
+             * @description who in Slack got the confirmation message
+             */
+            sent_to: string;
         };
         /** StartedOut */
         StartedOut: {
@@ -6766,6 +6983,16 @@ export interface components {
             name: string;
             /** Username */
             username: string;
+        };
+        /** TelegramLinkOut */
+        TelegramLinkOut: {
+            /** Bot */
+            bot: string;
+            /**
+             * Link
+             * @description open on the phone with Telegram; works once, for 15 minutes
+             */
+            link: string;
         };
         /** TemplateIn */
         TemplateIn: {
@@ -8130,6 +8357,39 @@ export interface operations {
             };
         };
     };
+    slack_complete_connectors_slack_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlackCompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlackCompleteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     healthz_healthz_get: {
         parameters: {
             query?: never;
@@ -8148,6 +8408,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    slack_interact_hooks_slack_interact_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -9964,6 +10244,129 @@ export interface operations {
             };
         };
     };
+    list_links_ventures__venture_id__approver_links_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproverLinksOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_slack_ventures__venture_id__approver_links_slack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlackLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_telegram_ventures__venture_id__approver_links_telegram_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_ventures__venture_id__approver_links__link_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_apps_ventures__venture_id__apps_get: {
         parameters: {
             query?: never;
@@ -11089,6 +11492,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SlackConnectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    slack_install_ventures__venture_id__connectors_slack_install_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlackInstallIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthUrlOut"];
                 };
             };
             /** @description Validation Error */

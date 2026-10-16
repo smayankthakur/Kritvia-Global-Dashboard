@@ -32,6 +32,13 @@ stored encrypted and never shown again.
 - If Slack says the address no longer works (the webhook was removed or the channel archived), the
   connector shows that as its last error. Connect a new address to fix it.
 
+## Kritvia's Slack app
+
+When the server has Kritvia's Slack app (`SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET`),
+Settings → Connectors → Slack shows **Add to Slack** instead. The admin picks a channel on Slack's
+consent screen; that channel gets the same notices, and team members can approve drafts from Slack.
+See [approvals-in-chat.md](approvals-in-chat.md).
+
 ## Not built yet
 
-Approving from inside Slack (that needs a Slack app with interactivity), and daily summaries.
+Daily summaries.

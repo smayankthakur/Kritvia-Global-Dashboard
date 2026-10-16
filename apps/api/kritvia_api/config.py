@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:3000/api/oauth/google/callback"  # the WEB app route
+    # Kritvia's Slack app (api.slack.com/apps): lets a business add Kritvia to its Slack so team members
+    # approve drafts from Slack. Empty: only the pasted incoming-webhook notices are offered.
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+    slack_signing_secret: str = ""
+    slack_redirect_uri: str = "http://localhost:3000/api/oauth/slack/callback"  # the WEB app route
     # Google Places API (New), used by the Prospector agent to find businesses on Maps. A server key
     # from Google Cloud (Places API (New) enabled, restricted to this server's IP). Empty: the
     # Prospector says it is not set up instead of searching.

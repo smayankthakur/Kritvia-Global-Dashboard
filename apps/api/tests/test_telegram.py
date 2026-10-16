@@ -120,7 +120,7 @@ async def test_bot_is_connected_and_chats_are_answered(shop, client, fake_llm, t
     assert "token" not in json.dumps(out).lower() or TOKEN not in json.dumps(out)
     cid = out["connector_id"]
     assert tg.webhook["url"] == f"https://api.example.test/hooks/telegram/{cid}"
-    assert tg.webhook["allowed_updates"] == ["message"]
+    assert tg.webhook["allowed_updates"] == ["message", "callback_query"]
     secret = tg.webhook["secret_token"]
     conns = (await mayank.get(f"/ventures/{v}/connectors")).json()
     assert [c["account_email"] for c in conns if c["provider"] == "telegram"] == ["@CleanCoBot"]

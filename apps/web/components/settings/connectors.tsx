@@ -14,6 +14,7 @@ import { KeyValue, Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { ConnectVideo } from "@/components/settings/how-to-video";
+import { approverLinksKey } from "@/components/account/chat-approvals";
 import { api, errorMessage, multipart, unwrap, type Schemas } from "@/lib/api";
 import { formatDateTime, formatINR, formatRelative } from "@/lib/format";
 
@@ -616,6 +617,27 @@ function SlackCard({ ventureId, canAdmin, conn, onRemove, onChanged }: {
     if (!url.trim().startsWith("https://hooks.slack.com/services/")) return setError("Paste the address Slack gives, starting https://hooks.slack.com/services/.");
     connect.mutate();
   };
+  const links = useQuery({
+    queryKey: approverLinksKey(ventureId),
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/approver-links", { params: { path: { venture_id: ventureId } } })),
+  });
+  const appAvailable = Boolean(links.data?.slack_available);
+  const appAdded = Boolean(links.data?.slack_app);
+  // Through the BFF route so the flow is bound to this browser (nonce cookie), like Google.
+  const install = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/oauth/slack/start", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...csrfHeaders() },
+        body: JSON.stringify({ venture_id: ventureId }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { url?: string; detail?: string };
+      if (!res.ok || !body.url) throw new Error(body.detail ?? `HTTP ${res.status}`);
+      return body as { url: string };
+    },
+    onSuccess: (out) => window.location.assign(out.url),
+    onError: (e) => toast.error("Can't add Kritvia to Slack", errorMessage(e)),
+  });
   return (
     <Card>
       <CardHeader
@@ -624,7 +646,11 @@ function SlackCard({ ventureId, canAdmin, conn, onRemove, onChanged }: {
             <BellRing className="h-4 w-4 text-subtle" aria-hidden /> Slack
           </span>
         }
-        description="Your team's channel hears when a draft waits for a yes or a customer chat needs a person, with a link to open it. Never what a customer wrote."
+        description={
+          appAvailable
+            ? "Add Kritvia to Slack: team members get drafts that need their yes as DMs with Approve, Reject and Ask for changes, and a channel you pick hears when a chat needs a person."
+            : "Your team's channel hears when a draft waits for a yes or a customer chat needs a person, with a link to open it. Never what a customer wrote."
+        }
         actions={conn ? <StatusBadge status={conn.status} /> : <Badge>not connected</Badge>}
       />
       <div className="space-y-4 p-4">
@@ -637,11 +663,25 @@ function SlackCard({ ventureId, canAdmin, conn, onRemove, onChanged }: {
             ]}
           />
         ) : (
-          <p className="text-sm text-muted">Add Slack&apos;s Incoming Webhooks app to a channel and paste the address it gives you.</p>
+          <p className="text-sm text-muted">
+            {appAvailable
+              ? "Add Kritvia to your Slack workspace and pick a channel. Or, for channel notices only, paste an Incoming Webhooks address."
+              : "Add Slack's Incoming Webhooks app to a channel and paste the address it gives you."}
+          </p>
         )}
+        {appAdded ? (
+          <p className="text-sm text-muted">
+            Kritvia is in your Slack. Each team member links their own Slack under Your account → Approve from your phone.
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
-          <Button variant={conn ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => setOpen(true)}>
-            {conn ? "Change channel" : "Connect Slack"}
+          {appAvailable ? (
+            <Button variant={appAdded ? "secondary" : "primary"} disabled={!canAdmin} loading={install.isPending} onClick={() => install.mutate()}>
+              {appAdded ? "Add to Slack again" : "Add to Slack"}
+            </Button>
+          ) : null}
+          <Button variant={conn || appAvailable ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => setOpen(true)}>
+            {appAvailable ? "Paste a webhook instead" : conn ? "Change channel" : "Connect Slack"}
           </Button>
           {conn ? (
             <Button variant="ghost" className="text-danger" icon={<Trash2 className="h-4 w-4" />} disabled={!canAdmin} onClick={onRemove}>

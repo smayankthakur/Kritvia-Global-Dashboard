@@ -14,7 +14,15 @@ const MESSAGES: Record<string, [ok: boolean, title: string, detail: string]> = {
   forbidden: [false, "Not allowed", "Only a venture admin or owner can connect Google."],
 };
 
-/** The Google OAuth callback lands here (?google=<result>&venture=<id>): toast, then go to that venture's settings. */
+const SLACK_MESSAGES: Record<string, [ok: boolean, title: string, detail: string]> = {
+  connected: [true, "Kritvia is in your Slack", "Drafts that need your yes now come to you in Slack. Teammates can link theirs from Your account."],
+  denied: [false, "Slack was not added", "Permission was not granted."],
+  invalid_state: [false, "Adding Slack expired", "The link was too old or tampered with. Please try again."],
+  exchange_failed: [false, "Adding Slack failed", "Slack did not finish. Please try again."],
+  forbidden: [false, "Not allowed", "Only a business admin or owner can add Kritvia to Slack."],
+};
+
+/** The Google and Slack OAuth callbacks land here (?google|slack=<result>&venture=<id>): toast, then go to that venture's settings. */
 function ConnectorsCallback() {
   const params = useSearchParams();
   const router = useRouter();
@@ -25,8 +33,8 @@ function ConnectorsCallback() {
   useEffect(() => {
     if (done.current) return;
     done.current = true;
-    const result = params.get("google") ?? "";
-    const msg = MESSAGES[result];
+    const slack = params.get("slack");
+    const msg = slack !== null ? SLACK_MESSAGES[slack] : MESSAGES[params.get("google") ?? ""];
     if (msg) (msg[0] ? toast.success : toast.error)(msg[1], msg[2]);
     const target = params.get("venture") ?? venture?.venture_id;
     router.replace(target ? `/v/${target}/settings?tab=connectors` : "/");

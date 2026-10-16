@@ -366,6 +366,10 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
         # Tell the people who can decide (push, and the business's Slack channel); never let a
         # notification problem touch the run.
         push.also_slack(ctx.venture_id, title="A draft needs your yes", body=req.title, path=f"/inbox?id={approval_id}")
+        # ...and, with buttons, in the Telegram chats and Slack DMs of team members who linked them.
+        from kritvia_api.services import chat_approvals
+        chat_approvals.announce(ctx.venture_id, approval_id, title=req.title, summary=req.summary,
+                                payload=req.payload, sensitive=req.sensitive)
         if push.enabled():
             asyncio.get_running_loop().create_task(_notify(approval_id, req.title, ctx.venture_id, req.agent))
     return auto

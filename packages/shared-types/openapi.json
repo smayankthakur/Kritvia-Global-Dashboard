@@ -872,6 +872,106 @@
         "title": "ApprovalOut",
         "type": "object"
       },
+      "ApproverLinkOut": {
+        "properties": {
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "person": {
+            "title": "Person",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "person",
+          "mine",
+          "channel",
+          "label",
+          "created_at"
+        ],
+        "title": "ApproverLinkOut",
+        "type": "object"
+      },
+      "ApproverLinksOut": {
+        "properties": {
+          "can_add_slack": {
+            "description": "the caller may add Kritvia to Slack (business admins)",
+            "title": "Can Add Slack",
+            "type": "boolean"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ApproverLinkOut"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "slack_app": {
+            "description": "Kritvia's Slack app is added to this business's Slack",
+            "title": "Slack App",
+            "type": "boolean"
+          },
+          "slack_available": {
+            "description": "this server has Kritvia's Slack app, so it can be added",
+            "title": "Slack Available",
+            "type": "boolean"
+          },
+          "telegram_bot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the business's bot (@username) when Telegram is connected",
+            "title": "Telegram Bot"
+          }
+        },
+        "required": [
+          "links",
+          "telegram_bot",
+          "slack_app",
+          "slack_available",
+          "can_add_slack"
+        ],
+        "title": "ApproverLinksOut",
+        "type": "object"
+      },
       "AssistantItem": {
         "properties": {
           "answer": {
@@ -7971,6 +8071,73 @@
         "title": "SigninUrlOut",
         "type": "object"
       },
+      "SlackCompleteIn": {
+        "properties": {
+          "code": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 32,
+            "title": "Nonce",
+            "type": "string"
+          },
+          "state": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "state",
+          "nonce"
+        ],
+        "title": "SlackCompleteIn",
+        "type": "object"
+      },
+      "SlackCompleteOut": {
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "venture_id": {
+            "format": "uuid",
+            "title": "Venture Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "venture_id",
+          "team",
+          "channel"
+        ],
+        "title": "SlackCompleteOut",
+        "type": "object"
+      },
       "SlackConnectIn": {
         "properties": {
           "channel": {
@@ -8024,6 +8191,35 @@
           "channel"
         ],
         "title": "SlackConnectOut",
+        "type": "object"
+      },
+      "SlackInstallIn": {
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 32,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "SlackInstallIn",
+        "type": "object"
+      },
+      "SlackLinkOut": {
+        "properties": {
+          "sent_to": {
+            "description": "who in Slack got the confirmation message",
+            "title": "Sent To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sent_to"
+        ],
+        "title": "SlackLinkOut",
         "type": "object"
       },
       "StartedOut": {
@@ -9115,6 +9311,25 @@
           "link"
         ],
         "title": "TelegramConnectOut",
+        "type": "object"
+      },
+      "TelegramLinkOut": {
+        "properties": {
+          "bot": {
+            "title": "Bot",
+            "type": "string"
+          },
+          "link": {
+            "description": "open on the phone with Telegram; works once, for 15 minutes",
+            "title": "Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "link",
+          "bot"
+        ],
+        "title": "TelegramLinkOut",
         "type": "object"
       },
       "TemplateIn": {
@@ -11832,6 +12047,53 @@
         ]
       }
     },
+    "/connectors/slack/complete": {
+      "post": {
+        "description": "Called by the web app's OAuth callback with the code, the state and the nonce from ITS httpOnly\ncookie, as the signed-in user. Stores the bot token encrypted, keeps the channel the installer picked\nfor notices, and links the installer's own Slack account (they just proved it by adding the app).",
+        "operationId": "slack_complete_connectors_slack_complete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlackCompleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlackCompleteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Slack Complete",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "operationId": "healthz_healthz_get",
@@ -11852,6 +12114,26 @@
         "summary": "Healthz",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/hooks/slack/interact": {
+      "post": {
+        "description": "Kritvia's Slack app: a button press or a submitted form. Slack signs each request with the app's\nsigning secret; anything unsigned, stale or replayed outside five minutes is refused.",
+        "operationId": "slack_interact_hooks_slack_interact_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Slack Interact",
+        "tags": [
+          "approvals"
         ]
       }
     },
@@ -14711,6 +14993,202 @@
         ]
       }
     },
+    "/ventures/{venture_id}/approver-links": {
+      "get": {
+        "operationId": "list_links_ventures__venture_id__approver_links_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproverLinksOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Links",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/approver-links/slack": {
+      "post": {
+        "description": "Finds the Slack member with your Kritvia email and sends them a \"Link to Kritvia\" button. Pressing\nit from that Slack account links it, so an email match alone never links anyone.",
+        "operationId": "link_slack_ventures__venture_id__approver_links_slack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlackLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link Slack",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/approver-links/telegram": {
+      "post": {
+        "operationId": "link_telegram_ventures__venture_id__approver_links_telegram_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link Telegram",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/approver-links/{link_id}": {
+      "delete": {
+        "operationId": "unlink_ventures__venture_id__approver_links__link_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlink",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
     "/ventures/{venture_id}/apps": {
       "get": {
         "operationId": "list_apps_ventures__venture_id__apps_get",
@@ -16672,6 +17150,64 @@
         "summary": "Connect Slack",
         "tags": [
           "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/slack/install": {
+      "post": {
+        "operationId": "slack_install_ventures__venture_id__connectors_slack_install_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlackInstallIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUrlOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Slack Install",
+        "tags": [
+          "approvals"
         ]
       }
     },

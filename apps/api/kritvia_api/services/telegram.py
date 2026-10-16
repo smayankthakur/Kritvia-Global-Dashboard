@@ -107,11 +107,16 @@ class TelegramClient:
         return me
 
     async def set_webhook(self, token: str, url: str, secret: str) -> None:
-        await self._call(token, "setWebhook", {"url": url, "secret_token": secret, "allowed_updates": ["message"],
+        await self._call(token, "setWebhook", {"url": url, "secret_token": secret,
+                                               "allowed_updates": ["message", "callback_query"],
                                                "max_connections": 20})
 
     async def delete_webhook(self, token: str) -> None:
         await self._call(token, "deleteWebhook", {"drop_pending_updates": False})
+
+    async def call(self, token: str, method: str, payload: dict[str, Any] | None = None) -> Any:
+        """Any Bot API method (approval cards, button answers, edits)."""
+        return await self._call(token, method, payload)
 
     async def send_message(self, conn: TelegramConn, *, chat_id: str, body: str) -> str:
         """Returns the provider message id (as stored with the chat: tg:<chat>:<message>)."""
@@ -122,6 +127,31 @@ class TelegramClient:
                                                            "link_preview_options": {"is_disabled": True}})
         mid = (res or {}).get("message_id") if isinstance(res, dict) else None
         return f"tg:{chat}:{mid}" if mid is not None else ""
+
+
+@dataclass
+class TelegramButton:
+    """A press on an inline button (approval cards)."""
+    callback_id: str
+    chat_id: str
+    from_id: str
+    message_id: int | None
+    data: str
+
+
+def parse_button(payload: Any) -> TelegramButton | None:
+    if not isinstance(payload, dict) or not isinstance(payload.get("callback_query"), dict):
+        return None
+    q = payload["callback_query"]
+    frm, msg = q.get("from") or {}, q.get("message") or {}
+    chat = (msg.get("chat") or {}) if isinstance(msg, dict) else {}
+    if not isinstance(frm, dict) or frm.get("is_bot") or chat.get("type") not in (None, "private"):
+        return None
+    fid, cid = str(frm.get("id") or ""), str(chat.get("id") or frm.get("id") or "")
+    if not fid.isdigit() or not cid.isdigit() or not isinstance(q.get("data"), str) or not q.get("id"):
+        return None
+    mid = msg.get("message_id") if isinstance(msg, dict) and isinstance(msg.get("message_id"), int) else None
+    return TelegramButton(str(q["id"])[:100], cid, fid, mid, q["data"][:64])
 
 
 def parse_update(payload: Any) -> TelegramMessage | None:

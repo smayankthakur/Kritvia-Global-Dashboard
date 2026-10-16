@@ -56,9 +56,60 @@ def message(title: str, body: str, path: str, business: str | None = None) -> di
             "unfurl_links": False, "unfurl_media": False}
 
 
+WEB_API = "https://slack.com/api"
+# What Kritvia's Slack app asks for: post and DM (approval cards), find a member by their Kritvia email
+# (to link them), and one channel for notices (the installer picks it on Slack's consent screen).
+FORM_METHODS = frozenset({"users.lookupByEmail", "users.info"})
+APP_SCOPES = "chat:write,im:write,users:read,users:read.email,incoming-webhook"
+
+
+def verify_signature(signing_secret: str, timestamp: str, body: bytes, signature: str, *, now: float) -> bool:
+    """Slack signs every interaction: v0=HMAC-SHA256(secret, "v0:<ts>:<body>"), within 5 minutes."""
+    import hashlib
+    import hmac
+    if not signing_secret or not timestamp.isdigit() or abs(now - int(timestamp)) > 300:
+        return False
+    mac = hmac.new(signing_secret.encode(), b"v0:" + timestamp.encode() + b":" + body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest("v0=" + mac, signature or "")
+
+
 class SlackClient:
     def __init__(self, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._http = httpx.AsyncClient(transport=transport, timeout=10, follow_redirects=False)
+
+    async def api(self, token: str, method: str, payload: dict | None = None) -> dict:
+        """Slack Web API call with the app's bot token. Raises SlackError unless Slack says ok. Reading
+        methods take form fields; writing ones take JSON."""
+        headers = {"Authorization": f"Bearer {token}"}
+        try:
+            if method in FORM_METHODS:
+                r = await self._http.post(f"{WEB_API}/{method}", data=payload or {}, headers=headers)
+            else:
+                r = await self._http.post(f"{WEB_API}/{method}", json=payload or {}, headers=headers)
+            data = r.json()
+        except (httpx.HTTPError, ValueError):
+            raise SlackError("couldn't reach Slack; try again in a minute") from None
+        if not isinstance(data, dict) or not data.get("ok"):
+            err = str((data or {}).get("error") or r.status_code)[:60] if isinstance(data, dict) else str(r.status_code)
+            if err in ("invalid_auth", "account_inactive", "token_revoked", "not_authed"):
+                raise SlackError("Kritvia was removed from this Slack workspace; add it to Slack again")
+            if err == "users_not_found":
+                raise SlackError("no one in this Slack workspace uses your Kritvia email address")
+            raise SlackError(f"Slack refused it ({err})")
+        return data
+
+    async def oauth_access(self, code: str) -> dict:
+        """Swaps the code from "Add to Slack" for the bot token (client credentials in Basic auth)."""
+        s = get_settings()
+        try:
+            r = await self._http.post(f"{WEB_API}/oauth.v2.access", auth=(s.slack_client_id, s.slack_client_secret),
+                                      data={"code": code, "redirect_uri": s.slack_redirect_uri})
+            data = r.json()
+        except (httpx.HTTPError, ValueError):
+            raise SlackError("couldn't reach Slack; try again in a minute") from None
+        if not isinstance(data, dict) or not data.get("ok") or not data.get("access_token"):
+            raise SlackError("Slack didn't finish adding Kritvia; try Add to Slack again")
+        return data
 
     async def post(self, url: str, payload: dict) -> None:
         if not allowed_webhook(url):
@@ -91,8 +142,54 @@ async def _address(venture_id: uuid.UUID):
             " WHERE t.connector_id = :c"), {"c": p.connector_id})).first()
         if row is None:
             return None
-        url = await EnvelopeCrypto(conn, get_services().keys).decrypt_str(venture_id, SECRET, row.secret_enc)
+        url = webhook_of(await EnvelopeCrypto(conn, get_services().keys).decrypt_str(venture_id, SECRET, row.secret_enc))
     return (p, url, row.name) if url else None
+
+
+def secrets_of(stored: str | None) -> dict:
+    """The connector's secret: a pasted webhook address, or (Kritvia's Slack app) {"webhook", "bot"}."""
+    import json
+    if not stored:
+        return {}
+    if stored.startswith("{"):
+        try:
+            d = json.loads(stored)
+        except ValueError:
+            return {}
+        return d if isinstance(d, dict) else {}
+    return {"webhook": stored}
+
+
+def webhook_of(stored: str | None) -> str | None:
+    return secrets_of(stored).get("webhook") or None
+
+
+def app_configured() -> bool:
+    s = get_settings()
+    return bool(s.slack_client_id and s.slack_client_secret and s.slack_signing_secret)
+
+
+async def app_token(venture_id: uuid.UUID, team: str | None = None):
+    """(principal, bot token, team) of Kritvia's Slack app for this business; None when not added."""
+    from kritvia_api.engine.context import get_services
+    from kritvia_api.services.crypto import EnvelopeCrypto
+    async with tenant_tx(None, "system") as conn:
+        if team is None:
+            p = (await conn.execute(text("SELECT * FROM private.slack_principal(:v)"), {"v": venture_id})).first()
+        else:
+            p = (await conn.execute(text("SELECT * FROM private.slack_app_principal(:t, :v)"),
+                                    {"t": team, "v": venture_id})).first()
+    if p is None:
+        return None
+    async with tenant_tx(p.run_as, "agent", "slack") as conn:
+        row = (await conn.execute(text(
+            "SELECT c.external_id, c.meta ->> 'mode' AS mode, t.secret_enc FROM connectors c"
+            " JOIN connector_tokens t ON t.connector_id = c.id WHERE c.id = :c"), {"c": p.connector_id})).first()
+        if row is None or row.mode != "app":
+            return None
+        bot = secrets_of(await EnvelopeCrypto(conn, get_services().keys).decrypt_str(
+            venture_id, SECRET, row.secret_enc)).get("bot")
+    return (p, bot, row.external_id) if bot else None
 
 
 async def notify(venture_id: uuid.UUID, *, title: str, body: str, path: str) -> bool:

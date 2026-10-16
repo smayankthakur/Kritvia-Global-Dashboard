@@ -1,0 +1,29 @@
+# Kritvia's Slack app. api.slack.com/apps → Create New App → From a manifest → paste this.
+# Replace app.sitelytc.com and api.sitelytc.com if Kritvia runs elsewhere. Then, under Basic Information,
+# copy Client ID, Client Secret and Signing Secret into the server's .env (SLACK_CLIENT_ID,
+# SLACK_CLIENT_SECRET, SLACK_SIGNING_SECRET) and turn on "Manage Distribution" so other workspaces can add it.
+display_information:
+  name: Kritvia
+  description: Approve your business's drafts from Slack
+  background_color: "#1f2937"
+features:
+  bot_user:
+    display_name: Kritvia
+    always_online: true
+oauth_config:
+  redirect_urls:
+    - https://app.sitelytc.com/api/oauth/slack/callback
+  scopes:
+    bot:
+      - chat:write
+      - im:write
+      - users:read
+      - users:read.email
+      - incoming-webhook
+settings:
+  interactivity:
+    is_enabled: true
+    request_url: https://api.sitelytc.com/hooks/slack/interact
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

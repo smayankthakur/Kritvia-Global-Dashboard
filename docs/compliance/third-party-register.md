@@ -82,6 +82,10 @@ below, through code we wrote.
 | Browser push services (Google, Apple, Mozilla, Microsoft) | Encrypted notification | Global | No | Platform terms |
 
 Connected by a business itself (the business's own account and contract): Google Workspace, Meta
-WhatsApp Business Platform, the business's Telegram bot (Telegram Bot API), a Slack channel (incoming
-webhook; notices only, never customer text), apps added through their MCP servers, any AI provider the
-business adds with its own key.
+WhatsApp Business Platform, the business's Telegram bot (Telegram Bot API), Slack (a channel's incoming
+webhook: notices only, never customer text; or Kritvia's Slack app), apps added through their MCP servers,
+any AI provider the business adds with its own key.
+
+Approve from your phone: a team member who links their own Telegram chat or Slack account receives the
+drafts they could approve, with a preview (recipient, subject, first 700 characters), through the
+business's bot or Kritvia's Slack app. Sensitive drafts are sent without a preview or buttons.

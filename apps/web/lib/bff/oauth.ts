@@ -1,5 +1,5 @@
 /**
- * Google OAuth, bound to the browser that started it.
+ * Google OAuth (and "Add to Slack", the same way), bound to the browser that started it.
  *
  * start:    POST /api/oauth/google/start {venture_id}
  *           -> random nonce in an httpOnly cookie (kv_oauth, path /api/oauth, 10 min)
@@ -68,9 +68,23 @@ function setCookiesOf(res: Response): string[] {
   return anyHeaders.getSetCookie?.() ?? [];
 }
 
-export async function startGoogle(
+/** Connectors that use this flow, with the API route that returns each one's consent URL. */
+const START_PATH: Record<ConnectorProvider, string> = { google: "start", slack: "install" };
+export type ConnectorProvider = "google" | "slack";
+
+export async function startGoogle(req: Request, deps: ProxyDeps): Promise<Response> {
+  return startConnector(req, deps, "google");
+}
+
+/** "Add to Slack" (Kritvia's Slack app), bound to this browser the same way as Google. */
+export async function startSlack(req: Request, deps: ProxyDeps): Promise<Response> {
+  return startConnector(req, deps, "slack");
+}
+
+async function startConnector(
   req: Request,
   deps: ProxyDeps,
+  provider: ConnectorProvider,
 ): Promise<Response> {
   // CSRF: the browser's own request must be same-origin and carry the token; the inner request is built by us.
   if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
@@ -89,7 +103,7 @@ export async function startGoogle(
   const nonce = randomNonce();
   const upstream = await proxyRequest(
     innerRequest(req, "POST", { nonce }),
-    ["ventures", ventureId, "connectors", "google", "start"],
+    ["ventures", ventureId, "connectors", provider, START_PATH[provider]],
     deps,
   );
   const headers = new Headers({
@@ -214,6 +228,15 @@ export async function completeGoogle(
   if (stateType(url.searchParams.get("state")) === "signin") {
     return completeSignin(req, deps, url.searchParams.get("code"), url.searchParams.get("state"));
   }
+  return completeConnector(req, deps, "google");
+}
+
+export async function completeSlack(req: Request, deps: ProxyDeps): Promise<Response> {
+  return completeConnector(req, deps, "slack");
+}
+
+async function completeConnector(req: Request, deps: ProxyDeps, provider: ConnectorProvider): Promise<Response> {
+  const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const nonce = parseCookies(req.headers.get("cookie"))[OAUTH_COOKIE];
@@ -237,7 +260,7 @@ export async function completeGoogle(
   } else {
     const upstream = await proxyRequest(
       innerRequest(req, "POST", { code, state, nonce }),
-      ["connectors", "google", "complete"],
+      ["connectors", provider, "complete"],
       deps,
     );
     for (const c of setCookiesOf(upstream)) headers.append("set-cookie", c);
@@ -254,7 +277,7 @@ export async function completeGoogle(
             : "exchange_failed";
     }
   }
-  back.searchParams.set("google", outcome);
+  back.searchParams.set(provider, outcome);
   headers.set("location", back.toString());
   return new Response(null, { status: 303, headers });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { OAUTH_COOKIE, SIGNIN_COOKIE, completeGoogle, startGoogle, startGoogleSignin, stateType } from "@/lib/bff/oauth";
+import { OAUTH_COOKIE, SIGNIN_COOKIE, completeGoogle, completeSlack, startGoogle, startGoogleSignin, startSlack, stateType } from "@/lib/bff/oauth";
 
 const deps = (fetchImpl: typeof fetch) => ({ apiUrl: "http://api", fetch: fetchImpl, secureCookies: false, trustedOrigins: [] });
 const V = "11111111-2222-3333-4444-555555555555";
@@ -57,6 +57,36 @@ describe("Google OAuth BFF", () => {
     });
     const res = await completeGoogle(req, deps(f as unknown as typeof fetch));
     expect(res.headers.get("location")).toContain("google=forbidden");
+  });
+});
+
+describe("Add to Slack BFF", () => {
+  it("start asks the API for Slack's consent URL and pins the nonce", async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify({ url: "https://slack.com/oauth/v2/authorize?x" }), { status: 200 }));
+    const req = new Request("http://app.test/api/oauth/slack/start", {
+      method: "POST",
+      headers: { origin: "http://app.test", host: "app.test", cookie: `kv_at=tok; kv_csrf=${TOK}`, "x-kv-csrf": TOK, "content-type": "application/json" },
+      body: JSON.stringify({ venture_id: V }),
+    });
+    const res = await startSlack(req, deps(f as unknown as typeof fetch));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toContain(`${OAUTH_COOKIE}=`);
+    expect((f.mock.calls[0] as unknown[])[0]).toBe(`http://api/ventures/${V}/connectors/slack/install`);
+  });
+
+  it("callback completes with the cookie nonce and reports slack=connected", async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify({ venture_id: V }), { status: 200 }));
+    const req = new Request("http://app.test/api/oauth/slack/callback?code=c&state=s", {
+      headers: { host: "app.test", cookie: `kv_at=tok; ${OAUTH_COOKIE}=${"n".repeat(64)}` },
+    });
+    const res = await completeSlack(req, deps(f as unknown as typeof fetch));
+    expect(res.headers.get("location")).toContain("slack=connected");
+    expect(String((f.mock.calls[0] as unknown[])[0])).toContain("/connectors/slack/complete");
+    const denied = await completeSlack(
+      new Request("http://app.test/api/oauth/slack/callback?error=access_denied", { headers: { host: "app.test" } }),
+      deps(vi.fn() as unknown as typeof fetch),
+    );
+    expect(denied.headers.get("location")).toContain("slack=denied");
   });
 });
 

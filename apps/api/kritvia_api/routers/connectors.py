@@ -364,10 +364,11 @@ async def connect_slack(venture_id: uuid.UUID, body: SlackConnectIn, user_id: Us
     try:
         async with db.begin_nested():
             cid = (await db.execute(text(
-                "INSERT INTO connectors (org_id, venture_id, provider, account_email, scopes, created_by)"
-                " VALUES (:o, :v, 'slack', :ch, ARRAY['incoming-webhook'], :u)"
+                "INSERT INTO connectors (org_id, venture_id, provider, account_email, scopes, meta, created_by)"
+                " VALUES (:o, :v, 'slack', :ch, ARRAY['incoming-webhook'], '{\"mode\": \"webhook\"}'::jsonb, :u)"
                 " ON CONFLICT (venture_id, provider) DO UPDATE SET status = 'active', account_email = EXCLUDED.account_email,"
-                " last_error = NULL, updated_at = now() RETURNING id"),
+                " meta = connectors.meta || EXCLUDED.meta, external_id = NULL, last_error = NULL, updated_at = now()"
+                " RETURNING id"),
                 {"o": org, "v": venture_id, "ch": "#" + channel if channel else None, "u": user_id})).scalar_one()
             enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, SECRET, url)
             await db.execute(text(
@@ -409,7 +410,7 @@ async def connect_telegram(venture_id: uuid.UUID, body: TelegramConnectIn, user_
         raise HTTPException(422, str(exc)) from None
     username, name = str(me.get("username") or ""), str(me.get("first_name") or "")[:120]
     secret = secrets.token_urlsafe(32)
-    meta = {"secret_hash": hashlib.sha256(secret.encode()).hexdigest(), "name": name}
+    meta = {"secret_hash": hashlib.sha256(secret.encode()).hexdigest(), "name": name, "buttons": True}
     try:
         async with db.begin_nested():
             cid = (await db.execute(text(
@@ -480,9 +481,14 @@ async def telegram_inbound(connector_id: uuid.UUID, request: Request, svc: Svc) 
     if len(body) > 256 * 1024:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "payload too large")
     try:
-        m = parse_update(json.loads(body))
+        payload = json.loads(body)
     except ValueError:
         raise HTTPException(422, "body must be JSON") from None
+    # A team member's link code, approval button or "what should change" answer never becomes a customer chat.
+    from kritvia_api.services import chat_approvals
+    if await chat_approvals.telegram_update(p, payload, svc):
+        return ChatHookOut(accepted=1)
+    m = parse_update(payload)
     if m is None or not await _plan_allows(p.run_as, p.venture_id, "telegram"):
         return ChatHookOut(accepted=0, ignored=1)       # groups, edits, bots, or a plan without Telegram
     async with tenant_tx(p.run_as, "agent", "telegram") as conn:

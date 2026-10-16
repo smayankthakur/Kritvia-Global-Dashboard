@@ -191,7 +191,13 @@ async def decide(venture_id: uuid.UUID, approval_id: uuid.UUID, body: DecisionIn
     await svc.dispatcher.enqueue_run(res.decided_run_id)
     async with tenant_tx(user_id) as conn:
         r = (await conn.execute(text(f"SELECT {COLS}{FROM} WHERE a.id = :id"), {"id": approval_id})).first()
-        return await _out(EnvelopeCrypto(conn, svc.keys), r)
+        who = (await conn.execute(text("SELECT coalesce(nullif(full_name, ''), email) FROM users WHERE id = :u"),
+                                  {"u": user_id})).scalar()
+        out = await _out(EnvelopeCrypto(conn, svc.keys), r)
+    # Cards about this draft in Telegram and Slack now say it was decided (and lose their buttons).
+    from kritvia_api.services import chat_approvals
+    chat_approvals.settle_later(venture_id, approval_id, who)
+    return out
 
 
 # ------------------------------------------------------------------ autonomy --

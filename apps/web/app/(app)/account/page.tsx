@@ -4,6 +4,7 @@ import { csrfHeaders } from "@/lib/bff/csrf";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { ChatApprovals } from "@/components/account/chat-approvals";
 import { PushToggle } from "@/components/notifications/push-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -11,11 +12,12 @@ import { ConfirmDialog } from "@/components/ui/dialog";
 import { Notice, PageHeader } from "@/components/ui/page";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap } from "@/lib/api";
-import { meKey } from "@/lib/access";
+import { meKey, useAccess } from "@/lib/access";
 
 export default function AccountPage() {
   const toast = useToast();
   const me = useQuery({ queryKey: meKey, queryFn: () => unwrap(api.GET("/auth/me")) });
+  const { venture } = useAccess();
   const [confirm, setConfirm] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const exportData = useMutation({
@@ -47,6 +49,7 @@ export default function AccountPage() {
       <PageHeader title="Your account" description={me.data ? `${me.data.full_name} · ${me.data.email}` : undefined} />
       <div className="grid max-w-3xl gap-4">
         <PushToggle />
+        {venture ? <ChatApprovals ventureId={venture.venture_id} ventureName={venture.venture_name} /> : null}
         <Card>
           <CardHeader title="Download your data" description="Your profile, memberships, voice settings, personal vocabulary and approval history, as a JSON file." />
           <div className="p-4">
