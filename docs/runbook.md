@@ -8,6 +8,27 @@ curl -fsSL https://raw.githubusercontent.com/smayankthakur/Kritvia-Global-Dashbo
 ```
 `scripts/server-setup.sh` does steps 1–3 below: Docker, gVisor, code in `/opt/kritvia`, `.env` with generated secrets, hidden prompts for the provider keys and the Cloudflare tunnel token, build, start, local models, health checks. Re-run it any time to update. Then do the Cloudflare hostnames and the `bootstrap` command it prints.
 
+## 0a. Moving an existing install to a new server (AWS → Oracle Always Free)
+
+To cut hosting to about $0 (Oracle Cloud Always Free: Ampere A1, 2 OCPU / 12 GB from 18 Aug 2026, 200 GB disk):
+
+1. **You:** sign up at cloud.oracle.com with **home region Mumbai or Hyderabad** (free Ampere capacity is only in
+   the home region, and Customer Data must stay in India). Upgrade the account to **Pay As You Go** (still $0
+   inside the Always Free limits; free-only accounts can have idle VMs reclaimed). Create a VM: shape
+   `VM.Standard.A1.Flex`, 2 OCPU, 12 GB, Ubuntu 24.04 (aarch64), 100 GB boot volume, your SSH key; ingress SSH
+   only. If it says "out of capacity", retry later or in the other Indian region's availability domain.
+2. **You:** `ssh -A ubuntu@<new ip>` (the `-A` lets it reach the old server with your key), then
+   ```bash
+   curl -fsSLO https://raw.githubusercontent.com/smayankthakur/Kritvia-Global-Dashboard/main/infra/scripts/move-server.sh
+   bash move-server.sh ubuntu@3.110.224.90
+   ```
+   It copies `.env` (never printed), builds and pulls models while the old server serves, then asks you to type
+   `MOVE`: it stops the old app, copies the database, starts here and stops the old stack. The Cloudflare tunnel
+   token is the same, so no DNS change. Downtime is usually 5–15 minutes; the old server keeps its data, so going
+   back is stopping here and starting there.
+3. Add the new server's IP to the Google Places key's IP restriction.
+4. After a week: snapshot and terminate the EC2 instance and release its IP. Keep S3 (backups) and SES (email).
+
 ## 1. Provision the VM (once)
 
 1. Oracle Cloud Always Free: Ampere A1, 4 OCPU / 24 GB, Ubuntu 24.04 (arm64), 150+ GB boot volume.
