@@ -23,7 +23,7 @@ const ADVANCED_ONLY = new Set([180, 365]);
 const AGENT: Record<string, string> = {
   inbox_assistant: "Inbox assistant", collections: "Payment reminders", lead_triage: "Lead triage", prospector: "Prospector",
   booking_reminders: "Booking reminders", reviews: "Google reviews", whatsapp_followup: "WhatsApp follow-ups",
-  automation: "Automations", assistant: "Assistant", meeting_digest: "Meeting digest", kitchen_daily: "Kitchen",
+  automation: "Automations", assistant: "Assistant", meeting_digest: "Meeting digest", kitchen_daily: "Kitchen", trade_watch: "Shipment watch", trade_update: "Shipment updates",
   loan_verification: "Loan documents", custom: "Custom workflows",
 };
 const AGE: [keyof A_Ageing, string][] = [["not_due", "Not due yet"], ["d1_30", "1–30 days late"], ["d31_60", "31–60 days"], ["d61_90", "61–90 days"], ["d90_plus", "Over 90 days"]];

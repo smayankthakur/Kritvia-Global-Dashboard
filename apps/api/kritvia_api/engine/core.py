@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any, Literal
 if TYPE_CHECKING:
     from kritvia_api.engine.context import RunContext
 
-VentureKind = Literal["general", "software", "finance", "kitchen"]
+VentureKind = Literal["general", "software", "finance", "kitchen", "trade"]
 
 
 @dataclass
@@ -109,7 +109,7 @@ class Workflow:
         title: str,
         start: str,
         description: str = "",
-        venture_kinds: tuple[VentureKind, ...] = ("general", "software", "finance", "kitchen"),
+        venture_kinds: tuple[VentureKind, ...] = ("general", "software", "finance", "kitchen", "trade"),
         version: int = 1,
         max_steps: int = 60,
         authorize_input: Callable[[Any, uuid.UUID, dict[str, Any]], Awaitable[None]] | None = None,

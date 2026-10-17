@@ -31,6 +31,9 @@ PRACTICE = {
                 "how long does approval take?"),
     "kitchen": ("Lunch for 30 next Friday",
                 "Hi, can you cater lunch for 30 people next Friday? Veg only, our office is in Andheri. What would it cost?"),
+    "trade": ("Quote for 2 containers of basmati",
+              "Hello, we are importers in Dubai. Please quote CIF Jebel Ali for 2 x 20ft containers of 1121 basmati rice, "
+              "25 kg bags. What is your earliest shipment date and payment terms?"),
     "general": ("Open this Saturday?",
                 "Hi, what are your prices, and are you open this Saturday? I'd like to book for two people around 11."),
 }

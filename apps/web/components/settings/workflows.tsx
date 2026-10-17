@@ -17,6 +17,7 @@ import { formatRelative } from "@/lib/format";
 /** Agents that run on a daily clock: the time they run, and how the field is labelled. */
 const SCHEDULED: Record<string, { at: string; label: string }> = {
   kitchen_daily: { at: "23:30", label: "Runs every night at (IST)" },
+  trade_watch: { at: "09:00", label: "Sends the shipment list every morning at (IST)" },
   prospector: { at: "10:30", label: "Finds leads and sends messages every day at (IST)" },
   whatsapp_followup: { at: "11:00", label: "Looks for quiet chats every day at (IST)" },
   collections: { at: "10:00", label: "Drafts reminders every day at (IST)" },
@@ -28,6 +29,7 @@ const INSTRUCTION_HINTS: Record<string, string> = {
   lead_triage: "e.g. We only take projects above ₹1 lakh. Always mention our 2-week pilot offer.",
   loan_verification: "e.g. Salaried applicants need 3 salary slips; self-employed need 2 years of ITR.",
   kitchen_daily: "e.g. Buy paneer only from Amul distributor. Keep 20% extra on weekends.",
+  trade_watch: "The list is written from your shipment files; keep cut-offs, ETD/ETA, LC dates and documents up to date there.",
   prospector: "e.g. Mention we built the site for Annapurna Rasoi. Skip hotels and big chains. Offer a free demo page.",
   whatsapp_followup: "e.g. Keep it light. Mention the weekend slots if they asked about bookings.",
   collections: "e.g. Write in Hinglish. Mention that GST invoices are attached on request. Be extra polite with Kapoor Sweets.",
@@ -244,7 +246,7 @@ export function WorkflowSettings({ ventureId, kind, canAdmin }: { ventureId: str
   if (catalogue.isPending || configs.isPending) return <SkeletonRows />;
   if (catalogue.isError) return <ErrorState error={catalogue.error} />;
   if (configs.isError) return <ErrorState error={configs.error} />;
-  const ORDER = ["inbox_assistant", "lead_triage", "prospector", "loan_verification", "kitchen_daily", "meeting_digest"];
+  const ORDER = ["inbox_assistant", "lead_triage", "prospector", "loan_verification", "kitchen_daily", "trade_watch", "meeting_digest"];
   const list = catalogue.data
     .filter((w) => w.venture_kinds.includes(kind) || configs.data.some((c) => c.workflow === w.name))
     .sort((a, b) => (ORDER.indexOf(a.name) + 1 || 99) - (ORDER.indexOf(b.name) + 1 || 99));

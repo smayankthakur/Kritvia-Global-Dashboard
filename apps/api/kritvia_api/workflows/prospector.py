@@ -40,7 +40,7 @@ from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Op
 from kritvia_api.workflows.common import CURRENCY_IN_TEXT, IST, today_ist
 
 wf = registry.register(Workflow(
-    "prospector", title="Prospector", start="route", venture_kinds=("software", "general"),
+    "prospector", title="Prospector", start="route", venture_kinds=("software", "general", "trade"),
     trigger="Every day at the time you set",
     description="Finds businesses on Google Maps that have no website, writes to each one in your voice, "
                 "follows up, and stops the moment they reply or say no. Emails go from your Gmail; WhatsApp "

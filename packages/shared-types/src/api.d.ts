@@ -4047,6 +4047,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/shipments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Shipments */
+        get: operations["list_shipments_ventures__venture_id__shipments_get"];
+        put?: never;
+        /** Create Shipment */
+        post: operations["create_shipment_ventures__venture_id__shipments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Shipment */
+        get: operations["get_shipment_ventures__venture_id__shipments__shipment_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Shipment */
+        delete: operations["delete_shipment_ventures__venture_id__shipments__shipment_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Shipment */
+        patch: operations["update_shipment_ventures__venture_id__shipments__shipment_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}/bill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bill Job */
+        post: operations["bill_job_ventures__venture_id__shipments__shipment_id__bill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}/docs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Doc */
+        post: operations["add_doc_ventures__venture_id__shipments__shipment_id__docs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}/docs/{doc_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Doc */
+        delete: operations["delete_doc_ventures__venture_id__shipments__shipment_id__docs__doc_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Doc */
+        patch: operations["update_doc_ventures__venture_id__shipments__shipment_id__docs__doc_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Items */
+        put: operations["put_items_ventures__venture_id__shipments__shipment_id__items_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Note */
+        post: operations["add_note_ventures__venture_id__shipments__shipment_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Packages */
+        put: operations["put_packages_ventures__venture_id__shipments__shipment_id__packages_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/shipments/{shipment_id}/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Update */
+        post: operations["send_update_ventures__venture_id__shipments__shipment_id__update_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/tally": {
         parameters: {
             query?: never;
@@ -4082,6 +4239,24 @@ export interface paths {
          * @description Owners can annotate any card and close or reopen cards that have no run; run cards follow the run.
          */
         patch: operations["patch_ticket_ventures__venture_id__tickets__ticket_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/trade-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_ventures__venture_id__trade_profile_get"];
+        /** Put Profile */
+        put: operations["put_profile_ventures__venture_id__trade_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/ventures/{venture_id}/transcribe": {
@@ -4595,6 +4770,18 @@ export interface components {
              */
             ventures_with_google: number;
         };
+        /** AlertOut */
+        AlertOut: {
+            /** Kind */
+            kind: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "urgent" | "soon" | "info";
+            /** Text */
+            text: string;
+        };
         /** AnalyticsOut */
         AnalyticsOut: {
             /** Advanced */
@@ -4994,6 +5181,25 @@ export interface components {
             /** Tool */
             tool: string;
         };
+        /** Attention */
+        Attention: {
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "urgent" | "soon" | "info";
+            /** Number */
+            number: string;
+            /** Party Name */
+            party_name: string;
+            /**
+             * Shipment Id
+             * Format: uuid
+             */
+            shipment_id: string;
+            /** Text */
+            text: string;
+        };
         /** AuditOut */
         AuditOut: {
             /** Action */
@@ -5171,6 +5377,18 @@ export interface components {
             auto_run: boolean;
             /** Reason */
             reason: string;
+        };
+        /** BillOut */
+        BillOut: {
+            /** Amount Paise */
+            amount_paise: number;
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /** Number */
+            number: string;
         };
         /** BillingEvent */
         BillingEvent: {
@@ -6179,6 +6397,18 @@ export interface components {
             /** Words */
             words: number;
         };
+        /** DocIn */
+        DocIn: {
+            /**
+             * Code
+             * @description one of the extras, or leave out
+             */
+            code?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Needed By */
+            needed_by?: ("order" | "production" | "booking" | "documents" | "customs" | "cleared" | "duty_paid" | "shipped" | "arrived" | "delivered" | "paid" | "closed" | "cancelled") | null;
+        };
         /** DocItem */
         DocItem: {
             /** Cgst Paise */
@@ -6205,6 +6435,48 @@ export interface components {
             taxable_paise: number;
             /** Unit */
             unit: string | null;
+        };
+        /** DocOut */
+        DocOut: {
+            /** Code */
+            code: string;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Needed By */
+            needed_by: string | null;
+            /** Note */
+            note: string | null;
+            /** Ref Date */
+            ref_date: string | null;
+            /** Ref No */
+            ref_no: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "needed" | "received" | "done" | "not_needed";
+        };
+        /** DocPatch */
+        DocPatch: {
+            /** Document Id */
+            document_id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Ref Date */
+            ref_date?: string | null;
+            /** Ref No */
+            ref_no?: string | null;
+            /** Status */
+            status?: ("needed" | "received" | "done" | "not_needed") | null;
         };
         /** DocumentDetailOut */
         DocumentDetailOut: {
@@ -6467,6 +6739,22 @@ export interface components {
             name: string;
             /** Note */
             note?: string | null;
+        };
+        /** EventOut */
+        EventOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** By */
+            by: string | null;
+            /** Kind */
+            kind: string;
+            /** Stage */
+            stage: string | null;
+            /** Text */
+            text: string;
         };
         /** ExecuteOut */
         ExecuteOut: {
@@ -7201,6 +7489,19 @@ export interface components {
             invoices: components["schemas"]["InvoiceOut"][];
             totals: components["schemas"]["Totals"];
         };
+        /** Item */
+        Item: {
+            /** Description */
+            description: string;
+            /** Hs Code */
+            hs_code?: string | null;
+            /** Qty */
+            qty: number | string;
+            /** Unit */
+            unit?: string | null;
+            /** Unit Price Minor */
+            unit_price_minor: number;
+        };
         /** ItemIn */
         ItemIn: {
             /** Description */
@@ -7229,6 +7530,21 @@ export interface components {
              * @description e.g. pcs, hrs, kg
              */
             unit?: string | null;
+        };
+        /** ItemOut */
+        ItemOut: {
+            /** Amount Minor */
+            amount_minor: number;
+            /** Description */
+            description: string;
+            /** Hs Code */
+            hs_code?: string | null;
+            /** Qty */
+            qty: string;
+            /** Unit */
+            unit?: string | null;
+            /** Unit Price Minor */
+            unit_price_minor: number;
         };
         /** KeyIn */
         KeyIn: {
@@ -7729,19 +8045,6 @@ export interface components {
              */
             template_id: string;
         };
-        /** NoteIn */
-        NoteIn: {
-            /**
-             * Kind
-             * @default note
-             * @enum {string}
-             */
-            kind: "note" | "proposal";
-            /** Text */
-            text: string;
-            /** Title */
-            title: string;
-        };
         /** NoticeOut */
         NoticeOut: {
             /**
@@ -7866,6 +8169,40 @@ export interface components {
             name: string;
             /** Slug */
             slug: string;
+        };
+        /** Package */
+        "Package-Input": {
+            /** Contents */
+            contents?: string | null;
+            /** Count */
+            count: number;
+            /** Dimensions */
+            dimensions?: string | null;
+            /** Gross Kg */
+            gross_kg?: number | string | null;
+            /** Kind */
+            kind: string;
+            /** Marks */
+            marks?: string | null;
+            /** Net Kg */
+            net_kg?: number | string | null;
+        };
+        /** Package */
+        "Package-Output": {
+            /** Contents */
+            contents?: string | null;
+            /** Count */
+            count: number;
+            /** Dimensions */
+            dimensions?: string | null;
+            /** Gross Kg */
+            gross_kg?: string | null;
+            /** Kind */
+            kind: string;
+            /** Marks */
+            marks?: string | null;
+            /** Net Kg */
+            net_kg?: string | null;
         };
         /** PaidClaimIn */
         PaidClaimIn: {
@@ -8883,6 +9220,429 @@ export interface components {
             /** Allow Training Models */
             allow_training_models: boolean;
         };
+        /** ShipmentIn */
+        ShipmentIn: {
+            /** Arrived On */
+            arrived_on?: string | null;
+            /** Bl Date */
+            bl_date?: string | null;
+            /** Bl No */
+            bl_no?: string | null;
+            /** Booking No */
+            booking_no?: string | null;
+            /** Brc No */
+            brc_no?: string | null;
+            /** Carrier */
+            carrier?: string | null;
+            /** Containers */
+            containers?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Customs Date */
+            customs_date?: string | null;
+            /** Customs No */
+            customs_no?: string | null;
+            /** Cutoff At */
+            cutoff_at?: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "export" | "import";
+            /** Duty Paise */
+            duty_paise?: number | null;
+            /** Eta */
+            eta?: string | null;
+            /** Etd */
+            etd?: string | null;
+            /** Fee Paise */
+            fee_paise?: number | null;
+            /** Final Destination */
+            final_destination?: string | null;
+            /**
+             * For Client
+             * @description a C&F agent's job for a client
+             * @default false
+             */
+            for_client: boolean;
+            /** Freight Minor */
+            freight_minor?: number | null;
+            /** Incoterm */
+            incoterm?: ("EXW" | "FCA" | "FAS" | "FOB" | "CFR" | "CIF" | "CPT" | "CIP" | "DAP" | "DPU" | "DDP") | null;
+            /** Incoterm Place */
+            incoterm_place?: string | null;
+            /** Insurance Minor */
+            insurance_minor?: number | null;
+            /** Lc Expiry */
+            lc_expiry?: string | null;
+            /** Lc Last Shipment */
+            lc_last_shipment?: string | null;
+            /** Lc No */
+            lc_no?: string | null;
+            /** Lut */
+            lut?: boolean | null;
+            /** Mode */
+            mode?: ("sea" | "air" | "road" | "rail" | "courier") | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Number
+             * @description leave out to number it automatically
+             */
+            number?: string | null;
+            /** Other Party */
+            other_party?: string | null;
+            /** Party Address */
+            party_address?: string | null;
+            /**
+             * Party Country
+             * @description ISO 3166 two letters, e.g. AE
+             */
+            party_country?: string | null;
+            /** Party Email */
+            party_email?: string | null;
+            /** Party Name */
+            party_name: string;
+            /** Party Phone */
+            party_phone?: string | null;
+            /** Payment Days */
+            payment_days?: number | null;
+            /** Payment Terms */
+            payment_terms?: ("advance" | "lc" | "dp" | "da" | "cad" | "open" | "other") | null;
+            /** Port Discharge */
+            port_discharge?: string | null;
+            /** Port Loading */
+            port_loading?: string | null;
+            /** Realise By */
+            realise_by?: string | null;
+            /** Realised On */
+            realised_on?: string | null;
+            /** Received Minor */
+            received_minor?: number | null;
+            /** Reference */
+            reference?: string | null;
+            /** Reimbursable Paise */
+            reimbursable_paise?: number | null;
+            /** Shipped On */
+            shipped_on?: string | null;
+            /** Stage */
+            stage?: ("order" | "production" | "booking" | "documents" | "customs" | "cleared" | "duty_paid" | "shipped" | "arrived" | "delivered" | "paid" | "closed" | "cancelled") | null;
+            /** Value Minor */
+            value_minor?: number | null;
+            /** Vessel */
+            vessel?: string | null;
+        };
+        /** ShipmentOut */
+        ShipmentOut: {
+            /** Alerts */
+            alerts: components["schemas"]["AlertOut"][];
+            /** Arrived On */
+            arrived_on: string | null;
+            /** Bl Date */
+            bl_date: string | null;
+            /** Bl No */
+            bl_no: string | null;
+            /** Booking No */
+            booking_no: string | null;
+            /** Brc No */
+            brc_no: string | null;
+            /** Can Edit */
+            can_edit: boolean;
+            /** Carrier */
+            carrier: string | null;
+            /** Containers */
+            containers: string | null;
+            /** Currency */
+            currency: string;
+            /** Customs Date */
+            customs_date: string | null;
+            /** Customs No */
+            customs_no: string | null;
+            /** Cutoff At */
+            cutoff_at: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "export" | "import";
+            /** Docs */
+            docs: components["schemas"]["DocOut"][];
+            /** Docs Needed */
+            docs_needed: number;
+            /** Docs Total */
+            docs_total: number;
+            /** Duty Paise */
+            duty_paise: number | null;
+            /** Eta */
+            eta: string | null;
+            /** Etd */
+            etd: string | null;
+            /** Events */
+            events: components["schemas"]["EventOut"][];
+            /**
+             * Extra Docs
+             * @description documents that can be added to the checklist (code, name)
+             */
+            extra_docs: components["schemas"]["StageOut"][];
+            /** Fee Paise */
+            fee_paise: number | null;
+            /** Final Destination */
+            final_destination: string | null;
+            /** For Client */
+            for_client: boolean;
+            /** Freight Minor */
+            freight_minor: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Incoterm */
+            incoterm: string | null;
+            /** Incoterm Place */
+            incoterm_place: string | null;
+            /** Insurance Minor */
+            insurance_minor: number;
+            /** Invoice Id */
+            invoice_id: string | null;
+            /** Items */
+            items: components["schemas"]["ItemOut"][];
+            /** Last Update At */
+            last_update_at: string | null;
+            /** Lc Expiry */
+            lc_expiry: string | null;
+            /** Lc Last Shipment */
+            lc_last_shipment: string | null;
+            /** Lc No */
+            lc_no: string | null;
+            /** Lut */
+            lut: boolean;
+            /** Mode */
+            mode: string;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: string;
+            /** Other Party */
+            other_party: string | null;
+            /** Packages */
+            packages: components["schemas"]["Package-Output"][];
+            /** Party Address */
+            party_address: string | null;
+            /** Party Country */
+            party_country: string | null;
+            /** Party Email */
+            party_email: string | null;
+            /** Party Name */
+            party_name: string;
+            /** Party Phone */
+            party_phone: string | null;
+            /** Payment Days */
+            payment_days: number | null;
+            /** Payment Terms */
+            payment_terms: string | null;
+            /** Port Discharge */
+            port_discharge: string | null;
+            /** Port Loading */
+            port_loading: string | null;
+            /** Realise By */
+            realise_by: string | null;
+            /** Realised On */
+            realised_on: string | null;
+            /** Received Minor */
+            received_minor: number;
+            /** Reference */
+            reference: string | null;
+            /** Reimbursable Paise */
+            reimbursable_paise: number | null;
+            /** Shipped On */
+            shipped_on: string | null;
+            /** Stage */
+            stage: string;
+            /** Stage Label */
+            stage_label: string;
+            /** Stages */
+            stages: components["schemas"]["StageOut"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Value Minor */
+            value_minor: number;
+            /** Vessel */
+            vessel: string | null;
+        };
+        /** ShipmentPatch */
+        ShipmentPatch: {
+            /** Arrived On */
+            arrived_on?: string | null;
+            /** Bl Date */
+            bl_date?: string | null;
+            /** Bl No */
+            bl_no?: string | null;
+            /** Booking No */
+            booking_no?: string | null;
+            /** Brc No */
+            brc_no?: string | null;
+            /** Carrier */
+            carrier?: string | null;
+            /** Containers */
+            containers?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Customs Date */
+            customs_date?: string | null;
+            /** Customs No */
+            customs_no?: string | null;
+            /** Cutoff At */
+            cutoff_at?: string | null;
+            /** Duty Paise */
+            duty_paise?: number | null;
+            /** Eta */
+            eta?: string | null;
+            /** Etd */
+            etd?: string | null;
+            /** Fee Paise */
+            fee_paise?: number | null;
+            /** Final Destination */
+            final_destination?: string | null;
+            /** Freight Minor */
+            freight_minor?: number | null;
+            /** Incoterm */
+            incoterm?: ("EXW" | "FCA" | "FAS" | "FOB" | "CFR" | "CIF" | "CPT" | "CIP" | "DAP" | "DPU" | "DDP") | null;
+            /** Incoterm Place */
+            incoterm_place?: string | null;
+            /** Insurance Minor */
+            insurance_minor?: number | null;
+            /** Lc Expiry */
+            lc_expiry?: string | null;
+            /** Lc Last Shipment */
+            lc_last_shipment?: string | null;
+            /** Lc No */
+            lc_no?: string | null;
+            /** Lut */
+            lut?: boolean | null;
+            /** Mode */
+            mode?: ("sea" | "air" | "road" | "rail" | "courier") | null;
+            /** Notes */
+            notes?: string | null;
+            /** Number */
+            number?: string | null;
+            /** Other Party */
+            other_party?: string | null;
+            /** Party Address */
+            party_address?: string | null;
+            /**
+             * Party Country
+             * @description ISO 3166 two letters, e.g. AE
+             */
+            party_country?: string | null;
+            /** Party Email */
+            party_email?: string | null;
+            /** Party Name */
+            party_name?: string | null;
+            /** Party Phone */
+            party_phone?: string | null;
+            /** Payment Days */
+            payment_days?: number | null;
+            /** Payment Terms */
+            payment_terms?: ("advance" | "lc" | "dp" | "da" | "cad" | "open" | "other") | null;
+            /** Port Discharge */
+            port_discharge?: string | null;
+            /** Port Loading */
+            port_loading?: string | null;
+            /** Realise By */
+            realise_by?: string | null;
+            /** Realised On */
+            realised_on?: string | null;
+            /** Received Minor */
+            received_minor?: number | null;
+            /** Reference */
+            reference?: string | null;
+            /** Reimbursable Paise */
+            reimbursable_paise?: number | null;
+            /** Shipped On */
+            shipped_on?: string | null;
+            /** Stage */
+            stage?: ("order" | "production" | "booking" | "documents" | "customs" | "cleared" | "duty_paid" | "shipped" | "arrived" | "delivered" | "paid" | "closed" | "cancelled") | null;
+            /** Value Minor */
+            value_minor?: number | null;
+            /** Vessel */
+            vessel?: string | null;
+        };
+        /** ShipmentRow */
+        ShipmentRow: {
+            /** Alerts */
+            alerts: components["schemas"]["AlertOut"][];
+            /** Currency */
+            currency: string;
+            /** Cutoff At */
+            cutoff_at: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "export" | "import";
+            /** Docs Needed */
+            docs_needed: number;
+            /** Docs Total */
+            docs_total: number;
+            /** Eta */
+            eta: string | null;
+            /** Etd */
+            etd: string | null;
+            /** For Client */
+            for_client: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Incoterm */
+            incoterm: string | null;
+            /** Mode */
+            mode: string;
+            /** Number */
+            number: string;
+            /** Party Country */
+            party_country: string | null;
+            /** Party Name */
+            party_name: string;
+            /** Port Discharge */
+            port_discharge: string | null;
+            /** Port Loading */
+            port_loading: string | null;
+            /** Received Minor */
+            received_minor: number;
+            /** Reference */
+            reference: string | null;
+            /** Stage */
+            stage: string;
+            /** Stage Label */
+            stage_label: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Value Minor */
+            value_minor: number;
+        };
+        /** ShipmentsOut */
+        ShipmentsOut: {
+            /** Attention */
+            attention: components["schemas"]["Attention"][];
+            /** Can Edit */
+            can_edit: boolean;
+            /** Items */
+            items: components["schemas"]["ShipmentRow"][];
+            profile_alert: components["schemas"]["AlertOut"] | null;
+            /** Profile Configured */
+            profile_configured: boolean;
+            /** Roles */
+            roles: string[];
+        };
         /** SigninUrlOut */
         SigninUrlOut: {
             /** Url */
@@ -9113,6 +9873,13 @@ export interface components {
             status: string;
             /** Upi Id */
             upi_id: string | null;
+        };
+        /** StageOut */
+        StageOut: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
         };
         /** StartedOut */
         StartedOut: {
@@ -9828,6 +10595,132 @@ export interface components {
             /** Paid This Month Paise */
             paid_this_month_paise: number;
         };
+        /** TradeProfile */
+        TradeProfile: {
+            /**
+             * Ad Code
+             * @description the bank's Authorised Dealer code
+             */
+            ad_code?: string | null;
+            /** Address */
+            address: string;
+            /** Bank Details */
+            bank_details?: string | null;
+            /** Cha Licence */
+            cha_licence?: string | null;
+            /** Declaration */
+            declaration?: string | null;
+            /**
+             * Default Currency
+             * @default USD
+             */
+            default_currency: string;
+            /** Email */
+            email?: string | null;
+            /** Gstin */
+            gstin?: string | null;
+            /**
+             * Iec
+             * @description Importer-Exporter Code, 10 characters
+             */
+            iec?: string | null;
+            /** Legal Name */
+            legal_name: string;
+            /** Lut Arn */
+            lut_arn?: string | null;
+            /** Lut Valid Until */
+            lut_valid_until?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Prefix Export
+             * @default EXP
+             */
+            prefix_export: string;
+            /**
+             * Prefix Import
+             * @default IMP
+             */
+            prefix_import: string;
+            /**
+             * Prefix Job
+             * @default JOB
+             */
+            prefix_job: string;
+            /**
+             * Realisation Months
+             * @description months to realise export proceeds (RBI; 9 unless the rule changes)
+             * @default 9
+             */
+            realisation_months: number;
+            /** Roles */
+            roles?: ("exporter" | "importer" | "cha")[];
+        };
+        /** TradeProfileOut */
+        TradeProfileOut: {
+            /**
+             * Ad Code
+             * @description the bank's Authorised Dealer code
+             */
+            ad_code?: string | null;
+            /** Address */
+            address: string;
+            /** Bank Details */
+            bank_details?: string | null;
+            /** Can Edit */
+            can_edit: boolean;
+            /** Cha Licence */
+            cha_licence?: string | null;
+            /** Configured */
+            configured: boolean;
+            /** Declaration */
+            declaration?: string | null;
+            /**
+             * Default Currency
+             * @default USD
+             */
+            default_currency: string;
+            /** Email */
+            email?: string | null;
+            /** Gstin */
+            gstin?: string | null;
+            /**
+             * Iec
+             * @description Importer-Exporter Code, 10 characters
+             */
+            iec?: string | null;
+            /** Legal Name */
+            legal_name: string;
+            /** Lut Arn */
+            lut_arn?: string | null;
+            /** Lut Valid Until */
+            lut_valid_until?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Prefix Export
+             * @default EXP
+             */
+            prefix_export: string;
+            /**
+             * Prefix Import
+             * @default IMP
+             */
+            prefix_import: string;
+            /**
+             * Prefix Job
+             * @default JOB
+             */
+            prefix_job: string;
+            /**
+             * Realisation Months
+             * @description months to realise export proceeds (RBI; 9 unless the rule changes)
+             * @default 9
+             */
+            realisation_months: number;
+            /** Roles */
+            roles?: ("exporter" | "importer" | "cha")[];
+        };
         /** TranscriptOut */
         TranscriptOut: {
             /** Deployment */
@@ -9925,6 +10818,21 @@ export interface components {
              * @description the schedule in words
              */
             when: string;
+        };
+        /** UpdateIn */
+        UpdateIn: {
+            /**
+             * Channel
+             * @default email
+             * @enum {string}
+             */
+            channel: "email" | "whatsapp";
+            /**
+             * Note
+             * @description a line to add, e.g. 'Original documents couriered today'
+             * @default
+             */
+            note: string;
         };
         /** UpiOut */
         UpiOut: {
@@ -10066,7 +10974,7 @@ export interface components {
         /** VentureIn */
         VentureIn: {
             /** Kind */
-            kind?: ("general" | "software" | "finance" | "kitchen") | null;
+            kind?: ("general" | "software" | "finance" | "kitchen" | "trade") | null;
             /** Name */
             name: string;
             /** Slug */
@@ -10115,7 +11023,7 @@ export interface components {
             /** City */
             city?: string | null;
             /** Kind */
-            kind?: ("general" | "software" | "finance" | "kitchen") | null;
+            kind?: ("general" | "software" | "finance" | "kitchen" | "trade") | null;
             /** Notice In Replies */
             notice_in_replies?: boolean | null;
             /** Privacy Contact Email */
@@ -10503,6 +11411,19 @@ export interface components {
             /** Question */
             question: string;
         };
+        /** NoteIn */
+        kritvia_api__routers__knowledge__NoteIn: {
+            /**
+             * Kind
+             * @default note
+             * @enum {string}
+             */
+            kind: "note" | "proposal";
+            /** Text */
+            text: string;
+            /** Title */
+            title: string;
+        };
         /** ApplyIn */
         kritvia_api__routers__partners__ApplyIn: {
             /** City */
@@ -10561,6 +11482,11 @@ export interface components {
             rating: number | null;
             /** Write Review Url */
             write_review_url: string;
+        };
+        /** NoteIn */
+        kritvia_api__routers__trade__NoteIn: {
+            /** Text */
+            text: string;
         };
         /** ConsentIn */
         kritvia_api__routers__truhome__ConsentIn: {
@@ -18672,7 +19598,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["NoteIn"];
+                "application/json": components["schemas"]["kritvia_api__routers__knowledge__NoteIn"];
             };
         };
         responses: {
@@ -19424,6 +20350,455 @@ export interface operations {
             };
         };
     };
+    list_shipments_ventures__venture_id__shipments_get: {
+        parameters: {
+            query?: {
+                show?: "open" | "closed" | "all";
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_shipment_ventures__venture_id__shipments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShipmentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_shipment_ventures__venture_id__shipments__shipment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_shipment_ventures__venture_id__shipments__shipment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_shipment_ventures__venture_id__shipments__shipment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShipmentPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bill_job_ventures__venture_id__shipments__shipment_id__bill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_doc_ventures__venture_id__shipments__shipment_id__docs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_doc_ventures__venture_id__shipments__shipment_id__docs__doc_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+                doc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_doc_ventures__venture_id__shipments__shipment_id__docs__doc_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+                doc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_items_ventures__venture_id__shipments__shipment_id__items_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Item"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_note_ventures__venture_id__shipments__shipment_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["kritvia_api__routers__trade__NoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_packages_ventures__venture_id__shipments__shipment_id__packages_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Package-Input"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShipmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_update_ventures__venture_id__shipments__shipment_id__update_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                shipment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     overview_ventures__venture_id__tally_get: {
         parameters: {
             query?: {
@@ -19481,6 +20856,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profile_ventures__venture_id__trade_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_profile_ventures__venture_id__trade_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TradeProfile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeProfileOut"];
                 };
             };
             /** @description Validation Error */

@@ -48,7 +48,7 @@ async def shop(world, client):
 async def test_catalogue_lists_options_and_trigger(world):
     cat = (await world["mayank"].get("/workflows")).json()
     inbox = next(w for w in cat if w["name"] == "inbox_assistant")
-    assert inbox["venture_kinds"] == ["general", "software", "finance", "kitchen"]
+    assert inbox["venture_kinds"] == ["general", "software", "finance", "kitchen", "trade"]
     assert {o["key"] for o in inbox["options"]} >= {"draft_replies", "reply_language", "hand_off_leads"}
     lead = next(w for w in cat if w["name"] == "lead_triage")
     assert any(o["key"] == "draft_proposal" and o["type"] == "boolean" for o in lead["options"])

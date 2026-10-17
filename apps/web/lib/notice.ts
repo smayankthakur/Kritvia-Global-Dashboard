@@ -64,6 +64,16 @@ const ITEMS: Record<string, Item> = {
     },
     local: true,
   },
+  trade_watch: {
+    what: {
+      en: "Shipment records: your name, company, address and contact details, what was ordered, shipping and customs details, and payment status.",
+      hi: "शिपमेंट के रिकॉर्ड: आपका नाम, कंपनी, पता और संपर्क, क्या ऑर्डर हुआ, शिपिंग और कस्टम्स की जानकारी, और भुगतान की स्थिति।",
+    },
+    why: {
+      en: "To prepare the export or import documents, track the shipment and its deadlines, and keep you updated.",
+      hi: "एक्सपोर्ट या इम्पोर्ट के दस्तावेज़ तैयार करने, शिपमेंट और उसकी तारीख़ों पर नज़र रखने और आपको जानकारी देते रहने के लिए।",
+    },
+  },
   meeting_digest: {
     what: {
       en: "Recordings and notes of meetings and calls with you.",

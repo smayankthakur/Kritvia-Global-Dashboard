@@ -94,7 +94,7 @@ class OrgIn(BaseModel):
 class VentureIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     slug: str = Slug
-    kind: Literal["general", "software", "finance", "kitchen"] | None = None
+    kind: Literal["general", "software", "finance", "kitchen", "trade"] | None = None
 
 
 class IdOut(BaseModel):

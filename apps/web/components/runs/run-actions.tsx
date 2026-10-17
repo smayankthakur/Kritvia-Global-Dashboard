@@ -48,6 +48,8 @@ export const WORKFLOW_LABEL: Record<string, string> = {
   lead_triage: "Lead triage",
   loan_verification: "Loan verification",
   kitchen_daily: "Kitchen daily plan",
+  trade_watch: "Shipment watch",
+  trade_update: "Shipment update",
   meeting_digest: "Meeting digest",
   prospector: "Prospector",
 };

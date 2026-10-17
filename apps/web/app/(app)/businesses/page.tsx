@@ -20,7 +20,7 @@ import { KIND_LABEL } from "@/lib/nav";
 import { SLUG_RE, slugify } from "@/lib/slug";
 
 type Venture = Schemas["VentureOut"];
-const KINDS: VentureKind[] = ["software", "finance", "kitchen", "general"];
+const KINDS: VentureKind[] = ["software", "finance", "kitchen", "trade", "general"];
 
 /** Owners add, rename and remove the businesses in their organisation. */
 export default function BusinessesPage() {

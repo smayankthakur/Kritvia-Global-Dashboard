@@ -83,6 +83,38 @@ def build_tools() -> ToolRegistry:
             "total_still_due": rupees(sum(r.amount_paise - r.paid_paise for r in rows if r.status == "open"))
             if rows else rupees(0)}
 
+    @reg.tool("shipments.search", Capability.READ, "Look up the business's shipment files: stage, dates, documents still needed, alerts")
+    async def shipments_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from datetime import datetime
+
+        from kritvia_api.services import trade as tr
+        from kritvia_api.workflows.common import IST
+        q = str(p.get("query") or "").strip()
+        where = "" if str(p.get("show") or "open") == "all" else " AND stage NOT IN ('closed', 'cancelled')"
+        params: dict[str, Any] = {"v": ctx.venture_id}
+        if q:
+            where += (" AND (number ILIKE :q OR party_name ILIKE :q OR coalesce(reference, '') ILIKE :q"
+                      " OR coalesce(bl_no, '') ILIKE :q OR coalesce(containers, '') ILIKE :q OR coalesce(customs_no, '') ILIKE :q)")
+            params["q"] = f"%{q}%"
+        async with ctx.tx() as conn:
+            rows = (await conn.execute(text(f"SELECT * FROM shipments WHERE venture_id = :v{where}"
+                                            " ORDER BY updated_at DESC LIMIT 25"), params)).all()
+            docs: dict = {r.id: [] for r in rows}
+            if rows:
+                for d in (await conn.execute(text("SELECT * FROM shipment_docs WHERE shipment_id = ANY (:ids)"),
+                                             {"ids": list(docs)})).all():
+                    docs[d.shipment_id].append(d)
+        today = datetime.now(IST).date()
+        return {"shipments": [{
+            "file": r.number, "kind": ("C&F job, " if r.for_client else "") + r.direction, "party": r.party_name,
+            "reference": r.reference, "stage": tr.stage_label(r.direction, r.stage), "mode": r.mode,
+            "incoterm": r.incoterm, "from": r.port_loading, "to": r.port_discharge, "vessel": r.vessel,
+            "bl_awb": r.bl_no, "containers": r.containers, "customs_no": r.customs_no,
+            "etd": str(r.etd) if r.etd else None, "eta": str(r.eta) if r.eta else None,
+            "value": tr.money(r.value_minor, r.currency), "received": tr.money(r.received_minor, r.currency),
+            "documents_still_needed": [d.name for d in docs[r.id] if d.status == "needed"],
+            "needs_attention": [a.text for a in tr.alerts(r, docs[r.id], today)]} for r in rows]}
+
     @reg.tool("places.search", Capability.READ, "Search Google Maps (Places API) for businesses")
     async def places_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
         from kritvia_api.services.places import PlacesError

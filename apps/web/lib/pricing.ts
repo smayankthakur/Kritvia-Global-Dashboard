@@ -144,8 +144,8 @@ export function priceFor(p: Pick<PlanCard, "price_inr" | "price_annual_inr">, pe
   return { big: rupees(p.price_inr), note: "Billed monthly" };
 }
 
-const CORE_AGENTS = new Set(["inbox_assistant", "lead_triage", "meeting_digest"]);
-const KIND_AGENT: Record<string, string> = { finance: "loan_verification", kitchen: "kitchen_daily" };
+const CORE_AGENTS = new Set(["inbox_assistant", "lead_triage", "meeting_digest", "trade_update"]);
+const KIND_AGENT: Record<string, string> = { finance: "loan_verification", kitchen: "kitchen_daily", trade: "trade_watch" };
 
 /** Mirrors Plan.allows_agent in the API: which agents a plan lets a business of this kind switch on. */
 export function agentAllowed(agents: string | undefined, workflow: string, kind: string): boolean {

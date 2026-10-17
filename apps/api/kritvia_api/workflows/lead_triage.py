@@ -27,7 +27,7 @@ from kritvia_api.services.quota import plan_for_venture
 from kritvia_api.workflows.common import CURRENCY_IN_TEXT, fmt_inr, money, next_business_slot, parse_inr
 
 wf = registry.register(Workflow(
-    "lead_triage", title="Lead triage & proposals", start="extract", venture_kinds=("software", "general"),
+    "lead_triage", title="Lead triage & proposals", start="extract", venture_kinds=("software", "general", "trade"),
     trigger="New enquiry by email, website form or WhatsApp",
     description="Reads an enquiry, scores it, prices it from your rate card, drafts a proposal citing your past "
                 "work and proposes a call — nothing is sent until you approve.",

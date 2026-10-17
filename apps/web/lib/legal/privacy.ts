@@ -3,7 +3,7 @@
  * Privacy Policy" (tab Privacy Policy). Every factual statement here was checked against the code;
  * if routing, retention or providers change (infra/litellm/tiers.yaml, migrations, worker purges),
  * change this text too and bump terms_version in the API settings.
- * 17 October 2026: single sign-on and API keys added (they apply only to organisations whose owner
+ * 17 October 2026: single sign-on, API keys and shipment files added (they apply only to organisations whose owner
  * switches them on, and add no new provider), without a new version.
  */
 export const PRIVACY_UPDATED = "17 October 2026";
@@ -43,7 +43,7 @@ This policy is published under the Digital Personal Data Protection Act, 2023 an
 
 We do not keep dictation audio. We keep the length, language and word count of each dictation; the text is kept only where you save it as a note. The Kritvia desktop app's auto-learn feature, if you switch it on, briefly holds your keystrokes in memory for up to 8 seconds after you paste dictated text, only to learn your corrections; it does not store or send those keystrokes.
 
-**Customer Data (we are a Data Processor).** Businesses using Kritvia put in or connect data that may include personal data of their own customers and contacts: emails and attachments, WhatsApp and Telegram messages, calendar events, Drive files, uploaded documents (including loan papers and identity documents), meeting recordings and transcripts, leads, proposals, accounting entries, invoices (including customers' GSTINs and addresses) and payments, bookings, and review requests. We process this only to provide Kritvia to that business: to store and search it, extract facts, and run the agents it switches on. We do not use it for our own purposes, sell it, use it for advertising, or use it to train AI models.
+**Customer Data (we are a Data Processor).** Businesses using Kritvia put in or connect data that may include personal data of their own customers and contacts: emails and attachments, WhatsApp and Telegram messages, calendar events, Drive files, uploaded documents (including loan papers and identity documents), meeting recordings and transcripts, leads, proposals, accounting entries, invoices (including customers' GSTINs and addresses) and payments, bookings, review requests, and shipment files (buyers', suppliers' and clients' names and contact details, what was shipped, shipping, customs and payment details, and the trade documents attached). We process this only to provide Kritvia to that business: to store and search it, extract facts, and run the agents it switches on. We do not use it for our own purposes, sell it, use it for advertising, or use it to train AI models.
 
 ## 3. How AI is used
 

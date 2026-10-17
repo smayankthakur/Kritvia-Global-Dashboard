@@ -8,7 +8,7 @@ import { readCookie, writeCookie } from "./cookies-client";
 
 export type Access = Schemas["AccessOut"];
 export type OrgSummary = Schemas["OrgSummary"];
-export type VentureKind = "software" | "finance" | "kitchen" | "general";
+export type VentureKind = "software" | "finance" | "kitchen" | "trade" | "general";
 
 export const accessKey = ["me", "access"] as const;
 export const meKey = ["me"] as const;
@@ -94,7 +94,7 @@ export function useRouteVenture(): Access | null {
 
 export function kindOf(v: Pick<Access, "kind"> | null | undefined): VentureKind {
   const k = v?.kind;
-  return k === "software" || k === "finance" || k === "kitchen" ? k : "general";
+  return k === "software" || k === "finance" || k === "kitchen" || k === "trade" ? k : "general";
 }
 
 export function hasRole(v: Access | null | undefined, ...roles: string[]): boolean {

@@ -15,7 +15,7 @@ import { accessKey } from "@/lib/access";
 import { KIND_LABEL } from "@/lib/nav";
 
 type Kind = NonNullable<Schemas["VentureSettingsIn"]["kind"]>;
-const KINDS = enumValues<Kind>()("software", "finance", "kitchen", "general");
+const KINDS = enumValues<Kind>()("software", "finance", "kitchen", "trade", "general");
 
 export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {
   const qc = useQueryClient();

@@ -120,10 +120,11 @@ export const AGENT_SUGGESTIONS: AgentSuggestion[] = [
   { workflow: "booking_reminders", title: "Remind customers of bookings", what: "Reminds customers the day before their booking, after your yes. Fewer no-shows.", href: agentLink("booking_reminders") },
   { workflow: "reviews", title: "Ask for Google reviews", what: "After a booking is done or an invoice is paid, asks for a review; drafts replies to new reviews.", href: (v) => `/v/${v}/reviews` },
   { workflow: "whatsapp_followup", title: "Follow up on WhatsApp", what: "One short nudge to enquiries that went quiet after your reply, after your yes.", href: agentLink("whatsapp_followup") },
-  { workflow: "lead_triage", title: "Qualify leads and draft proposals", what: "Reads each enquiry, scores it, and drafts a proposal from your rate card.", href: agentLink("lead_triage"), kinds: ["software", "general"] },
-  { workflow: "prospector", title: "Find new customers", what: "Finds businesses on Google Maps every day and drafts a first message.", href: agentLink("prospector"), kinds: ["software", "general"] },
+  { workflow: "lead_triage", title: "Qualify leads and draft proposals", what: "Reads each enquiry, scores it, and drafts a proposal from your rate card.", href: agentLink("lead_triage"), kinds: ["software", "general", "trade"] },
+  { workflow: "prospector", title: "Find new customers", what: "Finds businesses on Google Maps every day and drafts a first message.", href: agentLink("prospector"), kinds: ["software", "general", "trade"] },
   { workflow: "meeting_digest", title: "Meeting notes and follow-ups", what: "Turns a recording into notes, tasks and a follow-up email.", href: (v) => `/v/${v}/meetings` },
   { workflow: "kitchen_daily", title: "Kitchen demand and purchase orders", what: "Every night, forecasts demand and drafts purchase orders.", href: agentLink("kitchen_daily"), kinds: ["kitchen", "general"] },
+  { workflow: "trade_watch", title: "Watch your shipments", what: "Every morning, lists cut-offs with documents missing, sailings and arrivals, LC expiry, proceeds to realise and cargo waiting at port.", href: agentLink("trade_watch"), kinds: ["trade", "general"] },
   { workflow: "loan_verification", title: "Check loan documents", what: "Reads uploaded loan papers and lists what's missing or doesn't match.", href: (v) => `/v/${v}/loans`, kinds: ["finance", "general"] },
 ];
 

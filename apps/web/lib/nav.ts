@@ -16,6 +16,7 @@ import {
   FileText,
   Gauge,
   Gift,
+  Globe,
   Handshake,
   HeartPulse,
   Inbox,
@@ -34,6 +35,7 @@ import {
   Repeat,
   ScrollText,
   Settings,
+  Ship,
   ShieldCheck,
   Sparkles,
   Star,
@@ -68,6 +70,13 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
     { label: "Sales & stock", href: `${v}/kitchen/sales`, icon: TrendingUp },
     { label: "Events", href: `${v}/kitchen/events`, icon: CalendarDays },
   ];
+  const trade: NavItem[] = [
+    { label: "Shipments", href: `${v}/shipments`, icon: Ship, match: [`${v}/shipments`] },
+    { label: "Trade profile", href: `${v}/trade-profile`, icon: Globe },
+    { label: "Leads", href: `${v}/leads`, icon: Users },
+    { label: "Proposals", href: `${v}/proposals`, icon: FileText },
+    { label: "Rate card", href: `${v}/rate-card`, icon: Receipt },
+  ];
   // A "general" business gets the leads screens (any business can run lead triage with a
   // rate card); the loan and kitchen screens only make sense for those kinds.
   const domain =
@@ -77,7 +86,9 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
         ? finance
         : kind === "kitchen"
           ? kitchen
-          : software;
+          : kind === "trade"
+            ? trade
+            : software;
   const common: NavItem[] = [
     { label: "Assistant", href: `${v}/assistant`, icon: MessageSquareText },
     { label: "Chats", href: `${v}/whatsapp`, icon: MessageCircle },
@@ -131,5 +142,6 @@ export const KIND_LABEL: Record<VentureKind, string> = {
   software: "Agency / services",
   finance: "Loans & real estate",
   kitchen: "Restaurant / kitchen",
+  trade: "Export / import / C&F",
   general: "General",
 };

@@ -7,6 +7,8 @@
  * 17 October 2026 also added clauses 4.6 (single sign-on) and 4.7 (API keys) and named Scale's and
  * Enterprise's features in 10.1, without a new version: 4.6 and 4.7 apply only to organisations whose
  * owner sets up SSO or makes a key, and those screens link to the clause at that moment.
+ * 17 October 2026 also added clause 7.12 (shipment files and trade documents) the same way: it applies
+ * only to businesses that use shipment files, and the trade profile and shipment screens link to it.
  */
 export const TERMS_UPDATED = "17 October 2026";
 
@@ -118,6 +120,8 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 7.10 **Reviews.** The reviews agent drafts requests to your customers for a Google review and drafts replies to reviews for you to post in Google yourself. You must follow Google's policies: do not offer anything in return for a review, do not ask only the customers you expect to be happy, and do not write reviews of your own business.
 
 7.11 **Automations.** You can describe a scheduled report or task in your own words. The Service turns it into a schedule, which it shows you before saving. Check that it is what you meant. Reports go only to the destinations you choose, and anything sent to your customers still waits for Approval as clause 7.2 describes.
+
+7.12 **Shipment files and trade documents.** For exporters, importers and customs clearing and forwarding agents, the Service keeps shipment files, prints export invoices and packing lists from what you enter, and reminds you of dates such as cut-offs, letter of credit expiry, export proceeds to be realised and goods waiting at port. You are responsible for the accuracy of what you enter and print, for the HS codes, values and declarations on your documents, and for meeting customs, foreign exchange (FEMA and RBI) and GST rules, including filing shipping bills, bills of entry and LUTs and realising export proceeds on time. The Service does not file anything with customs, DGFT, the GST portal or your bank. Its reminders depend on the dates in your files and on the realisation period you set, and they are not legal, tax or customs advice. Status updates to your buyers, suppliers or clients are sent only after your Approval, as clause 7.2 describes.
 
 ## 8. Connected Services
 

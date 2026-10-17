@@ -69,6 +69,15 @@ export const TEMPLATES: Template[] = [
     instructions: { inbox_assistant: "Customers ask about orders, menu and delivery. For order problems, ask for the order number and apologise once." },
   },
   {
+    id: "trade",
+    kind: "trade",
+    title: "Exporter, importer or C&F agent",
+    example: "Exporter, importer, customs broker (CHA), freight forwarder",
+    gets: "Shipment files with document checklists, export invoices and packing lists, a morning list of cut-offs, LC and payment dates, updates to buyers and clients",
+    workflows: ["inbox_assistant", "trade_watch", "lead_triage", "meeting_digest"],
+    instructions: { inbox_assistant: "Messages are from buyers, suppliers, clients, shipping lines and forwarders. Quote prices only from the rate card, with the Incoterm. For a shipment query, ask for the file number, BL or container number. Never promise a sailing or clearance date the team hasn't confirmed." },
+  },
+  {
     id: "retail",
     kind: "general",
     title: "Shop or e-commerce",
@@ -130,10 +139,11 @@ const DEFAULT_ROLES: Record<VentureKind, string[]> = {
   software: ["approver"],
   finance: ["loan_officer"],
   kitchen: ["kitchen_manager"],
+  trade: ["approver"],
   general: ["approver"],
 };
 
-const DEFAULT_SCHEDULES: Record<string, string> = { kitchen_daily: "23:30" };
+const DEFAULT_SCHEDULES: Record<string, string> = { kitchen_daily: "23:30", trade_watch: "09:00" };
 
 function Steps({ step }: { step: number }) {
   const labels = ["Your business", "Roles & agents"];
@@ -534,7 +544,7 @@ function SetupStep({
                   <div key={w.name} className="flex flex-wrap items-start justify-between gap-3">
                     <Checkbox
                       label={w.title}
-                      hint={ok ? w.description : `Not on the ${planQ.data?.plan.name ?? "current"} plan — included from ${v.kind === "finance" || v.kind === "kitchen" ? "Starter" : "Growth"}. Upgrade any time in Plan & billing.`}
+                      hint={ok ? w.description : `Not on the ${planQ.data?.plan.name ?? "current"} plan — included from ${v.kind === "finance" || v.kind === "kitchen" || v.kind === "trade" ? "Starter" : "Growth"}. Upgrade any time in Plan & billing.`}
                       checked={st.on}
                       disabled={!ok}
                       onChange={(e) => setFlow(v.id, w.name, { on: e.target.checked })}

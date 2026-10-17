@@ -19,7 +19,7 @@ from kritvia_api.errors import raise_for_db
 
 router = APIRouter(tags=["ventures"])
 
-VentureKind = Literal["general", "software", "finance", "kitchen"]
+VentureKind = Literal["general", "software", "finance", "kitchen", "trade"]
 
 
 class AccessOut(BaseModel):
