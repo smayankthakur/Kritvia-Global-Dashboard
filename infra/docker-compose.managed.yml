@@ -32,3 +32,8 @@ services:
       REDIS_URL: ${MANAGED_REDIS_URL:-redis://:${VALKEY_PASSWORD}@valkey:6379/0}
     deploy:
       replicas: ${WORKER_REPLICAS:-2}
+
+  worker-priority:
+    environment:
+      DATABASE_URL: ${MANAGED_DATABASE_URL:?set in .env}
+      REDIS_URL: ${MANAGED_REDIS_URL:-redis://:${VALKEY_PASSWORD}@valkey:6379/0}

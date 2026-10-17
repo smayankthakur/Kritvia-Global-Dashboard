@@ -6,11 +6,16 @@ Cron (IST)
   every minute            fire_schedules   start workflows whose configured HH:MM is now (kitchen 23:30)
                           sweep            re-dispatch queued runs and runs with expired leases
                           expire_approvals expire overdue drafts and wake their runs
-                          fire_automations automations made in plain words whose time has come
+                          fire_automations automations made in plain words whose time has come,
+                                           and custom workflows' daily checks
   every 5 minutes         poll_gmail       new inquiries, aggregator reports, emailed loan documents
   every 15 minutes        reembed          embed chunks whose embedding was deferred (Ollama down)
   03:15 daily             purge_expired    retention: delete documents past their deadline
   06:30 daily             morning_check    alert (audit + log) if a scheduled plan is missing or failed
+
+Priority worker (PriorityWorkerSettings, service `worker-priority`): runs only the runs of plans with
+priority processing (Scale, Enterprise), from their own queue, and keeps a heartbeat in Valkey so the
+API knows it is there (engine/dispatch.py). No cron jobs: those stay on the main worker.
 
 A failing job never takes the worker down; failures are logged, visible in the
 run timeline, and retried by the sweeper where safe.
@@ -28,6 +33,7 @@ from sqlalchemy import text
 from kritvia_api.db.session import dispose_engine, tenant_tx
 from kritvia_api.engine.bootstrap import build_services
 from kritvia_api.engine.context import set_services
+from kritvia_api.engine.dispatch import PRIORITY_HEARTBEAT, PRIORITY_QUEUE
 from kritvia_api.engine.runner import DuplicateTrigger, advance_run, resume_budget_paused, start_run, sweep as sweep_runs
 from kritvia_api.services.quota import PlanRestricted
 
@@ -89,8 +95,14 @@ async def fire_schedules(ctx: dict, now: datetime | None = None) -> int:
 
 async def fire_automations(ctx: dict) -> int:
     """Automations made in plain words ("every Monday send me last week's sales") whose time has come."""
+    from kritvia_api.services import custom_workflows
     from kritvia_api.services.automations import fire_due
-    return await fire_due(ctx["services"])
+    n = await fire_due(ctx["services"])
+    try:
+        n += await custom_workflows.fire_due(ctx["services"])     # custom workflows' daily checks (Scale+)
+    except Exception:  # noqa: BLE001
+        log.exception("custom workflows didn't start")
+    return n
 
 
 async def sweep(ctx: dict) -> int:
@@ -171,6 +183,22 @@ def _every(minutes: int) -> set[int]:
     return set(range(0, 60, minutes))
 
 
+async def priority_startup(ctx: dict) -> None:
+    await startup(ctx)
+    await priority_heartbeat(ctx)
+
+
+async def priority_heartbeat(ctx: dict) -> None:
+    await ctx["redis"].set(PRIORITY_HEARTBEAT, ctx["services"].worker_id, ex=90)
+
+
+async def priority_shutdown(ctx: dict) -> None:
+    try:
+        await ctx["redis"].delete(PRIORITY_HEARTBEAT)
+    finally:
+        await shutdown(ctx)
+
+
 class WorkerSettings:
     functions = [execute_run]
     cron_jobs = [
@@ -191,4 +219,19 @@ class WorkerSettings:
     max_jobs = int(os.environ.get("WORKER_MAX_JOBS", "8"))
     job_timeout = 1800
     keep_result = 0          # lets the same run be re-enqueued as soon as a job finishes
+    allow_abort_jobs = True
+
+
+class PriorityWorkerSettings:
+    """The reserved worker for priority processing: `arq kritvia_worker.main.PriorityWorkerSettings`."""
+    queue_name = PRIORITY_QUEUE
+    functions = [execute_run]
+    cron_jobs = [cron(priority_heartbeat, second={0, 30})]
+    on_startup = priority_startup
+    on_shutdown = priority_shutdown
+    redis_settings = WorkerSettings.redis_settings
+    timezone = IST
+    max_jobs = int(os.environ.get("WORKER_PRIORITY_MAX_JOBS", "4"))
+    job_timeout = 1800
+    keep_result = 0
     allow_abort_jobs = True

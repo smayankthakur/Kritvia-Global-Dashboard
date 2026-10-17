@@ -23,13 +23,14 @@ GB = 1024 ** 3
 MB = 1024 ** 2
 
 CORE_AGENTS = frozenset({"assistant", "inbox_assistant", "lead_triage", "meeting_digest", "whatsapp_followup",
-                         "collections", "booking_reminders", "reviews", "automation"})
+                         "collections", "booking_reminders", "reviews", "automation", "custom"})
 KIND_AGENT = {"finance": "loan_verification", "kitchen": "kitchen_daily"}
 AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assistant", "lead_triage": "Lead triage & proposals",
                "meeting_digest": "Meeting digests", "loan_verification": "Loan document checks",
                "kitchen_daily": "Nightly kitchen plan", "prospector": "Prospector (outbound sales)",
                "whatsapp_followup": "WhatsApp follow-ups", "collections": "Payment reminders",
-               "booking_reminders": "Booking reminders", "reviews": "Google reviews", "automation": "Automations"}
+               "booking_reminders": "Booking reminders", "reviews": "Google reviews", "automation": "Automations",
+               "custom": "Custom workflows"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
                      "drive": "Google Drive", "whatsapp": "WhatsApp Business", "telegram": "Telegram bot", "slack": "Slack", "razorpay": "Razorpay payment links", "tally": "Tally",
                      "mcp": "Connected apps (MCP)"}
@@ -108,38 +109,40 @@ PLANS: dict[str, Plan] = {
         tagline="For individuals and small businesses.", audience="Solo founders and micro-businesses",
         highlights=("1 business, 5 people", "Inbox, lead and proposal agents", "The agent for your kind of business",
                     "Calendar, Google Drive and WhatsApp", "Each agent can earn one action it does alone",
-                    "10 GB business memory"),
-        coming_soon=("Basic analytics",)),
+                    "10 GB business memory", "Analytics: money, leads and agent work over 7 to 90 days")),
     "growth": Plan(
         "growth", "Growth", 6999, 69_990, 15_000_000, 3, 15, 50 * GB, None, "all", ALL, 0, "advanced",
         tagline="For businesses automating daily operations.", audience="Agencies, consultants and growing SMBs",
         highlights=("3 businesses, 15 people", "Every agent: inbox, lead, proposal, document and kitchen",
                     "Autonomous actions and approval policies", "All integrations, including Tally",
-                    "50 GB business memory", "Priority support"),
-        featured=True, support="priority", coming_soon=("Advanced analytics",)),
+                    "50 GB business memory", "Priority support",
+                    "Advanced analytics: 12 months, lead funnel, money owed by age, each agent's results"),
+        featured=True, support="priority"),
     "scale": Plan(
         "scale", "Scale", 14_999, 1_49_990, 50_000_000, 10, 50, 250 * GB, None, "all", ALL, 0, "advanced",
         tagline="For growing teams and multiple businesses.", audience="Serious SMBs and multi-team companies",
         highlights=("10 businesses, 50 people", "All agents and all integrations",
                     "Autonomous actions and approval policies", "Advanced permissions and audit logs",
-                    "250 GB business memory", "Priority support"),
-        support="priority", extras=("custom_workflows", "api_access", "priority_processing"),
-        coming_soon=("Custom workflows", "Advanced analytics", "API access", "Priority processing")),
+                    "250 GB business memory", "Priority support", "Advanced analytics",
+                    "Custom workflows: your own agents for invoices, bookings and leads",
+                    "API access for your website and tools", "Priority processing: agent runs go first"),
+        support="priority", extras=("custom_workflows", "api_access", "priority_processing")),
     "enterprise": Plan(
         "enterprise", "Enterprise", 29_999, None, None, None, None, None, None, "all", ALL, 0, "advanced",
         tagline="Talk to us.", audience="Custom businesses, users and AI usage",
         highlights=("Unlimited or custom businesses", "100+ people", "Custom agents built for you",
                     "Role-based access control", "Dedicated environment and SLA", "Onboarding and data migration",
-                    "Dedicated success manager"),
-        support="dedicated", extras=("custom_workflows", "api_access", "priority_processing", "sso", "sla"),
-        coming_soon=("API access", "Single sign-on (SSO)")),
+                    "Dedicated success manager", "Everything in Scale, including API access",
+                    "Single sign-on (SSO) with your identity provider"),
+        support="dedicated", extras=("custom_workflows", "api_access", "priority_processing", "sso", "sla")),
     # A trial that ended without a plan being chosen: read-only. People can view, export and
     # delete; agents, connections, uploads, invitations and new businesses wait for a plan.
     "expired": Plan(
         "expired", "Trial ended", 0, None, 0, 0, 0, 0, 0, "none", frozenset(), None, "basic",
         tagline="Choose a plan to keep working. Your data is safe."),
     "internal": Plan(
-        "internal", "Internal", 0, None, None, None, None, None, None, "all", ALL, 0, "advanced", support="dedicated"),
+        "internal", "Internal", 0, None, None, None, None, None, None, "all", ALL, 0, "advanced", support="dedicated",
+        extras=("custom_workflows", "api_access", "priority_processing", "sso")),
 }
 # The four plans on the pricing page, plus Enterprise ("Talk to us").
 PUBLIC_PLANS = ("free", "starter", "growth", "scale", "enterprise")

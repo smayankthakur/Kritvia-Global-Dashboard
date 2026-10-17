@@ -32,6 +32,8 @@ const BLOCKED = new Set([
   "auth/email/verify",
   "auth/google/start",
   "auth/google/complete",
+  "auth/sso/start",
+  "auth/sso/complete",
   "auth/password",
   "auth/password/reset",
   "auth/link/request",

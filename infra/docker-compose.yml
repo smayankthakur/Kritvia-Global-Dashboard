@@ -122,6 +122,20 @@ services:
       migrate: { condition: service_completed_successfully }
       valkey: { condition: service_started }
 
+  # Reserved worker for priority processing (Scale and Enterprise runs; engine/dispatch.py).
+  worker-priority:
+    logging: *logging
+    build: { context: .., dockerfile: apps/worker/Dockerfile }
+    command: ["arq", "kritvia_worker.main.PriorityWorkerSettings"]
+    restart: unless-stopped
+    env_file: ../.env
+    environment: *app-env
+    volumes:
+      - ./litellm/tiers.yaml:/app/tiers.yaml:ro
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      valkey: { condition: service_started }
+
   web:
     logging: *logging
     build:

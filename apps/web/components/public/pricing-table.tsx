@@ -134,9 +134,7 @@ export function PricingTable({
             </h3>
             <p className="mt-0.5 text-sm text-muted">{ENTERPRISE.tagline}</p>
             <p className="mt-2 text-xs text-subtle">{ENTERPRISE.highlights.join(" · ")}</p>
-            <p className="mt-1 text-xs text-subtle">
-              Coming soon: {ENTERPRISE.coming_soon.join(" · ")}
-            </p>
+            {ENTERPRISE.coming_soon.length ? <p className="mt-1 text-xs text-subtle">Coming soon: {ENTERPRISE.coming_soon.join(" · ")}</p> : null}
           </div>
         </div>
         <div className="shrink-0">

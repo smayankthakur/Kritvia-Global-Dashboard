@@ -26,7 +26,7 @@ the script with a reason; never delete a rule to make it pass.
 | Subscription trap | Cancel in-app in a few clicks; no "contact us to cancel"; renewal date visible | `/refunds` section 2; billing page |
 | Forced continuity (free trial) | The 15-day trial takes no card and never turns into a charge; when it ends the organisation becomes read-only, with data export and deletion still open | Scan rule `forced-continuity`; `tests/test_trial.py` |
 | Interface interference | "Reject all" as prominent as "Accept all"; destructive actions in red with confirmation | `components/legal/consent.tsx`; review |
-| Bait and switch | What a plan card lists is what the plan gives | `tests/pricing.test.ts` (unbuilt features only under "Coming soon") |
+| Bait and switch | What a plan card lists is what the plan gives | `tests/pricing.test.ts`, `apps/api/tests/test_plan_features.py` (each listed feature is on for that plan) |
 | Drip pricing | Every price says how GST applies (`PRICE_TAX_NOTE`: none charged until we are GST-registered); no other fees | Scan rules `hidden-fee`, `price-without-gst` |
 | Disguised advertisement | No sponsored content; any partner mention is labelled | Review |
 | Nagging | One terms dialog per version; no repeated upgrade pop-ups | Review |
@@ -45,6 +45,9 @@ Fixed in this change:
 - Pricing listed analytics, API access, SSO, custom workflows and priority processing as included, but
   they are not built. They now appear under **Coming soon** with an explanation, Terms 10.1 says they
   are not part of a plan until released, and a test stops them moving back into the included list.
+  *17 October 2026 (patch 0066):* all five are now built and listed as included. `tests/pricing.test.ts`
+  checks nothing is left under Coming soon, and the API's `tests/test_plan_features.py` checks that every
+  feature a plan card names is switched on for that plan.
 - "Learn from my corrections" (voice) was on by default while the Privacy Policy says it runs only if
   switched on. It is now off by default on the web, API and desktop app (existing choices kept).
 - The refund policy draft promised a renewal reminder email that does not exist; removed.

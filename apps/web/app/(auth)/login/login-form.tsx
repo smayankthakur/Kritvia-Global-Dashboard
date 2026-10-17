@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { PhoneSigninButton } from "@/components/auth/phone-signin";
-import { EmailCodeForm, GoogleButton, OrDivider } from "@/components/auth/sign-in";
+import { EmailCodeForm, GoogleButton, OrDivider, SsoForm } from "@/components/auth/sign-in";
 import { AuthCard } from "@/components/shell/auth-card";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/field";
 import { ApiError, errorMessage } from "@/lib/api";
-import { EMAIL_RE, GOOGLE_ERRORS, postAuth, safeNext } from "@/lib/auth-client";
+import { EMAIL_RE, GOOGLE_ERRORS, SSO_ERRORS, postAuth, safeNext } from "@/lib/auth-client";
 
 function PasswordForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
@@ -61,8 +61,10 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
 
 export function LoginForm() {
   const params = useSearchParams();
-  const [usePassword, setUsePassword] = useState(false);
-  const [googleError, setGoogleError] = useState<string | null>(GOOGLE_ERRORS[params.get("google") ?? ""] ?? null);
+  const [mode, setMode] = useState<"code" | "password" | "sso">(params.get("sso") ? "sso" : "code");
+  const [googleError, setGoogleError] = useState<string | null>(
+    GOOGLE_ERRORS[params.get("google") ?? ""] ?? SSO_ERRORS[params.get("sso") ?? ""] ?? null,
+  );
   const next = params.get("next");
   const done = () => window.location.assign(safeNext(next));
 
@@ -87,10 +89,24 @@ export function LoginForm() {
         <PhoneSigninButton onSignedIn={done} />
       </div>
       <OrDivider />
-      {usePassword ? <PasswordForm onDone={done} /> : <EmailCodeForm onSignedIn={done} />}
-      <button type="button" className="mt-4 w-full text-center text-sm text-muted hover:text-fg" onClick={() => setUsePassword((v) => !v)}>
-        {usePassword ? "Email me a code instead" : "Sign in with a password"}
-      </button>
+      {mode === "password" ? <PasswordForm onDone={done} /> : mode === "sso" ? <SsoForm /> : <EmailCodeForm onSignedIn={done} />}
+      <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+        {mode !== "code" ? (
+          <button type="button" className="text-muted hover:text-fg" onClick={() => setMode("code")}>
+            Email me a code instead
+          </button>
+        ) : null}
+        {mode !== "password" ? (
+          <button type="button" className="text-muted hover:text-fg" onClick={() => setMode("password")}>
+            Sign in with a password
+          </button>
+        ) : null}
+        {mode !== "sso" ? (
+          <button type="button" className="text-muted hover:text-fg" onClick={() => setMode("sso")}>
+            Sign in with SSO
+          </button>
+        ) : null}
+      </div>
     </AuthCard>
   );
 }

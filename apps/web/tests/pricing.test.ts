@@ -32,11 +32,16 @@ describe("pricing 2026–27", () => {
     }
   });
 
-  it("never lists an unreleased feature as included", () => {
-    // Not built yet: these may only appear under "Coming soon" (Terms 10.2, no unsupported claims).
-    const unreleased = /analytics|api access|\bapi\b|sso|single sign-on|custom workflow|priority processing/i;
-    for (const p of [...PLAN_CARDS, ENTERPRISE]) {
-      for (const h of p.highlights) expect(h, `${p.code}: "${h}" is not built yet`).not.toMatch(unreleased);
+  it("lists analytics, custom workflows, API access, priority processing and SSO as included, not coming soon", () => {
+    // Built in patch 0066; each one is checked against the plan's real capabilities in the API's test_plans_features.
+    for (const p of [...PLAN_CARDS, ENTERPRISE]) expect(p.coming_soon ?? [], p.code).toEqual([]);
+    const has = (code: string, re: RegExp) => [...PLAN_CARDS, ENTERPRISE].find((p) => p.code === code)!.highlights.some((h) => re.test(h));
+    expect(has("starter", /analytics/i)).toBe(true);
+    expect(has("growth", /advanced analytics/i)).toBe(true);
+    for (const re of [/advanced analytics/i, /custom workflows/i, /api access/i, /priority processing/i]) expect(has("scale", re), String(re)).toBe(true);
+    for (const re of [/api access/i, /single sign-on/i]) expect(has("enterprise", re), String(re)).toBe(true);
+    for (const re of [/custom workflows/i, /api access/i, /priority processing/i, /single sign-on/i]) {
+      expect(has("starter", re) || has("growth", re), String(re)).toBe(false);
     }
   });
 

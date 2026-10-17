@@ -23,6 +23,8 @@
   --fg-muted: #3c4a5f;
   --fg-subtle: #536176;
   --accent: #1d4ed8;
+  --series-1: #2a78d6;   /* charts: categorical slot 1 (validated with dataviz/validate_palette) */
+  --series-2: #eb6834;   /* charts: categorical slot 2 */
   --accent-2: #1e40af;
   --accent-hover: #1e40af;
   --accent-fg: #ffffff;
@@ -59,6 +61,8 @@
 
 .dark {
   --bg: #060a15;
+  --series-1: #3987e5;
+  --series-2: #d95926;
   --surface: rgb(15 23 42 / 0.52);
   --surface-strong: rgb(13 20 37 / 0.86);
   --surface-solid: #0e1526;
@@ -109,6 +113,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --bg: #060a15;
+    --series-1: #3987e5;
+    --series-2: #d95926;
     --surface: rgb(15 23 42 / 0.52);
     --surface-strong: rgb(13 20 37 / 0.86);
     --surface-solid: #0e1526;

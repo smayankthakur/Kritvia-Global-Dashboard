@@ -21,6 +21,8 @@ import { proxyRequest, type ProxyDeps } from "./proxy";
 export const OAUTH_COOKIE = "kv_oauth";
 /** Nonce for "Sign in with Google" (no session yet). Same path and redirect URI as connectors. */
 export const SIGNIN_COOKIE = "kv_signin";
+/** Nonce for "Sign in with SSO" (an organisation's own identity provider). */
+export const SSO_COOKIE = "kv_sso";
 const COOKIE_PATH = "/api/oauth";
 
 function randomNonce(): string {
@@ -279,5 +281,85 @@ async function completeConnector(req: Request, deps: ProxyDeps, provider: Connec
   }
   back.searchParams.set(provider, outcome);
   headers.set("location", back.toString());
+  return new Response(null, { status: 303, headers });
+}
+
+/** "Sign in with SSO": POST /api/oauth/sso/start {email} -> the organisation's identity provider. */
+export async function startSsoSignin(req: Request, deps: ProxyDeps): Promise<Response> {
+  if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
+  let email = "";
+  try {
+    email = String(((await req.json()) as { email?: string }).email ?? "").trim();
+  } catch {
+    /* handled below */
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return Response.json({ detail: "enter your work email" }, { status: 422 });
+  }
+  const nonce = randomNonce();
+  let upstream: Response;
+  try {
+    upstream = await (deps.fetch ?? fetch)(`${deps.apiUrl}/auth/sso/start`, {
+      method: "POST",
+      headers: clientHeaders(req),
+      body: JSON.stringify({ email, nonce }),
+      cache: "no-store",
+    });
+  } catch {
+    return Response.json({ detail: "the Kritvia API is unreachable" }, { status: 502 });
+  }
+  const headers = new Headers({ "content-type": "application/json", "cache-control": "no-store" });
+  if (upstream.ok) {
+    headers.append(
+      "set-cookie",
+      serializeCookie(SSO_COOKIE, nonce, { httpOnly: true, secure: deps.secureCookies, sameSite: "Lax", maxAge: 600, path: COOKIE_PATH }),
+    );
+  }
+  return new Response(await upstream.text(), { status: upstream.status, headers });
+}
+
+/** GET /api/oauth/sso/callback?code&state: the redirect URI each organisation registers with its provider. */
+export async function completeSso(req: Request, deps: ProxyDeps): Promise<Response> {
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const nonce = parseCookies(req.headers.get("cookie"))[SSO_COOKIE];
+  const headers = new Headers({ "cache-control": "no-store" });
+  headers.append("set-cookie", serializeCookie(SSO_COOKIE, "", { httpOnly: true, secure: deps.secureCookies, maxAge: 0, path: COOKIE_PATH }));
+  let target = new URL("/login", publicOrigin(req));
+  if (url.searchParams.get("error") || !code || !state) {
+    target.searchParams.set("sso", "denied");
+  } else if (!nonce || stateType(state) !== "sso") {
+    target.searchParams.set("sso", "invalid_state");
+  } else {
+    let res: Response | null = null;
+    try {
+      res = await (deps.fetch ?? fetch)(`${deps.apiUrl}/auth/sso/complete`, {
+        method: "POST",
+        headers: clientHeaders(req),
+        body: JSON.stringify({ code, state, nonce }),
+        cache: "no-store",
+      });
+    } catch {
+      res = null;
+    }
+    if (res?.ok) {
+      const tokens = (await res.json()) as TokenPair;
+      for (const c of sessionCookies(tokens, deps.secureCookies)) headers.append("set-cookie", c);
+      target = new URL("/", publicOrigin(req));
+    } else {
+      let detail = "";
+      try {
+        detail = String(((await res?.json()) as { detail?: string } | undefined)?.detail ?? "");
+      } catch {
+        detail = "";
+      }
+      target.searchParams.set(
+        "sso",
+        res?.status === 400 ? "invalid_state" : res?.status === 403 && /invite/.test(detail) ? "no_account" : res?.status === 403 ? "forbidden" : "failed",
+      );
+    }
+  }
+  headers.set("location", target.toString());
   return new Response(null, { status: 303, headers });
 }

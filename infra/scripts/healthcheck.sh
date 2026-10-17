@@ -61,7 +61,7 @@ fi
 
 # Application errors: a burst of tracebacks or ERROR lines in five minutes means something is
 # failing for users even when every health endpoint answers. Only the count goes in the alert.
-errs=$($DC logs --since 5m --no-color api worker 2>/dev/null | grep -cE 'Traceback \(most recent call last\)|\bERROR\b' || true)
+errs=$($DC logs --since 5m --no-color api worker worker-priority 2>/dev/null | grep -cE 'Traceback \(most recent call last\)|\bERROR\b' || true)
 [ "${errs:-0}" -lt "${ERROR_ALERT_THRESHOLD:-10}" ] || fails+=("${errs} application errors in the last 5 minutes (api/worker logs)")
 
 # Security events (apps/api/kritvia_api/services/security_log.py): any critical event (e.g. a payment

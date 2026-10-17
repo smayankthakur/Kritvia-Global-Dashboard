@@ -1,11 +1,11 @@
 "use client";
 
-import { Mail } from "lucide-react";
+import { KeyRound, Mail } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/field";
 import { ApiError, errorMessage } from "@/lib/api";
-import { EMAIL_RE, postAuth, startGoogleSignin } from "@/lib/auth-client";
+import { EMAIL_RE, postAuth, startGoogleSignin, startSsoSignin } from "@/lib/auth-client";
 
 function GoogleMark() {
   return (
@@ -37,6 +37,42 @@ export function GoogleButton({ label = "Continue with Google", onError }: { labe
     >
       {label}
     </Button>
+  );
+}
+
+/** Work email -> the organisation's own identity provider (Enterprise single sign-on). */
+export function SsoForm() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!EMAIL_RE.test(email.trim())) {
+      setError("Enter your work email address");
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await startSsoSignin(email.trim());
+    } catch (err) {
+      setBusy(false);
+      setError(
+        err instanceof ApiError && err.status === 404
+          ? "Single sign-on isn't set up for this email's domain. Use one of the other ways to sign in."
+          : errorMessage(err),
+      );
+    }
+  };
+  return (
+    <form onSubmit={submit} noValidate className="space-y-4">
+      <Field label="Work email" error={error} hint="We'll take you to your organisation's sign-in page." required>
+        <Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
+      </Field>
+      <Button type="submit" variant="primary" className="w-full" loading={busy} icon={<KeyRound className="h-4 w-4" />}>
+        Continue with SSO
+      </Button>
+    </form>
   );
 }
 

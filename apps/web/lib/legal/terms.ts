@@ -4,6 +4,9 @@
  * TERMS_VERSION in the API settings (terms_version) so everyone is asked to accept again.
  * 17 October 2026 added clause 10.10 (optional coupons) without a new version: it only applies to
  * organisations that use a coupon, and the coupon form asks for agreement to it at that moment.
+ * 17 October 2026 also added clauses 4.6 (single sign-on) and 4.7 (API keys) and named Scale's and
+ * Enterprise's features in 10.1, without a new version: 4.6 and 4.7 apply only to organisations whose
+ * owner sets up SSO or makes a key, and those screens link to the clause at that moment.
  */
 export const TERMS_UPDATED = "17 October 2026";
 
@@ -55,6 +58,10 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 4.4 Each User account is for one individual. Users must not share sign-in credentials.
 
 4.5 The Service is not directed at children. Users must be at least 18 years old, and each User confirms this when they accept these Terms. We will close any account we learn belongs to someone under 18.
+
+4.6 **Single sign-on.** On Plans that include it, an owner can set up single sign-on so that people with your email domain sign in through your own identity provider (such as Google Workspace or Microsoft Entra ID). You must own the domain and prove it with the DNS record the Service shows. Your identity provider then decides who can sign in for that domain, so you are responsible for its accounts and settings: when someone should lose access, switch off their account there or remove them from your organisation in Kritvia. Only people who already have a Kritvia account or an invitation to your organisation are let in. If you require single sign-on, people with your domain cannot sign in in any other way; sessions already open continue until they end or you remove the person.
+
+4.7 **API keys.** On Plans that include API access, an owner can make keys that let your own systems use part of the Service's API on your organisation's behalf. A key acts as the owner who made it, within its scope (read, or read and add). Keep keys secret and revoke a key at once if it may have been exposed: everything done with a key is treated as done by you. Each key is limited to the endpoints and rate the app shows, stops working if your Plan no longer includes API access or its maker stops being an owner, and must not be used to get around the Service's limits or Approvals, or to give anyone outside your organisation access to it.
 
 ## 5. Customer Data
 
@@ -147,8 +154,8 @@ We may remove content or suspend access under clause 14 if we reasonably believe
 | Free trial | ₹0 for 15 days | 1 business, 2 Users, 300,000 hosted-AI tokens a month, 500 MB business memory, 10 proposals; every Agent action needs Approval |
 | Starter | ₹2,499 a month or ₹24,990 a year | 1 business, 5 Users, 3 million hosted-AI tokens a month, 10 GB business memory; each Agent may act without Approval on one kind of action |
 | Growth | ₹6,999 a month or ₹69,990 a year | 3 businesses, 15 Users, 15 million hosted-AI tokens a month, 50 GB business memory |
-| Scale | ₹14,999 a month or ₹1,49,990 a year | 10 businesses, 50 Users, 50 million hosted-AI tokens a month, 250 GB business memory |
-| Enterprise | From ₹29,999 a month, by order form | As agreed in the order form |
+| Scale | ₹14,999 a month or ₹1,49,990 a year | 10 businesses, 50 Users, 50 million hosted-AI tokens a month, 250 GB business memory; also custom workflows, API access and priority processing |
+| Enterprise | From ₹29,999 a month, by order form | As agreed in the order form; also everything in Scale and single sign-on |
 
 **Free trial.** Each person may start one free trial. It lasts 15 days from when the organisation is created; if online payment is not yet available when it would end, it continues until 3 days after online payment opens. When the trial ends without a paid Plan, your organisation becomes **read-only**: you can still sign in, see, export and delete your data, but Agents stop and nothing new can be added until you choose a Plan. We do not delete Customer Data because a trial ended without at least 30 days' written notice.
 

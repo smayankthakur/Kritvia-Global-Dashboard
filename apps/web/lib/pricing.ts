@@ -51,8 +51,8 @@ export const PLAN_CARDS: PlanCard[] = [
       "Calendar, Google Drive and WhatsApp",
       "Each agent can earn one action it does alone",
       "10 GB business memory",
+      "Analytics: money, leads and agent work over 7 to 90 days",
     ],
-    coming_soon: ["Basic analytics"],
     featured: false,
   },
   {
@@ -70,8 +70,8 @@ export const PLAN_CARDS: PlanCard[] = [
       "All integrations, including Tally",
       "50 GB business memory",
       "Priority support",
+      "Advanced analytics: 12 months, lead funnel, money owed by age, each agent's results",
     ],
-    coming_soon: ["Advanced analytics"],
     featured: true,
   },
   {
@@ -89,8 +89,11 @@ export const PLAN_CARDS: PlanCard[] = [
       "Advanced permissions and audit logs",
       "250 GB business memory",
       "Priority support",
+      "Advanced analytics",
+      "Custom workflows: your own agents for invoices, bookings and leads",
+      "API access for your website and tools",
+      "Priority processing: agent runs go first",
     ],
-    coming_soon: ["Custom workflows", "Advanced analytics", "API access", "Priority processing"],
     featured: false,
   },
 ];
@@ -108,8 +111,10 @@ export const ENTERPRISE = {
     "Dedicated environment and SLA",
     "Onboarding and data migration",
     "Dedicated success manager",
+    "Everything in Scale, including API access",
+    "Single sign-on (SSO) with your identity provider",
   ],
-  coming_soon: ["API access", "Single sign-on (SSO)"],
+  coming_soon: [] as string[],
   contact: "mailto:support@sitelytc.com?subject=Kritvia%20Enterprise",
 };
 

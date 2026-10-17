@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { OAUTH_COOKIE, SIGNIN_COOKIE, completeGoogle, completeSlack, startGoogle, startGoogleSignin, startSlack, stateType } from "@/lib/bff/oauth";
+import { OAUTH_COOKIE, SIGNIN_COOKIE, SSO_COOKIE, completeGoogle, completeSlack, completeSso, startGoogle, startGoogleSignin, startSlack, startSsoSignin, stateType } from "@/lib/bff/oauth";
 
 const deps = (fetchImpl: typeof fetch) => ({ apiUrl: "http://api", fetch: fetchImpl, secureCookies: false, trustedOrigins: [] });
 const V = "11111111-2222-3333-4444-555555555555";
@@ -218,5 +218,62 @@ describe("OAuth redirects behind a tunnel", () => {
     });
     const res = await completeGoogle(req, deps(f as unknown as typeof fetch));
     expect(res.headers.get("location")).toBe("https://app.sitelytc.com/");
+  });
+});
+
+describe("Sign in with SSO BFF", () => {
+  const ssoState = () => `x.${btoa(JSON.stringify({ typ: "sso" })).replace(/=+$/, "")}.y`;
+
+  it("start sends the email and a nonce, pins the nonce in kv_sso, and refuses cross-site posts", async () => {
+    const f = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      expect(String(url)).toBe("http://api/auth/sso/start");
+      const body = JSON.parse(String(init?.body));
+      expect(body.email).toBe("asha@acme.in");
+      expect(body.nonce).toMatch(/^[0-9a-f]{64}$/);
+      return Response.json({ url: "https://idp.example/authorize?x" });
+    });
+    const mk = (origin: string) =>
+      new Request("http://app.test/api/auth/sso/start", {
+        method: "POST",
+        headers: { origin, host: "app.test", "content-type": "application/json" },
+        body: JSON.stringify({ email: "asha@acme.in" }),
+      });
+    const res = await startSsoSignin(mk("http://app.test"), deps(f as unknown as typeof fetch));
+    expect(res.status).toBe(200);
+    const cookie = res.headers.get("set-cookie") ?? "";
+    expect(cookie).toContain(`${SSO_COOKIE}=`);
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("Path=/api/oauth");
+    expect((await startSsoSignin(mk("https://evil.test"), deps(f as unknown as typeof fetch))).status).toBe(403);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it("callback completes with the cookie nonce and signs in", async () => {
+    const state = ssoState();
+    const f = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      expect(String(url)).toBe("http://api/auth/sso/complete");
+      expect(JSON.parse(String(init?.body))).toEqual({ code: "c", state, nonce: "n".repeat(64) });
+      return Response.json({ access_token: "AT", refresh_token: "RT", expires_in: 3600 });
+    });
+    const req = new Request(`http://app.test/api/oauth/sso/callback?code=c&state=${state}`, {
+      headers: { host: "app.test", cookie: `${SSO_COOKIE}=${"n".repeat(64)}` },
+    });
+    const res = await completeSso(req, deps(f as unknown as typeof fetch));
+    expect(res.headers.get("location")).toBe("http://app.test/");
+    expect(res.headers.getSetCookie().some((c) => c.startsWith("kv_at=AT;"))).toBe(true);
+  });
+
+  it("callback without the cookie, or refused for lack of an account, goes back to login", async () => {
+    const none = vi.fn();
+    const r1 = await completeSso(new Request(`http://app.test/api/oauth/sso/callback?code=c&state=${ssoState()}`, { headers: { host: "app.test" } }), deps(none as unknown as typeof fetch));
+    expect(none).not.toHaveBeenCalled();
+    expect(r1.headers.get("location")).toBe("http://app.test/login?sso=invalid_state");
+    const refuse = vi.fn(async () => Response.json({ detail: "ask your organisation's owner to invite you" }, { status: 403 }));
+    const r2 = await completeSso(
+      new Request(`http://app.test/api/oauth/sso/callback?code=c&state=${ssoState()}`, { headers: { host: "app.test", cookie: `${SSO_COOKIE}=abc` } }),
+      deps(refuse as unknown as typeof fetch),
+    );
+    expect(r2.headers.get("location")).toBe("http://app.test/login?sso=no_account");
+    expect(r2.headers.getSetCookie().some((c) => c.startsWith("kv_at="))).toBe(false);
   });
 });

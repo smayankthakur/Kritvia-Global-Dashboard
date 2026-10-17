@@ -18,10 +18,15 @@ _bearer = HTTPBearer(auto_error=False)
 
 
 async def current_user_id(
+    request: Request,
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> uuid.UUID:
     if creds is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing bearer token")
+    from kritvia_api.services.api_keys import PREFIX, user_for_key
+    if creds.credentials.startswith(PREFIX):
+        # An organisation's API key (Scale and Enterprise): limited to its own data and a few endpoints.
+        return await user_for_key(request, creds.credentials)
     try:
         user_id = decode_access_token(creds.credentials)
         iat = token_issued_at(creds.credentials)

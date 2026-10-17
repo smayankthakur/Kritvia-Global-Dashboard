@@ -70,6 +70,16 @@ async def _limit(request: Request, email: str | None = None) -> None:
         await limiter.hit(f"auth-email:{email.lower()}", per_minute=per)
 
 
+SSO_REQUIRED = "your organisation signs in with single sign-on: choose \"Sign in with SSO\""
+
+
+async def _sso_gate(db, email: str) -> None:
+    """People on a domain whose organisation enforces SSO sign in only through it."""
+    from kritvia_api.services.sso import required
+    if await required(db, email):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, SSO_REQUIRED)
+
+
 @router.post("/register", response_model=TokenOut, status_code=201)
 async def register(body: RegisterIn, db: AnonDB, request: Request) -> TokenOut:
     """Password sign-up, for tests and local development only. In production everyone signs up
@@ -96,6 +106,7 @@ async def login(body: LoginIn, db: AnonDB, request: Request) -> TokenOut:
     # A slow, steady password guesser still runs into an hourly cap per address.
     await limiter.hit_window(f"login-hour:{body.email.lower()}", 30, 3600)
     await signin_guard.check(body.email)
+    await _sso_gate(db, body.email)
     row = (await db.execute(text("SELECT * FROM auth_lookup(:e)"), {"e": body.email})).first()
     ok = verify_password(body.password, row.password_hash if row else None)
     if not ok or row is None or not row.is_active:
@@ -216,6 +227,7 @@ async def email_start(body: EmailStartIn, db: AnonDB, request: Request) -> Email
     mailer = get_mailer()
     if not mailer.can_deliver:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "email sign-in is not configured on this server")
+    await _sso_gate(db, email)
     if await _signup_allowed(db, email):
         code = f"{secrets.randbelow(1_000_000):06d}"
         await db.execute(text("SELECT auth_code_issue(:e, :h, :m)"),
@@ -246,6 +258,7 @@ async def email_verify(body: EmailVerifyIn, request: Request) -> TokenOut:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
     await signin_guard.succeeded(email)
     async with tenant_tx(None) as db:
+        await _sso_gate(db, email)
         if not await _signup_allowed(db, email):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "sign-up is closed on this server")
         uid = (await db.execute(text("SELECT auth_signin_email(:e, :n)"),
@@ -270,6 +283,7 @@ async def password_reset(body: PasswordResetIn, request: Request) -> TokenOut:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code is wrong or has expired")
     await signin_guard.succeeded(email)
     async with tenant_tx(None) as db:
+        await _sso_gate(db, email)
         uid = (await db.execute(text("SELECT auth_password_reset(:e, :h)"),
                                 {"e": email, "h": hash_password(body.new_password)})).scalar()
         if uid is None:
@@ -316,6 +330,7 @@ async def google_signin_complete(body: GoogleSigninCompleteIn, request: Request,
     except GoogleError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from None
     async with tenant_tx(None) as db:
+        await _sso_gate(db, who["email"])
         if not await _signup_allowed(db, who["email"]):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "sign-up is closed on this server")
         uid = (await db.execute(text("SELECT auth_signin_google(:s, :e, :n)"),

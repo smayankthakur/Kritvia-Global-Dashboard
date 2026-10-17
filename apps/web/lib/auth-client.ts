@@ -60,6 +60,37 @@ export async function startGoogleSignin(): Promise<void> {
   window.location.assign((data as { url: string }).url);
 }
 
+/** "Sign in with SSO": the organisation's identity provider for this email's domain. */
+export async function startSsoSignin(email: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/sso/start", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+  } catch {
+    throw parseErrorBody(0, null);
+  }
+  let data: unknown = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* ignore */
+  }
+  if (!res.ok) throw parseErrorBody(res.status, data) as ApiError;
+  window.location.assign((data as { url: string }).url);
+}
+
+export const SSO_ERRORS: Record<string, string> = {
+  denied: "Single sign-on was cancelled.",
+  invalid_state: "That sign-in expired or was started in another browser. Try again.",
+  no_account: "Your organisation's sign-in worked, but you don't have a Kritvia account yet. Ask your organisation's owner to invite you.",
+  forbidden: "Your organisation's identity provider didn't confirm this sign-in. Try again, or ask your IT admin.",
+  failed: "Single sign-on didn't work. Try again shortly.",
+};
+
 export const GOOGLE_ERRORS: Record<string, string> = {
   denied: "Google sign-in was cancelled.",
   invalid_state: "That Google sign-in expired or was started in another browser. Try again.",
