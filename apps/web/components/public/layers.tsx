@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  AnimatePresence,
-  motion,
-  useInView,
-  useReducedMotion,
-} from "motion/react";
+import { motion } from "motion/react";
 import {
   BrainCircuit,
   CalendarCheck,
@@ -23,19 +18,11 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/components/ui/cn";
+import { pop, Resolving, useAfter, useTyped } from "@/components/public/scene-kit";
+import { Showcase, type ShowcaseItem } from "@/components/public/showcase";
 
-const STEP_MS = 7000;
-
-const LAYERS: {
-  key: string;
-  icon: LucideIcon;
-  tag: string;
-  title: string;
-  text: string;
-  window: string;
-}[] = [
+const LAYERS: ShowcaseItem[] = [
   {
     key: "capture",
     icon: Inbox,
@@ -43,6 +30,7 @@ const LAYERS: {
     title: "Every message lands in one inbox, sorted.",
     text: "WhatsApp, email, Telegram and your website's form arrive in one place. Kritvia reads each one and files it: enquiry, payment, booking or stock.",
     window: "Kritvia · Inbox",
+    scene: (reduce) => <Capture reduce={reduce} />,
   },
   {
     key: "remember",
@@ -51,6 +39,7 @@ const LAYERS: {
     title: "A memory of your business, with sources.",
     text: "Customers, jobs, prices and promises become a map of how things connect. Every fact links back to the message or document it came from.",
     window: "Kritvia · Memory",
+    scene: (reduce) => <Remember reduce={reduce} />,
   },
   {
     key: "draft",
@@ -59,6 +48,7 @@ const LAYERS: {
     title: "Agents draft in your voice.",
     text: "Replies, proposals, invoices and follow-ups in Hindi, Hinglish or English, priced from your rate card, never a made-up number.",
     window: "Kritvia · Draft",
+    scene: (reduce) => <Draft reduce={reduce} />,
   },
   {
     key: "act",
@@ -67,288 +57,16 @@ const LAYERS: {
     title: "You say yes. Then it does the work.",
     text: "Nothing is sent, paid or changed until you approve. Then it sends, books and sets the reminder, and tells you what it did.",
     window: "Kritvia · Approvals",
+    scene: (reduce) => <Act reduce={reduce} />,
   },
 ];
 
-/**
- * "Four layers": tabs on the left, a small animated window on the right showing that layer at work.
- * Advances by itself while on screen (pauses on hover or focus); a click picks a layer. With reduced
- * motion it doesn't advance and each scene shows its finished state. Scenes are illustrations
- * (example data), hidden from screen readers; each tab panel has the same story in text.
- */
+/** "One app, four layers": each layer of Kritvia at work in a small example window. */
 export function Layers() {
-  const reduce = useReducedMotion() ?? false;
-  const root = useRef<HTMLDivElement>(null);
-  const inView = useInView(root, { margin: "-20% 0px -20% 0px" });
-  const [i, setI] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [round, setRound] = useState(0);
-  const uid = useId().replace(/:/g, "");
-  const running = inView && !paused && !reduce;
-
-  useEffect(() => {
-    if (!running) return;
-    const t = setTimeout(() => setI((x) => (x + 1) % LAYERS.length), STEP_MS);
-    return () => clearTimeout(t);
-  }, [running, i, round]);
-
-  // Pause while the pointer or keyboard focus is inside.
-  useEffect(() => {
-    const el = root.current;
-    if (!el) return;
-    const on = () => setPaused(true);
-    const off = (e: Event) => {
-      if (
-        e.type === "focusout" &&
-        el.contains((e as FocusEvent).relatedTarget as Node)
-      )
-        return;
-      setPaused(false);
-    };
-    el.addEventListener("pointerenter", on);
-    el.addEventListener("pointerleave", off);
-    el.addEventListener("focusin", on);
-    el.addEventListener("focusout", off);
-    return () => {
-      el.removeEventListener("pointerenter", on);
-      el.removeEventListener("pointerleave", off);
-      el.removeEventListener("focusin", on);
-      el.removeEventListener("focusout", off);
-    };
-  }, []);
-
-  // On phones the tabs are a sideways strip: keep the current one in view (the page doesn't move).
-  const list = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = list.current;
-    const tab = document.getElementById(`${uid}-tab-${i}`);
-    if (el && tab && el.scrollWidth > el.clientWidth)
-      el.scrollTo({
-        left:
-          el.scrollLeft +
-          tab.getBoundingClientRect().left -
-          el.getBoundingClientRect().left -
-          16,
-        behavior: reduce ? "auto" : "smooth",
-      });
-  }, [i, uid, reduce]);
-
-  const pick = (n: number) => {
-    setI(n);
-    setRound((r) => r + 1);
-  };
-  const L = LAYERS[i]!;
-
-  return (
-    <div
-      ref={root}
-      role="group"
-      aria-label="Kritvia's four layers"
-      className="grid gap-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)]"
-    >
-      <div
-        ref={list}
-        role="tablist"
-        aria-label="Layers"
-        aria-orientation="vertical"
-        className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
-      >
-        {LAYERS.map((l, n) => {
-          const on = n === i;
-          return (
-            <button
-              key={l.key}
-              id={`${uid}-tab-${n}`}
-              role="tab"
-              type="button"
-              aria-selected={on}
-              aria-controls={`${uid}-panel`}
-              tabIndex={on ? 0 : -1}
-              onClick={() => pick(n)}
-              onKeyDown={(e) => {
-                const d =
-                  e.key === "ArrowDown" || e.key === "ArrowRight"
-                    ? 1
-                    : e.key === "ArrowUp" || e.key === "ArrowLeft"
-                      ? -1
-                      : 0;
-                if (d) {
-                  e.preventDefault();
-                  const nn = (n + d + LAYERS.length) % LAYERS.length;
-                  pick(nn);
-                  document.getElementById(`${uid}-tab-${nn}`)?.focus();
-                }
-              }}
-              className={cn(
-                "group relative w-[17rem] shrink-0 overflow-hidden rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-300 lg:w-auto",
-                on
-                  ? "glass-strong border-accent/40 shadow-card"
-                  : "glass border-border hover:-translate-y-0.5 hover:border-border-strong",
-              )}
-            >
-              <span className="flex items-start gap-3">
-                <span
-                  className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors duration-300",
-                    on
-                      ? "bg-accent text-accent-fg"
-                      : "bg-accent-soft text-accent",
-                  )}
-                >
-                  <l.icon className="h-[18px] w-[18px]" aria-hidden />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[11px] font-semibold tracking-wider text-subtle uppercase">
-                    {l.tag}
-                  </span>
-                  <span
-                    className={cn(
-                      "mt-0.5 block text-[15px] leading-snug font-semibold",
-                      on ? "text-fg" : "text-muted",
-                    )}
-                  >
-                    {l.title}
-                  </span>
-                </span>
-              </span>
-              {on ? (
-                <span
-                  className="absolute inset-x-0 bottom-0 h-0.5 bg-accent/15"
-                  aria-hidden
-                >
-                  <motion.span
-                    key={`${i}-${round}-${running}`}
-                    className="block h-full origin-left bg-accent"
-                    initial={{ scaleX: running ? 0 : 1 }}
-                    animate={{ scaleX: 1 }}
-                    transition={{
-                      duration: running ? STEP_MS / 1000 : 0,
-                      ease: "linear",
-                    }}
-                  />
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        id={`${uid}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${uid}-tab-${i}`}
-        className="min-w-0"
-      >
-        <p className="sr-only">{L.text}</p>
-        <div
-          aria-hidden
-          className="glass-strong relative overflow-hidden rounded-2xl border shadow-[var(--shadow-pop)]"
-        >
-          <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={L.window}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.18 }}
-                className="ml-2 text-xs font-medium text-subtle"
-              >
-                {L.window}
-              </motion.span>
-            </AnimatePresence>
-            <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2 py-0.5 text-[10.5px] font-semibold text-success-fg">
-              <span className="relative flex h-1.5 w-1.5">
-                {!reduce ? (
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
-                ) : null}
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
-              </span>
-              Example
-            </span>
-          </div>
-          <div className="relative h-[22rem] sm:h-[24rem]">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={`${L.key}-${round}`}
-                className="absolute inset-0 p-4 sm:p-5"
-                initial={{ opacity: 0, x: 18, filter: "blur(6px)" }}
-                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, x: -18, filter: "blur(6px)" }}
-                transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
-              >
-                {L.key === "capture" ? <Capture reduce={reduce} /> : null}
-                {L.key === "remember" ? <Remember reduce={reduce} /> : null}
-                {L.key === "draft" ? <Draft reduce={reduce} /> : null}
-                {L.key === "act" ? <Act reduce={reduce} /> : null}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.p
-            key={L.key}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.25 }}
-            className="mt-4 text-[15px] leading-relaxed text-muted"
-            aria-hidden
-          >
-            {L.text}
-          </motion.p>
-        </AnimatePresence>
-      </div>
-    </div>
-  );
+  return <Showcase items={LAYERS} label="Kritvia's four layers" />;
 }
 
 /* ----------------------------------------------------------------------------- scenes -- */
-
-/** Typewriter: reveals `text` over time once `start` is true. */
-function useTyped(
-  text: string,
-  {
-    start = true,
-    cps = 38,
-    reduce = false,
-  }: { start?: boolean; cps?: number; reduce?: boolean },
-) {
-  const [n, setN] = useState(reduce ? text.length : 0);
-  useEffect(() => {
-    if (reduce) {
-      setN(text.length);
-      return;
-    }
-    if (!start) return;
-    setN(0);
-    const id = setInterval(
-      () => setN((x) => (x >= text.length ? (clearInterval(id), x) : x + 1)),
-      1000 / cps,
-    );
-    return () => clearInterval(id);
-  }, [text, start, cps, reduce]);
-  return { shown: text.slice(0, n), done: n >= text.length };
-}
-
-/** Becomes true `ms` after mount (immediately with reduced motion). */
-function useAfter(ms: number, reduce: boolean) {
-  const [on, setOn] = useState(reduce);
-  useEffect(() => {
-    if (reduce) return;
-    const t = setTimeout(() => setOn(true), ms);
-    return () => clearTimeout(t);
-  }, [ms, reduce]);
-  return on;
-}
-
-const pop = {
-  initial: { opacity: 0, y: 12, scale: 0.97 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-};
 
 function Capture({ reduce }: { reduce: boolean }) {
   const items: {
@@ -410,7 +128,7 @@ function Capture({ reduce }: { reduce: boolean }) {
             </span>
             <span className="block truncate text-[13px] text-fg">{m.text}</span>
           </span>
-          <Sorted delay={reduce ? 0 : 0.25 + k * 0.9 + 0.55} reduce={reduce}>
+          <Resolving delay={reduce ? 0 : 0.25 + k * 0.9 + 0.55} reduce={reduce}>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap",
@@ -419,7 +137,7 @@ function Capture({ reduce }: { reduce: boolean }) {
             >
               {m.chip}
             </span>
-          </Sorted>
+          </Resolving>
         </motion.div>
       ))}
       <motion.p
@@ -432,44 +150,6 @@ function Capture({ reduce }: { reduce: boolean }) {
         1 booking request · tasks pulled out
       </motion.p>
     </div>
-  );
-}
-
-/** A tiny "reading…" spinner that turns into the label. */
-function Sorted({
-  delay,
-  reduce,
-  children,
-}: {
-  delay: number;
-  reduce: boolean;
-  children: ReactNode;
-}) {
-  const done = useAfter(delay * 1000 + 500, reduce);
-  return (
-    <span className="relative flex h-6 min-w-[5.5rem] shrink-0 items-center justify-end">
-      <AnimatePresence mode="wait" initial={false}>
-        {done ? (
-          <motion.span
-            key="chip"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 500, damping: 26 }}
-          >
-            {children}
-          </motion.span>
-        ) : (
-          <motion.span
-            key="spin"
-            exit={{ opacity: 0 }}
-            className="flex items-center gap-1 text-[11px] text-subtle"
-          >
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />{" "}
-            reading
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </span>
   );
 }
 

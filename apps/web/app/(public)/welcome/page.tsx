@@ -1,10 +1,12 @@
 import { PRICE_TAX_NOTE } from "@/lib/business";
-import { ArrowRight, BookOpen, Inbox, Landmark, Lock, Mic, Network, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Lock, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HeroLive } from "@/components/public/hero-live";
 import { ConnectsMarquee, Reveal, RevealFallback, RevealGroup } from "@/components/public/landing-motion";
+import { AgentsShowcase } from "@/components/public/agents-showcase";
 import { Layers } from "@/components/public/layers";
+import { PlatformShowcase } from "@/components/public/platform-showcase";
 import { PublicPricing } from "@/components/public/pricing-table";
 import { PublicShell } from "@/components/public/doc-page";
 import { buttonClass } from "@/components/ui/button";
@@ -23,38 +25,6 @@ export const metadata: Metadata = {
   ...share(TITLE, DESCRIPTION, "/"),
   keywords: ["AI agents", "business automation India", "WhatsApp automation", "lead management", "DPDP", "Hinglish AI"],
 };
-
-/** Only what is live today. Prices match the Plan & billing page (plans.py). */
-const AGENTS = [
-  {
-    icon: Inbox,
-    title: "Inbox assistant",
-    text: "Sorts every email and WhatsApp message, files it, pulls out tasks and drafts a reply in your voice from what it knows about your business.",
-  },
-  {
-    icon: Users,
-    title: "Lead triage & proposals",
-    text: "Scores each enquiry, prices it from your rate card — never a made-up number — and drafts a proposal citing your past work, plus a call invite.",
-  },
-  {
-    icon: Landmark,
-    title: "Loan document checks",
-    text: "Reads KYC, bank statements and salary slips on a private model, checks them against your checklist and drafts the follow-up for what's missing.",
-  },
-  {
-    icon: Sparkles,
-    title: "Nightly kitchen plan",
-    text: "Forecasts tomorrow's demand per dish from your Swiggy and Zomato reports, converts it to ingredients and drafts vendor purchase orders.",
-  },
-];
-
-const PLATFORM = [
-  { icon: BookOpen, title: "Memory with citations", text: "Upload documents or connect Drive; every answer says which page it came from." },
-  { icon: Network, title: "Mind map", text: "See the people, companies and deals Kritvia has learned about and how they connect." },
-  { icon: Mic, title: "Voice in 22 languages", text: "Dictate notes in Hindi, Hinglish or English; Kritvia learns your names and terms." },
-  { icon: ShieldCheck, title: "Earned autonomy", text: "An agent acts alone on one action only after a long run of approvals without edits — and you can take it back." },
-];
-
 
 const TRUST = [
   "Each business is sealed off in the database itself (row-level security).",
@@ -103,6 +73,21 @@ function SectionHead({ id, eyebrow, title, text }: { id: string; eyebrow: string
       </h2>
       {text ? <p className="mt-2 text-[15px] text-muted">{text}</p> : null}
     </div>
+  );
+}
+
+/** The centred heading used above the animated showcases (layers, agents, platform). */
+function ShowcaseHead({ id, eyebrow, title, text }: { id: string; eyebrow: string; title: string; text: string }) {
+  return (
+    <Reveal className="mx-auto max-w-2xl text-center">
+      <p className="inline-flex rounded-full border border-border bg-surface-strong px-3 py-1 text-xs font-semibold tracking-wider text-accent uppercase">
+        {eyebrow}
+      </p>
+      <h2 id={id} className="mt-4 text-3xl font-bold tracking-tight text-fg sm:text-4xl">
+        {title}
+      </h2>
+      <p className="mt-3 text-[15px] text-muted">{text}</p>
+    </Reveal>
   );
 }
 
@@ -177,48 +162,28 @@ export default function WelcomePage() {
         </RevealGroup>
       </section>
 
-      <section aria-labelledby="agents" className="py-12">
-        <Reveal>
-          <SectionHead
-            id="agents"
-            eyebrow="Agents"
-            title="Agents you can switch on today"
-            text="Pick your kind of business at sign-up; the right agents start switched on. Tell them how you work in plain language."
-          />
+      <section aria-labelledby="agents" className="scroll-mt-20 py-14">
+        <ShowcaseHead
+          id="agents"
+          eyebrow="Agents"
+          title="Agents you can switch on today"
+          text="Pick your kind of business at sign-up; the right agents start switched on. Tell them how you work in plain language."
+        />
+        <Reveal className="mt-10" delay={0.1}>
+          <AgentsShowcase />
         </Reveal>
-        <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2">
-          {AGENTS.map((a) => (
-            <div key={a.title} className="kv-lift glass glass-sheen group h-full rounded-2xl border p-6">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent ring-1 ring-accent/15 transition-colors duration-200 group-hover:bg-accent group-hover:text-accent-fg">
-                <a.icon className="h-5 w-5" aria-hidden />
-              </span>
-              <h3 className="mt-4 text-[15px] font-semibold text-fg">{a.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted">{a.text}</p>
-            </div>
-          ))}
-        </RevealGroup>
       </section>
 
-      <section aria-labelledby="platform" className="py-12">
-        <Reveal>
-          <SectionHead id="platform" eyebrow="Platform" title="Built on a memory of your business" />
+      <section aria-labelledby="platform" className="scroll-mt-20 py-14">
+        <ShowcaseHead
+          id="platform"
+          eyebrow="Platform"
+          title="Built on a memory of your business"
+          text="Underneath every agent: what it knows, who works with whom, your voice, and the trust it has earned."
+        />
+        <Reveal className="mt-10" delay={0.1}>
+          <PlatformShowcase />
         </Reveal>
-        <RevealGroup className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
-          {PLATFORM.map((a) => (
-            <div key={a.title} className="flex gap-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center glass rounded-xl border text-accent">
-                <a.icon className="h-[18px] w-[18px]" aria-hidden />
-              </span>
-              <div>
-                <h3 className="font-semibold text-fg">{a.title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted">{a.text}</p>
-              </div>
-            </div>
-          ))}
-        </RevealGroup>
-        <p className="mt-8 glass rounded-2xl border px-4 py-3 text-sm text-muted">
-          Connects to Google Workspace (Gmail, Calendar, Drive), WhatsApp Business, your website&apos;s lead form and Tally exports.
-        </p>
       </section>
 
       <section aria-labelledby="pricing" className="py-12">
