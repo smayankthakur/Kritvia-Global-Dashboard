@@ -37,7 +37,7 @@ export default function CallsPage() {
               </Notice>
             )}
             {canWrite ? <TestCall ventureId={v.id} /> : null}
-            <CallList ventureId={v.id} />
+            <CallList ventureId={v.id} canAdmin={s.can_admin} />
             {canWrite ? <PlaceCall ventureId={v.id} live={s.outbound_enabled && s.answering} /> : null}
             {s.can_admin ? <VoiceSettings ventureId={v.id} voice={s} /> : null}
           </div>

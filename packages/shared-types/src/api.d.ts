@@ -2672,7 +2672,11 @@ export interface paths {
         get: operations["get_call_ventures__venture_id__calls__call_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Call
+         * @description Delete a call and what was said in it (a do-not-call request it led to stays).
+         */
+        delete: operations["delete_call_ventures__venture_id__calls__call_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -18695,6 +18699,36 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CallDetail"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_call_ventures__venture_id__calls__call_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

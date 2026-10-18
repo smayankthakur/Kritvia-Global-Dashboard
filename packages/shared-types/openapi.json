@@ -30448,6 +30448,56 @@
       }
     },
     "/ventures/{venture_id}/calls/{call_id}": {
+      "delete": {
+        "description": "Delete a call and what was said in it (a do-not-call request it led to stays).",
+        "operationId": "delete_call_ventures__venture_id__calls__call_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Call",
+        "tags": [
+          "calls"
+        ]
+      },
       "get": {
         "operationId": "get_call_ventures__venture_id__calls__call_id__get",
         "parameters": [

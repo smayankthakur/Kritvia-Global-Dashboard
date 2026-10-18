@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Mic, Phone, PhoneIncoming, PhoneOff, PhoneOutgoing, Send, Volume2 } from "lucide-react";
+import { ChevronDown, Mic, Phone, PhoneIncoming, PhoneOff, PhoneOutgoing, Send, Trash2, Volume2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
@@ -151,8 +151,18 @@ export function TestCall({ ventureId }: { ventureId: string }) {
   );
 }
 
-function CallRow({ ventureId, c }: { ventureId: string; c: Call }) {
+function CallRow({ ventureId, c, canAdmin }: { ventureId: string; c: Call; canAdmin: boolean }) {
+  const qc = useQueryClient();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
+  const remove = useMutation({
+    mutationFn: () => unwrap(api.DELETE("/ventures/{venture_id}/calls/{call_id}", { params: { path: { venture_id: ventureId, call_id: c.id } } })),
+    onSuccess: () => {
+      toast.success("Call deleted");
+      void qc.invalidateQueries({ queryKey: callsKey(ventureId) });
+    },
+    onError: (e) => toast.error("Can't delete it", errorMessage(e)),
+  });
   const detail = useQuery({
     queryKey: ["call", ventureId, c.id],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/calls/{call_id}", { params: { path: { venture_id: ventureId, call_id: c.id } } })),
@@ -185,9 +195,14 @@ function CallRow({ ventureId, c }: { ventureId: string; c: Call }) {
             </p>
           </div>
         </div>
-        <Button size="sm" variant="ghost" icon={<ChevronDown className={open ? "h-4 w-4 rotate-180" : "h-4 w-4"} />} onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Hide" : "What was said"}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="ghost" icon={<ChevronDown className={open ? "h-4 w-4 rotate-180" : "h-4 w-4"} />} onClick={() => setOpen(!open)} aria-expanded={open}>
+            {open ? "Hide" : "What was said"}
+          </Button>
+          {canAdmin ? (
+            <Button size="icon" variant="ghost" aria-label="Delete this call" icon={<Trash2 className="h-4 w-4" />} loading={remove.isPending} onClick={() => remove.mutate()} />
+          ) : null}
+        </div>
       </div>
       {c.summary ? (
         <p className="text-sm whitespace-pre-line text-muted" translate="no">
@@ -211,7 +226,7 @@ function CallRow({ ventureId, c }: { ventureId: string; c: Call }) {
   );
 }
 
-export function CallList({ ventureId }: { ventureId: string }) {
+export function CallList({ ventureId, canAdmin = false }: { ventureId: string; canAdmin?: boolean }) {
   const q = useQuery({
     queryKey: callsKey(ventureId),
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/calls", { params: { path: { venture_id: ventureId }, query: { limit: 30 } } })),
@@ -225,7 +240,7 @@ export function CallList({ ventureId }: { ventureId: string }) {
           rows.length ? (
             <ul className="divide-y divide-border">
               {rows.map((c) => (
-                <CallRow key={c.id} ventureId={ventureId} c={c} />
+                <CallRow key={c.id} ventureId={ventureId} c={c} canAdmin={canAdmin} />
               ))}
             </ul>
           ) : (

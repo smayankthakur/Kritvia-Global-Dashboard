@@ -210,6 +210,9 @@ async def test_a_test_call_in_the_app(shop, fake_llm):
     assert r["ended"] is True
     c = (await mayank.get(f"/ventures/{v}/calls")).json()[0]
     assert c["test"] is True and c["lead_id"] is None and c["summary"]
+    assert (await shop["operator"].delete(f"/ventures/{v}/calls/{c['id']}")).status_code == 403
+    assert (await mayank.delete(f"/ventures/{v}/calls/{c['id']}")).status_code == 204
+    assert (await mayank.get(f"/ventures/{v}/calls/{c['id']}")).status_code == 404
 
 
 async def test_outbound_calls_need_a_yes_and_the_registration(shop, fake_llm, twilio, client, monkeypatch):

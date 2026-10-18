@@ -10,6 +10,7 @@ App:
   POST   /ventures/{v}/calls                 ask Kritvia to phone a customer (waits for a yes)
   GET    /ventures/{v}/calls                 recent calls with summaries
   GET    /ventures/{v}/calls/{id}            one call with what was said
+  DELETE /ventures/{v}/calls/{id}            delete it (admins)
 Twilio (signed with the business's auth token):
   POST   /hooks/voice/twilio/{connector}/incoming | /turn | /outgoing | /status
 """
@@ -424,6 +425,19 @@ async def get_call(venture_id: uuid.UUID, call_id: uuid.UUID, db: TenantDB, svc:
     if r is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "call not found")
     return await _call_out(EnvelopeCrypto(db, svc.keys), venture_id, r, detail=True)  # type: ignore[return-value]
+
+
+@router.delete("/ventures/{venture_id}/calls/{call_id}", status_code=204)
+async def delete_call(venture_id: uuid.UUID, call_id: uuid.UUID, db: TenantDB) -> Response:
+    """Delete a call and what was said in it (a do-not-call request it led to stays)."""
+    await venture_org(db, venture_id)
+    if not await _can_admin(db, venture_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "only an admin deletes calls")
+    done = (await db.execute(text("DELETE FROM calls WHERE id = :id AND venture_id = :v RETURNING id"),
+                             {"id": call_id, "v": venture_id})).first()
+    if done is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "call not found")
+    return Response(status_code=204)
 
 
 # ------------------------------------------------------------------------------------- Twilio hooks --
