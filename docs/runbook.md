@@ -65,12 +65,19 @@ Downtime: about 5 minutes for the last copy, plus a stop/start (~2 minutes).
    kritvia-root-150-before-shrink). Detach the old volume, detach the new one, attach the new one to
    the instance with the root device name. Start the instance.
 6. **Check**: `sudo bash /opt/kritvia/infra/scripts/shrink-root.sh verify` (disk 50G, swap back on,
-   readyz 200, containers up), then open app.sitelytc.com and run a sample enquiry.
+   readyz 200, containers up), then open app.sitelytc.com and run a sample enquiry. `verify` also
+   starts any container that was running before `final` and didn't come back on its own: the
+   tunnel (`cloudflared`) stays stopped after a reboot once it's been stopped by hand, and the site
+   answers 530 until it runs.
 7. **Going back** if it doesn't boot: stop, detach the new volume, attach the old one as the root
    device name, start. Nothing on the old volume was changed.
 8. **After a week** of normal running: delete the old 150 GB volume, then the snapshot.
 
 Never boot with both disks attached after `final`: they share identifiers.
+
+Done 18 Oct 2026: Elastic IP 65.1.228.118; root is now vol-0f8e39f02c556cf88 (50 GiB gp3,
+kritvia-root-50). Old root vol-0690757ed4b46495b (150 GiB, detached) and its snapshot
+snap-06d2988f71940a1a4 are kept until about 25 Oct 2026.
 
 ## 1. Provision the VM (once)
 

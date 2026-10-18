@@ -26,6 +26,7 @@ SRC="${SRC%/}"
 NEW="${NEW_MNT:-/mnt/newroot}"
 MARK=".kritvia-shrink-root"
 KEEP_FREE_GB="${KEEP_FREE_GB:-8}"
+RUNNING="${SRC}/var/lib/kritvia-shrink-running"   # containers up before 'final'; copied to the new disk
 
 say() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 die() { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -132,6 +133,8 @@ final() {
   [ -f "$NEW/$MARK" ] || die "run 'copy' first"
   if [ "$SRC" = "" ] || [ "$SRC" = "/" ]; then
     say "Stopping Kritvia and Docker (downtime starts)"
+    # Containers stopped by hand stay stopped after a reboot (e.g. the tunnel); remember them for 'verify'.
+    docker ps --format '{{.Names}}' > "$RUNNING" 2>/dev/null || true
     if [ -d /opt/kritvia/infra ]; then (cd /opt/kritvia/infra && docker compose --profile tunnel stop) || true; fi
     systemctl stop docker.socket docker containerd 2>/dev/null || true
   fi
@@ -176,7 +179,7 @@ final() {
     b=$(blkid -p -s UUID -o value "${pair##*:}" 2>/dev/null || blkid -s UUID -o value "${pair##*:}")/$(blkid -p -s LABEL -o value "${pair##*:}" 2>/dev/null || blkid -s LABEL -o value "${pair##*:}")
     printf 'filesystem   %-40s %s\n' "$a" "$([ "$a" = "$b" ] && echo same || { ok=0; echo "DIFFERENT ($b)"; })"
   done
-  [ "$ok" = 1 ] || die "identifiers don't match; don't swap the disks. Start Docker again: sudo systemctl start docker"
+  [ "$ok" = 1 ] || die "identifiers don't match; don't swap the disks. Start Docker again: sudo systemctl start docker, then: sudo bash $0 verify"
   cat <<EOF
 
 Ready. Next (runbook 0b):
@@ -193,6 +196,14 @@ verify() {
   df -h / | tail -1
   swapon --show
   say "Kritvia"
+  if [ -s "$RUNNING" ]; then
+    # Start whatever was running before 'final' and didn't come back by itself.
+    local up; up=$(docker ps --format '{{.Names}}' 2>/dev/null)
+    while read -r c; do
+      [ -n "$c" ] && ! grep -qx "$c" <<<"$up" && docker start "$c" >/dev/null && echo "started $c (was running before the move)"
+    done < "$RUNNING"
+    rm -f "$RUNNING"
+  fi
   curl -fsS -m 5 -o /dev/null -w "api readyz %{http_code}\n" http://localhost:8000/readyz || echo "api not answering yet (wait a minute)"
   docker ps --format '{{.Names}} {{.Status}}' 2>/dev/null | sort || true
 }
