@@ -1326,6 +1326,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Teams */
+        get: operations["list_teams_orgs__org_id__teams_get"];
+        put?: never;
+        /** Create Team */
+        post: operations["create_team_orgs__org_id__teams_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{org_id}/teams/{team_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Team */
+        put: operations["update_team_orgs__org_id__teams__team_id__put"];
+        post?: never;
+        /** Delete Team */
+        delete: operations["delete_team_orgs__org_id__teams__team_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/ventures": {
         parameters: {
             query?: never;
@@ -2508,6 +2544,27 @@ export interface paths {
          * @description Creates a new version; earlier versions stay for the audit trail of past decisions.
          */
         put: operations["put_checklist_ventures__venture_id__checklists__loan_type__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/collab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Collaboration
+         * @description Who works with whom in this business, on a project or in a team. Everything comes from what the
+         *     caller can already see: task cards, the knowledge graph and documents are read under their access.
+         */
+        get: operations["collaboration_ventures__venture_id__collab_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -4213,6 +4270,23 @@ export interface paths {
         };
         /** Overview */
         get: operations["overview_ventures__venture_id__tally_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Venture Teams */
+        get: operations["venture_teams_ventures__venture_id__teams_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6036,6 +6110,171 @@ export interface components {
         CodeIn: {
             /** Code */
             code: string;
+        };
+        /** CollabDoc */
+        CollabDoc: {
+            /** Date */
+            date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Title */
+            title: string;
+        };
+        /** CollabLink */
+        CollabLink: {
+            /** Emails */
+            emails: number;
+            /**
+             * Evidence
+             * @description the latest meetings, emails and documents naming both
+             */
+            evidence: components["schemas"]["CollabDoc"][];
+            /**
+             * Handoffs
+             * @description tasks one made and gave to the other
+             */
+            handoffs: number;
+            /** Is Lead */
+            is_lead: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "works_with" | "on_project" | "in_team" | "project_team";
+            /** Meetings */
+            meetings: number;
+            /**
+             * Mentions
+             * @description on_project: documents naming them with the project
+             */
+            mentions: number;
+            /** Other Docs */
+            other_docs: number;
+            /** Projects */
+            projects: string[];
+            /** Same Team */
+            same_team: boolean;
+            /**
+             * Shared Tasks
+             * @description works_with: tasks on shared project boards; on_project: their tasks there
+             */
+            shared_tasks: number;
+            /** Source */
+            source: string;
+            /** Strength */
+            strength: number;
+            /** Target */
+            target: string;
+            /** Teams */
+            teams: string[];
+        };
+        /** CollabOut */
+        CollabOut: {
+            /**
+             * Boards
+             * @description the business's project boards, for the filter (colour unused)
+             */
+            boards: components["schemas"]["TeamBrief"][];
+            /** Days */
+            days: number;
+            /** Links */
+            links: components["schemas"]["CollabLink"][];
+            /** People */
+            people: components["schemas"]["CollabPerson"][];
+            /** Projects */
+            projects: components["schemas"]["CollabProject"][];
+            /** Teams */
+            teams: components["schemas"]["CollabTeam"][];
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** CollabPerson */
+        CollabPerson: {
+            /**
+             * Documents
+             * @description meetings, emails and documents naming them in the period
+             */
+            documents: number;
+            /** Done Tasks */
+            done_tasks: number;
+            /** Email */
+            email: string | null;
+            /**
+             * Id
+             * @description a user id, or c:<name> for an outside contact named in documents
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "member" | "contact";
+            /**
+             * Leads
+             * @description teams this person leads
+             */
+            leads: string[];
+            /** Name */
+            name: string;
+            /** Open Tasks */
+            open_tasks: number;
+            /**
+             * Outside
+             * @description team view: works with the team but isn't in it
+             */
+            outside: boolean;
+            /** Strength */
+            strength: number;
+            /** Teams */
+            teams: string[];
+        };
+        /** CollabProject */
+        CollabProject: {
+            /**
+             * Board Id
+             * Format: uuid
+             */
+            board_id: string;
+            /**
+             * Id
+             * @description p:<board id>
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Open Tasks */
+            open_tasks: number;
+            /** People */
+            people: number;
+            /** Team Id */
+            team_id: string | null;
+        };
+        /** CollabTeam */
+        CollabTeam: {
+            /**
+             * Color
+             * @enum {string}
+             */
+            color: "blue" | "orange" | "aqua" | "yellow" | "pink" | "green" | "violet" | "red";
+            /**
+             * Id
+             * @description t:<team id>
+             */
+            id: string;
+            /** Members */
+            members: number;
+            /** Name */
+            name: string;
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
         };
         /** Commission */
         Commission: {
@@ -10097,6 +10336,8 @@ export interface components {
             name: string;
             /** Position */
             position: number;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** TaskBoardIn */
         TaskBoardIn: {
@@ -10121,13 +10362,25 @@ export interface components {
             name: string;
             /** Position */
             position: number;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** TaskBoardPatch */
         TaskBoardPatch: {
+            /**
+             * Clear Team
+             * @default false
+             */
+            clear_team: boolean;
             /** Name */
             name?: string | null;
             /** Position */
             position?: number | null;
+            /**
+             * Team Id
+             * @description put the board in one of the organisation's teams
+             */
+            team_id?: string | null;
         };
         /** TaskCardIn */
         TaskCardIn: {
@@ -10314,6 +10567,111 @@ export interface components {
             sgst_paise: number;
             /** Taxable Paise */
             taxable_paise: number;
+        };
+        /** TeamBrief */
+        TeamBrief: {
+            /**
+             * Color
+             * @enum {string}
+             */
+            color: "blue" | "orange" | "aqua" | "yellow" | "pink" | "green" | "violet" | "red";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** TeamIn */
+        TeamIn: {
+            /**
+             * Color
+             * @default blue
+             * @enum {string}
+             */
+            color: "blue" | "orange" | "aqua" | "yellow" | "pink" | "green" | "violet" | "red";
+            /** Description */
+            description?: string | null;
+            /** Members */
+            members?: components["schemas"]["TeamMemberIn"][];
+            /** Name */
+            name: string;
+        };
+        /** TeamMember */
+        TeamMember: {
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /** Is Lead */
+            is_lead: boolean;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** TeamMemberIn */
+        TeamMemberIn: {
+            /**
+             * Is Lead
+             * @default false
+             */
+            is_lead: boolean;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** TeamOut */
+        TeamOut: {
+            /**
+             * Boards
+             * @description project boards that belong to the team, in every business
+             */
+            boards: number;
+            /**
+             * Color
+             * @enum {string}
+             */
+            color: "blue" | "orange" | "aqua" | "yellow" | "pink" | "green" | "violet" | "red";
+            /** Description */
+            description: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Members */
+            members: components["schemas"]["TeamMember"][];
+            /** Name */
+            name: string;
+        };
+        /** TeamPerson */
+        TeamPerson: {
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** TeamsOut */
+        TeamsOut: {
+            /** Can Edit */
+            can_edit: boolean;
+            /**
+             * People
+             * @description everyone in the organisation, for the member picker
+             */
+            people: components["schemas"]["TeamPerson"][];
+            /** Teams */
+            teams: components["schemas"]["TeamOut"][];
         };
         /** TelegramConnectIn */
         TelegramConnectIn: {
@@ -14141,6 +14499,138 @@ export interface operations {
             };
         };
     };
+    list_teams_orgs__org_id__teams_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_team_orgs__org_id__teams_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_team_orgs__org_id__teams__team_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_team_orgs__org_id__teams__team_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_ventures_orgs__org_id__ventures_get: {
         parameters: {
             query?: never;
@@ -16713,6 +17203,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChecklistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collaboration_ventures__venture_id__collab_get: {
+        parameters: {
+            query?: {
+                /** @description a project board */
+                project?: string | null;
+                team?: string | null;
+                days?: number;
+                tasks?: boolean;
+                docs?: boolean;
+                teams?: boolean;
+                contacts?: boolean;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollabOut"];
                 };
             };
             /** @description Validation Error */
@@ -20820,6 +21350,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TallyOverviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    venture_teams_ventures__venture_id__teams_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamBrief"][];
                 };
             };
             /** @description Validation Error */

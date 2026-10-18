@@ -163,7 +163,7 @@ export function MindMap({ ventureId }: { ventureId: string }) {
           <svg
             viewBox={`0 0 ${W} ${H}`}
             className="block aspect-[25/16] w-full cursor-grab touch-none bg-surface-2/40 active:cursor-grabbing"
-            role="img"
+            role="group"
             aria-label={`Mind map of ${nodes.length} entities and ${links.length} links`}
             onPointerDown={onDown}
             onPointerMove={onMove}

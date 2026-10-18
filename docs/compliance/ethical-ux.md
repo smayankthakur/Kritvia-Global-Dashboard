@@ -61,6 +61,20 @@ Fixed in this change:
 | 3 | Landing page, Pricing | "Cheaper than a part-time operations assistant" | Comparative claim without a stated basis. | Add the basis ("a part-time assistant in Delhi costs about ₹X a month") or drop it |
 | 4 | Help page | "We reply within one business day" | A service promise; fine if you can keep it, otherwise it is a misleading claim. | Keep only if you can staff it; otherwise "within two business days" |
 
+## People analytics (the mind map's People & projects view)
+
+The view shows who works with whom. It must never become a surveillance or ranking tool:
+
+- **No scores or rankings of people.** A link's thickness is a plain sum that the panel spells out
+  ("3 shared tasks · 1 task handed over · 1 meeting · same team"); there is no productivity number,
+  league table or "least connected" list.
+- **Nothing new is revealed.** It is computed with the viewer's own access: role-restricted tasks,
+  documents and knowledge stay hidden, and outside contacts appear only by the names already in the
+  business's meetings and emails.
+- **Big meetings don't count.** A document naming more than 15 people creates no pairs.
+- **Teams are visible to everyone in the organisation**; only owners change them.
+- The Privacy Policy (section 2, Account Data) describes it.
+
 ## Licensed fonts, images and media
 
 See [asset-licences.md](asset-licences.md). Rule: no image, font, icon, video or sound goes into the

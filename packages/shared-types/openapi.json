@@ -3524,6 +3524,381 @@
         "title": "CodeIn",
         "type": "object"
       },
+      "CollabDoc": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "date"
+        ],
+        "title": "CollabDoc",
+        "type": "object"
+      },
+      "CollabLink": {
+        "properties": {
+          "emails": {
+            "title": "Emails",
+            "type": "integer"
+          },
+          "evidence": {
+            "description": "the latest meetings, emails and documents naming both",
+            "items": {
+              "$ref": "#/components/schemas/CollabDoc"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "handoffs": {
+            "description": "tasks one made and gave to the other",
+            "title": "Handoffs",
+            "type": "integer"
+          },
+          "is_lead": {
+            "title": "Is Lead",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "works_with",
+              "on_project",
+              "in_team",
+              "project_team"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "meetings": {
+            "title": "Meetings",
+            "type": "integer"
+          },
+          "mentions": {
+            "description": "on_project: documents naming them with the project",
+            "title": "Mentions",
+            "type": "integer"
+          },
+          "other_docs": {
+            "title": "Other Docs",
+            "type": "integer"
+          },
+          "projects": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "same_team": {
+            "title": "Same Team",
+            "type": "boolean"
+          },
+          "shared_tasks": {
+            "description": "works_with: tasks on shared project boards; on_project: their tasks there",
+            "title": "Shared Tasks",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "strength": {
+            "title": "Strength",
+            "type": "number"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "kind",
+          "strength",
+          "shared_tasks",
+          "handoffs",
+          "meetings",
+          "emails",
+          "other_docs",
+          "mentions",
+          "same_team",
+          "is_lead",
+          "teams",
+          "projects",
+          "evidence"
+        ],
+        "title": "CollabLink",
+        "type": "object"
+      },
+      "CollabOut": {
+        "properties": {
+          "boards": {
+            "description": "the business's project boards, for the filter (colour unused)",
+            "items": {
+              "$ref": "#/components/schemas/TeamBrief"
+            },
+            "title": "Boards",
+            "type": "array"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/CollabLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/CollabPerson"
+            },
+            "title": "People",
+            "type": "array"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/CollabProject"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/CollabTeam"
+            },
+            "title": "Teams",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "people",
+          "projects",
+          "teams",
+          "links",
+          "boards",
+          "days",
+          "truncated"
+        ],
+        "title": "CollabOut",
+        "type": "object"
+      },
+      "CollabPerson": {
+        "properties": {
+          "documents": {
+            "description": "meetings, emails and documents naming them in the period",
+            "title": "Documents",
+            "type": "integer"
+          },
+          "done_tasks": {
+            "title": "Done Tasks",
+            "type": "integer"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "description": "a user id, or c:<name> for an outside contact named in documents",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "member",
+              "contact"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "leads": {
+            "description": "teams this person leads",
+            "items": {
+              "type": "string"
+            },
+            "title": "Leads",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open_tasks": {
+            "title": "Open Tasks",
+            "type": "integer"
+          },
+          "outside": {
+            "description": "team view: works with the team but isn't in it",
+            "title": "Outside",
+            "type": "boolean"
+          },
+          "strength": {
+            "title": "Strength",
+            "type": "number"
+          },
+          "teams": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "email",
+          "teams",
+          "leads",
+          "open_tasks",
+          "done_tasks",
+          "documents",
+          "outside",
+          "strength"
+        ],
+        "title": "CollabPerson",
+        "type": "object"
+      },
+      "CollabProject": {
+        "properties": {
+          "board_id": {
+            "format": "uuid",
+            "title": "Board Id",
+            "type": "string"
+          },
+          "id": {
+            "description": "p:<board id>",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open_tasks": {
+            "title": "Open Tasks",
+            "type": "integer"
+          },
+          "people": {
+            "title": "People",
+            "type": "integer"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
+          }
+        },
+        "required": [
+          "id",
+          "board_id",
+          "name",
+          "team_id",
+          "people",
+          "open_tasks"
+        ],
+        "title": "CollabProject",
+        "type": "object"
+      },
+      "CollabTeam": {
+        "properties": {
+          "color": {
+            "enum": [
+              "blue",
+              "orange",
+              "aqua",
+              "yellow",
+              "pink",
+              "green",
+              "violet",
+              "red"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "id": {
+            "description": "t:<team id>",
+            "title": "Id",
+            "type": "string"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "team_id": {
+            "format": "uuid",
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team_id",
+          "name",
+          "color",
+          "members"
+        ],
+        "title": "CollabTeam",
+        "type": "object"
+      },
       "Commission": {
         "properties": {
           "commission_paise": {
@@ -15331,6 +15706,18 @@
           "position": {
             "title": "Position",
             "type": "number"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
           }
         },
         "required": [
@@ -15382,6 +15769,18 @@
           "position": {
             "title": "Position",
             "type": "number"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
           }
         },
         "required": [
@@ -15395,6 +15794,11 @@
       },
       "TaskBoardPatch": {
         "properties": {
+          "clear_team": {
+            "default": false,
+            "title": "Clear Team",
+            "type": "boolean"
+          },
           "name": {
             "anyOf": [
               {
@@ -15418,6 +15822,19 @@
               }
             ],
             "title": "Position"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "put the board in one of the organisation's teams",
+            "title": "Team Id"
           }
         },
         "title": "TaskBoardPatch",
@@ -15960,6 +16377,252 @@
           "igst_paise"
         ],
         "title": "TaxRow",
+        "type": "object"
+      },
+      "TeamBrief": {
+        "properties": {
+          "color": {
+            "enum": [
+              "blue",
+              "orange",
+              "aqua",
+              "yellow",
+              "pink",
+              "green",
+              "violet",
+              "red"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "title": "TeamBrief",
+        "type": "object"
+      },
+      "TeamIn": {
+        "properties": {
+          "color": {
+            "default": "blue",
+            "enum": [
+              "blue",
+              "orange",
+              "aqua",
+              "yellow",
+              "pink",
+              "green",
+              "violet",
+              "red"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberIn"
+            },
+            "maxItems": 500,
+            "title": "Members",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TeamIn",
+        "type": "object"
+      },
+      "TeamMember": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "is_lead": {
+            "title": "Is Lead",
+            "type": "boolean"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "full_name",
+          "email",
+          "is_lead"
+        ],
+        "title": "TeamMember",
+        "type": "object"
+      },
+      "TeamMemberIn": {
+        "properties": {
+          "is_lead": {
+            "default": false,
+            "title": "Is Lead",
+            "type": "boolean"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "TeamMemberIn",
+        "type": "object"
+      },
+      "TeamOut": {
+        "properties": {
+          "boards": {
+            "description": "project boards that belong to the team, in every business",
+            "title": "Boards",
+            "type": "integer"
+          },
+          "color": {
+            "enum": [
+              "blue",
+              "orange",
+              "aqua",
+              "yellow",
+              "pink",
+              "green",
+              "violet",
+              "red"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMember"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "color",
+          "members",
+          "boards"
+        ],
+        "title": "TeamOut",
+        "type": "object"
+      },
+      "TeamPerson": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "full_name",
+          "email"
+        ],
+        "title": "TeamPerson",
+        "type": "object"
+      },
+      "TeamsOut": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "people": {
+            "description": "everyone in the organisation, for the member picker",
+            "items": {
+              "$ref": "#/components/schemas/TeamPerson"
+            },
+            "title": "People",
+            "type": "array"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/TeamOut"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "teams",
+          "people",
+          "can_edit"
+        ],
+        "title": "TeamsOut",
         "type": "object"
       },
       "TelegramConnectIn": {
@@ -22880,6 +23543,227 @@
         ]
       }
     },
+    "/orgs/{org_id}/teams": {
+      "get": {
+        "operationId": "list_teams_orgs__org_id__teams_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Teams",
+        "tags": [
+          "teams"
+        ]
+      },
+      "post": {
+        "operationId": "create_team_orgs__org_id__teams_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Team",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/orgs/{org_id}/teams/{team_id}": {
+      "delete": {
+        "operationId": "delete_team_orgs__org_id__teams__team_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Team",
+        "tags": [
+          "teams"
+        ]
+      },
+      "put": {
+        "operationId": "update_team_orgs__org_id__teams__team_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Team",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
     "/orgs/{org_id}/ventures": {
       "get": {
         "operationId": "list_ventures_orgs__org_id__ventures_get",
@@ -27186,6 +28070,143 @@
         "summary": "Put Checklist",
         "tags": [
           "truhome"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/collab": {
+      "get": {
+        "description": "Who works with whom in this business, on a project or in a team. Everything comes from what the\ncaller can already see: task cards, the knowledge graph and documents are read under their access.",
+        "operationId": "collaboration_ventures__venture_id__collab_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "a project board",
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "a project board",
+              "title": "Project"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "maximum": 730,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tasks",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Tasks",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "docs",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Docs",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "teams",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Teams",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contacts",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Contacts",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Collaboration",
+        "tags": [
+          "teams"
         ]
       }
     },
@@ -34615,6 +35636,58 @@
         "summary": "Overview",
         "tags": [
           "tally"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/teams": {
+      "get": {
+        "operationId": "venture_teams_ventures__venture_id__teams_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamBrief"
+                  },
+                  "title": "Response Venture Teams Ventures  Venture Id  Teams Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Venture Teams",
+        "tags": [
+          "teams"
         ]
       }
     },

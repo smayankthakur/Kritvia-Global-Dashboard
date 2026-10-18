@@ -41,6 +41,7 @@ import {
   Star,
   TrendingUp,
   Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import type { VentureKind } from "./access";
@@ -119,6 +120,7 @@ export const topNav: NavItem[] = [
 
 export const ownerNav: NavItem[] = [
   { label: "Businesses", href: "/businesses", icon: Building2 },
+  { label: "Teams", href: "/teams", icon: UsersRound },
   { label: "Plan & billing", href: "/billing", icon: CreditCard },
   { label: "AI models", href: "/ai", icon: BrainCircuit },
   { label: "API keys", href: "/developers", icon: KeyRound },

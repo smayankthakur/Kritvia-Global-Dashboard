@@ -5,8 +5,10 @@
  * change this text too and bump terms_version in the API settings.
  * 17 October 2026: single sign-on, API keys and shipment files added (they apply only to organisations whose owner
  * switches them on, and add no new provider), without a new version.
+ * 18 October 2026: teams and the mind map's People & projects view added (built from data the business
+ * already holds, shown only to people who can already see it; no new provider), without a new version.
  */
-export const PRIVACY_UPDATED = "17 October 2026";
+export const PRIVACY_UPDATED = "18 October 2026";
 
 export const PRIVACY_MD = `## 1. Who we are and what this policy covers
 
@@ -37,6 +39,7 @@ This policy is published under the Digital Personal Data Protection Act, 2023 an
 | Support messages and contact-form details | You | To answer you and improve help content | Data you provided for this purpose |
 | Usage metadata: features used, agent runs, AI-model usage counts and costs, error records | Your use of Kritvia | To operate, secure and bill the service, enforce plan limits, and fix faults | Data you provided for this purpose |
 | Voice dictation: audio while you dictate | You, when you use dictation | To turn speech into text | Consent (you start each dictation) |
+| Teams you are in (and whether you lead one), and who you work with | Your organisation's owners (teams); the tasks, meetings and emails your business keeps in Kritvia | To show your organisation who works with whom and on which projects (the mind map's **People & projects** view). It is built only from tasks, meetings and emails a viewer can already see, explains every link, and never scores or ranks people | Your organisation's instructions; data provided for this purpose |
 | Notification subscription: the browser push address and keys | Your browser, when you switch on notifications | To alert you when a draft needs approval | Consent (you can switch it off) |
 | Chat links for approvals: your Telegram chat ID or Slack user ID, and the approvals you give there | You, when you link Telegram or Slack under **Your account** | To send you approval cards and record your answer | Consent (you can unlink at any time) |
 | Partner details, only if you join our partner programme: name, firm, type, city, phone, UPI ID; the names, Plans and sign-up dates of businesses you refer; commissions and payouts | You; our billing records | To run the programme and pay you commission | Data you provided for this purpose; compliance with tax law |

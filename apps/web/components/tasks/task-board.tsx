@@ -27,7 +27,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
-import { Field, Input, Switch, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Switch, Textarea } from "@/components/ui/field";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap } from "@/lib/api";
@@ -612,15 +612,23 @@ function BoardDialogs({
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [isDone, setIsDone] = useState(false);
+  const [teamId, setTeamId] = useState("");
   const [confirm, setConfirm] = useState<null | "board" | "list">(null);
   const listDlg = dialog && typeof dialog === "object" ? dialog.list : null;
+  const teams = useQuery({
+    queryKey: ["venture-teams", v.id],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/teams", { params: { path: { venture_id: v.id } } })),
+    enabled: dialog === "board" && !board.is_default,
+  });
   useEffect(() => {
-    if (dialog === "board") setName(board.name);
-    else if (listDlg) {
+    if (dialog === "board") {
+      setName(board.name);
+      setTeamId(board.team_id ?? "");
+    } else if (listDlg) {
       setName(listDlg.name);
       setIsDone(listDlg.is_done);
     } else setName("");
-  }, [dialog, board.name, listDlg]);
+  }, [dialog, board.name, board.team_id, listDlg]);
 
   const done = (msg: string) => {
     toast.success(msg);
@@ -637,9 +645,18 @@ function BoardDialogs({
     onError: fail("Could not create the board"),
   });
   const renameBoard = useMutation({
-    mutationFn: () => unwrap(api.PATCH("/ventures/{venture_id}/boards/{board_id}", { params: { path: { venture_id: v.id, board_id: board.id } }, body: { name: name.trim() } })),
-    onSuccess: () => done("Board renamed"),
-    onError: fail("Could not rename the board"),
+    mutationFn: () =>
+      unwrap(
+        api.PATCH("/ventures/{venture_id}/boards/{board_id}", {
+          params: { path: { venture_id: v.id, board_id: board.id } },
+          body: { name: name.trim(), team_id: teamId || null, clear_team: !teamId },
+        }),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["collab", v.id] });
+      done("Board saved");
+    },
+    onError: fail("Could not save the board"),
   });
   const deleteBoard = useMutation({
     mutationFn: () => unwrap(api.DELETE("/ventures/{venture_id}/boards/{board_id}", { params: { path: { venture_id: v.id, board_id: board.id } } })),
@@ -734,13 +751,30 @@ function BoardDialogs({
               </Button>
             ) : null}
             <Button onClick={close}>Cancel</Button>
-            <Button variant="primary" disabled={!name.trim() || name.trim() === board.name} loading={renameBoard.isPending} onClick={() => renameBoard.mutate()}>
+            <Button
+              variant="primary"
+              disabled={!name.trim() || (name.trim() === board.name && teamId === (board.team_id ?? ""))}
+              loading={renameBoard.isPending}
+              onClick={() => renameBoard.mutate()}
+            >
               Save
             </Button>
           </>
         }
       >
         {nameField("Board name", 80, () => renameBoard.mutate())}
+        {!board.is_default ? (
+          <Field label="Team" hint="The team that works on this project. It shows on the mind map's People & projects view." className="mt-3">
+            <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+              <option value="">No team</option>
+              {(teams.data ?? []).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
         {board.is_default ? <p className="mt-3 text-xs text-subtle">This is the main board: tasks Kritvia finds in meetings, emails and documents land here. It can be renamed but not deleted.</p> : null}
       </Dialog>
 

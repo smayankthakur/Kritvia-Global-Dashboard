@@ -87,6 +87,7 @@ class TaskBoardOut(BaseModel):
     name: str
     position: float
     is_default: bool
+    team_id: uuid.UUID | None = None
     cards: int = 0
 
 
@@ -102,6 +103,8 @@ class TaskBoardIn(BaseModel):
 class TaskBoardPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=80)
     position: float | None = None
+    team_id: uuid.UUID | None = Field(default=None, description="put the board in one of the organisation's teams")
+    clear_team: bool = False
 
 
 class TaskListIn(BaseModel):
@@ -223,7 +226,7 @@ async def list_boards(venture_id: uuid.UUID, db: TenantDB) -> list[TaskBoardOut]
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     rows = (await db.execute(text(
-        "SELECT b.id, b.name, b.position, b.is_default,"
+        "SELECT b.id, b.name, b.position, b.is_default, b.team_id,"
         " (SELECT count(*) FROM task_cards c WHERE c.board_id = b.id AND c.archived_at IS NULL) AS cards"
         " FROM task_boards b WHERE b.venture_id = :v ORDER BY b.is_default DESC, b.position, b.created_at"),
         {"v": venture_id})).all()
@@ -239,7 +242,7 @@ async def create_board(venture_id: uuid.UUID, body: TaskBoardIn, user_id: UserId
                                     {"v": venture_id, "s": STEP})).scalar()
             row = (await db.execute(text(
                 "INSERT INTO task_boards (org_id, venture_id, name, position, created_by) VALUES (:o, :v, :n, :p, :u)"
-                " RETURNING id, name, position, is_default"),
+                " RETURNING id, name, position, is_default, team_id"),
                 {"o": org, "v": venture_id, "n": body.name.strip(), "p": pos, "u": user_id})).first()
             for i, (name, done) in enumerate((("To do", False), ("In progress", False), ("Review", False), ("Done", True))):
                 await db.execute(text(
@@ -255,7 +258,7 @@ async def create_board(venture_id: uuid.UUID, body: TaskBoardIn, user_id: UserId
 async def get_board(venture_id: uuid.UUID, board_id: uuid.UUID, db: TenantDB, svc: Svc,
                     archived: bool = False) -> TaskBoardDetail:
     await venture_org(db, venture_id)
-    b = (await db.execute(text("SELECT id, name, position, is_default FROM task_boards WHERE venture_id = :v AND id = :b"),
+    b = (await db.execute(text("SELECT id, name, position, is_default, team_id FROM task_boards WHERE venture_id = :v AND id = :b"),
                           {"v": venture_id, "b": board_id})).first()
     if b is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "board not found")
@@ -274,11 +277,21 @@ async def get_board(venture_id: uuid.UUID, board_id: uuid.UUID, db: TenantDB, sv
 
 @router.patch("/ventures/{venture_id}/boards/{board_id}", response_model=TaskBoardOut)
 async def update_board(venture_id: uuid.UUID, board_id: uuid.UUID, body: TaskBoardPatch, db: TenantDB) -> TaskBoardOut:
-    await _require_write(db, venture_id)
+    org = await _require_write(db, venture_id)
+    team_sql = "team_id"
+    params = {"n": body.name.strip() if body.name else None, "p": body.position, "v": venture_id, "b": board_id}
+    if body.clear_team:
+        team_sql = "NULL"
+    elif body.team_id is not None:
+        if (await db.execute(text("SELECT 1 FROM teams WHERE org_id = :o AND id = :t"),
+                             {"o": org, "t": body.team_id})).first() is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "team not found")
+        team_sql = ":t"
+        params["t"] = body.team_id
     row = (await db.execute(text(
-        "UPDATE task_boards SET name = coalesce(:n, name), position = coalesce(:p, position), updated_at = now()"
-        " WHERE venture_id = :v AND id = :b RETURNING id, name, position, is_default"),
-        {"n": body.name.strip() if body.name else None, "p": body.position, "v": venture_id, "b": board_id})).first()
+        "UPDATE task_boards SET name = coalesce(:n, name), position = coalesce(:p, position),"
+        f" team_id = {team_sql}, updated_at = now()"
+        " WHERE venture_id = :v AND id = :b RETURNING id, name, position, is_default, team_id"), params)).first()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "board not found")
     return TaskBoardOut(**row._mapping)
