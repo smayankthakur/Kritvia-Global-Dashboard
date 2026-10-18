@@ -15,6 +15,7 @@ import type { Board } from "@/lib/board";
 import { formatRelative } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
 import { OrgChart } from "./org-chart";
+import { TeamCard } from "./team";
 import { TicketBoard } from "./ticket-board";
 
 export function boardKey(ventureId: string) {
@@ -49,6 +50,7 @@ export function BoardView() {
           <div className="space-y-6">
             <Mission board={board} canAdmin={canAdmin} onEdit={() => setMissionOpen(true)} />
             <OrgChart ventureId={v.id} board={board} ownerName={v.venture_name} canAdmin={canAdmin} />
+            <TeamCard ventureId={v.id} canAdmin={canAdmin} />
             <TicketBoard ventureId={v.id} tickets={board.tickets} canAdmin={canAdmin} />
           </div>
         )}

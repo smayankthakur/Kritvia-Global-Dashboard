@@ -110,6 +110,11 @@ async def fire_automations(ctx: dict) -> int:
         n += await skills.fire_due(ctx["services"])              # skills on a schedule, and event skills' checks
     except Exception:  # noqa: BLE001
         log.exception("skills didn't start")
+    try:
+        from kritvia_api.services import team
+        n += await team.fire_due(ctx["services"])                # team leads' check-ins
+    except Exception:  # noqa: BLE001
+        log.exception("team check-ins didn't start")
     return n
 
 

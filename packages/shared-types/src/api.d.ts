@@ -1834,6 +1834,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Templates */
+        get: operations["list_templates_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tiers": {
         parameters: {
             query?: never;
@@ -4446,6 +4463,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Team */
+        get: operations["get_team_ventures__venture_id__team_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/team/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reports */
+        get: operations["reports_ventures__venture_id__team_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/team/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Lead */
+        put: operations["put_lead_ventures__venture_id__team__role__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/team/{role}/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check In Now */
+        post: operations["check_in_now_ventures__venture_id__team__role__check_in_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/teams": {
         parameters: {
             query?: never;
@@ -4457,6 +4542,23 @@ export interface paths {
         get: operations["venture_teams_ventures__venture_id__teams_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/templates/{key}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply Template */
+        post: operations["apply_template_ventures__venture_id__templates__key__apply_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4985,6 +5087,15 @@ export interface components {
             monthly_tokens?: number | null;
             /** Role */
             role?: ("front_desk" | "sales" | "accounts" | "ops") | null;
+        };
+        /** AgentTeamOut */
+        AgentTeamOut: {
+            /** Can Admin */
+            can_admin: boolean;
+            /** Can Check In */
+            can_check_in: boolean;
+            /** Leads */
+            leads: components["schemas"]["TeamLeadOut"][];
         };
         /** AiSetupOut */
         AiSetupOut: {
@@ -10974,6 +11085,63 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** TeamLeadIn */
+        TeamLeadIn: {
+            /**
+             * At Time
+             * @default 09:30
+             */
+            at_time: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Goal */
+            goal: string;
+            /** Monthly Tokens */
+            monthly_tokens?: number | null;
+            /** Weekdays */
+            weekdays?: number[];
+        };
+        /** TeamLeadOut */
+        TeamLeadOut: {
+            /** Agents */
+            agents: string[];
+            /** At Time */
+            at_time: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Goal */
+            goal: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Latest Report */
+            latest_report: string | null;
+            /** Latest Report At */
+            latest_report_at: string | null;
+            /** Monthly Tokens */
+            monthly_tokens: number | null;
+            /** Next Run At */
+            next_run_at: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "front_desk" | "sales" | "accounts" | "ops";
+            /** Set Up */
+            set_up: boolean;
+            /** Title */
+            title: string;
+            /** Used Tokens */
+            used_tokens: number;
+            /** Weekdays */
+            weekdays: number[];
+            /** When */
+            when: string;
+        };
         /** TeamMember */
         TeamMember: {
             /** Email */
@@ -11037,6 +11205,38 @@ export interface components {
              */
             user_id: string;
         };
+        /** TeamReportOut */
+        TeamReportOut: {
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "front_desk" | "sales" | "accounts" | "ops";
+            /** Run Id */
+            run_id: string | null;
+            /** Title */
+            title: string;
+        };
+        /** TeamRunOut */
+        TeamRunOut: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+        };
         /** TeamsOut */
         TeamsOut: {
             /** Can Edit */
@@ -11084,6 +11284,21 @@ export interface components {
              */
             link: string;
         };
+        /** TemplateAppliedOut */
+        TemplateAppliedOut: {
+            /** Agents */
+            agents: string[];
+            /** Automations */
+            automations: string[];
+            /** Leads */
+            leads: string[];
+            /** Notes */
+            notes: string[];
+            /** Skills */
+            skills: string[];
+            /** Skipped */
+            skipped: string[];
+        };
         /** TemplateIn */
         TemplateIn: {
             /** Body */
@@ -11109,6 +11324,25 @@ export interface components {
              * @enum {string}
              */
             language: "en" | "en_US" | "en_GB" | "hi";
+        };
+        /** TemplateKitOut */
+        TemplateKitOut: {
+            /** Agents */
+            agents: string[];
+            /** Automations */
+            automations: string[];
+            /** Description */
+            description: string;
+            /** Key */
+            key: string;
+            /** Kind */
+            kind: string;
+            /** Leads */
+            leads: string[];
+            /** Name */
+            name: string;
+            /** Skills */
+            skills: string[];
         };
         /** TemplateOut */
         TemplateOut: {
@@ -15899,6 +16133,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PilotsOut"];
+                };
+            };
+        };
+    };
+    list_templates_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateKitOut"][];
                 };
             };
         };
@@ -22127,6 +22381,138 @@ export interface operations {
             };
         };
     };
+    get_team_ventures__venture_id__team_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTeamOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reports_ventures__venture_id__team_reports_get: {
+        parameters: {
+            query?: {
+                role?: ("front_desk" | "sales" | "accounts" | "ops") | null;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamReportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_lead_ventures__venture_id__team__role__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                role: "front_desk" | "sales" | "accounts" | "ops";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamLeadIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamLeadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_in_now_ventures__venture_id__team__role__check_in_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                role: "front_desk" | "sales" | "accounts" | "ops";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     venture_teams_ventures__venture_id__teams_get: {
         parameters: {
             query?: never;
@@ -22145,6 +22531,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamBrief"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_template_ventures__venture_id__templates__key__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateAppliedOut"];
                 };
             };
             /** @description Validation Error */

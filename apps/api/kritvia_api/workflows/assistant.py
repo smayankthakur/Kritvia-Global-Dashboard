@@ -44,6 +44,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
                      "show": "open (default), done or all"},
     "approvals.waiting": {},
     "indiamart.enquiries": {},
+    "team.handoff": {"to": "front_desk, sales, accounts or ops", "note": "what that lead should do, with the details"},
     "invoices.search": {"show": "unpaid (default), overdue or paid", "customer": "optional: part of a customer's name"},
     "shipments.search": {"query": "optional: file number, buyer/supplier/client, reference, BL/AWB, container or customs no.",
                          "show": "open (default) or all"},
@@ -69,6 +70,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
 REQUIRED: dict[str, tuple[str, ...]] = {
     "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "shipments.search": (), "crm.update_lead": ("lead_id",),
     "business.numbers": (), "tasks.search": (), "approvals.waiting": (), "indiamart.enquiries": (),
+    "team.handoff": ("to", "note"),
     "tasks.create": ("title",), "leads.create": ("name",),
     "gmail.send": ("to", "subject", "body"), "whatsapp.send": ("to", "body"),
     "whatsapp.templates": (), "whatsapp.template": ("to", "template"),
@@ -299,7 +301,15 @@ async def _learn(ctx: RunContext, state: dict, pending: dict, *, final: dict | N
 
 
 async def _reply_back(ctx: RunContext, state: dict, answer: str) -> None:
-    """A request made from Telegram or WhatsApp (the front door) gets its answer there too."""
+    """A request made from Telegram or WhatsApp (the front door) gets its answer there too; a team lead's
+    check-in becomes its report."""
+    if (state.get("input") or {}).get("team"):
+        from kritvia_api.services import team
+        try:
+            await team.report(ctx, state, answer)
+        except Exception:  # noqa: BLE001 - a report that can't be kept never fails the run
+            import logging
+            logging.getLogger(__name__).exception("team report failed")
     target = (state.get("input") or {}).get("reply_to")
     if isinstance(target, dict):
         from kritvia_api.services import front_door

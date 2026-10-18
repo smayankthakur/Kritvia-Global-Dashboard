@@ -190,6 +190,32 @@
         "title": "AgentIn",
         "type": "object"
       },
+      "AgentTeamOut": {
+        "properties": {
+          "can_admin": {
+            "title": "Can Admin",
+            "type": "boolean"
+          },
+          "can_check_in": {
+            "title": "Can Check In",
+            "type": "boolean"
+          },
+          "leads": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLeadOut"
+            },
+            "title": "Leads",
+            "type": "array"
+          }
+        },
+        "required": [
+          "leads",
+          "can_admin",
+          "can_check_in"
+        ],
+        "title": "AgentTeamOut",
+        "type": "object"
+      },
       "AiSetupOut": {
         "properties": {
           "allow_training_models": {
@@ -16998,6 +17024,199 @@
         "title": "TeamIn",
         "type": "object"
       },
+      "TeamLeadIn": {
+        "properties": {
+          "at_time": {
+            "default": "09:30",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "title": "At Time",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "goal": {
+            "maxLength": 600,
+            "minLength": 5,
+            "title": "Goal",
+            "type": "string"
+          },
+          "monthly_tokens": {
+            "anyOf": [
+              {
+                "maximum": 100000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Tokens"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "goal"
+        ],
+        "title": "TeamLeadIn",
+        "type": "object"
+      },
+      "TeamLeadOut": {
+        "properties": {
+          "agents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "at_time": {
+            "title": "At Time",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "goal": {
+            "title": "Goal",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "latest_report": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Report"
+          },
+          "latest_report_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Report At"
+          },
+          "monthly_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Tokens"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "role": {
+            "enum": [
+              "front_desk",
+              "sales",
+              "accounts",
+              "ops"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "set_up": {
+            "title": "Set Up",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "used_tokens": {
+            "title": "Used Tokens",
+            "type": "integer"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          },
+          "when": {
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "title",
+          "goal",
+          "set_up",
+          "enabled",
+          "weekdays",
+          "at_time",
+          "when",
+          "monthly_tokens",
+          "used_tokens",
+          "agents",
+          "next_run_at",
+          "last_run_at",
+          "last_error",
+          "latest_report",
+          "latest_report_at"
+        ],
+        "title": "TeamLeadOut",
+        "type": "object"
+      },
       "TeamMember": {
         "properties": {
           "email": {
@@ -17130,6 +17349,74 @@
         "title": "TeamPerson",
         "type": "object"
       },
+      "TeamReportOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "front_desk",
+              "sales",
+              "accounts",
+              "ops"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "title",
+          "body",
+          "run_id",
+          "created_at"
+        ],
+        "title": "TeamReportOut",
+        "type": "object"
+      },
+      "TeamRunOut": {
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "TeamRunOut",
+        "type": "object"
+      },
       "TeamsOut": {
         "properties": {
           "can_edit": {
@@ -17226,6 +17513,62 @@
         "title": "TelegramLinkOut",
         "type": "object"
       },
+      "TemplateAppliedOut": {
+        "properties": {
+          "agents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "automations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Automations",
+            "type": "array"
+          },
+          "leads": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Leads",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agents",
+          "automations",
+          "skills",
+          "leads",
+          "skipped",
+          "notes"
+        ],
+        "title": "TemplateAppliedOut",
+        "type": "object"
+      },
       "TemplateIn": {
         "properties": {
           "body": {
@@ -17276,6 +17619,66 @@
           "body"
         ],
         "title": "TemplateIn",
+        "type": "object"
+      },
+      "TemplateKitOut": {
+        "properties": {
+          "agents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "automations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Automations",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "leads": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Leads",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "description",
+          "kind",
+          "agents",
+          "automations",
+          "skills",
+          "leads"
+        ],
+        "title": "TemplateKitOut",
         "type": "object"
       },
       "TemplateOut": {
@@ -25631,6 +26034,31 @@
         "summary": "Pilots",
         "tags": [
           "first-win"
+        ]
+      }
+    },
+    "/templates": {
+      "get": {
+        "operationId": "list_templates_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateKitOut"
+                  },
+                  "title": "Response List Templates Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Templates",
+        "tags": [
+          "team"
         ]
       }
     },
@@ -36859,6 +37287,264 @@
         ]
       }
     },
+    "/ventures/{venture_id}/team": {
+      "get": {
+        "operationId": "get_team_ventures__venture_id__team_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTeamOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Team",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/team/reports": {
+      "get": {
+        "operationId": "reports_ventures__venture_id__team_reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "front_desk",
+                    "sales",
+                    "accounts",
+                    "ops"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamReportOut"
+                  },
+                  "title": "Response Reports Ventures  Venture Id  Team Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reports",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/team/{role}": {
+      "put": {
+        "operationId": "put_lead_ventures__venture_id__team__role__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "enum": [
+                "front_desk",
+                "sales",
+                "accounts",
+                "ops"
+              ],
+              "title": "Role",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamLeadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamLeadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Lead",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/team/{role}/check-in": {
+      "post": {
+        "operationId": "check_in_now_ventures__venture_id__team__role__check_in_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "enum": [
+                "front_desk",
+                "sales",
+                "accounts",
+                "ops"
+              ],
+              "title": "Role",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check In Now",
+        "tags": [
+          "team"
+        ]
+      }
+    },
     "/ventures/{venture_id}/teams": {
       "get": {
         "operationId": "venture_teams_ventures__venture_id__teams_get",
@@ -36908,6 +37594,63 @@
         "summary": "Venture Teams",
         "tags": [
           "teams"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/templates/{key}/apply": {
+      "post": {
+        "operationId": "apply_template_ventures__venture_id__templates__key__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateAppliedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Template",
+        "tags": [
+          "team"
         ]
       }
     },

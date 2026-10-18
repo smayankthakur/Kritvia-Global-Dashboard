@@ -331,4 +331,10 @@ def build_tools() -> ToolRegistry:
             {"name": r.name, "company": r.company, "email": r.email, "phone": r.phone, "status": r.status,
              "score": r.score, "came_in": r.created_at.date().isoformat()} for r in rows]}
 
+    @reg.tool("team.handoff", Capability.READ,
+              "Hand work to another lead of the business's team (front_desk, sales, accounts or ops); they start on it now")
+    async def team_handoff(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import team
+        return await team.handoff(ctx, str(p.get("to") or "").strip().lower(), str(p.get("note") or ""))
+
     return reg
