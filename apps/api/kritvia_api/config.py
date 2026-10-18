@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # Sarvam speech-to-text (Indian languages); called directly by the API, not via LiteLLM.
     sarvam_api_key: str = ""
     sarvam_base_url: str = "https://api.sarvam.ai"
+    # Speech server on this machine for phone calls (speaches: faster-whisper + Kokoro/Piper voices,
+    # OpenAI-compatible), e.g. http://whisper:8000/v1 with the compose profile "speech". Empty = not offered.
+    voice_local_url: str = ""
 
     allowed_origins: list[str] = ["http://localhost:3000"]
     public_api_url: str = "http://localhost:8000"

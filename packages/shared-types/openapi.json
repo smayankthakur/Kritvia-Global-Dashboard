@@ -6378,6 +6378,107 @@
         "title": "ExecuteOut",
         "type": "object"
       },
+      "ExotelIn": {
+        "properties": {
+          "account_sid": {
+            "maxLength": 80,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Account Sid",
+            "type": "string"
+          },
+          "api_key": {
+            "maxLength": 120,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Api Key",
+            "type": "string"
+          },
+          "api_token": {
+            "description": "checked with Exotel, stored encrypted, never shown again",
+            "maxLength": 200,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Api Token",
+            "type": "string"
+          },
+          "exophone": {
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Exophone",
+            "type": "string"
+          },
+          "region": {
+            "default": "api.in.exotel.com",
+            "enum": [
+              "api.in.exotel.com",
+              "api.exotel.com"
+            ],
+            "title": "Region",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_key",
+          "api_token",
+          "account_sid",
+          "exophone"
+        ],
+        "title": "ExotelIn",
+        "type": "object"
+      },
+      "ExotelLinkOut": {
+        "properties": {
+          "voice": {
+            "$ref": "#/components/schemas/VoiceOut"
+          },
+          "voicebot_url": {
+            "description": "paste into the Voicebot applet of your Exotel flow; shown only now",
+            "title": "Voicebot Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "voicebot_url",
+          "voice"
+        ],
+        "title": "ExotelLinkOut",
+        "type": "object"
+      },
+      "ExotelNumber": {
+        "properties": {
+          "account": {
+            "description": "the account SID's last 4 characters",
+            "title": "Account",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_url": {
+            "title": "Status Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "account",
+          "region",
+          "status",
+          "status_url"
+        ],
+        "title": "ExotelNumber",
+        "type": "object"
+      },
       "FactOut": {
         "properties": {
           "chunk_id": {
@@ -8655,49 +8756,6 @@
           "amount_minor"
         ],
         "title": "ItemOut",
-        "type": "object"
-      },
-      "KeyIn": {
-        "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "maxLength": 400,
-                "minLength": 8,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "omit to change only the model or order of a saved key",
-            "title": "Api Key"
-          },
-          "model": {
-            "maxLength": 120,
-            "minLength": 1,
-            "pattern": "^[A-Za-z0-9._:/@+-]+$",
-            "title": "Model",
-            "type": "string"
-          },
-          "position": {
-            "anyOf": [
-              {
-                "maximum": 100.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Position"
-          }
-        },
-        "required": [
-          "model"
-        ],
-        "title": "KeyIn",
         "type": "object"
       },
       "KeyOut": {
@@ -15891,6 +15949,102 @@
         "title": "SlotsOut",
         "type": "object"
       },
+      "SpeechIn": {
+        "properties": {
+          "stt_model": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "pattern": "^[A-Za-z0-9._:/-]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stt Model"
+          },
+          "stt_provider": {
+            "default": "platform",
+            "enum": [
+              "platform",
+              "sarvam",
+              "openai",
+              "deepgram",
+              "local"
+            ],
+            "title": "Stt Provider",
+            "type": "string"
+          },
+          "tts_model": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "pattern": "^[A-Za-z0-9._:/-]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Model"
+          },
+          "tts_provider": {
+            "default": "platform",
+            "enum": [
+              "platform",
+              "sarvam",
+              "openai",
+              "elevenlabs",
+              "local"
+            ],
+            "title": "Tts Provider",
+            "type": "string"
+          },
+          "tts_voice": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "pattern": "^[A-Za-z0-9._:-]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Voice"
+          },
+          "twilio_mode": {
+            "default": "gather",
+            "enum": [
+              "gather",
+              "stream"
+            ],
+            "title": "Twilio Mode",
+            "type": "string"
+          }
+        },
+        "title": "SpeechIn",
+        "type": "object"
+      },
+      "SpeechTestIn": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "SpeechTestIn",
+        "type": "object"
+      },
       "SsoCompleteIn": {
         "properties": {
           "code": {
@@ -20400,6 +20554,43 @@
         "title": "VoiceIn",
         "type": "object"
       },
+      "VoiceKeyOut": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "provider": {
+            "enum": [
+              "sarvam",
+              "openai",
+              "deepgram",
+              "elevenlabs"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "base_url",
+          "updated_at"
+        ],
+        "title": "VoiceKeyOut",
+        "type": "object"
+      },
       "VoiceNumber": {
         "properties": {
           "account": {
@@ -20504,6 +20695,16 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "exotel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExotelNumber"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "greeting": {
             "anyOf": [
               {
@@ -20519,6 +20720,14 @@
             "title": "Greeting Preview",
             "type": "string"
           },
+          "keys": {
+            "description": "speech keys saved (never shown)",
+            "items": {
+              "$ref": "#/components/schemas/VoiceKeyOut"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
           "language": {
             "enum": [
               "hi-IN",
@@ -20526,6 +20735,12 @@
             ],
             "title": "Language",
             "type": "string"
+          },
+          "local_available": {
+            "default": false,
+            "description": "the speech server on Kritvia's own machine is set up",
+            "title": "Local Available",
+            "type": "boolean"
           },
           "max_minutes": {
             "title": "Max Minutes",
@@ -20564,6 +20779,12 @@
             "title": "Plan Includes",
             "type": "boolean"
           },
+          "platform_voice": {
+            "default": false,
+            "description": "Kritvia's own voice (its speech server) is set up",
+            "title": "Platform Voice",
+            "type": "boolean"
+          },
           "registered_at": {
             "anyOf": [
               {
@@ -20576,6 +20797,29 @@
             ],
             "title": "Registered At"
           },
+          "stt_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stt Model"
+          },
+          "stt_provider": {
+            "default": "platform",
+            "enum": [
+              "platform",
+              "sarvam",
+              "openai",
+              "deepgram",
+              "local"
+            ],
+            "title": "Stt Provider",
+            "type": "string"
+          },
           "transfer_number": {
             "anyOf": [
               {
@@ -20587,6 +20831,49 @@
             ],
             "title": "Transfer Number"
           },
+          "tts_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Model"
+          },
+          "tts_provider": {
+            "default": "platform",
+            "enum": [
+              "platform",
+              "sarvam",
+              "openai",
+              "elevenlabs",
+              "local"
+            ],
+            "title": "Tts Provider",
+            "type": "string"
+          },
+          "tts_voice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Voice"
+          },
+          "twilio_mode": {
+            "default": "gather",
+            "enum": [
+              "gather",
+              "stream"
+            ],
+            "title": "Twilio Mode",
+            "type": "string"
+          },
           "voice": {
             "enum": [
               "Polly.Aditi",
@@ -20595,6 +20882,18 @@
             ],
             "title": "Voice",
             "type": "string"
+          },
+          "voice_problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "why Kritvia can't speak with these settings, if so",
+            "title": "Voice Problem"
           }
         },
         "required": [
@@ -21119,6 +21418,49 @@
         "title": "WorkflowOut",
         "type": "object"
       },
+      "kritvia_api__routers__ai_models__KeyIn": {
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "minLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "omit to change only the model or order of a saved key",
+            "title": "Api Key"
+          },
+          "model": {
+            "maxLength": 120,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:/@+-]+$",
+            "title": "Model",
+            "type": "string"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "KeyIn",
+        "type": "object"
+      },
       "kritvia_api__routers__assistant__AskIn": {
         "properties": {
           "request": {
@@ -21146,6 +21488,35 @@
           "run_id"
         ],
         "title": "RunOut",
+        "type": "object"
+      },
+      "kritvia_api__routers__calls__KeyIn": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "OpenAI-compatible server instead of api.openai.com (https only)",
+            "title": "Base Url"
+          },
+          "key": {
+            "description": "stored encrypted, never shown again",
+            "maxLength": 400,
+            "minLength": 8,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "KeyIn",
         "type": "object"
       },
       "kritvia_api__routers__calls__PlaceOut": {
@@ -23163,6 +23534,62 @@
         ]
       }
     },
+    "/hooks/voice/exotel/{connector_id}/status": {
+      "post": {
+        "description": "Exotel's status callback for a call Kritvia placed (signed link): busy / no answer / failed / done.",
+        "operationId": "exotel_status_hooks_voice_exotel__connector_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "call",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sig",
+            "required": true,
+            "schema": {
+              "title": "Sig",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exotel Status",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
     "/hooks/voice/twilio/{connector_id}/incoming": {
       "post": {
         "operationId": "twilio_incoming_hooks_voice_twilio__connector_id__incoming_post",
@@ -24126,7 +24553,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KeyIn"
+                "$ref": "#/components/schemas/kritvia_api__routers__ai_models__KeyIn"
               }
             }
           },
@@ -40425,6 +40852,294 @@
         ]
       }
     },
+    "/ventures/{venture_id}/voice/exotel": {
+      "delete": {
+        "operationId": "disconnect_exotel_ventures__venture_id__voice_exotel_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Disconnect Exotel",
+        "tags": [
+          "calls"
+        ]
+      },
+      "post": {
+        "description": "Connect the business's Exotel number (ExoPhone): calls within India. The Voicebot link is shown once.",
+        "operationId": "connect_exotel_ventures__venture_id__voice_exotel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExotelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExotelLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Exotel",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/voice/exotel/link": {
+      "post": {
+        "description": "A new Voicebot link (the old one stops working).",
+        "operationId": "new_exotel_link_ventures__venture_id__voice_exotel_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExotelLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "New Exotel Link",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/voice/keys/{provider}": {
+      "delete": {
+        "operationId": "delete_key_ventures__venture_id__voice_keys__provider__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "sarvam",
+                "openai",
+                "deepgram",
+                "elevenlabs"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Key",
+        "tags": [
+          "calls"
+        ]
+      },
+      "put": {
+        "operationId": "put_key_ventures__venture_id__voice_keys__provider__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "sarvam",
+                "openai",
+                "deepgram",
+                "elevenlabs"
+              ],
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/kritvia_api__routers__calls__KeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Key",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
     "/ventures/{venture_id}/voice/outbound": {
       "put": {
         "operationId": "put_outbound_ventures__venture_id__voice_outbound_put",
@@ -40478,6 +41193,117 @@
           }
         ],
         "summary": "Put Outbound",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/voice/speech": {
+      "put": {
+        "description": "Whose speech-to-text and voice calls use: Kritvia's, your own keys, or the speech server on Kritvia's machine.",
+        "operationId": "put_speech_ventures__venture_id__voice_speech_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeechIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Speech",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/voice/speech/test": {
+      "post": {
+        "description": "Hear the voice calls use (a short WAV), to check the provider and key.",
+        "operationId": "test_voice_ventures__venture_id__voice_speech_test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeechTestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Voice",
         "tags": [
           "calls"
         ]

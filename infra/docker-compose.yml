@@ -180,8 +180,8 @@ services:
     restart: "no"
     network_mode: none
 
-  # Local speech-to-text for sensitive audio (tier 'speech' falls back to it).
-  # Verify the arm64 tag before use.
+  # Local speech-to-text for sensitive audio (tier 'speech' falls back to it), and Kritvia's own voice for
+  # phone calls (Kokoro/Piper; set VOICE_LOCAL_URL=http://whisper:8000/v1). Verify the arm64 tag before use.
   whisper:
     logging: *logging
     profiles: ["speech"]

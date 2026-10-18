@@ -62,16 +62,81 @@ Rules (enforced when the call is placed, not only by the model):
   in `connector_tokens`), `private.voice_principal`.
 - `services/twilio_voice.py` (signatures, TwiML, REST), `services/voice_calls.py` (the call: greeting, turns,
   finish, place), `workflows/voice_call.py` (approval → dial), tool `voice.call`, `routers/calls.py`.
-- Web: `app/(app)/v/[ventureId]/calls/page.tsx`, `components/calls/calls.tsx`; the approval card shows calls.
+- Web: `app/(app)/v/[ventureId]/calls/page.tsx`, `components/calls/calls.tsx`, `components/calls/speech.tsx`; the
+  approval card shows calls.
+- Patch 0081: migration 0058 (`exotel_voice`, `voice_keys`, speech settings, `private.exotel_principal`),
+  `services/voice_media.py` (mu-law, resampling, WAV, turn detection), `services/voice_speech.py` (BYOK STT/TTS),
+  `services/voice_stream.py` (live calls over media streams), `services/exotel.py`, WebSockets
+  `/hooks/voice/stream/exotel/<id>` and `/hooks/voice/stream/twilio/<id>`, `/hooks/voice/exotel/<id>/status`.
 
-## Owner to do before real calls
+## Calls within India: Exotel (patch 0081)
 
-- A Twilio account with an Indian number (Twilio's regulatory bundle for India) or another number that can reach
-  Indian callers; put the Account SID and auth token in the Calls page yourself.
-- For calling customers: register the business on a DLT platform (Jio, Airtel, Vi or BSNL) and get a 160-series or
-  registered caller id with Twilio; then switch outbound calls on.
-- Privacy policy and Terms: phone calls (caller number, what was said, summaries; AI disclosure; do-not-call list)
-  — wording is the owner's decision.
+Twilio can't carry calls within India (its India guidelines: domestic calling isn't supported, and calls to
+India must come from non-Indian numbers). Indian businesses use an **Exotel** number (ExoPhone) instead:
+
+- **Connect:** Calls → Phone settings → Indian number: API key, API token (checked with Exotel, stored
+  encrypted), account SID, the ExoPhone and the region (India `api.in.exotel.com`, or Singapore). Kritvia shows a
+  **Voicebot link** once (`wss://…/hooks/voice/stream/exotel/<id>?k=<secret>&sample-rate=16000`); only its hash is
+  kept, and "New Voicebot link" replaces it.
+- **Exotel flow** (App Bazaar): Voicebot applet (paste the link, bidirectional) → Hangup applet; set the ExoPhone's
+  flow to it.
+- **On a call** Kritvia listens and speaks itself (services/voice_stream.py): the caller's audio arrives as 16-bit PCM
+  (8 or 16 kHz, or mu-law, read from the start message), a turn ends after 0.7 s of quiet, speech-to-text, the same
+  call brain as before, text-to-speech, audio back in chunks of 3,200+ bytes in multiples of 320, a "mark" to know
+  when it finished playing, "clear" when the caller talks over it (barge-in), 8 s of silence counts as a silence.
+  Putting callers through isn't offered on Exotel yet (it takes a message instead).
+- **Outbound** (after a yes, same rules): `POST /v1/Accounts/<sid>/Calls/connect` with `StreamUrl` (a link signed for
+  that one call) and `StreamType=bidirectional`; the status callback (signed too) records busy, no answer or failed.
+  When both are connected, an Exotel number is used first.
+
+## Voice and speech, with your own keys (BYOK)
+
+Calls → Phone settings → Voice and speech. Used on Exotel, and on Twilio when its mode is "Kritvia's voice" (Media
+Streams: `<Connect><Stream>` with the call's signed parameters; Twilio's own Polly voices remain the default and the
+fallback when no voice is set up).
+
+| | Speech-to-text | Voice |
+|---|---|---|
+| Kritvia's (`platform`) | Groq Whisper, then the server's own Whisper; never a provider whose terms allow training | the speech server on Kritvia's machine |
+| Your Sarvam key | saaras/saarika (Indian languages) | Bulbul (`anushka` by default; any Bulbul speaker) |
+| Your OpenAI key, or any OpenAI-compatible server (e.g. Groq) | `gpt-4o-mini-transcribe` by default | `gpt-4o-mini-tts`, voice `marin` |
+| Your Deepgram key | nova-3, `language=multi` for Hindi-English | — |
+| Your ElevenLabs key | — | `eleven_flash_v2_5`, any voice id |
+| Speech server on Kritvia's machine (`local`) | faster-whisper (speaches) | Kokoro / Piper (speaches), `hf_alpha` Hindi voice by default |
+
+Keys are stored encrypted (`voice_keys`) and never shown again; an OpenAI-compatible server must be a public
+https address. "Hear it" plays the chosen voice. Only the text of what was said is kept, never audio. The LLM that
+decides what to say follows the organisation's AI models page (its own keys there too).
+
+## Kritvia's own speech system (works anywhere)
+
+The speech server runs on Kritvia's server (compose profile `speech`, service `whisper` = speaches: faster-whisper
+for hearing and Kokoro/Piper for speaking, OpenAI-compatible). With it, calls in India (Exotel) and anywhere else
+(Twilio Media Streams) need no outside speech provider at all. Runbook: "Local speech for phone calls".
+
+## Owner steps before real calls
+
+**Calls within India (Exotel)**
+1. Sign up at exotel.com with Sitelytc's KYC (company PAN, GST certificate, certificate of incorporation, address
+   proof, an authorised signatory's ID); buy an ExoPhone (a landline-style virtual number) and a plan with the
+   Voicebot / AgentStream applet enabled (ask Exotel sales to switch it on).
+2. Developer settings → API key and token; account SID. Enter them on the Calls page yourself (Kritvia never sees
+   or types them for you).
+3. Build the flow (Voicebot → Hangup) with the link Kritvia shows, and assign it to the ExoPhone.
+4. Choose the voice (your Sarvam key is the best fit for Hindi; or the local speech server), "Hear it", switch
+   answering on, then call the number.
+
+**Calling customers (TRAI)**
+5. Register Sitelytc as a Principal Entity on a DLT portal (Jio, Airtel, Vi or BSNL; GST certificate, PAN and
+   business registration documents; approval usually takes a few working days). Keep the Entity ID.
+6. Use a registered caller id for service calls. Banks, insurers, stockbrokers and other RBI/SEBI/IRDAI/PFRDA
+   entities must use the 1600/160 series; for other businesses, ask Exotel which registered number to use. Never
+   promotional calls from Kritvia (those need the 140 series, DND scrubbing and opt-in consent).
+7. Calls → Calling customers: enter the Entity ID, the caller-id type, confirm, switch on.
+
+**Numbers outside India (Twilio)**
+8. A Twilio account with a number in that country; enter the Account SID and auth token on the Calls page. Twilio's
+   Polly voices work at once; "Kritvia's voice" uses the settings above.
 
 ## Credits
 

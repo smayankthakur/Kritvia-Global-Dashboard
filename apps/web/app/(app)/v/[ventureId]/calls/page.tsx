@@ -29,11 +29,11 @@ export default function CallsPage() {
               </Notice>
             ) : s.answering ? (
               <Notice tone="success" title="Answering">
-                Calls to {s.number?.number} are answered by Kritvia.
+                Calls to {[s.exotel?.status === "active" ? s.exotel.number : null, s.number?.status === "active" ? s.number.number : null].filter(Boolean).join(" and ")} are answered by Kritvia.
               </Notice>
             ) : (
               <Notice tone="info" title="Not answering calls yet">
-                {s.number ? "Switch answering on below." : "Connect your Twilio number below, then switch answering on."}
+                {s.number || s.exotel ? "Switch answering on below." : "Connect your number below (Exotel for India, Twilio elsewhere), then switch answering on."}
               </Notice>
             )}
             {canWrite ? <TestCall ventureId={v.id} /> : null}

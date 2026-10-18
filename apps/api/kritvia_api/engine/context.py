@@ -40,6 +40,7 @@ class Services:
     indiamart: Any = None          # IndiaMART Lead Manager Pull API (enquiries)
     browser: Any = None            # the locked-down browser (services/browser) for the browser agent
     twilio: Any = None             # businesses' own Twilio numbers (AI phone calls)
+    exotel: Any = None             # businesses' own Exotel numbers (AI phone calls within India)
     worker_id: str = field(default_factory=lambda: f"w-{uuid.uuid4().hex[:8]}")
 
 

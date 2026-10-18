@@ -97,6 +97,13 @@ def transfer(say: str, number: str, v: Voice, *, caller_id: str | None = None, a
             f"{_say(say, v)}<Dial timeout=\"25\"{cid}{act}><Number>{escape(number)}</Number></Dial></Response>")
 
 
+def stream(url: str, params: dict[str, str]) -> str:
+    """Hand the call to Kritvia's own speech over a bidirectional Media Stream; hang up when it closes."""
+    ps = "".join(f"<Parameter name={quoteattr(k)} value={quoteattr(v)}/>" for k, v in params.items())
+    return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response>"
+            f"<Connect><Stream url={quoteattr(url)}>{ps}</Stream></Connect><Hangup/></Response>")
+
+
 def reject() -> str:
     return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Reject reason=\"busy\"/></Response>"
 
@@ -142,6 +149,10 @@ class TwilioClient:
         await self._call(sid, token, "POST", f"/IncomingPhoneNumbers/{number_sid}.json",
                          data={"VoiceUrl": voice_url, "VoiceMethod": "POST", "StatusCallback": status_url,
                                "StatusCallbackMethod": "POST"})
+
+    async def update_call(self, sid: str, token: str, call_sid: str, twiml: str) -> None:
+        """Give a live call new TwiML (put a streamed call through to a person)."""
+        await self._call(sid, token, "POST", f"/Calls/{call_sid}.json", data={"Twiml": twiml})
 
     async def place_call(self, sid: str, token: str, *, to: str, from_: str, url: str, status_url: str) -> str:
         out = await self._call(sid, token, "POST", "/Calls.json", data={

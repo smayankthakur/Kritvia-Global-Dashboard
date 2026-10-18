@@ -94,6 +94,7 @@ class Settings:
     dlt_entity_id: str | None = None
     caller_id_kind: str | None = None
     registered_at: datetime | None = None
+    twilio_mode: str = "gather"
 
 
 async def settings_for(conn, venture_id: uuid.UUID) -> Settings:
@@ -304,7 +305,8 @@ async def opening_line(svc, p: Principal, call_id: uuid.UUID) -> tuple[str, Sett
 
 
 async def turn(svc, p: Principal, call_id: uuid.UUID, *, heard: str, digits: str | None = None,
-               dial_status: str | None = None, now: datetime | None = None) -> tuple[Step, Settings]:
+               dial_status: str | None = None, now: datetime | None = None,
+               transfer_ok: bool = True) -> tuple[Step, Settings]:
     """One reply in a call. Saves what was said before answering, so nothing the caller said is lost."""
     now = now or datetime.now(UTC)
     actor = Actor(svc, p)
@@ -318,7 +320,8 @@ async def turn(svc, p: Principal, call_id: uuid.UUID, *, heard: str, digits: str
         if row.ended_at is not None or row.outcome in ("opted_out", "no_input", "too_long", "ended"):
             return Step("goodbye", line(s, "bye"), outcome=row.outcome), s
         started = datetime.fromisoformat(state.get("started") or now.isoformat())
-        can_transfer = bool(s.transfer_number) and open_now(s, tz, now) and row.direction == "inbound"
+        can_transfer = (transfer_ok and bool(s.transfer_number) and open_now(s, tz, now)
+                        and row.direction == "inbound")
 
         async def done(step: Step, **cols: Any) -> tuple[Step, Settings]:
             state["turns"].append({"who": "agent", "text": step.say})
@@ -475,6 +478,14 @@ class CallRefused(ValueError):
     pass
 
 
+def stream_sig(connector_id: uuid.UUID, call_id: uuid.UUID | str) -> str:
+    """Signs a call's media-stream link (Kritvia's own secret), so only the call it was made for can use it."""
+    import hmac
+    from kritvia_api.config import get_settings
+    key = hashlib.sha256(("voice-stream:" + get_settings().jwt_secret).encode()).digest()
+    return hmac.new(key, f"{connector_id}:{call_id}".encode(), hashlib.sha256).hexdigest()[:40]
+
+
 async def place(svc, p: Principal, *, phone: str, callee: str | None, purpose: str, opening: str | None,
                 created_by: uuid.UUID | None, approval_id: uuid.UUID | None, now: datetime | None = None) -> dict[str, Any]:
     """An approved outbound call: dialled for real when the business is set up for it, otherwise a test call."""
@@ -494,10 +505,13 @@ async def place(svc, p: Principal, *, phone: str, callee: str | None, purpose: s
         if (await conn.execute(text("SELECT 1 FROM voice_dnd WHERE venture_id = :v AND phone_hash = :h"),
                                {"v": p.venture_id, "h": h})).first():
             raise CallRefused("this number asked not to be called, so Kritvia won't call it")
+        # An Indian number (Exotel) first: Twilio can't call Indian numbers from an Indian number.
         con = (await conn.execute(text(
-            "SELECT c.id, c.meta ->> 'account_sid' AS account_sid, c.account_email, t.secret_enc FROM connectors c"
+            "SELECT c.id, c.provider, c.meta ->> 'account_sid' AS account_sid, c.meta ->> 'api_key' AS api_key,"
+            " c.meta ->> 'subdomain' AS subdomain, c.account_email, t.secret_enc FROM connectors c"
             " LEFT JOIN connector_tokens t ON t.connector_id = c.id"
-            " WHERE c.venture_id = :v AND c.provider = 'twilio_voice' AND c.status = 'active'"), {"v": p.venture_id})).first()
+            " WHERE c.venture_id = :v AND c.provider IN ('exotel_voice', 'twilio_voice') AND c.status = 'active'"
+            " ORDER BY c.provider = 'exotel_voice' DESC LIMIT 1"), {"v": p.venture_id})).first()
         live = bool(s.outbound_enabled and s.enabled and con is not None and con.secret_enc is not None)
         if live:
             if not calling_hours(tz, now):
@@ -518,11 +532,20 @@ async def place(svc, p: Principal, *, phone: str, callee: str | None, purpose: s
         return {"placed": False, "test": True, "call_id": str(call_id),
                 "note": "Test call: nothing was dialled (outbound calling isn't switched on). Answer it on the Calls page."}
     base = get_settings().public_api_url.rstrip("/")
+    from kritvia_api.services import exotel as ex
     try:
-        sid = await svc.twilio.place_call(con.account_sid, token, to=number, from_=con.account_email,
-                                          url=f"{base}/hooks/voice/twilio/{con.id}/outgoing?call={call_id}",
-                                          status_url=f"{base}/hooks/voice/twilio/{con.id}/status")
-    except tw.TwilioError as exc:
+        if con.provider == "exotel_voice":
+            sig = stream_sig(con.id, call_id)
+            wss = base.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
+            sid = await svc.exotel.place_call(
+                ex.Account(con.api_key, token, con.account_sid, con.subdomain), to=number, caller_id=con.account_email,
+                stream_url=f"{wss}/hooks/voice/stream/exotel/{con.id}?call={call_id}&sig={sig}",
+                status_url=f"{base}/hooks/voice/exotel/{con.id}/status?call={call_id}&sig={sig}", custom=str(call_id))
+        else:
+            sid = await svc.twilio.place_call(con.account_sid, token, to=number, from_=con.account_email,
+                                              url=f"{base}/hooks/voice/twilio/{con.id}/outgoing?call={call_id}",
+                                              status_url=f"{base}/hooks/voice/twilio/{con.id}/status")
+    except (tw.TwilioError, ex.ExotelError) as exc:
         async with actor.tx() as conn:
             await conn.execute(text("UPDATE calls SET status = 'failed', outcome = 'ended', ended_at = now(),"
                                     " summary_enc = NULL WHERE id = :id"), {"id": call_id})

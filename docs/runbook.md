@@ -288,3 +288,15 @@ off until it has a token:
 
 It uses at most 1.5 GB of memory and 1.5 CPUs, one job at a time (others wait up to 45 s, then are told to try
 again). The browser agent comes with Growth, Scale and Enterprise.
+
+## Local speech for phone calls
+
+Kritvia's own speech system for calls (no outside speech provider; works with Exotel in India and Twilio elsewhere):
+
+1. `cd /opt/kritvia/infra && sudo docker compose --profile speech up -d whisper` (speaches: faster-whisper +
+   Kokoro/Piper; first start downloads models, a few GB; check the arm64 image tag first).
+2. Download the models once (speaches API; see its docs if a name changed):
+   `sudo docker compose exec api python -c "import httpx; [print(m, httpx.post('http://whisper:8000/v1/models/' + m, timeout=900).status_code) for m in ('Systran/faster-whisper-small', 'speaches-ai/Kokoro-82M-v1.0-ONNX')]"`
+3. Add `VOICE_LOCAL_URL=http://whisper:8000/v1` to `/opt/kritvia/.env` and `sudo docker compose up -d api worker`.
+4. Calls → Phone settings → Voice and speech: "Speech server on Kritvia's machine" for both, then "Hear it".
+   Memory: about 1-2 GB while in use; on the 8 GB server keep calls few at a time.

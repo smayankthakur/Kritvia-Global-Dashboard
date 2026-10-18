@@ -24,7 +24,10 @@ describe("legal text", () => {
   });
 
   it("names training providers only as an opt-in, never for Google data or sensitive records", () => {
-    expect(PRIVACY_MD).not.toMatch(/Sarvam/);
+    // Sarvam's terms allow training: it appears only as a speech provider a business connects with its own key.
+    expect(PRIVACY_MD).not.toMatch(/\| Sarvam/);
+    expect(PRIVACY_MD.match(/Sarvam/g) ?? []).toHaveLength(1);
+    expect(PRIVACY_MD).toMatch(/connects with its own key \(Sarvam, OpenAI/);
     expect(PRIVACY_MD).toMatch(/Groq/);
     expect(PRIVACY_MD).toMatch(/Only if a business opts in: Google \(Gemini free tier\), OpenRouter free models, Mistral/);
     expect(PRIVACY_MD).toMatch(/never to an AI model whose provider may train on it/);

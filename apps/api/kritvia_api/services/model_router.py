@@ -548,7 +548,7 @@ HintsFor = Callable[[str], list[str]]
 async def transcribe(router: ModelRouter, ctx: CallContext, audio: bytes, filename: str, *,
                      sensitive: bool = False, language: str | None = None,
                      tier: str = "speech", engine: str = "auto",
-                     hints_for: HintsFor | None = None) -> Transcript:
+                     hints_for: HintsFor | None = None, no_training: bool = False) -> Transcript:
     """Speech-to-text. Segments carry start/end seconds so extracted facts can cite timestamps.
 
     `hints_for(deployment)` returns spelling hints (vocabulary, names) allowed for that
@@ -556,6 +556,8 @@ async def transcribe(router: ModelRouter, ctx: CallContext, audio: bytes, filena
     """
     lang = None if language in (None, "", "auto") else language
     candidates = speech_candidates(router.config, tier, sensitive=sensitive, engine=engine, language=lang)
+    if no_training:          # e.g. callers' voices: never to a provider whose terms allow training
+        candidates = [d for d in candidates if router.config.policies.get(d) != "may_train"]
     if not candidates and engine == "local":
         await router._meter(ctx, tier=tier, status="blocked", error="no local speech deployment")
         raise PolicyViolation(f"tier '{tier}': no local speech deployment is configured")

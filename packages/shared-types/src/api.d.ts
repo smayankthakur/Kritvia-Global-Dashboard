@@ -640,6 +640,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/voice/exotel/{connector_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exotel Status
+         * @description Exotel's status callback for a call Kritvia placed (signed link): busy / no answer / failed / done.
+         */
+        post: operations["exotel_status_hooks_voice_exotel__connector_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/voice/twilio/{connector_id}/incoming": {
         parameters: {
             query?: never;
@@ -4995,6 +5015,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/voice/exotel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Exotel
+         * @description Connect the business's Exotel number (ExoPhone): calls within India. The Voicebot link is shown once.
+         */
+        post: operations["connect_exotel_ventures__venture_id__voice_exotel_post"];
+        /** Disconnect Exotel */
+        delete: operations["disconnect_exotel_ventures__venture_id__voice_exotel_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/voice/exotel/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New Exotel Link
+         * @description A new Voicebot link (the old one stops working).
+         */
+        post: operations["new_exotel_link_ventures__venture_id__voice_exotel_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/voice/keys/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Key */
+        put: operations["put_key_ventures__venture_id__voice_keys__provider__put"];
+        post?: never;
+        /** Delete Key */
+        delete: operations["delete_key_ventures__venture_id__voice_keys__provider__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/voice/outbound": {
         parameters: {
             query?: never;
@@ -5006,6 +5085,46 @@ export interface paths {
         /** Put Outbound */
         put: operations["put_outbound_ventures__venture_id__voice_outbound_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/voice/speech": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Speech
+         * @description Whose speech-to-text and voice calls use: Kritvia's, your own keys, or the speech server on Kritvia's machine.
+         */
+        put: operations["put_speech_ventures__venture_id__voice_speech_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/voice/speech/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Voice
+         * @description Hear the voice calls use (a short WAV), to check the provider and key.
+         */
+        post: operations["test_voice_ventures__venture_id__voice_speech_test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7687,6 +7806,51 @@ export interface components {
             } | null;
             request: components["schemas"]["DPDPOut"];
         };
+        /** ExotelIn */
+        ExotelIn: {
+            /** Account Sid */
+            account_sid: string;
+            /** Api Key */
+            api_key: string;
+            /**
+             * Api Token
+             * @description checked with Exotel, stored encrypted, never shown again
+             */
+            api_token: string;
+            /** Exophone */
+            exophone: string;
+            /**
+             * Region
+             * @default api.in.exotel.com
+             * @enum {string}
+             */
+            region: "api.in.exotel.com" | "api.exotel.com";
+        };
+        /** ExotelLinkOut */
+        ExotelLinkOut: {
+            voice: components["schemas"]["VoiceOut"];
+            /**
+             * Voicebot Url
+             * @description paste into the Voicebot applet of your Exotel flow; shown only now
+             */
+            voicebot_url: string;
+        };
+        /** ExotelNumber */
+        ExotelNumber: {
+            /**
+             * Account
+             * @description the account SID's last 4 characters
+             */
+            account: string;
+            /** Number */
+            number: string;
+            /** Region */
+            region: string;
+            /** Status */
+            status: string;
+            /** Status Url */
+            status_url: string;
+        };
         /** FactOut */
         FactOut: {
             /**
@@ -8497,18 +8661,6 @@ export interface components {
             unit?: string | null;
             /** Unit Price Minor */
             unit_price_minor: number;
-        };
-        /** KeyIn */
-        KeyIn: {
-            /**
-             * Api Key
-             * @description omit to change only the model or order of a saved key
-             */
-            api_key?: string | null;
-            /** Model */
-            model: string;
-            /** Position */
-            position?: number | null;
         };
         /** KeyOut */
         KeyOut: {
@@ -10863,6 +11015,38 @@ export interface components {
             /** Slots */
             slots: string[];
         };
+        /** SpeechIn */
+        SpeechIn: {
+            /** Stt Model */
+            stt_model?: string | null;
+            /**
+             * Stt Provider
+             * @default platform
+             * @enum {string}
+             */
+            stt_provider: "platform" | "sarvam" | "openai" | "deepgram" | "local";
+            /** Tts Model */
+            tts_model?: string | null;
+            /**
+             * Tts Provider
+             * @default platform
+             * @enum {string}
+             */
+            tts_provider: "platform" | "sarvam" | "openai" | "elevenlabs" | "local";
+            /** Tts Voice */
+            tts_voice?: string | null;
+            /**
+             * Twilio Mode
+             * @default gather
+             * @enum {string}
+             */
+            twilio_mode: "gather" | "stream";
+        };
+        /** SpeechTestIn */
+        SpeechTestIn: {
+            /** Text */
+            text?: string | null;
+        };
         /** SsoCompleteIn */
         SsoCompleteIn: {
             /** Code */
@@ -12596,6 +12780,21 @@ export interface components {
              */
             voice: "Polly.Aditi" | "Polly.Raveena" | "Polly.Kajal-Neural";
         };
+        /** VoiceKeyOut */
+        VoiceKeyOut: {
+            /** Base Url */
+            base_url: string | null;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "sarvam" | "openai" | "deepgram" | "elevenlabs";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** VoiceNumber */
         VoiceNumber: {
             /**
@@ -12636,15 +12835,27 @@ export interface components {
             dnd_count: number;
             /** Enabled */
             enabled: boolean;
+            exotel?: components["schemas"]["ExotelNumber"] | null;
             /** Greeting */
             greeting: string | null;
             /** Greeting Preview */
             greeting_preview: string;
             /**
+             * Keys
+             * @description speech keys saved (never shown)
+             */
+            keys?: components["schemas"]["VoiceKeyOut"][];
+            /**
              * Language
              * @enum {string}
              */
             language: "hi-IN" | "en-IN";
+            /**
+             * Local Available
+             * @description the speech server on Kritvia's own machine is set up
+             * @default false
+             */
+            local_available: boolean;
             /** Max Minutes */
             max_minutes: number;
             number: components["schemas"]["VoiceNumber"] | null;
@@ -12658,15 +12869,50 @@ export interface components {
             outbound_enabled: boolean;
             /** Plan Includes */
             plan_includes: boolean;
+            /**
+             * Platform Voice
+             * @description Kritvia's own voice (its speech server) is set up
+             * @default false
+             */
+            platform_voice: boolean;
             /** Registered At */
             registered_at: string | null;
+            /** Stt Model */
+            stt_model?: string | null;
+            /**
+             * Stt Provider
+             * @default platform
+             * @enum {string}
+             */
+            stt_provider: "platform" | "sarvam" | "openai" | "deepgram" | "local";
             /** Transfer Number */
             transfer_number: string | null;
+            /** Tts Model */
+            tts_model?: string | null;
+            /**
+             * Tts Provider
+             * @default platform
+             * @enum {string}
+             */
+            tts_provider: "platform" | "sarvam" | "openai" | "elevenlabs" | "local";
+            /** Tts Voice */
+            tts_voice?: string | null;
+            /**
+             * Twilio Mode
+             * @default gather
+             * @enum {string}
+             */
+            twilio_mode: "gather" | "stream";
             /**
              * Voice
              * @enum {string}
              */
             voice: "Polly.Aditi" | "Polly.Raveena" | "Polly.Kajal-Neural";
+            /**
+             * Voice Problem
+             * @description why Kritvia can't speak with these settings, if so
+             */
+            voice_problem?: string | null;
         };
         /** VoiceSettings */
         VoiceSettings: {
@@ -12911,6 +13157,18 @@ export interface components {
             /** Venture Kinds */
             venture_kinds: string[];
         };
+        /** KeyIn */
+        kritvia_api__routers__ai_models__KeyIn: {
+            /**
+             * Api Key
+             * @description omit to change only the model or order of a saved key
+             */
+            api_key?: string | null;
+            /** Model */
+            model: string;
+            /** Position */
+            position?: number | null;
+        };
         /** AskIn */
         kritvia_api__routers__assistant__AskIn: {
             /** Request */
@@ -12923,6 +13181,19 @@ export interface components {
              * Format: uuid
              */
             run_id: string;
+        };
+        /** KeyIn */
+        kritvia_api__routers__calls__KeyIn: {
+            /**
+             * Base Url
+             * @description OpenAI-compatible server instead of api.openai.com (https only)
+             */
+            base_url?: string | null;
+            /**
+             * Key
+             * @description stored encrypted, never shown again
+             */
+            key: string;
         };
         /** PlaceOut */
         kritvia_api__routers__calls__PlaceOut: {
@@ -14202,6 +14473,38 @@ export interface operations {
             };
         };
     };
+    exotel_status_hooks_voice_exotel__connector_id__status_post: {
+        parameters: {
+            query: {
+                call: string;
+                sig: string;
+            };
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     twilio_incoming_hooks_voice_twilio__connector_id__incoming_post: {
         parameters: {
             query?: never;
@@ -14820,7 +15123,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["KeyIn"];
+                "application/json": components["schemas"]["kritvia_api__routers__ai_models__KeyIn"];
             };
         };
         responses: {
@@ -24168,6 +24471,171 @@ export interface operations {
             };
         };
     };
+    connect_exotel_ventures__venture_id__voice_exotel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExotelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExotelLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_exotel_ventures__venture_id__voice_exotel_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    new_exotel_link_ventures__venture_id__voice_exotel_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExotelLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_key_ventures__venture_id__voice_keys__provider__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                provider: "sarvam" | "openai" | "deepgram" | "elevenlabs";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["kritvia_api__routers__calls__KeyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_key_ventures__venture_id__voice_keys__provider__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                provider: "sarvam" | "openai" | "deepgram" | "elevenlabs";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     put_outbound_ventures__venture_id__voice_outbound_put: {
         parameters: {
             query?: never;
@@ -24191,6 +24659,74 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VoiceOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_speech_ventures__venture_id__voice_speech_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpeechIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_voice_ventures__venture_id__voice_speech_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpeechTestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

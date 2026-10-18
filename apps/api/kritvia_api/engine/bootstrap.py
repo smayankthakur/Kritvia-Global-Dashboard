@@ -12,6 +12,7 @@ from kritvia_api.services.model_router import ModelRouter, TierConfig
 from kritvia_api.services.payments import RazorpayClient
 from kritvia_api.services.places import PlacesClient
 from kritvia_api.services.browser_agent import BrowserClient
+from kritvia_api.services.exotel import ExotelClient
 from kritvia_api.services.twilio_voice import TwilioClient
 from kritvia_api.services.sandbox import HttpSandbox, LocalSandbox
 from kritvia_api.services.slack import SlackClient
@@ -64,6 +65,7 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
         indiamart=indiamart or IndiaMartClient(),
         browser=browser or BrowserClient(s.browser_url, s.browser_token),
         twilio=twilio or TwilioClient(),
+        exotel=ExotelClient(),
     )
     if isinstance(dispatcher, InlineDispatcher):
         dispatcher.services = services

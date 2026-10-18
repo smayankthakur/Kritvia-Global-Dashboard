@@ -14,6 +14,7 @@ import { TimeField } from "@/components/ui/time-field";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
+import { ExotelSetup, SpeechSettings } from "./speech";
 
 type Voice = Schemas["VoiceOut"];
 type Call = Schemas["CallOut"];
@@ -432,12 +433,18 @@ export function VoiceSettings({ ventureId, voice }: { ventureId: string; voice: 
   const days = d.open_days ?? [];
   return (
     <Card>
-      <CardHeader title="Phone settings" description="Your own Twilio number (Kritvia never sees audio; Twilio speaks and listens), how calls are answered, and calling customers." />
+      <CardHeader
+        title="Phone settings"
+        description="Your own number (Exotel for calls within India, Twilio elsewhere), the voice Kritvia uses, how calls are answered, and calling customers."
+      />
       <div className="space-y-6 p-4">
         <section className="space-y-3" aria-labelledby="num-h">
           <h3 id="num-h" className="text-sm font-semibold">
-            Number
+            Indian number (Exotel): calls within India
           </h3>
+          <ExotelSetup ventureId={ventureId} voice={voice} />
+          <h3 className="pt-2 text-sm font-semibold">Number outside India (Twilio)</h3>
+          <p className="text-xs text-subtle">Twilio can&apos;t carry calls within India; use it for numbers in other countries.</p>
           {voice.number && voice.number.status === "active" ? (
             <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
               <p className="flex flex-wrap items-center gap-2">
@@ -458,6 +465,13 @@ export function VoiceSettings({ ventureId, voice }: { ventureId: string; voice: 
           ) : (
             <ConnectTwilio ventureId={ventureId} />
           )}
+        </section>
+
+        <section className="space-y-3" aria-labelledby="speech-h">
+          <h3 id="speech-h" className="text-sm font-semibold">
+            Voice and speech (your keys)
+          </h3>
+          <SpeechSettings ventureId={ventureId} voice={voice} />
         </section>
 
         <section className="space-y-3" aria-labelledby="ans-h">
