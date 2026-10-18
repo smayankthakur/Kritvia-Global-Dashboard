@@ -187,7 +187,9 @@ function Conversation({ ventureId, chatId, canWrite, canAdmin, onClose }: {
     void qc.invalidateQueries({ queryKey: ["whatsapp", ventureId] });
   };
   const count = detail.data?.messages.length ?? 0;
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [count]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" }); // block body: scrollIntoView() may return a Promise
+  }, [count]);
   // Opening a chat marks it read on the server; refresh the list so its unread count clears.
   const loaded = Boolean(detail.data);
   useEffect(() => {

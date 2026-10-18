@@ -65,7 +65,11 @@ export function TestCall({ ventureId }: { ventureId: string }) {
   const [aloud, setAloud] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ block: "nearest" }), [lines]);
+  // A block body: newer Chrome returns a Promise from scrollIntoView(), and an arrow that returns it would hand
+  // React a non-function "cleanup" (TypeError on the next reply).
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "nearest" });
+  }, [lines]);
   const send = useMutation({
     mutationFn: (body: Schemas["TestIn"]) =>
       unwrap(api.POST("/ventures/{venture_id}/calls/test", { params: { path: { venture_id: ventureId } }, body })),
