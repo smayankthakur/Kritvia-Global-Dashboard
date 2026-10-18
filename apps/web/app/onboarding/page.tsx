@@ -13,6 +13,7 @@ import { cn } from "@/components/ui/cn";
 import { Checkbox, Field, FormError, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { ErrorState } from "@/components/ui/states";
+import { TimeField } from "@/components/ui/time-field";
 import { ApiError, api, errorMessage, unwrap } from "@/lib/api";
 import { accessKey, meKey, useAccessQuery, type VentureKind } from "@/lib/access";
 import { agentAllowed } from "@/lib/pricing";
@@ -551,8 +552,8 @@ function SetupStep({
                       className="min-w-0 flex-1"
                     />
                     {w.name in DEFAULT_SCHEDULES ? (
-                      <Field label="Daily at (IST)" className="w-32">
-                        <Input type="time" value={st.schedule} onChange={(e) => setFlow(v.id, w.name, { schedule: e.target.value })} />
+                      <Field label="Daily at (IST)" className="w-44">
+                        <TimeField value={st.schedule} onChange={(t) => setFlow(v.id, w.name, { schedule: t })} />
                       </Field>
                     ) : null}
                   </div>

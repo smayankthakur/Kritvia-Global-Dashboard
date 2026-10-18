@@ -2,7 +2,9 @@ import { PRICE_TAX_NOTE } from "@/lib/business";
 import { ArrowRight, BookOpen, Inbox, Landmark, Lock, Mic, Network, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ApprovalPreview } from "@/components/public/approval-preview";
+import { HeroLive } from "@/components/public/hero-live";
+import { ConnectsMarquee, Reveal, RevealFallback, RevealGroup } from "@/components/public/landing-motion";
+import { Layers } from "@/components/public/layers";
 import { PublicPricing } from "@/components/public/pricing-table";
 import { PublicShell } from "@/components/public/doc-page";
 import { buttonClass } from "@/components/ui/button";
@@ -108,6 +110,7 @@ export default function WelcomePage() {
   return (
     <PublicShell wide>
       <JsonLd />
+      <RevealFallback />
       <section className="relative isolate -mx-4 -mt-10 px-4 pt-12 pb-10 sm:pt-20 sm:pb-16">
         <div className="kv-grid-bg pointer-events-none absolute inset-0 -z-10" aria-hidden />
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
@@ -133,33 +136,59 @@ export default function WelcomePage() {
             </div>
             <p className="mt-4 text-xs text-subtle">No card needed. Sign in with Google or an emailed code.</p>
           </div>
-          <ApprovalPreview className="mx-auto w-full max-w-md lg:max-w-none" />
+          <HeroLive className="mx-auto w-full max-w-md lg:max-w-none" />
         </div>
       </section>
 
+      <section aria-label="What Kritvia connects to" className="py-4">
+        <p className="mb-3 text-center text-xs font-semibold tracking-wider text-subtle uppercase">Works with what you already use</p>
+        <ConnectsMarquee />
+      </section>
+
+      <section aria-labelledby="layers" className="scroll-mt-20 py-14">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <p className="inline-flex rounded-full border border-border bg-surface-strong px-3 py-1 text-xs font-semibold tracking-wider text-accent uppercase">
+            One app, four layers
+          </p>
+          <h2 id="layers" className="mt-4 text-3xl font-bold tracking-tight text-fg sm:text-4xl">
+            Each layer feeds the <span className="kv-gradient-text">next.</span>
+          </h2>
+          <p className="mt-3 text-[15px] text-muted">
+            The inbox gives it your conversations. Memory gives it your business. Agents give it a pen. Your approval gives it the go-ahead.
+          </p>
+        </Reveal>
+        <Reveal className="mt-10" delay={0.1}>
+          <Layers />
+        </Reveal>
+      </section>
+
       <section aria-labelledby="how" className="py-12">
-        <SectionHead id="how" eyebrow="How it works" title="Up and running in minutes" />
-        <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+        <Reveal>
+          <SectionHead id="how" eyebrow="How it works" title="Up and running in minutes" />
+        </Reveal>
+        <RevealGroup as="ol" className="mt-8 grid gap-4 sm:grid-cols-3">
           {STEPS.map((st, i) => (
-            <li key={st.title} className="glass glass-sheen relative rounded-2xl border p-5">
+            <div key={st.title} className="kv-lift glass glass-sheen relative h-full rounded-2xl border p-5">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-fg">{i + 1}</span>
               <h3 className="mt-4 font-semibold text-fg">{st.title}</h3>
               <p className="mt-1 text-sm text-muted">{st.text}</p>
-            </li>
+            </div>
           ))}
-        </ol>
+        </RevealGroup>
       </section>
 
       <section aria-labelledby="agents" className="py-12">
-        <SectionHead
-          id="agents"
-          eyebrow="Agents"
-          title="Agents you can switch on today"
-          text="Pick your kind of business at sign-up; the right agents start switched on. Tell them how you work in plain language."
-        />
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <Reveal>
+          <SectionHead
+            id="agents"
+            eyebrow="Agents"
+            title="Agents you can switch on today"
+            text="Pick your kind of business at sign-up; the right agents start switched on. Tell them how you work in plain language."
+          />
+        </Reveal>
+        <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2">
           {AGENTS.map((a) => (
-            <div key={a.title} className="kv-lift glass glass-sheen group rounded-2xl border p-6">
+            <div key={a.title} className="kv-lift glass glass-sheen group h-full rounded-2xl border p-6">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent ring-1 ring-accent/15 transition-colors duration-200 group-hover:bg-accent group-hover:text-accent-fg">
                 <a.icon className="h-5 w-5" aria-hidden />
               </span>
@@ -167,12 +196,14 @@ export default function WelcomePage() {
               <p className="mt-1.5 text-sm leading-relaxed text-muted">{a.text}</p>
             </div>
           ))}
-        </div>
+        </RevealGroup>
       </section>
 
       <section aria-labelledby="platform" className="py-12">
-        <SectionHead id="platform" eyebrow="Platform" title="Built on a memory of your business" />
-        <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
+        <Reveal>
+          <SectionHead id="platform" eyebrow="Platform" title="Built on a memory of your business" />
+        </Reveal>
+        <RevealGroup className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
           {PLATFORM.map((a) => (
             <div key={a.title} className="flex gap-4">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center glass rounded-xl border text-accent">
@@ -184,19 +215,21 @@ export default function WelcomePage() {
               </div>
             </div>
           ))}
-        </div>
+        </RevealGroup>
         <p className="mt-8 glass rounded-2xl border px-4 py-3 text-sm text-muted">
           Connects to Google Workspace (Gmail, Calendar, Drive), WhatsApp Business, your website&apos;s lead form and Tally exports.
         </p>
       </section>
 
       <section aria-labelledby="pricing" className="py-12">
+        <Reveal>
         <SectionHead
           id="pricing"
           eyebrow="Pricing"
           title="Plans that grow with your business"
           text={`Cheaper than a part-time operations assistant. ${PRICE_TAX_NOTE} Cancel any time and keep the month you paid for.`}
         />
+        </Reveal>
         <div className="mt-8">
           <PublicPricing plans={PLAN_CARDS} />
         </div>
@@ -206,7 +239,7 @@ export default function WelcomePage() {
       </section>
 
       <section aria-labelledby="trust" className="py-12">
-        <div className="glass glass-sheen grid gap-8 rounded-3xl border p-6 sm:p-10 lg:grid-cols-[1fr_1.3fr]">
+        <Reveal className="glass glass-sheen grid gap-8 rounded-3xl border p-6 sm:p-10 lg:grid-cols-[1fr_1.3fr]">
           <div>
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-success-soft text-success">
               <Lock className="h-5 w-5" aria-hidden />
@@ -231,7 +264,7 @@ export default function WelcomePage() {
               </li>
             ))}
           </ul>
-        </div>
+        </Reveal>
       </section>
 
       <section className="relative isolate mt-4 mb-2 overflow-hidden rounded-3xl border border-white/10 bg-[#0b1324] px-6 py-12 text-center text-white sm:py-16">

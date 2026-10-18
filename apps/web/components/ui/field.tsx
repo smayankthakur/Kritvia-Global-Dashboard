@@ -67,7 +67,7 @@ export function Field({ label, hint, error, required, className, children, srLab
   );
 }
 
-function useFieldProps(props: { id?: string; "aria-describedby"?: string; required?: boolean }) {
+export function useFieldProps(props: { id?: string; "aria-describedby"?: string; required?: boolean }) {
   const ctx = useContext(FieldContext);
   return {
     id: props.id ?? ctx?.id,

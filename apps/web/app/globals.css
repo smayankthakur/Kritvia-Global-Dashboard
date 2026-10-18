@@ -489,6 +489,161 @@
   background-size: 16px;
 }
 
+/* Customizable select (Chrome 135+): the dropdown itself takes the theme, opens with a short
+ * fade-and-drop, the chevron turns, and the chosen option is marked. Other browsers keep the
+ * native popup with the chevron above. Semantics, keyboard and form behaviour stay native. */
+@supports (appearance: base-select) {
+  .kv-select,
+  .kv-select::picker(select) {
+    appearance: base-select;
+  }
+  .kv-select {
+    display: flex;
+    align-items: center;
+    background-image: none;
+    padding-right: 0.6rem;
+  }
+  .kv-select::picker-icon {
+    content: "";
+    width: 16px;
+    height: 16px;
+    margin-left: auto;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+      center / 16px no-repeat;
+    transition: rotate 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .kv-select:open::picker-icon {
+    rotate: 180deg;
+  }
+  .kv-select:open {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent);
+  }
+  .kv-select::picker(select) {
+    margin-block: 6px;
+    padding: 4px;
+    max-height: min(22rem, 60vh);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-solid);
+    color: var(--fg);
+    box-shadow: var(--shadow-pop);
+    opacity: 0;
+    translate: 0 -6px;
+    scale: 0.98;
+    transform-origin: top center;
+    transition:
+      opacity 150ms ease-out,
+      translate 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      scale 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      display 220ms allow-discrete,
+      overlay 220ms allow-discrete;
+  }
+  .kv-select:open::picker(select) {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+  @starting-style {
+    .kv-select:open::picker(select) {
+      opacity: 0;
+      translate: 0 -6px;
+      scale: 0.98;
+    }
+  }
+  .kv-select option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+    transition:
+      background-color 120ms,
+      color 120ms;
+  }
+  .kv-select option:hover,
+  .kv-select option:focus-visible {
+    background: var(--surface-2);
+    color: var(--fg);
+    outline: none;
+  }
+  .kv-select option:checked {
+    background: var(--accent-soft);
+    color: var(--accent-soft-fg);
+    font-weight: 500;
+  }
+  .kv-select option::checkmark {
+    order: 1;
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .kv-select option:disabled {
+    opacity: 0.5;
+  }
+  .kv-select optgroup {
+    padding-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--fg-subtle);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kv-select::picker(select),
+  .kv-select::picker-icon {
+    transition: none;
+  }
+}
+
+/* Landing: a slow endless strip (two copies of the list, moved by half its width). */
+.kv-marquee {
+  width: max-content;
+  animation: kv-marquee 48s linear infinite;
+}
+@keyframes kv-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kv-marquee {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: auto;
+  }
+  .kv-marquee > ul[aria-hidden] {
+    display: none;
+  }
+  .kv-marquee > ul {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 0.5rem;
+  }
+}
+/* Headline accent: the brand gradient, slowly drifting. */
+.kv-gradient-text {
+  background: linear-gradient(90deg, var(--accent), #0891b2, var(--accent-2), var(--accent));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: kv-gradient-drift 8s ease-in-out infinite alternate;
+}
+@keyframes kv-gradient-drift {
+  to {
+    background-position: 100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kv-gradient-text {
+    animation: none;
+  }
+}
+
 /* Rendered markdown (proposals, email bodies, answers). */
 .prose-kv {
   line-height: 1.65;

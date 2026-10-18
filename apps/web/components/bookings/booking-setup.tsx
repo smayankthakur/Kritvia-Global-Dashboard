@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Checkbox, Field, FormError, Input, Select } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
+import { TimeField } from "@/components/ui/time-field";
+
+const OPEN_PRESETS = ["09:00", "10:00", "11:00", "14:00"];
+const CLOSE_PRESETS = ["13:00", "18:00", "20:00", "21:00"];
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { paiseToInput, rupees, toPaise } from "@/components/invoices/money";
 
@@ -33,9 +37,9 @@ function HoursEditor({ hours, onChange, disabled }: { hours: Spans; onChange: (h
             <span className="font-medium">{DAY_NAME[d]}</span>
             {[0, 1].map((i) => (
               <div key={i} className="flex items-center gap-1">
-                <Input type="time" aria-label={`${DAY_NAME[d]} ${i ? "second" : "first"} span opens`} value={spans[i]?.[0] ?? ""} onChange={(e) => set(d, i, 0, e.target.value)} disabled={disabled} />
+                <TimeField className="min-w-0 flex-1" clearable step={15} presets={OPEN_PRESETS} placeholder="Opens" aria-label={`${DAY_NAME[d]} ${i ? "second" : "first"} span opens`} value={spans[i]?.[0] ?? ""} onChange={(v) => set(d, i, 0, v)} disabled={disabled} />
                 <span aria-hidden>–</span>
-                <Input type="time" aria-label={`${DAY_NAME[d]} ${i ? "second" : "first"} span closes`} value={spans[i]?.[1] ?? ""} onChange={(e) => set(d, i, 1, e.target.value)} disabled={disabled} />
+                <TimeField className="min-w-0 flex-1" clearable step={15} presets={CLOSE_PRESETS} placeholder="Closes" aria-label={`${DAY_NAME[d]} ${i ? "second" : "first"} span closes`} value={spans[i]?.[1] ?? ""} onChange={(v) => set(d, i, 1, v)} disabled={disabled} />
               </div>
             ))}
           </div>

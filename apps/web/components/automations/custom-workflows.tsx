@@ -10,6 +10,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, FormError, Input, Select, Switch, Textarea } from "@/components/ui/field";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
+import { TimeField } from "@/components/ui/time-field";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
 
@@ -93,7 +94,7 @@ function Editor({ ventureId, onDone }: { ventureId: string; onDone: () => void }
           </Select>
         </Field>
         <Field label="Check daily at (IST)">
-          <Input type="time" value={d.at_time} onChange={(e) => setD({ ...d, at_time: e.target.value })} />
+          <TimeField value={d.at_time} onChange={(t) => setD({ ...d, at_time: t })} />
         </Field>
       </div>
       <FormError message={make.isError ? errorMessage(make.error) : null} />

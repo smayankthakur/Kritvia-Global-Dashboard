@@ -13,6 +13,7 @@ import { Field, FormError, Input, Select, Switch } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
+import { TimeField } from "@/components/ui/time-field";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { AGENT_SUGGESTIONS, GROUPS, SUGGESTIONS, describeSchedule, type Suggestion, type SuggestionGroup } from "@/lib/automation-suggestions";
 import { formatDateTime, formatRelative } from "@/lib/format";
@@ -253,7 +254,7 @@ export default function AutomationsPage() {
                   </Select>
                 </Field>
                 <Field label="Time (IST)">
-                  <Input type="time" value={draft.at_time} onChange={(e) => setDraft({ ...draft, at_time: e.target.value })} />
+                  <TimeField value={draft.at_time} onChange={(t) => setDraft({ ...draft, at_time: t })} />
                 </Field>
                 <Field label="Send to">
                   <Select value={draft.channel} onChange={(e) => setDraft({ ...draft, channel: e.target.value as Draft["channel"] })}>

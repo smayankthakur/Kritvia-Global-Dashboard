@@ -11,6 +11,7 @@ import { Checkbox, Field, Input, Switch, Textarea } from "@/components/ui/field"
 import { Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
+import { TimeField } from "@/components/ui/time-field";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
 
@@ -173,7 +174,7 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
       ) : null}
       {SCHEDULED[wf.name] ? (
         <Field label={SCHEDULED[wf.name]!.label} error={schedErr} className="max-w-xs">
-          <Input type="time" value={schedule} disabled={!canAdmin} onChange={(e) => setSchedule(e.target.value)} />
+          <TimeField value={schedule} disabled={!canAdmin} onChange={setSchedule} />
         </Field>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -204,8 +205,8 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
       {advanced ? (
         <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
           {!SCHEDULED[wf.name] ? (
-            <Field label="Also run daily at (IST)" error={schedErr} hint="Optional" className="max-w-[10rem]">
-              <Input type="time" value={schedule} disabled={!canAdmin} onChange={(e) => setSchedule(e.target.value)} />
+            <Field label="Also run daily at (IST)" error={schedErr} hint="Optional" className="max-w-[12rem]">
+              <TimeField clearable placeholder="Not daily" value={schedule} disabled={!canAdmin} onChange={setSchedule} />
             </Field>
           ) : null}
           <Field label="Extra settings (JSON)" error={parsed.error} hint="For settings without a field above, e.g. gmail_query, source_weights.">
