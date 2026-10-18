@@ -1198,6 +1198,18 @@
             ],
             "description": "the business's bot (@username) when Telegram is connected",
             "title": "Telegram Bot"
+          },
+          "whatsapp_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the business's WhatsApp number when connected",
+            "title": "Whatsapp Number"
           }
         },
         "required": [
@@ -18955,6 +18967,25 @@
         "title": "WhatsAppHookOut",
         "type": "object"
       },
+      "WhatsAppLinkOut": {
+        "properties": {
+          "link": {
+            "description": "open on your phone: WhatsApp opens a chat with the business's number with the code typed in; send it. Works once, for 15 minutes",
+            "title": "Link",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "link",
+          "number"
+        ],
+        "title": "WhatsAppLinkOut",
+        "type": "object"
+      },
       "WhatsAppSignupConfigOut": {
         "properties": {
           "app_id": {
@@ -25555,6 +25586,55 @@
           }
         ],
         "summary": "Link Telegram",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/approver-links/whatsapp": {
+      "post": {
+        "description": "Your own WhatsApp number becomes yours in this business: you send a one-time code to the\nbusiness's number from it. From then on you can ask the business things there, and drafts that\nneed your yes arrive there (while WhatsApp's 24-hour window since your last message is open).",
+        "operationId": "link_whatsapp_ventures__venture_id__approver_links_whatsapp_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link Whatsapp",
         "tags": [
           "approvals"
         ]

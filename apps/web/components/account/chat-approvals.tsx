@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Send, Trash2 } from "lucide-react";
+import { BellRing, MessageCircle, Send, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,10 @@ type Link = Schemas["ApproverLinkOut"];
 
 export const approverLinksKey = (ventureId: string) => ["approver-links", ventureId] as const;
 
-export const CHANNEL_NAME: Record<string, string> = { telegram: "Telegram", slack: "Slack" };
+export const CHANNEL_NAME: Record<string, string> = { telegram: "Telegram", slack: "Slack", whatsapp: "WhatsApp" };
 
-/** "Approve from your phone": link your Telegram chat or Slack account to one business. */
+/** "Approve from your phone": link your Telegram chat, WhatsApp number or Slack account to one business. In Telegram and
+ * WhatsApp you can also ask the business anything (the front door). */
 export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; ventureName: string }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -27,12 +28,18 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/approver-links", { params: { path: { venture_id: ventureId } } })),
   });
   const [tgLink, setTgLink] = useState<string | null>(null);
+  const [waLink, setWaLink] = useState<string | null>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: key });
 
   const telegram = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/approver-links/telegram", { params: { path: { venture_id: ventureId } } })),
     onSuccess: (out) => setTgLink(out.link),
     onError: (e) => toast.error("Can't link Telegram", errorMessage(e)),
+  });
+  const whatsapp = useMutation({
+    mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/approver-links/whatsapp", { params: { path: { venture_id: ventureId } } })),
+    onSuccess: (out) => setWaLink(out.link),
+    onError: (e) => toast.error("Can't link WhatsApp", errorMessage(e)),
   });
   const slack = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/approver-links/slack", { params: { path: { venture_id: ventureId } } })),
@@ -56,7 +63,7 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
           <BellRing className="h-4 w-4 text-subtle" aria-hidden /> Approve from your phone
         </span>
       }
-      description={`Get ${ventureName}'s drafts that need your yes in Telegram or Slack, with Approve, Reject and Ask for changes. You decide as yourself, with the same rights as here.`}
+      description={`Get ${ventureName}'s drafts that need your yes in Telegram, WhatsApp or Slack, with Approve, Reject and Ask for changes. In Telegram and WhatsApp you can also ask the business anything, by message or voice note. You act as yourself, with the same rights as here.`}
     />
   );
   if (q.isLoading) {
@@ -79,7 +86,7 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
   const mine = (channel: string): Link | undefined => d.links.find((l) => l.mine && l.channel === channel);
   const others = d.links.filter((l) => !l.mine);
 
-  const row = (channel: "telegram" | "slack", available: boolean, missing: string, link: () => void, pending: boolean) => {
+  const row = (channel: "telegram" | "whatsapp" | "slack", available: boolean, missing: string, link: () => void, pending: boolean) => {
     const linked = mine(channel);
     return (
       <li className="flex flex-wrap items-center justify-between gap-3 py-3">
@@ -94,7 +101,9 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
               : available
                 ? channel === "telegram"
                   ? `Through ${d.telegram_bot}, the business's bot.`
-                  : "Kritvia messages the Slack member with your email address to confirm it's you."
+                  : channel === "whatsapp"
+                    ? `Send a one-time code from your phone to ${d.whatsapp_number}, the business's number.`
+                    : "Kritvia messages the Slack member with your email address to confirm it's you."
                 : missing}
           </p>
         </div>
@@ -118,6 +127,13 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
         <ul className="divide-y divide-border">
           {row("telegram", Boolean(d.telegram_bot), "Connect the business's Telegram bot first (Settings → Connectors).", () => telegram.mutate(), telegram.isPending)}
           {row(
+            "whatsapp",
+            Boolean(d.whatsapp_number),
+            "Connect the business's WhatsApp number first (Settings → Connectors).",
+            () => whatsapp.mutate(),
+            whatsapp.isPending,
+          )}
+          {row(
             "slack",
             d.slack_app,
             d.slack_available ? "An admin adds Kritvia to Slack first (Settings → Connectors)." : "Not available on this server yet.",
@@ -136,6 +152,29 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
                 I tapped Start
               </Button>
             </div>
+          </div>
+        ) : null}
+        {waLink && !mine("whatsapp") ? (
+          <div className="mt-3 rounded-md border border-border bg-surface-2 p-3 text-sm">
+            <p className="text-fg">Open this on your phone: WhatsApp opens a chat with the business&apos;s number with the code typed in. Send it. It works once, for 15 minutes.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <a className="inline-flex items-center gap-2 font-medium text-accent underline" href={waLink} target="_blank" rel="noreferrer">
+                <MessageCircle className="h-4 w-4" aria-hidden /> Open WhatsApp
+              </a>
+              <Button variant="ghost" size="sm" onClick={refresh}>
+                I sent it
+              </Button>
+            </div>
+          </div>
+        ) : null}
+        {mine("telegram") || mine("whatsapp") ? (
+          <div className="mt-4 rounded-md border border-border p-3 text-sm">
+            <p className="font-medium text-fg">Run the business from your chat</p>
+            <p className="mt-1 text-muted">
+              Ask anything by message or voice note, in Hindi, Hinglish or English: &quot;Is hafte kitna paisa aaya?&quot;, &quot;Priya ko follow-up bhejo&quot;, &quot;Add a
+              task for Neha&quot;. The answer comes back in the chat; anything that sends or changes something arrives as a draft for your yes. Quick: /today, /week,
+              /waiting, /help.
+            </p>
           </div>
         ) : null}
         {others.length ? (
@@ -157,7 +196,8 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
           </div>
         ) : null}
         <p className="mt-3 text-xs text-subtle">
-          Drafts marked sensitive arrive without buttons and are reviewed here. Telegram and Slack keep the messages they deliver.
+          Drafts marked sensitive arrive without buttons and are reviewed here. WhatsApp only lets the business message you for 24 hours after you last wrote, so
+          send it a message now and then. Telegram, WhatsApp and Slack keep the messages they deliver.
         </p>
       </div>
     </Card>

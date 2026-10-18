@@ -184,12 +184,14 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
               "give `tool` and `args`.")
     s = await ctx.llm_json(tier="plan", schema=Step, system=system, prompt=prompt)
     if s.answer and (not s.tool or out_of_steps):
+        await _reply_back(ctx, state, s.answer)
         return Finish("answered", update={"answer": s.answer, "summary": _summary(log, answered=True)},
                       note=f"answered after {used} tool step(s)")
     if not s.tool or out_of_steps:
-        return Finish("answered", update={
-            "answer": s.answer or "I couldn't finish this. Please try asking in a different way.",
-            "summary": _summary(log, answered=bool(s.answer))}, note="stopped without a clear answer")
+        answer = s.answer or "I couldn't finish this. Please try asking in a different way."
+        await _reply_back(ctx, state, answer)
+        return Finish("answered", update={"answer": answer, "summary": _summary(log, answered=bool(s.answer))},
+                      note="stopped without a clear answer")
 
     n = len(log) + 1
     if s.tool not in tools:
@@ -272,9 +274,18 @@ async def rejected(ctx: RunContext, state: dict) -> Goto | Finish:
                 "comment": comment})
     rejections = sum(1 for e in log if e.get("status") == "rejected")
     if rejections > MAX_REJECTIONS:
+        await _reply_back(ctx, state, "Okay, I've stopped. Nothing was sent.")
         return Finish("not_done", update={"log": log, "pending": None, "summary": _summary(log, answered=False),
                                           "answer": "Okay, I've stopped. Nothing was sent."})
     return Goto("think", update={"log": log, "pending": None}, note="not approved; trying another way")
+
+
+async def _reply_back(ctx: RunContext, state: dict, answer: str) -> None:
+    """A request made from Telegram or WhatsApp (the front door) gets its answer there too."""
+    target = (state.get("input") or {}).get("reply_to")
+    if isinstance(target, dict):
+        from kritvia_api.services import front_door
+        await front_door.reply(ctx.venture_id, target, answer)
 
 
 def _summary(log: list[dict], *, answered: bool) -> dict[str, Any]:

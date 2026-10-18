@@ -27,6 +27,9 @@ MEDIA = {"photo": "[photo]", "document": "[file]", "voice": "[voice message]", "
          "contact": "[contact]", "animation": "[GIF]", "poll": "[poll]"}
 
 
+MAX_FILE_BYTES = 10 * 1024 * 1024   # voice notes the front door will download (Bot API serves up to 20 MB)
+
+
 class TelegramError(Exception):
     def __init__(self, message: str, *, blocked: bool = False) -> None:
         super().__init__(message)
@@ -50,6 +53,7 @@ class TelegramMessage:
     handle: str | None
     text: str
     kind: str
+    file_id: str | None = None        # a voice note or audio file, for the owner's front door
 
     @property
     def provider_id(self) -> str:
@@ -118,6 +122,27 @@ class TelegramClient:
         """Any Bot API method (approval cards, button answers, edits)."""
         return await self._call(token, method, payload)
 
+    async def download(self, token: str, file_id: str) -> bytes:
+        """A file a chat sent (a voice note): getFile, then the file itself, at most MAX_FILE_BYTES."""
+        f = await self._call(token, "getFile", {"file_id": file_id})
+        path = (f or {}).get("file_path") if isinstance(f, dict) else None
+        if not isinstance(path, str) or ".." in path or path.startswith("/"):
+            raise TelegramError("Telegram didn't give the file")
+        if int((f or {}).get("file_size") or 0) > MAX_FILE_BYTES:
+            raise TelegramError("that file is too large")
+        try:
+            async with self._http.stream("GET", f"{API}/file/bot{token}/{path}") as r:
+                if r.status_code != 200:
+                    raise TelegramError(f"Telegram answered with an error ({r.status_code})")
+                data = bytearray()
+                async for chunk in r.aiter_bytes():
+                    data += chunk
+                    if len(data) > MAX_FILE_BYTES:
+                        raise TelegramError("that file is too large")
+        except httpx.HTTPError:
+            raise TelegramError("couldn't reach Telegram; try again in a minute") from None
+        return bytes(data)
+
     async def send_message(self, conn: TelegramConn, *, chat_id: str, body: str) -> str:
         """Returns the provider message id (as stored with the chat: tg:<chat>:<message>)."""
         chat = "".join(ch for ch in str(chat_id) if ch.isdigit())
@@ -177,8 +202,13 @@ def parse_update(payload: Any) -> TelegramMessage | None:
     handle = frm.get("username") if isinstance(frm.get("username"), str) else None
     if handle and not handle.replace("_", "").isalnum():
         handle = None
+    file_id = None
+    if kind in ("voice", "audio") and isinstance(m.get(kind), dict):
+        f = m[kind]
+        if isinstance(f.get("file_id"), str) and int(f.get("file_size") or 0) <= MAX_FILE_BYTES:
+            file_id = f["file_id"][:200]
     return TelegramMessage(int(payload.get("update_id") or 0), chat_id, m["message_id"], name and name[:120],
-                           handle and handle[:64], body[:20000], kind)
+                           handle and handle[:64], body[:20000], kind, file_id)
 
 
 async def load_telegram(ctx: RunContext, conn) -> TelegramConn | None:

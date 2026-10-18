@@ -247,9 +247,9 @@ async def test_telegram_link_card_and_buttons(salon, client, fake_llm, tg):
     chats = (await mayank.get(f"/ventures/{v}/whatsapp/chats")).json()["chats"]
     assert {c["phone"] for c in chats if c["channel"] == "telegram"} == {CUSTOMER}
 
-    # any other message from a linked person gets a short note
-    await send(client, cid, secret, update(13, "hello?", chat=APPROVER_CHAT))
-    assert "You approve drafts for Glow Salon here" in tg.to(APPROVER_CHAT)[-1]["text"]
+    # any other message from a linked person goes to the business (the front door): here, /help
+    await send(client, cid, secret, update(13, "/help", chat=APPROVER_CHAT))
+    assert "Ask me anything about Glow Salon" in tg.to(APPROVER_CHAT)[-1]["text"]
 
     # unlink: the chat is a stranger again (a press does nothing)
     mine = (await approver.get(f"/ventures/{v}/approver-links")).json()["links"][0]

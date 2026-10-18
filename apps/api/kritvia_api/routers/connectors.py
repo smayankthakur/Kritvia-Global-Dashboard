@@ -742,6 +742,11 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
         if p is None or not await _plan_allows(p.run_as, p.venture_id, "whatsapp"):
             ignored += 1
             continue
+        # A team member who linked this number (link code, buttons, asking the business) is never a customer.
+        from kritvia_api.services import chat_approvals
+        if await chat_approvals.whatsapp_update(p, m, svc):
+            accepted += 1
+            continue
         # Every message is kept in the customer's chat first (WhatsApp page, and the history agents read).
         async with tenant_tx(p.run_as, "agent", "whatsapp") as conn:
             contact, new = await wa_inbox.record_inbound(

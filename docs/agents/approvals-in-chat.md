@@ -1,4 +1,8 @@
-# Approve from your phone (Telegram and Slack)
+# Approve from your phone (Telegram, WhatsApp and Slack)
+
+Since 0075 a linked Telegram chat or WhatsApp number can also ask the business anything (by message or voice
+note) and gets the answer there: see [the owner side of the front door](front-door.md). WhatsApp cards have
+reply buttons and are sent only inside WhatsApp's 24-hour window.
 
 Drafts that wait for a yes can reach each team member in Telegram or Slack, as a card with
 **Approve**, **Reject** and **Ask for changes** (plus **Open in Kritvia**).

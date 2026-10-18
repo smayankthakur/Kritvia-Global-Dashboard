@@ -98,7 +98,7 @@ def announce(venture_id: uuid.UUID, approval_id: uuid.UUID, *, title: str, summa
 
 
 async def _announce(venture_id, approval_id, title, summary, payload, sensitive) -> None:
-    for send in (_telegram_cards, _slack_cards):
+    for send in (_telegram_cards, _slack_cards, _whatsapp_cards):
         try:
             await send(venture_id, approval_id, title, summary, payload, sensitive)
         except Exception:  # noqa: BLE001 - a card is a courtesy
@@ -213,6 +213,86 @@ async def _telegram_cards(venture_id, approval_id, title, summary, payload, sens
     await _keep_notes(bot.run_as, "telegram", bot.org_id, venture_id, approval_id, notes)
 
 
+async def card_for(run_as: uuid.UUID, venture_id: uuid.UUID, approval_id: uuid.UUID) -> dict[str, Any] | None:
+    """A pending draft's card content, read again (for /waiting), as the business's runtime."""
+    import json
+
+    from kritvia_api.engine.context import get_services
+    from kritvia_api.engine.runner import PAYLOAD_PURPOSE
+    from kritvia_api.services.crypto import EnvelopeCrypto
+    async with tenant_tx(run_as, "agent", "chat") as conn:
+        a = (await conn.execute(text("SELECT title, summary, payload_enc, sensitive, status FROM approvals"
+                                     " WHERE id = :a AND venture_id = :v"), {"a": approval_id, "v": venture_id})).first()
+        if a is None or a.status != "pending":
+            return None
+        raw = await EnvelopeCrypto(conn, get_services().keys).decrypt_str(venture_id, PAYLOAD_PURPOSE, a.payload_enc)
+    try:
+        payload = json.loads(raw or "{}")
+    except ValueError:
+        payload = {}
+    return {"title": a.title, "summary": a.summary, "payload": payload if isinstance(payload, dict) else {},
+            "sensitive": a.sensitive}
+
+
+async def telegram_card_to(venture_id: uuid.UUID, approval_id: uuid.UUID, chat: str) -> None:
+    """One pending draft's card, to one linked chat (/waiting)."""
+    from kritvia_api.engine.context import get_services
+    from kritvia_api.services.telegram import TelegramError
+    bot = await telegram_bot(venture_id)
+    card = await card_for(bot.run_as, venture_id, approval_id) if bot else None
+    if card is None or bot is None:
+        return
+    try:
+        res = await get_services().telegram.call(bot.token, "sendMessage", {
+            "chat_id": int(chat), "text": card_text(card["title"], card["summary"], card["payload"], bot.business,
+                                                    card["sensitive"]),
+            "link_preview_options": {"is_disabled": True},
+            "reply_markup": telegram_keyboard(approval_id, venture_id, card["sensitive"])})
+    except (TelegramError, ValueError):
+        return
+    if isinstance(res, dict) and res.get("message_id") is not None:
+        await _keep_notes(bot.run_as, "telegram", bot.org_id, venture_id, approval_id, [(chat, str(res["message_id"]))])
+
+
+# ------------------------------------------------------------------ WhatsApp --
+def whatsapp_buttons(approval_id: uuid.UUID, sensitive: bool) -> list[tuple[str, str]]:
+    """Reply buttons (WhatsApp allows 3, titles up to 20 characters)."""
+    if sensitive:
+        return []
+    return [(f"a:{approval_id}:y", "Approve"), (f"a:{approval_id}:n", "Reject"), (f"a:{approval_id}:c", "Ask for changes")]
+
+
+def _whatsapp_card(card: dict[str, Any], business: str | None, approval_id: uuid.UUID) -> str:
+    body = card_text(card["title"], card["summary"], card["payload"], business, card["sensitive"])
+    if card["sensitive"]:
+        body += "\n\nOpen it in Kritvia: " + _link(f"/inbox?id={approval_id}")
+    return body[:1000]           # WhatsApp's limit for a message with buttons
+
+
+async def whatsapp_card_to(venture_id: uuid.UUID, approval_id: uuid.UUID, user_id: uuid.UUID, chat: str,
+                           card: dict[str, Any] | None = None) -> None:
+    from kritvia_api.services import front_door
+    n = await front_door.whatsapp_number(venture_id)
+    if n is None:
+        return
+    card = card or await card_for(n.run_as, venture_id, approval_id)
+    if card is None:
+        return
+    mid = await front_door.whatsapp_say(venture_id, user_id, chat, _whatsapp_card(card, n.business, approval_id),
+                                        whatsapp_buttons(approval_id, card["sensitive"]))
+    if mid:
+        await _keep_notes(n.run_as, "whatsapp", n.org_id, venture_id, approval_id, [(chat, mid[:64])])
+
+
+async def _whatsapp_cards(venture_id, approval_id, title, summary, payload, sensitive) -> None:
+    targets = await _targets(approval_id, "whatsapp")
+    if not targets:
+        return
+    card = {"title": title, "summary": summary, "payload": payload, "sensitive": sensitive}
+    for t in targets:
+        await whatsapp_card_to(venture_id, approval_id, t.user_id, t.external_id, card)
+
+
 def slack_blocks(text_: str, approval_id: uuid.UUID, venture_id: uuid.UUID, sensitive: bool) -> list[dict]:
     from kritvia_api.services.slack import _escape
     value = f"{venture_id}:{approval_id}"
@@ -313,7 +393,8 @@ async def _settle(venture_id: uuid.UUID, approval_id: uuid.UUID, who: str | None
     from kritvia_api.services.telegram import TelegramError
     async with tenant_tx(None, "system") as conn:
         b = (await conn.execute(text("SELECT * FROM private.telegram_bot_for(:v)"), {"v": venture_id})).first() \
-            or (await conn.execute(text("SELECT * FROM private.slack_principal(:v)"), {"v": venture_id})).first()
+            or (await conn.execute(text("SELECT * FROM private.slack_principal(:v)"), {"v": venture_id})).first() \
+            or (await conn.execute(text("SELECT * FROM private.whatsapp_number_for(:v)"), {"v": venture_id})).first()
     if b is None:
         return
     async with tenant_tx(b.run_as, "agent", "telegram") as conn:
@@ -351,6 +432,7 @@ async def _settle(venture_id: uuid.UUID, approval_id: uuid.UUID, who: str | None
                 except slack.SlackError:
                     pass
             done.append(n.id)
+    done += [n.id for n in notes if n.channel == "whatsapp"]   # WhatsApp can't edit a sent message
     async with tenant_tx(b.run_as, "agent", "telegram") as conn:
         await conn.execute(text("DELETE FROM approval_notes WHERE id = ANY(:ids)"), {"ids": done})
 
@@ -377,16 +459,43 @@ async def telegram_update(p, payload: Any, svc) -> bool:
     bot = await telegram_bot(p.venture_id)
     if bot is None:
         return True
+    await touch(p.run_as, link.link_id)
     if link.pending_changes is not None and m.kind == "text" and not m.text.startswith("/"):
         await set_pending_changes(p.run_as, "telegram", link.link_id, None)
         ok, said = await decide_as(link.user_id, p.venture_id, link.pending_changes, "reject",
                                    m.text.strip()[:2000], svc)
-        reply = "Thanks: the draft goes back to be redone with your note." if ok else said
-    else:
-        reply = (f"You approve drafts for {bot.business} here. When one needs your yes it arrives with "
-                 "buttons. To stop, remove this chat in Kritvia → Account.")
-    await _tg_say(svc, bot.token, m.chat_id, reply)
+        await _tg_say(svc, bot.token, m.chat_id, "Thanks: the draft goes back to be redone with your note." if ok else said)
+        return True
+    # Anything else is the person talking to the business: the assistant, a report, their drafts.
+    from kritvia_api.services import front_door
+    if m.kind != "text" and not m.file_id:
+        await _tg_say(svc, bot.token, m.chat_id, "I read messages and voice notes here. Type it, or send a voice note.")
+        return True
+
+    async def say(body: str) -> None:
+        await _tg_say(svc, bot.token, m.chat_id, body)
+
+    async def resend(ids: list[uuid.UUID]) -> None:
+        for aid in ids:
+            await telegram_card_to(p.venture_id, aid, m.chat_id)
+
+    async def audio() -> tuple[bytes, str] | None:
+        from kritvia_api.services.telegram import TelegramError
+        try:
+            return await svc.telegram.download(bot.token, m.file_id), "voice.ogg"
+        except TelegramError:
+            return None
+    await front_door.handle(svc, front_door.Asker("telegram", p.venture_id, link.user_id, m.chat_id, m.provider_id,
+                                                  bot.business),
+                            text_=m.text if m.kind == "text" else "", say=say, resend_cards=resend,
+                            audio=audio if m.file_id else None)
     return True
+
+
+async def touch(run_as: uuid.UUID, link_id: uuid.UUID) -> None:
+    """The person just wrote from this chat (WhatsApp's 24-hour window starts again)."""
+    async with tenant_tx(run_as, "agent", "chat") as conn:
+        await conn.execute(text("UPDATE approver_links SET last_inbound_at = now() WHERE id = :l"), {"l": link_id})
 
 
 async def _tg_say(svc, token: str, chat: str, body: str, markup: dict | None = None) -> None:
@@ -413,8 +522,9 @@ async def _telegram_link(p, m, code: str, svc) -> None:
                                                   "your phone and tap Link Telegram again.")
         return
     await _tg_say(svc, bot.token, m.chat_id,
-                  f"Linked. Hi {who.full_name or 'there'}: drafts for {bot.business} that need your yes will "
-                  "arrive here with Approve, Reject and Ask for changes buttons.")
+                  f"Linked. Hi {who.full_name or 'there'}: ask me anything about {bot.business} here, by message or "
+                  "voice note, and drafts that need your yes arrive here with Approve, Reject and Ask for changes "
+                  "buttons. Send /help to see how.")
 
 
 async def _telegram_button(p, button, svc) -> None:
@@ -450,6 +560,86 @@ async def _telegram_button(p, button, svc) -> None:
     ok, said = await decide_as(link.user_id, p.venture_id, approval_id, "approve" if parts[2] == "y" else "reject",
                                None, svc)
     await answer(said, alert=not ok)
+
+
+# ------------------------------------------------------------- WhatsApp (in) --
+async def whatsapp_update(p, m, svc) -> bool:
+    """A message to the business's WhatsApp number from a team member: their link code, a button on a
+    draft's card, their "what should change" answer, or anything they ask the business. Returns False
+    for everyone else (customers), whose messages the caller keeps as chats."""
+    from kritvia_api.services import front_door
+    words = m.text.strip().split()
+    if m.kind == "text" and len(words) == 1 and words[0].startswith(LINK_PREFIX):
+        async with tenant_tx(None, "system") as conn:
+            who = (await conn.execute(text(
+                "SELECT * FROM private.redeem_approver_link_code(:v, 'whatsapp', :h, :x, NULL, :l)"),
+                {"v": p.venture_id, "h": code_hash(words[0][len(LINK_PREFIX):][:64]), "x": m.sender,
+                 "l": "+" + m.sender})).first()
+        if who is None:
+            return False          # not a code we gave out: an ordinary customer message
+        link = await approver(p.venture_id, "whatsapp", m.sender)
+        if link is not None:
+            await touch(p.run_as, link.link_id)
+        n = await front_door.whatsapp_number(p.venture_id)
+        await front_door.whatsapp_say(p.venture_id, None, m.sender,
+                                      f"Linked. Hi {who.full_name or 'there'}: ask me anything about "
+                                      f"{(n.business if n else None) or 'the business'} here, by message or voice note. "
+                                      "Drafts that need your yes arrive here too. Send /help to see how.",
+                                      check_window=False)
+        return True
+    link = await approver(p.venture_id, "whatsapp", m.sender)
+    if link is None:
+        return False
+    await touch(p.run_as, link.link_id)
+
+    async def say(body: str) -> None:
+        await front_door.whatsapp_say(p.venture_id, link.user_id, m.sender, body[:4000])
+
+    if m.reply_id and m.reply_id.startswith("a:"):
+        parts = m.reply_id.split(":")
+        try:
+            approval_id = uuid.UUID(parts[1]) if len(parts) == 3 and parts[2] in ("y", "n", "c") else None
+        except ValueError:
+            approval_id = None
+        if approval_id is None:
+            await say("That button is out of date.")
+        elif parts[2] == "c":
+            await set_pending_changes(p.run_as, "whatsapp", link.link_id, approval_id)
+            await say(CHANGES_PROMPT)
+        else:
+            ok, said = await decide_as(link.user_id, p.venture_id, approval_id,
+                                       "approve" if parts[2] == "y" else "reject", None, svc)
+            await say(said)
+        return True
+    if link.pending_changes is not None and m.kind == "text" and not m.text.startswith("/"):
+        await set_pending_changes(p.run_as, "whatsapp", link.link_id, None)
+        ok, said = await decide_as(link.user_id, p.venture_id, link.pending_changes, "reject", m.text.strip()[:2000], svc)
+        await say("Thanks: the draft goes back to be redone with your note." if ok else said)
+        return True
+    if m.kind not in ("text", "audio") or (m.kind == "audio" and not m.media_id):
+        await say("I read messages and voice notes here. Type it, or send a voice note.")
+        return True
+    n = await front_door.whatsapp_number(p.venture_id)
+
+    async def resend(ids: list[uuid.UUID]) -> None:
+        for aid in ids:
+            await whatsapp_card_to(p.venture_id, aid, link.user_id, m.sender)
+
+    async def audio() -> tuple[bytes, str] | None:
+        from kritvia_api.services.whatsapp import WhatsAppError
+        if n is None:
+            return None
+        try:
+            data, mime = await svc.whatsapp.media(n.conn, m.media_id)
+        except WhatsAppError:
+            return None
+        return data, "voice." + {"audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "aac", "audio/amr": "amr"}.get(
+            mime.split(";")[0].strip(), "ogg")
+    await front_door.handle(svc, front_door.Asker("whatsapp", p.venture_id, link.user_id, m.sender, m.message_id,
+                                                  n.business if n else None),
+                            text_=m.text if m.kind == "text" else "", say=say, resend_cards=resend,
+                            audio=audio if m.kind == "audio" else None)
+    return True
 
 
 # --------------------------------------------------------------------- Slack --

@@ -1994,6 +1994,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/approver-links/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link Whatsapp
+         * @description Your own WhatsApp number becomes yours in this business: you send a one-time code to the
+         *     business's number from it. From then on you can ask the business things there, and drafts that
+         *     need your yes arrive there (while WhatsApp's 24-hour window since your last message is open).
+         */
+        post: operations["link_whatsapp_ventures__venture_id__approver_links_whatsapp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/approver-links/{link_id}": {
         parameters: {
             query?: never;
@@ -5237,6 +5259,11 @@ export interface components {
              * @description the business's bot (@username) when Telegram is connected
              */
             telegram_bot: string | null;
+            /**
+             * Whatsapp Number
+             * @description the business's WhatsApp number when connected
+             */
+            whatsapp_number?: string | null;
         };
         /** AssistantItem */
         AssistantItem: {
@@ -11641,6 +11668,16 @@ export interface components {
              */
             ignored: number;
         };
+        /** WhatsAppLinkOut */
+        WhatsAppLinkOut: {
+            /**
+             * Link
+             * @description open on your phone: WhatsApp opens a chat with the business's number with the code typed in; send it. Works once, for 15 minutes
+             */
+            link: string;
+            /** Number */
+            number: string;
+        };
         /** WhatsAppSignupConfigOut */
         WhatsAppSignupConfigOut: {
             /** App Id */
@@ -15804,6 +15841,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TelegramLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_whatsapp_ventures__venture_id__approver_links_whatsapp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppLinkOut"];
                 };
             };
             /** @description Validation Error */

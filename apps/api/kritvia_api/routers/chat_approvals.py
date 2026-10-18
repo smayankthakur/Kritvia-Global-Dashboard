@@ -2,6 +2,7 @@
 
   GET    /ventures/{v}/approver-links            your links (admins: everyone's) and what can be linked
   POST   /ventures/{v}/approver-links/telegram   a one-time t.me link that links the chat it is opened in
+  POST   /ventures/{v}/approver-links/whatsapp   a one-time wa.me link: send the code to the business's number
   POST   /ventures/{v}/approver-links/slack      a DM in Slack, to the member with your email, to confirm
   DELETE /ventures/{v}/approver-links/{id}       unlink
   POST   /ventures/{v}/connectors/slack/install  "Add to Slack" (admins), bound to this browser by a nonce
@@ -51,6 +52,7 @@ class ApproverLinkOut(BaseModel):
 class ApproverLinksOut(BaseModel):
     links: list[ApproverLinkOut]
     telegram_bot: str | None = Field(description="the business's bot (@username) when Telegram is connected")
+    whatsapp_number: str | None = Field(default=None, description="the business's WhatsApp number when connected")
     slack_app: bool = Field(description="Kritvia's Slack app is added to this business's Slack")
     slack_available: bool = Field(description="this server has Kritvia's Slack app, so it can be added")
     can_add_slack: bool = Field(description="the caller may add Kritvia to Slack (business admins)")
@@ -65,13 +67,15 @@ async def list_links(venture_id: uuid.UUID, user_id: UserId, db: TenantDB) -> Ap
         {"v": venture_id})).all()
     conns = (await db.execute(text(
         "SELECT provider, account_email, meta ->> 'mode' AS mode FROM connectors"
-        " WHERE venture_id = :v AND provider IN ('telegram', 'slack') AND status = 'active'"), {"v": venture_id})).all()
+        " WHERE venture_id = :v AND provider IN ('telegram', 'slack', 'whatsapp') AND status = 'active'"),
+        {"v": venture_id})).all()
     admin = bool((await db.execute(text("SELECT private.can_admin_venture(:v)"), {"v": venture_id})).scalar())
     bot = next((c.account_email for c in conns if c.provider == "telegram"), None)
     return ApproverLinksOut(
         links=[ApproverLinkOut(id=r.id, user_id=r.user_id, person=r.person, mine=r.user_id == user_id,
                                channel=r.channel, label=r.label, created_at=r.created_at) for r in rows],
-        telegram_bot=bot, slack_app=any(c.provider == "slack" and c.mode == "app" for c in conns),
+        telegram_bot=bot, whatsapp_number=next((c.account_email for c in conns if c.provider == "whatsapp"), None),
+        slack_app=any(c.provider == "slack" and c.mode == "app" for c in conns),
         slack_available=slack.app_configured(), can_add_slack=admin)
 
 
@@ -112,6 +116,33 @@ async def link_telegram(venture_id: uuid.UUID, user_id: UserId, db: TenantDB, sv
     code = await _new_code(db, venture_id, "telegram")
     username = bot.lstrip("@")
     return TelegramLinkOut(link=f"https://t.me/{username}?start={chat_approvals.LINK_PREFIX}{code}", bot="@" + username)
+
+
+class WhatsAppLinkOut(BaseModel):
+    link: str = Field(description="open on your phone: WhatsApp opens a chat with the business's number with "
+                                  "the code typed in; send it. Works once, for 15 minutes")
+    number: str
+
+
+@router.post("/ventures/{venture_id}/approver-links/whatsapp", response_model=WhatsAppLinkOut)
+async def link_whatsapp(venture_id: uuid.UUID, user_id: UserId, db: TenantDB) -> WhatsAppLinkOut:
+    """Your own WhatsApp number becomes yours in this business: you send a one-time code to the
+    business's number from it. From then on you can ask the business things there, and drafts that
+    need your yes arrive there (while WhatsApp's 24-hour window since your last message is open)."""
+    await venture_org(db, venture_id)
+    await limiter.hit(f"approver-link:{user_id}", per_minute=10)
+    number = (await db.execute(text(
+        "SELECT account_email FROM connectors WHERE venture_id = :v AND provider = 'whatsapp' AND status = 'active'"),
+        {"v": venture_id})).scalar()
+    digits = "".join(ch for ch in str(number or "") if ch.isdigit())
+    if not digits:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Connect the business's WhatsApp number first (Settings → Connectors)")
+    try:
+        await require_integration(db, venture_id, "whatsapp")
+    except PlanRestricted as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
+    code = await _new_code(db, venture_id, "whatsapp")
+    return WhatsAppLinkOut(link=f"https://wa.me/{digits}?text={chat_approvals.LINK_PREFIX}{code}", number="+" + digits)
 
 
 class SlackLinkOut(BaseModel):

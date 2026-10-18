@@ -19,6 +19,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 import httpx
 from sqlalchemy import text
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 
 GRAPH_VERSION = "v25.0"
 GRAPH = f"https://graph.facebook.com/{GRAPH_VERSION}"
+META_FILE_HOSTS = (".fbsbx.com", ".facebook.com", ".whatsapp.net", ".fbcdn.net")
 
 
 class WhatsAppError(Exception):
@@ -69,7 +71,9 @@ class InboundMessage:
     sender: str                  # E.164 digits, no plus
     sender_name: str | None
     text: str
-    kind: str                    # text | image | document | audio | other
+    kind: str                    # text | image | document | audio | interactive | other
+    reply_id: str | None = None  # the id of a reply button pressed (interactive messages)
+    media_id: str | None = None  # an audio message / voice note, for the owner's front door
 
 
 def _body(m: dict[str, Any]) -> tuple[str, str]:
@@ -104,7 +108,12 @@ def parse_inbound(payload: dict[str, Any]) -> list[InboundMessage]:
                 sender = str(m.get("from") or "")
                 if not sender or not m.get("id"):
                     continue
-                out.append(InboundMessage(pnid, str(m["id"]), sender, names.get(sender), body, kind))
+                i = m.get("interactive") or {}
+                reply = (i.get("button_reply") or i.get("list_reply") or {}) if kind == "interactive" else {}
+                reply_id = str(reply.get("id"))[:256] if reply.get("id") else None
+                media = (m.get("audio") or {}) if kind == "audio" else {}
+                media_id = str(media.get("id"))[:200] if media.get("id") else None
+                out.append(InboundMessage(pnid, str(m["id"]), sender, names.get(sender), body, kind, reply_id, media_id))
     return out
 
 
@@ -423,6 +432,47 @@ class WhatsAppClient:
         if r.status_code >= 400:
             raise WhatsAppError("WhatsApp rejected the phone number id or token")
         return r.json()
+
+    async def send_buttons(self, conn: WhatsAppConn, *, to: str, body: str, buttons: list[tuple[str, str]]) -> str:
+        """A message with up to 3 reply buttons (id, title); allowed only inside the 24-hour window."""
+        to = "".join(ch for ch in to if ch.isdigit())
+        if not to:
+            raise WhatsAppError("recipient phone number is missing")
+        r = await self._http.post(f"{GRAPH}/{conn.phone_number_id}/messages",
+                                  headers={"Authorization": f"Bearer {conn.access_token}"},
+                                  json={"messaging_product": "whatsapp", "recipient_type": "individual", "to": to,
+                                        "type": "interactive", "interactive": {
+                                            "type": "button", "body": {"text": body[:1024]},
+                                            "action": {"buttons": [{"type": "reply", "reply": {"id": i[:256], "title": t[:20]}}
+                                                                   for i, t in buttons[:3]]}}})
+        if r.status_code >= 400:
+            raise WhatsAppError(f"WhatsApp send failed: {_meta_error(r, 'WhatsApp refused the message')}")
+        return str((r.json().get("messages") or [{}])[0].get("id") or "")
+
+    async def media(self, conn: WhatsAppConn, media_id: str, max_bytes: int = 10 * 1024 * 1024) -> tuple[bytes, str]:
+        """A file someone sent (a voice note): its address from the Graph API, then the file, with the
+        business's token. Returns (bytes, mime type)."""
+        h = {"Authorization": f"Bearer {conn.access_token}"}
+        try:
+            r = await self._http.get(f"{GRAPH}/{media_id}", headers=h)
+            info = r.json() if r.status_code == 200 else {}
+            url, mime = str(info.get("url") or ""), str(info.get("mime_type") or "audio/ogg")
+            host = (urlsplit(url).hostname or "").lower()
+            # The business's token goes with the download, so only to Meta's own file hosts.
+            if (not url.startswith("https://") or not host.endswith(META_FILE_HOSTS)
+                    or int(info.get("file_size") or 0) > max_bytes):
+                raise WhatsAppError("WhatsApp didn't give the file")
+            data = bytearray()
+            async with self._http.stream("GET", url, headers=h) as f:
+                if f.status_code != 200:
+                    raise WhatsAppError("WhatsApp didn't give the file")
+                async for chunk in f.aiter_bytes():
+                    data += chunk
+                    if len(data) > max_bytes:
+                        raise WhatsAppError("that file is too large")
+        except (httpx.HTTPError, ValueError):
+            raise WhatsAppError("couldn't reach WhatsApp") from None
+        return bytes(data), mime
 
     async def mark_read(self, conn: WhatsAppConn, message_id: str) -> None:
         try:
