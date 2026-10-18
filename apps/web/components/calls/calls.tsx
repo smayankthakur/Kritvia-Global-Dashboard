@@ -387,6 +387,7 @@ export function VoiceSettings({ ventureId, voice }: { ventureId: string; voice: 
     language: voice.language,
     voice: voice.voice,
     greeting: voice.greeting ?? "",
+    caller_facts: voice.caller_facts ?? "",
     transfer_number: voice.transfer_number ?? "",
     open_days: voice.open_days,
     open_from: voice.open_from,
@@ -405,7 +406,12 @@ export function VoiceSettings({ ventureId, voice }: { ventureId: string; voice: 
       unwrap(
         api.PUT("/ventures/{venture_id}/voice", {
           params: { path: { venture_id: ventureId } },
-          body: { ...d, greeting: (d.greeting ?? "").trim() || null, transfer_number: (d.transfer_number ?? "").trim() || null },
+          body: {
+            ...d,
+            greeting: (d.greeting ?? "").trim() || null,
+            caller_facts: (d.caller_facts ?? "").trim() || null,
+            transfer_number: (d.transfer_number ?? "").trim() || null,
+          },
         }),
       ),
     onSuccess: (v) => {
@@ -503,6 +509,18 @@ export function VoiceSettings({ ventureId, voice }: { ventureId: string; voice: 
           </div>
           <Field label="Greeting (optional)" hint={`Empty: "${voice.greeting_preview}". It always says it is your AI assistant.`}>
             <Textarea rows={2} value={d.greeting ?? ""} onChange={(e) => set({ greeting: e.target.value })} maxLength={300} />
+          </Field>
+          <Field
+            label="What callers can be told"
+            hint="Services, prices or price ranges, address, how to pay, policies. Kritvia answers from this first and never makes up prices or promises. It never reads out your emails, meetings, proposals or reports."
+          >
+            <Textarea
+              rows={4}
+              value={d.caller_facts ?? ""}
+              onChange={(e) => set({ caller_facts: e.target.value })}
+              maxLength={2000}
+              placeholder="Websites from ₹25,000, ready in 3–4 weeks. Office: Nihal Vihar, New Delhi. Payment by UPI or bank transfer, 50% advance."
+            />
           </Field>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Put callers through to (optional)" hint="Someone at the business, in opening hours">

@@ -20475,6 +20475,19 @@
       },
       "VoiceIn": {
         "properties": {
+          "caller_facts": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "services, prices, address, policies: what callers can be told. Left out: unchanged",
+            "title": "Caller Facts"
+          },
           "enabled": {
             "default": false,
             "title": "Enabled",
@@ -20655,6 +20668,18 @@
             "description": "calls to the connected number are answered now",
             "title": "Answering",
             "type": "boolean"
+          },
+          "caller_facts": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "what the owner wants callers to know",
+            "title": "Caller Facts"
           },
           "caller_id_kind": {
             "anyOf": [

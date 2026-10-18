@@ -109,8 +109,35 @@ def test_signature_and_twiml():
     assert "AI assistant" in vc.greeting("Sharma Sweets", s)
     assert vc.greeting("Sharma Sweets", vc.Settings(language="en-IN", greeting="Welcome to Sharma Sweets!")).startswith(
         "This is Sharma Sweets's AI assistant.")
-    assert vc.STOP_RE.search("please don't call me again") and vc.STOP_RE.search("mujhe call mat karo")
-    assert not vc.STOP_RE.search("can you call me back tomorrow")
+
+
+def test_stop_calling_only_on_clear_asks():
+    for stop in ("please don't call me again", "mujhe call mat karo", "call na karein please", "phone band kar do",
+                 "stop calling me", "कॉल मत करना", "दोबारा फोन न करें"):
+        assert vc.STOP_RE.search(stop), stop
+    # complaints and questions about calls are not asks to stop (one ended a live call before)
+    for not_stop in ("can you call me back tomorrow", "Maine subah try kiya par call nahi lag raha tha",
+                     "pichli baar call band ho gaya tha", "Aapne mujhe call nahi kiya", "phone pe baat karni hai"):
+        assert not vc.STOP_RE.search(not_stop), not_stop
+
+
+def test_numbers_language_and_hours_for_the_phone():
+    assert vc.speakable("आपका नंबर 98110 00011 है, सही?") == "आपका नंबर 9 8 1 1 0, 0 0 0 1 1 है, सही?"
+    assert vc.speakable("Call +91 98110-00011") == "Call plus 9 1, 9 8 1 1 0, 0 0 0 1 1"
+    assert vc.speakable("Is it 9811000011, or 9811000012?") == (
+        "Is it 9 8 1 1 0 0 0 0 1 1, or 9 8 1 1 0 0 0 0 1 2?")
+    same = "₹1,50,000 or 40000, in 2026, pin 110087, ₹12,50,00,000 or 1.2345678"
+    assert vc.speakable(same) == same
+    assert vc.caller_language("Hi, do you build mobile apps as well?") == "english"
+    assert vc.caller_language("Aap kitne baje tak khule ho?") == "hinglish"
+    assert vc.caller_language("मुझे वेबसाइट चाहिए") == "hindi"
+    assert vc.caller_language("ok") is None and vc.caller_language("Rohit") is None
+    s = vc.Settings(open_days=[0, 1, 2, 3, 4, 5], open_from="10:00", open_to="19:00")
+    tz = vc.ZoneInfo("Asia/Kolkata")
+    h = vc.hours_line(s, tz, datetime(2026, 10, 18, 15, 0, tzinfo=UTC))   # a Sunday, 20:30 in Delhi
+    assert "Sunday 18 October 2026, 20:30" in h and "Monday, Tuesday" in h and "10:00 to 19:00" in h
+    assert "CLOSED right now" in h
+    assert "OPEN right now" in vc.hours_line(s, tz, datetime(2026, 10, 19, 6, 0, tzinfo=UTC))
 
 
 def test_one_voice_keeps_the_feminine_form():
@@ -186,10 +213,12 @@ async def test_put_through_stop_calling_and_silence(shop, fake_llm, twilio, clie
     after = r.text.split('<Dial timeout="25" action="')[1].split('"')[0].replace("&amp;", "&").split(base)[1]
     r = await hook(client, after, {"CallSid": "CA2", "DialCallStatus": "no-answer"})
     assert "nobody could pick up" in r.text and "<Gather" in r.text
-    # "don't call me" ends the call and the number is never called by Kritvia
+    # "don't call me" on a call to the business: the number is never called by Kritvia, and the caller is
+    # still helped with what they called about
+    brain(fake_llm, {"say": "Okay, we won't call you. What else can I do for you?", "action": "opt_out"})
     path = await start("CA3")
     r = await hook(client, path, {"CallSid": "CA3", "SpeechResult": "Please don't call me again"})
-    assert "won't call you again" in r.text and "<Hangup/>" in r.text
+    assert "won't call you" in r.text and "<Gather" in r.text and "<Hangup/>" not in r.text
     assert (await mayank.get(f"/ventures/{v}/voice")).json()["dnd_count"] == 1
     # two silences in a row: goodbye
     path = await start("CA4")
@@ -307,3 +336,56 @@ async def test_roles_and_plan(shop, twilio, world):
     finally:
         await conn.execute("DELETE FROM org_plans WHERE org_id = $1", uuid.UUID(world["org"]))
         await conn.close()
+
+
+async def test_what_the_assistant_knows_and_a_slow_model(shop, fake_llm, monkeypatch):
+    mayank, v = shop["mayank"], shop["v"]
+    facts = "Websites start at Rs 25,000. Office: Nihal Vihar, New Delhi. We reply to WhatsApp within a day."
+    r = await mayank.put(f"/ventures/{v}/voice", json={"language": "hi-IN", "caller_facts": facts})
+    assert r.status_code == 200 and r.json()["caller_facts"] == facts
+    # saving other settings without the field keeps what callers can be told
+    r = await mayank.put(f"/ventures/{v}/voice", json={"language": "hi-IN", "greeting": "Namaste!"})
+    assert r.json()["caller_facts"] == facts
+    assert (await shop["operator"].put(f"/ventures/{v}/voice", json={"caller_facts": "x"})).status_code == 403
+
+    from kritvia_api.services import memory
+    seen_kinds: list = []
+    monkeypatch.setattr(memory, "search_as_agent",
+                        lambda ctx, q, k=6, kinds=None, sensitive=False: _none(seen_kinds, kinds))
+
+    brain(fake_llm, {"say": "We close at 7 pm today.", "action": "listen"},
+          {"say": "Sorry about that. Which website do you need?", "action": "listen"},
+          {"say": "Your number is 98110 00011, right?", "action": "listen"})
+    call = (await mayank.post(f"/ventures/{v}/calls/test", json={})).json()["call_id"]
+    say = lambda t: mayank.post(f"/ventures/{v}/calls/test", json={"call_id": call, "said": t})  # noqa: E731
+    r = (await say("Hi, what time do you close today?")).json()
+    assert r["say"] == "We close at 7 pm today." and r["ended"] is False
+    system = fake_llm.chat_calls(PHONE_BRAIN)[-1]["prompt"]
+    assert "Opening hours:" in system and "right now." in system and facts in system and "ENGLISH" in system
+    assert "other customers" in system and "112" in system
+    assert seen_kinds == [vc.CALLER_KINDS]
+    # a complaint about a dropped call is not "don't call me": the call goes on
+    r = (await say("Maine subah try kiya par call nahi lag raha tha")).json()
+    assert r["ended"] is False and r["say"].startswith("Sorry about that")
+    assert "Hindi in Roman letters" in fake_llm.chat_calls(PHONE_BRAIN)[-1]["prompt"]
+    # numbers are read digit by digit; "ok" keeps the language the call was in
+    r = (await say("ok")).json()
+    assert r["say"] == "Your number is 9 8 1 1 0, 0 0 0 1 1, right?"
+    assert "Hindi in Roman letters" in fake_llm.chat_calls(PHONE_BRAIN)[-1]["prompt"]
+
+    # a model that doesn't answer in time: the caller hears that a message will be taken, not silence
+    import asyncio
+
+    from kritvia_api.services import llm
+
+    async def slow(*a, **kw):
+        await asyncio.sleep(5)
+    monkeypatch.setattr(vc, "TURN_BUDGET_S", 0.2)
+    monkeypatch.setattr(llm, "complete_json", slow)
+    r = (await say("Price kya hai?")).json()
+    assert r["ended"] is False and "उपलब्ध नहीं" in r["say"]
+
+
+async def _none(seen: list, kinds):
+    seen.append(kinds)
+    return []

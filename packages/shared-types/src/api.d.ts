@@ -12742,6 +12742,11 @@ export interface components {
         /** VoiceIn */
         VoiceIn: {
             /**
+             * Caller Facts
+             * @description services, prices, address, policies: what callers can be told. Left out: unchanged
+             */
+            caller_facts?: string | null;
+            /**
              * Enabled
              * @default false
              */
@@ -12825,6 +12830,11 @@ export interface components {
              * @description calls to the connected number are answered now
              */
             answering: boolean;
+            /**
+             * Caller Facts
+             * @description what the owner wants callers to know
+             */
+            caller_facts?: string | null;
             /** Caller Id Kind */
             caller_id_kind: ("160" | "landline" | "other") | null;
             /** Can Admin */

@@ -2,7 +2,8 @@
 
 App:
   GET    /ventures/{v}/voice                 settings, the connected number, what's ready
-  PUT    /ventures/{v}/voice                 answering: on/off, language, voice, greeting, put-through number, hours
+  PUT    /ventures/{v}/voice                 answering: on/off, language, voice, greeting, what callers can be
+                                             told, put-through number, hours
   PUT    /ventures/{v}/voice/outbound        outbound calling: the business's DLT registration (admins confirm it)
   POST   /ventures/{v}/voice/twilio          connect the business's Twilio number (checked; webhooks pointed here)
   DELETE /ventures/{v}/voice/twilio          disconnect it
@@ -88,6 +89,7 @@ class VoiceOut(BaseModel):
     voice: Literal["Polly.Aditi", "Polly.Raveena", "Polly.Kajal-Neural"]
     greeting: str | None
     greeting_preview: str
+    caller_facts: str | None = Field(default=None, description="what the owner wants callers to know")
     transfer_number: str | None
     open_days: list[int]
     open_from: str
@@ -120,6 +122,9 @@ class VoiceIn(BaseModel):
     language: Literal["hi-IN", "en-IN"] = "hi-IN"
     voice: Literal["Polly.Aditi", "Polly.Raveena", "Polly.Kajal-Neural"] = "Polly.Aditi"
     greeting: str | None = Field(default=None, max_length=300)
+    caller_facts: str | None = Field(default=None, max_length=2000,
+                                     description="services, prices, address, policies: what callers can be told. "
+                                                 "Left out: unchanged")
     transfer_number: str | None = Field(default=None, max_length=20)
     open_days: list[int] = Field(default_factory=lambda: [0, 1, 2, 3, 4, 5], max_length=7)
     open_from: str = Field(default="10:00", pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
@@ -185,7 +190,7 @@ async def _voice_out(db, svc, venture_id: uuid.UUID) -> VoiceOut:
     live = any(c is not None and c.status == "active" for c in (con, exo))
     st = get_settings()
     return VoiceOut(enabled=s.enabled, language=s.language, voice=s.voice, greeting=s.greeting,
-                    greeting_preview=vc.greeting(name, s), transfer_number=s.transfer_number, open_days=list(s.open_days),
+                    greeting_preview=vc.greeting(name, s), caller_facts=s.caller_facts, transfer_number=s.transfer_number, open_days=list(s.open_days),
                     open_from=s.open_from, open_to=s.open_to, max_minutes=s.max_minutes,
                     outbound_enabled=s.outbound_enabled, dlt_entity_id=s.dlt_entity_id, caller_id_kind=s.caller_id_kind,
                     registered_at=s.registered_at, number=number, plan_includes=includes,
@@ -217,15 +222,17 @@ async def put_voice(venture_id: uuid.UUID, body: VoiceIn, user_id: UserId, db: T
         async with db.begin_nested():
             await db.execute(text(
                 "INSERT INTO phone_settings (venture_id, org_id, enabled, language, voice, greeting, transfer_number,"
-                " open_days, open_from, open_to, max_minutes, updated_by)"
-                " VALUES (:v, :o, :e, :l, :vo, :g, :t, :d, :f, :to, :m, :u)"
+                " open_days, open_from, open_to, max_minutes, updated_by, caller_facts)"
+                " VALUES (:v, :o, :e, :l, :vo, :g, :t, :d, :f, :to, :m, :u, :cf)"
                 " ON CONFLICT (venture_id) DO UPDATE SET enabled = EXCLUDED.enabled, language = EXCLUDED.language,"
                 " voice = EXCLUDED.voice, greeting = EXCLUDED.greeting, transfer_number = EXCLUDED.transfer_number,"
+                " caller_facts = CASE WHEN :cf_set THEN EXCLUDED.caller_facts ELSE phone_settings.caller_facts END,"
                 " open_days = EXCLUDED.open_days, open_from = EXCLUDED.open_from, open_to = EXCLUDED.open_to,"
                 " max_minutes = EXCLUDED.max_minutes, updated_by = EXCLUDED.updated_by, updated_at = now()"),
                 {"v": venture_id, "o": org, "e": body.enabled, "l": body.language, "vo": body.voice,
                  "g": (body.greeting or "").strip() or None, "t": body.transfer_number, "d": body.open_days,
-                 "f": body.open_from, "to": body.open_to, "m": body.max_minutes, "u": user_id})
+                 "f": body.open_from, "to": body.open_to, "m": body.max_minutes, "u": user_id,
+                 "cf": (body.caller_facts or "").strip() or None, "cf_set": "caller_facts" in body.model_fields_set})
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return await _voice_out(db, svc, venture_id)
