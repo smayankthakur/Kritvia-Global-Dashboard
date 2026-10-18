@@ -193,6 +193,25 @@ def line(s: Settings, key: str) -> str:
     return LINES.get(s.language, LINES["en-IN"])[key]
 
 
+# "सकता/सकती", "(करूँगा / करूँगी)", "sakta/sakti": a word written twice, once masculine and once feminine.
+_W = r"([\u0900-\u097FA-Za-z]+)"
+_BOTH = re.compile(rf"\(\s*{_W}\s*/\s*{_W}\s*\)|{_W}\s*/\s*{_W}")
+
+
+def _pick_feminine(m: re.Match) -> str:
+    a, b = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+    for masc, fem in ((a, b), (b, a)):
+        if len(masc) == len(fem) and masc[:-1] == fem[:-1] and (masc[-1], fem[-1]) in (("ा", "ी"), ("a", "i")):
+            return fem
+    return m.group(0)
+
+
+def one_voice(say: str) -> str:
+    """The assistant's voice is a woman's (every default voice is), so in Hindi she says सकती हूँ, not
+    सकता/सकती. Models sometimes hedge with both forms; keep the feminine one so it doesn't read out a slash."""
+    return _BOTH.sub(_pick_feminine, say)
+
+
 class Turn(BaseModel):
     say: str = Field(max_length=600, description="what to say now: 1-3 short spoken sentences, no lists or symbols")
     action: Literal["listen", "take_message", "booking_request", "transfer", "opt_out", "end"] = "listen"
@@ -229,6 +248,8 @@ def _system(name: str, about: str, s: Settings, *, can_transfer: bool, outbound:
         + "\nRules:\n"
         "- Speak like a friendly, polite receptionist: 1-3 short sentences each time, no lists, no symbols, no links. "
         + lang + "\n"
+        "- Your voice is a woman's. In Hindi always speak of yourself in the feminine (मैं मदद कर सकती हूँ, "
+        "बताती हूँ, जोड़ रही हूँ, नोट करूँगी); never write two forms like सकता/सकती.\n"
         "- Use only facts from the business's details and the notes below. Never make up prices, offers, dates, "
         "stock or promises. If you don't know, say a team member will call back, and take a message.\n"
         "- Never ask for or repeat card numbers, OTPs, PINs, passwords, Aadhaar, PAN or bank details. Never take "
@@ -372,7 +393,7 @@ async def turn(svc, p: Principal, call_id: uuid.UUID, *, heard: str, digits: str
         row, state = await _load(conn, crypto, p.venture_id, call_id)
         if t.caller_name:
             state["caller_name"] = t.caller_name.strip()[:80]
-        say = t.say.strip() or line(s, "again")
+        say = one_voice(t.say.strip()) or line(s, "again")
         if t.action in ("take_message", "booking_request") and t.note:
             state.setdefault("details", []).append({"kind": "booking" if t.action == "booking_request" else "message",
                                                     "note": t.note.strip()[:500]})

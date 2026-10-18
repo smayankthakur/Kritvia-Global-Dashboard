@@ -113,6 +113,14 @@ def test_signature_and_twiml():
     assert not vc.STOP_RE.search("can you call me back tomorrow")
 
 
+def test_one_voice_keeps_the_feminine_form():
+    assert vc.one_voice("मैं मदद कर सकता/सकती हूँ") == "मैं मदद कर सकती हूँ"
+    assert vc.one_voice("मैं आपको कॉल (करूँगा / करूँगी)।") == "मैं आपको कॉल करूँगी।"
+    assert vc.one_voice("Main bata sakta/sakti hoon") == "Main bata sakti hoon"
+    for same in ("हम 24/7 खुले हैं", "call/WhatsApp", "and/or", "10/12 को"):
+        assert vc.one_voice(same) == same
+
+
 async def test_answering_a_call_takes_a_message(shop, fake_llm, twilio, client):
     mayank, v = shop["mayank"], shop["v"]
     out = await connect(mayank, v, twilio)
@@ -200,12 +208,14 @@ async def test_put_through_stop_calling_and_silence(shop, fake_llm, twilio, clie
 
 async def test_a_test_call_in_the_app(shop, fake_llm):
     mayank, v = shop["mayank"], shop["v"]
-    brain(fake_llm, {"say": "We're open 10 to 7 every day except Sunday.", "action": "listen"},
+    brain(fake_llm, {"say": "We're open 10 to 7 every day except Sunday. और क्या मदद कर सकता/सकती हूँ?",
+                     "action": "listen"},
           {"say": "Bye!", "action": "end"})
     first = (await mayank.post(f"/ventures/{v}/calls/test", json={})).json()
     assert "AI" in first["say"] and first["ended"] is False and first["language"] == "hi-IN"
     r = (await mayank.post(f"/ventures/{v}/calls/test", json={"call_id": first["call_id"], "said": "When are you open?"})).json()
     assert r["say"].startswith("We're open") and r["ended"] is False
+    assert r["say"].endswith("और क्या मदद कर सकती हूँ?")  # one voice, not सकता/सकती read out
     r = (await mayank.post(f"/ventures/{v}/calls/test", json={"call_id": first["call_id"], "said": "ok bye"})).json()
     assert r["ended"] is True
     c = (await mayank.get(f"/ventures/{v}/calls")).json()[0]
