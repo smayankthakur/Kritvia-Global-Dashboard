@@ -63,6 +63,7 @@ fi
 
 bash "$ROOT/infra/scripts/install-ops.sh" >/dev/null 2>&1 || step "warning: install-ops.sh failed (cron jobs may be stale)"
 docker image prune -f >/dev/null 2>&1 || true   # old image layers, so disk doesn't fill up deploy by deploy
+docker builder prune -f --keep-storage 3GB >/dev/null 2>&1 || docker builder prune -f >/dev/null 2>&1 || true   # build cache grew to 46 GB once; keep it small
 
 rm -f "$MARK"
 step "health check"

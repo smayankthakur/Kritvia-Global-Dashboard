@@ -29,6 +29,49 @@ To cut hosting to about $0 (Oracle Cloud Always Free: Ampere A1, 2 OCPU / 12 GB 
 3. Add the new server's IP to the Google Places key's IP restriction.
 4. After a week: snapshot and terminate the EC2 instance and release its IP. Keep S3 (backups) and SES (email).
 
+## 0b. Moving the root disk to a smaller volume (150 GB → 50 GB)
+
+The server used 31 GB of its 150 GB disk (18 Oct 2026; 6 GB of that is the swap file, about 4 GB
+Docker build cache, which deploys now trim). A 50 GB gp3 volume saves roughly $9 a month and still
+leaves room for builds; 40 GB works but is tight. AWS can't shrink a volume, so the files are copied
+to a new one with `infra/scripts/shrink-root.sh`, which gives it the same layout and identifiers
+(GPT disk and partition GUIDs, filesystem UUIDs and labels), so GRUB and fstab boot from it unchanged.
+Rehearsed on disk images with the server's exact layout (p15 ESP, p16 /boot, p1 root).
+
+Downtime: about 5 minutes for the last copy, plus a stop/start (~2 minutes).
+
+1. **Fixed IP first** (EC2 → Elastic IPs → Allocate → Associate with `i-0177e8d81131819d7`). The
+   address changes to the Elastic IP once now and then stays through every stop/start; it costs the
+   same as the current public IP while attached. Put the new address on both Google Places keys'
+   IP restriction (Google Cloud → Credentials).
+2. **New volume**: EC2 → Volumes → Create volume: gp3, 50 GiB, 3000 IOPS, 125 MB/s, availability zone
+   **ap-south-1b** (the instance's), tag Name=kritvia-root-50. Actions → Attach volume → instance
+   `i-0177e8d81131819d7`, device `/dev/sdf`. On the server it appears as `/dev/nvme1n1` (check with
+   `lsblk`: the empty 50G disk).
+3. **Copy while running** (safe, repeatable; takes a few minutes):
+   ```bash
+   # after the patch with the script is pushed and deployed (deploy.sh pulls main):
+   sudo bash /opt/kritvia/infra/scripts/shrink-root.sh copy /dev/nvme1n1
+   ```
+   It refuses the disk the server runs from, a disk with partitions it didn't make (FORCE=1 to wipe),
+   and a disk without 8 GB to spare.
+4. **Final copy** (downtime starts): `sudo bash /opt/kritvia/infra/scripts/shrink-root.sh final /dev/nvme1n1`.
+   It stops Kritvia and Docker, copies the last changes, gives the new disk the old identifiers,
+   checks the filesystems and prints "same" for every identifier. If anything says DIFFERENT, don't
+   swap: `sudo systemctl start docker && cd /opt/kritvia/infra && sudo docker compose --profile tunnel up -d`.
+   Then `sudo poweroff`.
+5. **Swap the disks** (EC2 console, instance stopped): Storage tab → note the **Root device name**
+   (e.g. `/dev/sda1`) and the old volume ID. Volumes → old volume → Create snapshot (name
+   kritvia-root-150-before-shrink). Detach the old volume, detach the new one, attach the new one to
+   the instance with the root device name. Start the instance.
+6. **Check**: `sudo bash /opt/kritvia/infra/scripts/shrink-root.sh verify` (disk 50G, swap back on,
+   readyz 200, containers up), then open app.sitelytc.com and run a sample enquiry.
+7. **Going back** if it doesn't boot: stop, detach the new volume, attach the old one as the root
+   device name, start. Nothing on the old volume was changed.
+8. **After a week** of normal running: delete the old 150 GB volume, then the snapshot.
+
+Never boot with both disks attached after `final`: they share identifiers.
+
 ## 1. Provision the VM (once)
 
 1. Oracle Cloud Always Free: Ampere A1, 4 OCPU / 24 GB, Ubuntu 24.04 (arm64), 150+ GB boot volume.
