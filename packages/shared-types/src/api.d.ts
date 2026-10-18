@@ -4305,6 +4305,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Skills */
+        get: operations["list_skills_ventures__venture_id__skills_get"];
+        put?: never;
+        /** Create Skill */
+        post: operations["create_skill_ventures__venture_id__skills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/skills/from-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * From Request
+         * @description One of YOUR assistant requests (only yours) -> a draft skill that does the same job again.
+         */
+        post: operations["from_request_ventures__venture_id__skills_from_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/skills/understand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Understand */
+        post: operations["understand_ventures__venture_id__skills_understand_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/skills/{skill_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Skill */
+        put: operations["update_skill_ventures__venture_id__skills__skill_id__put"];
+        post?: never;
+        /** Delete Skill */
+        delete: operations["delete_skill_ventures__venture_id__skills__skill_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/skills/{skill_id}/lessons/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Forget Lesson */
+        delete: operations["forget_lesson_ventures__venture_id__skills__skill_id__lessons__index__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/skills/{skill_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Skill */
+        post: operations["run_skill_ventures__venture_id__skills__skill_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/skills/{skill_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Skill Runs */
+        get: operations["skill_runs_ventures__venture_id__skills__skill_id__runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/tally": {
         parameters: {
             query?: never;
@@ -5287,6 +5411,11 @@ export interface components {
              * Format: uuid
              */
             run_id: string;
+            /**
+             * Skill Id
+             * @description set when this request was a skill's run
+             */
+            skill_id?: string | null;
             /** Status */
             status: string;
             /** Steps */
@@ -7163,6 +7292,14 @@ export interface components {
              * @description the provider may learn from what it receives (opt-in only)
              */
             may_train: boolean;
+        };
+        /** FromRequestIn */
+        FromRequestIn: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
         };
         /** GoogleCompleteIn */
         GoogleCompleteIn: {
@@ -9957,6 +10094,175 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** SkillDraftOut */
+        SkillDraftOut: {
+            /**
+             * At Time
+             * @description HH:MM, 24-hour, in the business's time zone
+             */
+            at_time?: string | null;
+            /**
+             * Day Of Month
+             * @description 1-28 (monthly only)
+             */
+            day_of_month?: number | null;
+            /** Event */
+            event?: ("invoice_overdue" | "invoice_paid" | "booking_done" | "lead_new" | "lead_quiet") | null;
+            /** Freq */
+            freq?: ("daily" | "weekly" | "monthly") | null;
+            /**
+             * Instructions
+             * @description the job as numbered steps in plain words, in the person's language; general (no one-off names or dates unless the job is always about them)
+             */
+            instructions: string;
+            /**
+             * Name
+             * @description a short name, 2-6 words, e.g. 'Overdue invoice reminders'
+             */
+            name: string;
+            /**
+             * Trigger
+             * @default manual
+             * @enum {string}
+             */
+            trigger: "manual" | "schedule" | "event";
+            /**
+             * Wait Days
+             * @default 0
+             */
+            wait_days: number;
+            /**
+             * Weekdays
+             * @description 0 = Monday … 6 = Sunday (weekly only)
+             */
+            weekdays?: number[];
+            /**
+             * When
+             * @description when it would run, in words
+             */
+            when: string;
+        };
+        /** SkillIn */
+        SkillIn: {
+            /**
+             * At Time
+             * @description HH:MM, 24-hour, in the business's time zone
+             */
+            at_time?: string | null;
+            /**
+             * Day Of Month
+             * @description 1-28 (monthly only)
+             */
+            day_of_month?: number | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Event */
+            event?: ("invoice_overdue" | "invoice_paid" | "booking_done" | "lead_new" | "lead_quiet") | null;
+            /** Freq */
+            freq?: ("daily" | "weekly" | "monthly") | null;
+            /**
+             * Instructions
+             * @description the job as numbered steps in plain words, in the person's language; general (no one-off names or dates unless the job is always about them)
+             */
+            instructions: string;
+            /**
+             * Name
+             * @description a short name, 2-6 words, e.g. 'Overdue invoice reminders'
+             */
+            name: string;
+            /** Source Run Id */
+            source_run_id?: string | null;
+            /**
+             * Trigger
+             * @default manual
+             * @enum {string}
+             */
+            trigger: "manual" | "schedule" | "event";
+            /**
+             * Wait Days
+             * @default 0
+             */
+            wait_days: number;
+            /**
+             * Weekdays
+             * @description 0 = Monday … 6 = Sunday (weekly only)
+             */
+            weekdays?: number[];
+        };
+        /** SkillOut */
+        SkillOut: {
+            /** At Time */
+            at_time: string | null;
+            /** Can Edit */
+            can_edit: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Day Of Month */
+            day_of_month: number | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Event */
+            event: ("invoice_overdue" | "invoice_paid" | "booking_done" | "lead_new" | "lead_quiet") | null;
+            /** Freq */
+            freq: ("daily" | "weekly" | "monthly") | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Instructions */
+            instructions: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Lessons */
+            lessons: string[];
+            /** Lessons Learned */
+            lessons_learned: number;
+            /** Mine */
+            mine: boolean;
+            /** Name */
+            name: string;
+            /** Next Run At */
+            next_run_at: string | null;
+            /** Runs */
+            runs: number;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "manual" | "schedule" | "event";
+            /** Wait Days */
+            wait_days: number;
+            /** Weekdays */
+            weekdays: number[];
+            /** When */
+            when: string;
+        };
+        /** SkillRunOut */
+        SkillRunOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Status */
+            status: string;
+        };
         /** SlackCompleteIn */
         SlackCompleteIn: {
             /** Code */
@@ -11713,6 +12019,11 @@ export interface components {
             /** Waba Id */
             waba_id: string;
         };
+        /** WordsIn */
+        WordsIn: {
+            /** Words */
+            words: string;
+        };
         /** WorkflowConfigIn */
         WorkflowConfigIn: {
             /**
@@ -11920,6 +12231,14 @@ export interface components {
             rating: number | null;
             /** Write Review Url */
             write_review_url: string;
+        };
+        /** RunOut */
+        kritvia_api__routers__skills__RunOut: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
         };
         /** NoteIn */
         kritvia_api__routers__trade__NoteIn: {
@@ -21462,6 +21781,305 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StartedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_skills_ventures__venture_id__skills_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_skill_ventures__venture_id__skills_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    from_request_ventures__venture_id__skills_from_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FromRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    understand_ventures__venture_id__skills_understand_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WordsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_skill_ventures__venture_id__skills__skill_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkillIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_skill_ventures__venture_id__skills__skill_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forget_lesson_ventures__venture_id__skills__skill_id__lessons__index__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                skill_id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_skill_ventures__venture_id__skills__skill_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["kritvia_api__routers__skills__RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    skill_runs_ventures__venture_id__skills__skill_id__runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillRunOut"][];
                 };
             };
             /** @description Validation Error */

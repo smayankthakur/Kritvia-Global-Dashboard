@@ -7,7 +7,8 @@ Cron (IST)
                           sweep            re-dispatch queued runs and runs with expired leases
                           expire_approvals expire overdue drafts and wake their runs
                           fire_automations automations made in plain words whose time has come,
-                                           and custom workflows' daily checks
+                                           custom workflows' daily checks, and skills (scheduled
+                                           ones, and event skills' daily checks)
   every 5 minutes         poll_gmail       new inquiries, aggregator reports, emailed loan documents
   every 10 minutes        poll_indiamart   new IndiaMART enquiries -> Lead triage (IndiaMART allows a call
                                            every 5 minutes)
@@ -104,6 +105,11 @@ async def fire_automations(ctx: dict) -> int:
         n += await custom_workflows.fire_due(ctx["services"])     # custom workflows' daily checks (Scale+)
     except Exception:  # noqa: BLE001
         log.exception("custom workflows didn't start")
+    try:
+        from kritvia_api.services import skills
+        n += await skills.fire_due(ctx["services"])              # skills on a schedule, and event skills' checks
+    except Exception:  # noqa: BLE001
+        log.exception("skills didn't start")
     return n
 
 

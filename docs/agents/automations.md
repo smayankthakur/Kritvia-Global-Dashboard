@@ -1,5 +1,9 @@
 # Automations from plain words
 
+Automations report the business's numbers on a schedule. For jobs that **do** things (draft reminders, add
+tasks, follow up with leads) on a schedule or when something happens, and that learn from your edits, see
+[Skills](skills.md).
+
 **Automations** page. Type what you want regularly, in English, Hindi or Hinglish. For example:
 
 - "Every Monday at 9 send me last week's sales";

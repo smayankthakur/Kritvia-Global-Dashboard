@@ -244,7 +244,8 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
                         required_roles=("approver", "venture_admin"),
                         always_review=s.tool.startswith(mcp.PREFIX)),
         resume="act", on_reject="rejected",
-        update={"pending": {"n": n, "tool": s.tool}, "log": log},
+        update={"pending": {"n": n, "tool": s.tool, **({"draft": args} if state["input"].get("skill_id") else {})},
+                "log": log},
         note=f"{s.tool} waits for approval")
 
 
@@ -253,6 +254,8 @@ async def act(ctx: RunContext, state: dict) -> Goto:
     from kritvia_api.services import mcp
     pending, log = state.pop("pending"), state.get("log", [])
     d = state.get("decision") or {}
+    if state["input"].get("skill_id") and d.get("status") == "edited":
+        await _learn(ctx, state, pending, final=d.get("payload"), comment=d.get("comment"))
     try:
         if pending["tool"].startswith(mcp.PREFIX):
             result = await ctx.invoke("mcp.call", approval_id=d["approval_id"])
@@ -270,6 +273,8 @@ async def act(ctx: RunContext, state: dict) -> Goto:
 async def rejected(ctx: RunContext, state: dict) -> Goto | Finish:
     pending, log = state.get("pending") or {}, state.get("log", [])
     comment = ((state.get("decision") or {}).get("comment") or "").strip()[:500]
+    if state["input"].get("skill_id") and comment:
+        await _learn(ctx, state, pending, final=None, comment=comment)
     log.append({"n": pending.get("n", len(log) + 1), "tool": pending.get("tool", "?"), "status": "rejected",
                 "comment": comment})
     rejections = sum(1 for e in log if e.get("status") == "rejected")
@@ -278,6 +283,19 @@ async def rejected(ctx: RunContext, state: dict) -> Goto | Finish:
         return Finish("not_done", update={"log": log, "pending": None, "summary": _summary(log, answered=False),
                                           "answer": "Okay, I've stopped. Nothing was sent."})
     return Goto("think", update={"log": log, "pending": None}, note="not approved; trying another way")
+
+
+async def _learn(ctx: RunContext, state: dict, pending: dict, *, final: dict | None, comment: str | None) -> None:
+    """A skill's draft was edited or sent back with a note: the skill learns from it (best effort)."""
+    from kritvia_api.services import skills
+    try:
+        lesson = await skills.learn(ctx, state["input"]["skill_id"], tool=str(pending.get("tool")),
+                                    draft=pending.get("draft"), final=final, comment=comment)
+        if lesson:
+            ctx.note("the skill learned a lesson from this edit")
+    except Exception:  # noqa: BLE001 - learning never stops the job
+        import logging
+        logging.getLogger(__name__).exception("skill learning failed")
 
 
 async def _reply_back(ctx: RunContext, state: dict, answer: str) -> None:

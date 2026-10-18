@@ -12,6 +12,7 @@ import { Notice, PageHeader } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { EXAMPLES, inProgress, toolLabel } from "@/components/assistant/labels";
+import { SaveAsSkill } from "@/components/skills/skills";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
@@ -26,14 +27,16 @@ const STEP_ICON = {
   "waiting for approval": <Clock className="h-3.5 w-3.5 text-warning" aria-hidden />,
 } as const;
 
-function Request({ item }: { item: Item }) {
+function Request({ item, ventureId, canWrite }: { item: Item; ventureId: string; canWrite: boolean }) {
   const working = inProgress(item.status);
+  const worked = item.status === "completed" && item.steps.some((s) => s.result === "done");
   return (
     <Card className="space-y-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <p className="min-w-0 flex-1 font-medium whitespace-pre-wrap">{item.request}</p>
         <div className="flex items-center gap-2 text-xs text-subtle">
           <span>{formatRelative(item.created_at)}</span>
+          {item.skill_id ? <Badge tone="info">skill</Badge> : null}
           {item.pending_approval_id ? <Badge tone="warning">Needs your yes</Badge> : <StatusBadge status={working ? "working" : item.status} />}
         </div>
       </div>
@@ -64,6 +67,11 @@ function Request({ item }: { item: Item }) {
       ) : null}
       {item.answer ? <p className="rounded-md border border-border bg-surface-2 p-3 text-sm whitespace-pre-wrap">{item.answer}</p> : null}
       {item.status === "failed" ? <p className="text-sm text-danger">Something went wrong. Try asking again in a moment.</p> : null}
+      {worked && !item.skill_id && canWrite ? (
+        <div className="flex justify-end">
+          <SaveAsSkill ventureId={ventureId} runId={item.run_id} />
+        </div>
+      ) : null}
     </Card>
   );
 }
@@ -302,7 +310,7 @@ export default function AssistantPage() {
             list.length ? (
               <div className="space-y-3">
                 {list.map((i) => (
-                  <Request key={i.run_id} item={i} />
+                  <Request key={i.run_id} item={i} ventureId={v.id} canWrite={v.access === "write"} />
                 ))}
               </div>
             ) : (

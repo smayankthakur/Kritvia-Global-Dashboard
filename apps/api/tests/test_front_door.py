@@ -296,3 +296,19 @@ async def test_a_code_from_someone_else_is_just_a_customer_message(desk, client,
     assert r["accepted"] in (0, 1)
     links = (await desk["mayank"].get(f"/ventures/{desk['v']}/approver-links")).json()["links"]
     assert all(x.get("label") != "+" + stranger for x in links)
+
+
+async def test_skills_are_listed_and_run_from_the_chat(desk, client, fake_llm, tg):
+    owner, v = desk["owner"], desk["v"]
+    cid, secret = await link_telegram(client, desk, tg)
+    r = await owner.post(f"/ventures/{v}/skills", json={"name": "Daily summary", "trigger": "schedule", "freq": "daily",
+                                                        "at_time": "19:00", "instructions": "1. Tell me today's numbers."})
+    assert r.status_code == 201, r.text
+    await send(client, cid, secret, update(30, "/skills", chat=OWNER_CHAT))
+    assert "• Daily summary: Every day at 19:00" in tg.to(OWNER_CHAT)[-1]
+    script(fake_llm, {"answer": "Aaj ₹0 aaya."})
+    await send(client, cid, secret, update(31, "/run daily", chat=OWNER_CHAT))
+    said = tg.to(OWNER_CHAT)
+    assert 'Running "Daily summary".' in said and "Aaj ₹0 aaya." in said
+    await send(client, cid, secret, update(32, "/run nothing-like-this", chat=OWNER_CHAT))
+    assert tg.to(OWNER_CHAT)[-1].startswith("No skill by that name")

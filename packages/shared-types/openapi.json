@@ -1284,6 +1284,19 @@
             "title": "Run Id",
             "type": "string"
           },
+          "skill_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "set when this request was a skill's run",
+            "title": "Skill Id"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -6120,6 +6133,20 @@
           "available"
         ],
         "title": "FreeModelOut",
+        "type": "object"
+      },
+      "FromRequestIn": {
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "FromRequestIn",
         "type": "object"
       },
       "GoogleCompleteIn": {
@@ -14607,6 +14634,465 @@
         "title": "SigninUrlOut",
         "type": "object"
       },
+      "SkillDraftOut": {
+        "properties": {
+          "at_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HH:MM, 24-hour, in the business's time zone",
+            "title": "At Time"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "1-28 (monthly only)",
+            "title": "Day Of Month"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invoice_overdue",
+                  "invoice_paid",
+                  "booking_done",
+                  "lead_new",
+                  "lead_quiet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "freq": {
+            "anyOf": [
+              {
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freq"
+          },
+          "instructions": {
+            "description": "the job as numbered steps in plain words, in the person's language; general (no one-off names or dates unless the job is always about them)",
+            "maxLength": 2000,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "name": {
+            "description": "a short name, 2-6 words, e.g. 'Overdue invoice reminders'",
+            "maxLength": 80,
+            "title": "Name",
+            "type": "string"
+          },
+          "trigger": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "schedule",
+              "event"
+            ],
+            "title": "Trigger",
+            "type": "string"
+          },
+          "wait_days": {
+            "default": 0,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Wait Days",
+            "type": "integer"
+          },
+          "weekdays": {
+            "description": "0 = Monday \u2026 6 = Sunday (weekly only)",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          },
+          "when": {
+            "description": "when it would run, in words",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "instructions",
+          "when"
+        ],
+        "title": "SkillDraftOut",
+        "type": "object"
+      },
+      "SkillIn": {
+        "properties": {
+          "at_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HH:MM, 24-hour, in the business's time zone",
+            "title": "At Time"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "1-28 (monthly only)",
+            "title": "Day Of Month"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invoice_overdue",
+                  "invoice_paid",
+                  "booking_done",
+                  "lead_new",
+                  "lead_quiet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "freq": {
+            "anyOf": [
+              {
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freq"
+          },
+          "instructions": {
+            "description": "the job as numbered steps in plain words, in the person's language; general (no one-off names or dates unless the job is always about them)",
+            "maxLength": 2000,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "name": {
+            "description": "a short name, 2-6 words, e.g. 'Overdue invoice reminders'",
+            "maxLength": 80,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Run Id"
+          },
+          "trigger": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "schedule",
+              "event"
+            ],
+            "title": "Trigger",
+            "type": "string"
+          },
+          "wait_days": {
+            "default": 0,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Wait Days",
+            "type": "integer"
+          },
+          "weekdays": {
+            "description": "0 = Monday \u2026 6 = Sunday (weekly only)",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "instructions"
+        ],
+        "title": "SkillIn",
+        "type": "object"
+      },
+      "SkillOut": {
+        "properties": {
+          "at_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At Time"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "day_of_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Of Month"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invoice_overdue",
+                  "invoice_paid",
+                  "booking_done",
+                  "lead_new",
+                  "lead_quiet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "freq": {
+            "anyOf": [
+              {
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freq"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "instructions": {
+            "title": "Instructions",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "lessons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lessons",
+            "type": "array"
+          },
+          "lessons_learned": {
+            "title": "Lessons Learned",
+            "type": "integer"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "trigger": {
+            "enum": [
+              "manual",
+              "schedule",
+              "event"
+            ],
+            "title": "Trigger",
+            "type": "string"
+          },
+          "wait_days": {
+            "title": "Wait Days",
+            "type": "integer"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Weekdays",
+            "type": "array"
+          },
+          "when": {
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "instructions",
+          "lessons",
+          "lessons_learned",
+          "trigger",
+          "freq",
+          "weekdays",
+          "day_of_month",
+          "at_time",
+          "event",
+          "wait_days",
+          "when",
+          "enabled",
+          "next_run_at",
+          "last_run_at",
+          "last_error",
+          "runs",
+          "mine",
+          "can_edit",
+          "created_at"
+        ],
+        "title": "SkillOut",
+        "type": "object"
+      },
+      "SkillRunOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "outcome",
+          "created_at"
+        ],
+        "title": "SkillRunOut",
+        "type": "object"
+      },
       "SlackCompleteIn": {
         "properties": {
           "code": {
@@ -19060,6 +19546,21 @@
         "title": "WhatsAppSignupIn",
         "type": "object"
       },
+      "WordsIn": {
+        "properties": {
+          "words": {
+            "maxLength": 1500,
+            "minLength": 5,
+            "title": "Words",
+            "type": "string"
+          }
+        },
+        "required": [
+          "words"
+        ],
+        "title": "WordsIn",
+        "type": "object"
+      },
       "WorkflowConfigIn": {
         "properties": {
           "enabled": {
@@ -19577,6 +20078,20 @@
           "write_review_url"
         ],
         "title": "PlaceOut",
+        "type": "object"
+      },
+      "kritvia_api__routers__skills__RunOut": {
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "RunOut",
         "type": "object"
       },
       "kritvia_api__routers__trade__NoteIn": {
@@ -35735,6 +36250,535 @@
         "summary": "Send Update",
         "tags": [
           "trade"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/skills": {
+      "get": {
+        "operationId": "list_skills_ventures__venture_id__skills_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SkillOut"
+                  },
+                  "title": "Response List Skills Ventures  Venture Id  Skills Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Skills",
+        "tags": [
+          "skills"
+        ]
+      },
+      "post": {
+        "operationId": "create_skill_ventures__venture_id__skills_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Skill",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/skills/from-request": {
+      "post": {
+        "description": "One of YOUR assistant requests (only yours) -> a draft skill that does the same job again.",
+        "operationId": "from_request_ventures__venture_id__skills_from_request_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FromRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillDraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "From Request",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/skills/understand": {
+      "post": {
+        "operationId": "understand_ventures__venture_id__skills_understand_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WordsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillDraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Understand",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/skills/{skill_id}": {
+      "delete": {
+        "operationId": "delete_skill_ventures__venture_id__skills__skill_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Skill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Skill",
+        "tags": [
+          "skills"
+        ]
+      },
+      "put": {
+        "operationId": "update_skill_ventures__venture_id__skills__skill_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Skill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Skill",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/skills/{skill_id}/lessons/{index}": {
+      "delete": {
+        "operationId": "forget_lesson_ventures__venture_id__skills__skill_id__lessons__index__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Skill Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forget Lesson",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/skills/{skill_id}/run": {
+      "post": {
+        "operationId": "run_skill_ventures__venture_id__skills__skill_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Skill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/kritvia_api__routers__skills__RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Skill",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/skills/{skill_id}/runs": {
+      "get": {
+        "operationId": "skill_runs_ventures__venture_id__skills__skill_id__runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Skill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SkillRunOut"
+                  },
+                  "title": "Response Skill Runs Ventures  Venture Id  Skills  Skill Id  Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Skill Runs",
+        "tags": [
+          "skills"
         ]
       }
     },

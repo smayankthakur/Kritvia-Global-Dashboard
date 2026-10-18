@@ -46,6 +46,7 @@ class AssistantItem(BaseModel):
     pending_approval_id: uuid.UUID | None
     created_at: datetime
     finished_at: datetime | None
+    skill_id: uuid.UUID | None = Field(default=None, description="set when this request was a skill's run")
 
 
 ITEM_SQL = ("SELECT r.id, r.status, r.outcome, r.state_enc, r.created_at, r.finished_at,"
@@ -70,7 +71,8 @@ async def _item(crypto: EnvelopeCrypto, venture_id: uuid.UUID, r) -> AssistantIt
     return AssistantItem(run_id=r.id, status=r.status, outcome=r.outcome,
                          request=str((state.get("input") or {}).get("request", "")),
                          answer=state.get("answer"), steps=steps, pending_approval_id=r.pending_id,
-                         created_at=r.created_at, finished_at=r.finished_at)
+                         created_at=r.created_at, finished_at=r.finished_at,
+                         skill_id=(state.get("input") or {}).get("skill_id"))
 
 
 @router.post("/ventures/{venture_id}/assistant", response_model=AssistantItem, status_code=201)

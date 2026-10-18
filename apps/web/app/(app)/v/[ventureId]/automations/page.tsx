@@ -5,6 +5,7 @@ import { Bot, Plus, Play, Repeat, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { CustomWorkflows } from "@/components/automations/custom-workflows";
+import { SkillsCard } from "@/components/skills/skills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -324,6 +325,7 @@ export default function AutomationsPage() {
         </QueryState>
       </Card>
       {canWrite ? <Suggestions taken={new Set((list.data ?? []).map((a) => a.name.toLowerCase()))} onPick={pick} /> : null}
+      <SkillsCard ventureId={v.id} canWrite={canWrite} canAdmin={Boolean(v.can_admin || v.is_owner)} />
       <CustomWorkflows ventureId={v.id} canAdmin={Boolean(v.can_admin || v.is_owner)} />
       <AgentIdeas ventureId={v.id} kind={v.kind} />
       {viewing ? <Results ventureId={v.id} a={viewing} onClose={() => setViewing(null)} /> : null}

@@ -240,8 +240,8 @@ async def test_telegram_link_card_and_buttons(salon, client, fake_llm, tg):
     await send(client, cid, secret, update(12, "Mention tomorrow 11 am is free", chat=APPROVER_CHAT))
     a = (await approver.get(f"/ventures/{v}/approvals/{second}")).json()
     assert a["status"] == "rejected" and a["comment"] == "Mention tomorrow 11 am is free"
-    assert "goes back to be redone" in tg.to(APPROVER_CHAT)[-1]["text"] or \
-        "already" in tg.to(APPROVER_CHAT)[-1]["text"]
+    # the redraft's new card is sent in the background, so it may land just before or after the thanks
+    assert any("goes back to be redone" in m["text"] or "already" in m["text"] for m in tg.to(APPROVER_CHAT)[-2:])
     assert len(await tg_runs(mayank, v)) == runs_before            # same run, redrafted
     # the approver's own messages never became customer chats
     chats = (await mayank.get(f"/ventures/{v}/whatsapp/chats")).json()["chats"]

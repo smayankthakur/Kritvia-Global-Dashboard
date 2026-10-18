@@ -38,7 +38,7 @@ HELP = ("Ask me anything about {business} in Hindi, Hinglish or English, by mess
         "• Priya ko proposal ka follow-up bhejo\n"
         "• Add a task for Neha to send the Acme quote by Friday\n\n"
         "Anything that sends, books or changes something comes back here as a draft for your yes.\n"
-        "Quick: /today, /week, /waiting, /help")
+        "Quick: /today, /week, /waiting, /skills, /run <skill name>, /help")
 
 Say = Callable[[str], Awaitable[None]]
 
@@ -59,7 +59,7 @@ def command(text_: str) -> str | None:
     if not w or not w[0].startswith("/"):
         return None
     c = w[0][1:].split("@", 1)[0].lower()
-    return c if c in ("today", "week", "waiting", "help", "start") else "unknown"
+    return c if c in ("today", "week", "waiting", "help", "start", "skills", "run") else "unknown"
 
 
 async def numbers(venture_id: uuid.UUID, user_id: uuid.UUID, period: str) -> str:
@@ -150,6 +150,12 @@ async def handle(svc, a: Asker, *, text_: str, say: Say, resend_cards: Callable[
     if c in ("today", "week"):
         await say(await numbers(a.venture_id, a.user_id, "today" if c == "today" else "last_7_days"))
         return
+    if c == "skills":
+        await say(await skill_list(a))
+        return
+    if c == "run":
+        await say(await run_skill(svc, a, text_.strip().split(None, 1)[1] if len(text_.strip().split(None, 1)) > 1 else ""))
+        return
     if c == "waiting":
         ids = await waiting(a.venture_id, a.user_id)
         if not ids:
@@ -171,6 +177,39 @@ async def handle(svc, a: Asker, *, text_: str, say: Say, resend_cards: Callable[
     elif started == "off":
         await say("The Kritvia assistant can't take requests for this business right now. Check its plan, or ask "
                   "an admin to switch it on in Agents.")
+
+
+async def skill_list(a: Asker) -> str:
+    from kritvia_api.services import skills as sk
+    async with tenant_tx(a.user_id) as conn:
+        rows = (await conn.execute(text("SELECT name, trigger, freq, weekdays, day_of_month, at_time, event, wait_days,"
+                                        " enabled FROM skills WHERE venture_id = :v ORDER BY name"),
+                                   {"v": a.venture_id})).all()
+    if not rows:
+        return "No skills yet. Make one in Kritvia → Automations → Skills, or save a request that worked as a skill."
+    return "Skills:\n" + "\n".join(f"• {r.name}: {sk.describe(dict(r._mapping))}" + ("" if r.enabled else " (off)")
+                                   for r in rows) + "\n\nRun one with /run <name>."
+
+
+async def run_skill(svc, a: Asker, name: str) -> str:
+    from kritvia_api.services import skills as sk
+    from kritvia_api.services.crypto import EnvelopeCrypto
+    if not name.strip():
+        return "Say which: /run <skill name>. /skills lists them."
+    if not await can_ask(a.venture_id, a.user_id):
+        return "Running skills needs an operator or admin role."
+    async with tenant_tx(a.user_id) as conn:
+        hits = (await conn.execute(text("SELECT id FROM skills WHERE venture_id = :v AND name ILIKE :n ORDER BY name"),
+                                   {"v": a.venture_id, "n": "%" + name.strip().replace("%", "")[:80] + "%"})).scalars().all()
+        if len(hits) != 1:
+            return "No skill by that name. /skills lists them." if not hits else "More than one skill matches; say more of its name."
+        s = await sk.load(conn, EnvelopeCrypto(conn, svc.keys), a.venture_id, hits[0])
+    try:
+        await sk.start(svc, s, actor_user_id=a.user_id, actor_type="user", trigger_kind=a.channel,
+                       reply_to={"channel": a.channel, "chat": a.chat, "user": str(a.user_id)})
+    except ValueError:
+        return "That skill can't run right now. Check it in Kritvia."
+    return f"Running \"{s['name']}\"."
 
 
 # ------------------------------------------------------------- answers back --
