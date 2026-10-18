@@ -9,6 +9,14 @@ const TOOL_LABELS: Record<string, string> = {
   "whatsapp.templates": "Looked up WhatsApp templates",
   "telegram.send": "Telegram message",
   "calendar.create_event": "Meeting invite",
+  "business.numbers": "Checked the business's numbers",
+  "invoices.search": "Looked up invoices",
+  "shipments.search": "Looked up shipments",
+  "tasks.search": "Looked up tasks",
+  "approvals.waiting": "Checked what's waiting for a yes",
+  "indiamart.enquiries": "Looked up IndiaMART enquiries",
+  "tasks.create": "New task",
+  "leads.create": "New lead",
 };
 
 export function toolLabel(tool: string): string {
@@ -20,8 +28,10 @@ export function toolLabel(tool: string): string {
 
 export const EXAMPLES = [
   "Which leads came in this week, and who should I call first?",
+  "Is mahine kitna paisa aaya aur kitna baaki hai?",
   "Priya ko proposal ka follow-up email bhejo",
   "Kal 4 baje Ravi ke saath 30 minute ki meeting set karo",
+  "Add a task for Neha to send the Acme quote by Friday",
   "What did we quote the last bakery we worked with?",
 ];
 

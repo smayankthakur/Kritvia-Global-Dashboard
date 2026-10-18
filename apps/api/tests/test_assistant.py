@@ -269,3 +269,62 @@ async def test_starter_plan_has_no_connected_apps(client, monkeypatch, fake_mcp)
     r = await owner.post(f"/ventures/{v}/apps", json={"name": "crm", "url": "https://mcp.example-crm.com/mcp",
                                                       "token": "secret-token"})
     assert r.status_code == 402 and "Connected apps" in r.json()["detail"]
+
+
+# --------------------------------------------- the business itself: numbers, tasks, leads (0074) --
+async def test_reads_the_business_numbers_and_whats_waiting(desk, fake_llm):
+    mayank, v = desk["mayank"], desk["v"]
+    seen: dict = {}
+
+    def answer(m):
+        seen["log"] = m[-1]["content"]
+        return {"answer": "Done."}
+    script(fake_llm,
+           {"tool": "business.numbers", "args": {"period": "last month"}},
+           {"tool": "approvals.waiting", "args": {}},
+           answer)
+    item = await ask(mayank, v, "Pichle mahine kitna paisa aaya, aur kya pending hai?")
+    assert [(s["tool"], s["result"]) for s in item["steps"]] == [("business.numbers", "done"), ("approvals.waiting", "done")]
+    assert '"period": "last month"' in seen["log"] and "invoices" in seen["log"].lower()
+    assert '"waiting": 0' in seen["log"]
+
+
+async def test_adds_a_task_for_a_teammate_after_a_yes_and_finds_it_again(desk, fake_llm, client):
+    mayank, v = desk["mayank"], desk["v"]
+    neha = await make_actor(client, "neha-tasks")
+    await join(mayank, neha, desk["org"], v, "operator")
+    script(fake_llm,
+           {"tool": "tasks.create", "title": "Task for Neha: Acme quote",
+            "args": {"title": "Send the Acme quote", "person": "neha", "due": "2026-10-23"}},
+           lambda m: {"answer": "Added." if "done (approved by the person)" in m[-1]["content"] else "Waiting."})
+    item = await ask(mayank, v, "Add a task for Neha to send the Acme quote by Friday")
+    a = (await mayank.get(f"/ventures/{v}/approvals/{item['pending_approval_id']}")).json()
+    assert a["action"] == "tasks.create" and a["title"] == "Task for Neha: Acme quote"
+    assert (await mayank.post(f"/ventures/{v}/approvals/{a['id']}/decision", json={"decision": "approve"})).status_code == 200
+    assert (await mayank.get(f"/ventures/{v}/assistant/{item['run_id']}")).json()["answer"] == "Added."
+    board = (await mayank.get(f"/ventures/{v}/boards")).json()[0]
+    detail = (await mayank.get(f"/ventures/{v}/boards/{board['id']}")).json()
+    card = next(c for lst in detail["lists"] for c in lst["cards"] if c["title"] == "Send the Acme quote")
+    assert card["assignee"]["email"] == neha.email and card["due_date"] == "2026-10-23"
+
+    found: dict = {}
+
+    def check(m):
+        found["log"] = m[-1]["content"]
+        return {"answer": "ok"}
+    script(fake_llm, {"tool": "tasks.search", "args": {"person": "neha"}}, check)
+    await ask(mayank, v, "What is Neha working on?")
+    assert "Send the Acme quote" in found["log"] and "2026-10-23" in found["log"], found["log"]
+
+
+async def test_adds_a_lead_only_after_a_yes(desk, fake_llm):
+    mayank, v = desk["mayank"], desk["v"]
+    script(fake_llm,
+           {"tool": "leads.create", "args": {"name": "Ravi Kumar", "company": "Kumar Sweets", "phone": "+91 98100 00000"}},
+           lambda m: {"answer": "Added Ravi." if "done (approved" in m[-1]["content"] else "Waiting."})
+    item = await ask(mayank, v, "Ravi Kumar from Kumar Sweets called, add him as a lead")
+    before = [x["name"] for x in (await mayank.get(f"/ventures/{v}/leads")).json()]
+    assert "Ravi Kumar" not in before
+    await mayank.post(f"/ventures/{v}/approvals/{item['pending_approval_id']}/decision", json={"decision": "approve"})
+    lead = next(x for x in (await mayank.get(f"/ventures/{v}/leads")).json() if x["name"] == "Ravi Kumar")
+    assert lead["source"] == "assistant" and lead["company"] == "Kumar Sweets"

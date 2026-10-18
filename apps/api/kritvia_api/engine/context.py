@@ -37,6 +37,7 @@ class Services:
     slack: Any = None
     places: Any = None
     razorpay: Any = None           # businesses' own Razorpay accounts (invoice payment links)
+    indiamart: Any = None          # IndiaMART Lead Manager Pull API (enquiries)
     worker_id: str = field(default_factory=lambda: f"w-{uuid.uuid4().hex[:8]}")
 
 

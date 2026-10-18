@@ -6777,6 +6777,43 @@
         "title": "ImportOut",
         "type": "object"
       },
+      "IndiaMartConnectIn": {
+        "properties": {
+          "key": {
+            "description": "the Lead Manager Pull API key; checked with IndiaMART, stored encrypted, never shown again",
+            "maxLength": 200,
+            "minLength": 16,
+            "pattern": "^[A-Za-z0-9+/=_-]+$",
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "IndiaMartConnectIn",
+        "type": "object"
+      },
+      "IndiaMartConnectOut": {
+        "properties": {
+          "connector_id": {
+            "format": "uuid",
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "enquiries": {
+            "description": "enquiries from the last 24 hours being handed to Lead triage now",
+            "title": "Enquiries",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connector_id",
+          "enquiries"
+        ],
+        "title": "IndiaMartConnectOut",
+        "type": "object"
+      },
       "IngestOut": {
         "properties": {
           "chunks": {
@@ -28634,6 +28671,65 @@
           }
         ],
         "summary": "Google Sync",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/indiamart": {
+      "post": {
+        "description": "Connect IndiaMART. The key is checked by fetching the last 24 hours of enquiries (one call, as\nIndiaMART allows one every 5 minutes); those enquiries go to Lead triage straight away, and from\nthen on the worker fetches new ones every 10 minutes.",
+        "operationId": "connect_indiamart_ventures__venture_id__connectors_indiamart_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndiaMartConnectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndiaMartConnectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Indiamart",
         "tags": [
           "connectors"
         ]

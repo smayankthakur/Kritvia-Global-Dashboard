@@ -2707,6 +2707,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/connectors/indiamart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Indiamart
+         * @description Connect IndiaMART. The key is checked by fetching the last 24 hours of enquiries (one call, as
+         *     IndiaMART allows one every 5 minutes); those enquiries go to Lead triage straight away, and from
+         *     then on the worker fetches new ones every 10 minutes.
+         */
+        post: operations["connect_indiamart_ventures__venture_id__connectors_indiamart_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/connectors/razorpay": {
         parameters: {
             query?: never;
@@ -7367,6 +7389,27 @@ export interface components {
             errors: string[];
             /** Upserted */
             upserted: number;
+        };
+        /** IndiaMartConnectIn */
+        IndiaMartConnectIn: {
+            /**
+             * Key
+             * @description the Lead Manager Pull API key; checked with IndiaMART, stored encrypted, never shown again
+             */
+            key: string;
+        };
+        /** IndiaMartConnectOut */
+        IndiaMartConnectOut: {
+            /**
+             * Connector Id
+             * Format: uuid
+             */
+            connector_id: string;
+            /**
+             * Enquiries
+             * @description enquiries from the last 24 hours being handed to Lead triage now
+             */
+            enquiries: number;
         };
         /** IngestOut */
         IngestOut: {
@@ -17503,6 +17546,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_indiamart_ventures__venture_id__connectors_indiamart_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndiaMartConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndiaMartConnectOut"];
                 };
             };
             /** @description Validation Error */

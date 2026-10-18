@@ -12,14 +12,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import tenant_tx
-from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
+from kritvia_api.deps import Svc, TenantDB, TenantDBCommitFirst, UserId, venture_org
 from kritvia_api.engine.runner import DuplicateTrigger, start_run
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services.security_log import security_event
@@ -378,6 +378,60 @@ async def connect_slack(venture_id: uuid.UUID, body: SlackConnectIn, user_id: Us
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return SlackConnectOut(connector_id=cid, channel="#" + channel if channel else None)
+
+
+# ---------------------------------------------------------------- indiamart --
+class IndiaMartConnectIn(BaseModel):
+    key: str = Field(min_length=16, max_length=200, pattern=r"^[A-Za-z0-9+/=_-]+$",
+                     description="the Lead Manager Pull API key; checked with IndiaMART, stored encrypted, never shown again")
+
+
+class IndiaMartConnectOut(BaseModel):
+    connector_id: uuid.UUID
+    enquiries: int = Field(description="enquiries from the last 24 hours being handed to Lead triage now")
+
+
+@router.post("/ventures/{venture_id}/connectors/indiamart", response_model=IndiaMartConnectOut, status_code=201)
+async def connect_indiamart(venture_id: uuid.UUID, body: IndiaMartConnectIn, user_id: UserId,
+                            db: TenantDBCommitFirst, svc: Svc, background: BackgroundTasks) -> IndiaMartConnectOut:
+    """Connect IndiaMART. The key is checked by fetching the last 24 hours of enquiries (one call, as
+    IndiaMART allows one every 5 minutes); those enquiries go to Lead triage straight away, and from
+    then on the worker fetches new ones every 10 minutes."""
+    from kritvia_api.services import indiamart as im
+    org = await _require_admin(db, venture_id)
+    try:
+        await require_integration(db, venture_id, "indiamart")
+    except PlanRestricted as exc:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, str(exc)) from None
+    await limiter.hit(f"indiamart-connect:{venture_id}", per_minute=2)
+    key = body.key.strip()
+    start, end = im.window(None, datetime.now(im.IST))
+    try:
+        found = await svc.indiamart.enquiries(key, start, end)
+    except im.IndiaMartError as exc:
+        raise HTTPException(422, str(exc)) from None
+    except im.TryLater as exc:
+        raise HTTPException(503, f"{exc}. Try connecting again in 5 minutes.") from None
+    try:
+        async with db.begin_nested():
+            cid = (await db.execute(text(
+                "INSERT INTO connectors (org_id, venture_id, provider, scopes, cursor, created_by)"
+                " VALUES (:o, :v, 'indiamart', ARRAY['enquiries'], :cur, :u)"
+                " ON CONFLICT (venture_id, provider) DO UPDATE SET status = 'active', cursor = EXCLUDED.cursor,"
+                " last_error = NULL, updated_at = now() RETURNING id"),
+                {"o": org, "v": venture_id, "cur": end.isoformat(), "u": user_id})).scalar_one()
+            enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, SECRET, key)
+            await db.execute(text(
+                "INSERT INTO connector_tokens (connector_id, org_id, venture_id, secret_enc) VALUES (:c, :o, :v, :s)"
+                " ON CONFLICT (connector_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, updated_at = now()"),
+                {"c": cid, "o": org, "v": venture_id, "s": enc})
+    except DBAPIError as exc:
+        raise_for_db(exc, "venture not found")
+    # The first day's enquiries start once this is committed, as the person who connected (later ones
+    # run as the agent). Starting them inside this transaction would wait on its own connector row.
+    if found:
+        background.add_task(im.hand_over, svc, None, venture_id, user_id, found, end, actor_type="user")
+    return IndiaMartConnectOut(connector_id=cid, enquiries=min(len(found), im.PER_RUN))
 
 
 # ----------------------------------------------------------------- telegram --

@@ -43,7 +43,7 @@ wf = registry.register(Workflow(
     )))
 
 DEFAULTS = {
-    "source_weights": {"referral": 20, "webhook": 12, "email": 10, "manual": 8, "whatsapp": 10},
+    "source_weights": {"referral": 20, "webhook": 12, "indiamart": 12, "email": 10, "manual": 8, "whatsapp": 10},
     # "sender_name": overrides the business profile's sign-off for proposals only
 }
 

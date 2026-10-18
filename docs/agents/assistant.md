@@ -8,12 +8,20 @@ works out the steps, uses the business's tools one at a time, and replies. Code:
 
 1. **think**: the model (tier `plan`, i.e. the paid planner when switched on, otherwise the free models) sees
    the request, the business brief, the tool list and every step so far. It either answers or picks one tool.
-2. **Read tools** run straight away and their result goes back to *think*: `knowledge.search`,
-   `leads.search`, and connected-app tools the app marks read-only.
+2. **Read tools** run straight away and their result goes back to *think*:
+   - `knowledge.search` (documents and notes), `leads.search`, `invoices.search`, `shipments.search`;
+   - `business.numbers`: money received, invoices issued, still to collect and overdue, bookings, new and
+     won leads and drafts for a period (the same numbers automations report, from `services/automations.py`);
+   - `tasks.search`: cards on the task boards, by words, person or open/done;
+   - `approvals.waiting`: what waits for a yes (titles only; sensitive drafts are left out);
+   - `indiamart.enquiries`, `whatsapp.templates`;
+   - connected-app tools the app marks read-only.
 3. **Write and send tools** become an approval on the board and in the Inbox. Nothing happens until a person
    approves, optionally after editing; *act* then runs exactly the approved payload. These are
-   `gmail.send`, `whatsapp.send`, `calendar.create_event`, `crm.update_lead`, and connected-app tools that
-   change something (`mcp.call`, which a person always reviews).
+   `gmail.send`, `whatsapp.send`, `whatsapp.template`, `calendar.create_event`, `crm.update_lead`,
+   `tasks.create` (a card on the default board; the person is matched by name or email among the business's
+   people, and left unassigned if the name matches no one or several), `leads.create` (source
+   `assistant`), and connected-app tools that change something (`mcp.call`, which a person always reviews).
 4. A draft that isn't approved goes back to the model with the person's comment. After 3 refusals the
    assistant stops.
 
@@ -33,6 +41,13 @@ works out the steps, uses the business's tools one at a time, and replies. Code:
 
 Admins add an app's MCP server address and, if needed, a token, on the Assistant page. Connected apps come
 with Growth and above (integration `mcp`).
+
+**Quick picks** fill the form:
+- **Zapier (8,000+ apps):** address `https://mcp.zapier.com/api/v1/connect`. In Zapier MCP the owner adds a
+  server for "Other", picks the apps and actions, and generates a connection token on the Connect tab
+  (shown once). Kritvia sends it as `Authorization: Bearer …`, the form Zapier recommends over a token in
+  the address. Each business uses its own Zapier account and token (docs.zapier.com/mcp).
+- **Another app's MCP server:** any https address on the public internet.
 
 - **Transport:** Streamable HTTP (initialize, tools/list, tools/call). JSON and SSE answers are both
   accepted.

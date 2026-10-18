@@ -33,9 +33,9 @@ AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assis
                "custom": "Custom workflows", "trade_watch": "Shipment watch", "trade_update": "Shipment updates"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
                      "drive": "Google Drive", "whatsapp": "WhatsApp Business", "telegram": "Telegram bot", "slack": "Slack", "razorpay": "Razorpay payment links", "tally": "Tally",
-                     "mcp": "Connected apps (MCP)"}
+                     "mcp": "Connected apps (MCP)", "indiamart": "IndiaMART enquiries"}
 BASIC = frozenset({"gmail", "lead_form"})
-STANDARD = BASIC | {"calendar", "drive", "whatsapp", "telegram", "slack", "razorpay"}
+STANDARD = BASIC | {"calendar", "drive", "whatsapp", "telegram", "slack", "razorpay", "indiamart"}
 ALL = STANDARD | {"tally", "mcp"}
 
 

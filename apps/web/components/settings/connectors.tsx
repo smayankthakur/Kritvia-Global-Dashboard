@@ -2,7 +2,7 @@
 
 import { csrfHeaders } from "@/lib/bff/csrf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, BookOpenCheck, FolderDown, Forward, Mail, MessageCircle, RefreshCw, Send, Trash2, Upload, Webhook } from "lucide-react";
+import { BellRing, BookOpenCheck, FolderDown, Forward, Mail, MessageCircle, RefreshCw, Send, Store, Trash2, Upload, Webhook } from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -240,6 +240,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   const tallyConn = q.data.find((c) => c.provider === "tally");
   const tg = q.data.find((c) => c.provider === "telegram");
   const slack = q.data.find((c) => c.provider === "slack");
+  const indiamart = q.data.find((c) => c.provider === "indiamart");
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -373,6 +374,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
       </Card>
       <TelegramCard ventureId={ventureId} canAdmin={canAdmin} bot={tg} onRemove={() => tg && setRemoving(tg)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
       <SlackCard ventureId={ventureId} canAdmin={canAdmin} conn={slack} onRemove={() => slack && setRemoving(slack)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
+      <IndiaMartCard ventureId={ventureId} canAdmin={canAdmin} conn={indiamart} onRemove={() => indiamart && setRemoving(indiamart)} onChanged={() => void qc.invalidateQueries({ queryKey: key })} />
       <PaymentsCard ventureId={ventureId} />
       <GstCard ventureId={ventureId} />
       <Card>
@@ -733,6 +735,119 @@ function SlackCard({ ventureId, canAdmin, conn, onRemove, onChanged }: {
           </Field>
           <Field label="Channel name" hint="Only to show here, e.g. #sales">
             <Input value={channel} onChange={(e) => setChannel(e.target.value)} maxLength={80} />
+          </Field>
+          <FormError message={error} />
+          <button type="submit" hidden />
+        </form>
+      </Dialog>
+    </Card>
+  );
+}
+
+/** IndiaMART: enquiries come in by themselves through the Lead Manager Pull API. */
+function IndiaMartCard({ ventureId, canAdmin, conn, onRemove, onChanged }: {
+  ventureId: string;
+  canAdmin: boolean;
+  conn: Connector | undefined;
+  onRemove: () => void;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [key, setKey] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const close = () => {
+    setOpen(false);
+    setKey("");
+    setError(null);
+  };
+  const connect = useMutation({
+    mutationFn: () =>
+      unwrap(api.POST("/ventures/{venture_id}/connectors/indiamart", { params: { path: { venture_id: ventureId } }, body: { key: key.trim() } })),
+    onSuccess: (out) => {
+      close();
+      toast.success(
+        "IndiaMART is connected",
+        out.enquiries ? `${out.enquiries} enquiries from the last 24 hours went to Lead triage.` : "New enquiries will arrive as leads within about 10 minutes.",
+      );
+      onChanged();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const submit = () => {
+    if (key.trim().length < 16) return setError("Paste the whole key IndiaMART shows under Pull API.");
+    connect.mutate();
+  };
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Store className="h-4 w-4 text-subtle" aria-hidden /> IndiaMART
+          </span>
+        }
+        description="Every IndiaMART enquiry, buy-lead and call becomes a lead by itself: scored, filed and with a reply drafted for your yes."
+        actions={conn ? <StatusBadge status={conn.status} /> : <Badge>not connected</Badge>}
+      />
+      <div className="space-y-4 p-4">
+        {conn ? (
+          <KeyValue
+            items={[
+              ["Checked up to", conn.cursor ? formatDateTime(conn.cursor) : "—"],
+              ["Last error", conn.last_error ? <span className="text-danger">{conn.last_error}</span> : "none"],
+              ["Updated", formatRelative(conn.updated_at)],
+            ]}
+          />
+        ) : (
+          <p className="text-sm text-muted">Paste your Lead Manager Pull API key. Kritvia checks for new enquiries every 10 minutes.</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant={conn ? "secondary" : "primary"} disabled={!canAdmin} onClick={() => setOpen(true)}>
+            {conn ? "Change key" : "Connect IndiaMART"}
+          </Button>
+          {conn ? (
+            <Button variant="ghost" className="text-danger" icon={<Trash2 className="h-4 w-4" />} disabled={!canAdmin} onClick={onRemove}>
+              Disconnect
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      <Dialog
+        open={open}
+        onClose={close}
+        title="Connect IndiaMART"
+        description="Kritvia checks the key with IndiaMART, then stores it encrypted. It is never shown again."
+        footer={
+          <>
+            <Button variant="ghost" onClick={close}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={connect.isPending} onClick={submit}>
+              Connect
+            </Button>
+          </>
+        }
+      >
+        <form
+          className="space-y-3"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+            <li>
+              Open{" "}
+              <a href="https://seller.indiamart.com/leadmanager/crmapi" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">
+                Lead Manager → Pull API
+              </a>{" "}
+              in IndiaMART and click Generate Key.
+            </li>
+            <li>Copy the key and paste it below. A key stops working if it isn&apos;t used for 7 days, so keep it connected.</li>
+          </ol>
+          <Field label="Pull API key" required>
+            <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} maxLength={200} className="font-mono" />
           </Field>
           <FormError message={error} />
           <button type="submit" hidden />

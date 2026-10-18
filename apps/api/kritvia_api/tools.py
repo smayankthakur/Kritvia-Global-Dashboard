@@ -194,4 +194,141 @@ def build_tools() -> ToolRegistry:
                                      kinds=p.get("kinds"), sensitive=bool(p.get("sensitive", False)))
         return {"hits": hits}
 
+    # ------------------------------------------------------- the business itself (assistant) --
+    async def _tz(conn, venture_id):
+        from zoneinfo import ZoneInfo
+        tz = (await conn.execute(text("SELECT timezone FROM venture_settings WHERE venture_id = :v"),
+                                 {"v": venture_id})).scalar()
+        try:
+            return ZoneInfo(tz or "Asia/Kolkata")
+        except Exception:
+            return ZoneInfo("Asia/Kolkata")
+
+    @reg.tool("business.numbers", Capability.READ,
+              "The business's numbers for a period: money received, invoices issued, still to collect and overdue "
+              "(largest first), bookings, new and won leads, drafts waiting")
+    async def business_numbers(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from datetime import datetime
+
+        from kritvia_api.services import automations as au
+        period = str(p.get("period") or "this_month").strip().lower().replace(" ", "_")
+        if period not in au.PERIODS:
+            period = "this_month"
+        async with ctx.tx() as conn:
+            tz = await _tz(conn, ctx.venture_id)
+            start, end = au.period_range(period, tz, datetime.now(tz))
+            lines = await au.facts(conn, ctx.venture_id, start, end)
+        return {"period": au.PERIOD_WORDS[period], "numbers": lines}
+
+    @reg.tool("tasks.search", Capability.READ,
+              "Look up the business's tasks (cards on its task boards): what is open, who has it, when it is due")
+    async def tasks_search(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import memory
+        q = str(p.get("query") or "").strip().lower()[:100]
+        who = str(p.get("person") or "").strip().lower()[:100]
+        show = str(p.get("show") or "open")
+        where = "c.venture_id = :v AND c.archived_at IS NULL"
+        where += {"done": " AND c.done_at IS NOT NULL", "all": ""}.get(show, " AND c.done_at IS NULL")
+        async with ctx.tx() as conn:
+            rows = (await conn.execute(text(
+                "SELECT c.title_enc, f.statement_enc, c.due_date, c.done_at, c.assignee_id, b.name AS board"
+                " FROM task_cards c JOIN task_boards b ON b.id = c.board_id"
+                f" LEFT JOIN facts f ON f.id = c.fact_id WHERE {where}"
+                " ORDER BY c.due_date NULLS LAST, c.updated_at DESC LIMIT 200"), {"v": ctx.venture_id})).all()
+            people = {r.user_id: r for r in (await conn.execute(
+                text("SELECT user_id, full_name, email FROM venture_people(:v)"), {"v": ctx.venture_id})).all()}
+            crypto = ctx.crypto(conn)
+            out = []
+            for r in rows:
+                title = await crypto.decrypt_str(ctx.venture_id, "task_cards.title", r.title_enc)
+                if title is None and r.statement_enc is not None:
+                    title = (await crypto.decrypt(ctx.venture_id, memory.FACT_PURPOSE, r.statement_enc)).decode()
+                title = title or "(untitled)"
+                if q and q not in title.lower():
+                    continue
+                p_ = people.get(r.assignee_id)
+                if who and (p_ is None or who not in f"{p_.full_name or ''} {p_.email or ''}".lower()):
+                    continue
+                out.append({"task": title[:200], "board": r.board, "who": (p_.full_name or p_.email) if p_ else None,
+                            "due": r.due_date.isoformat() if r.due_date else None, "done": r.done_at is not None})
+                if len(out) >= 30:
+                    break
+        return {"tasks": out}
+
+    @reg.tool("approvals.waiting", Capability.READ, "What is waiting for a yes on the approval board (titles only)")
+    async def approvals_waiting(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        async with ctx.tx() as conn:
+            rows = (await conn.execute(text(
+                "SELECT agent, action, title, created_at FROM approvals WHERE venture_id = :v AND status = 'pending'"
+                " AND NOT sensitive ORDER BY created_at LIMIT 30"), {"v": ctx.venture_id})).all()
+            n = (await conn.execute(text("SELECT count(*) FROM approvals WHERE venture_id = :v AND status = 'pending'"),
+                                    {"v": ctx.venture_id})).scalar()
+        from kritvia_api.plans import AGENT_NAMES
+        return {"waiting": int(n or 0), "drafts": [{"by": AGENT_NAMES.get(r.agent, r.agent), "what": r.title,
+                                                    "since": r.created_at.date().isoformat()} for r in rows]}
+
+    @reg.tool("tasks.create", Capability.WRITE, "Add a task to the business's task board, optionally for a person with a due date")
+    async def tasks_create(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from datetime import date
+        title = str(p.get("title") or "").strip()[:300]
+        if not title:
+            raise ValueError("a task needs a title")
+        due = None
+        if p.get("due"):
+            due = date.fromisoformat(str(p["due"])[:10])
+        who = str(p.get("person") or "").strip().lower()
+        async with ctx.tx() as conn:
+            board = (await conn.execute(text("SELECT default_task_board(:v)"), {"v": ctx.venture_id})).scalar()
+            lst = (await conn.execute(text("SELECT id FROM task_lists WHERE board_id = :b AND NOT is_done"
+                                           " ORDER BY position LIMIT 1"), {"b": board})).scalar()
+            assignee = None
+            if who:
+                people = (await conn.execute(text("SELECT user_id, full_name, email FROM venture_people(:v)"),
+                                             {"v": ctx.venture_id})).all()
+                hits = [r.user_id for r in people if who == (r.email or "").lower() or who in (r.full_name or "").lower()]
+                if len(hits) == 1:
+                    assignee = hits[0]
+            enc = await ctx.crypto(conn).encrypt(ctx.venture_id, "task_cards.title", title)
+            pos = (await conn.execute(text("SELECT coalesce(max(position), 0) + 1024 FROM task_cards WHERE list_id = :l"),
+                                      {"l": lst})).scalar()
+            cid = (await conn.execute(text(
+                "INSERT INTO task_cards (org_id, venture_id, board_id, list_id, title_enc, position, assignee_id, due_date)"
+                " VALUES (:o, :v, :b, :l, :t, :p, :a, :d) RETURNING id"),
+                {"o": ctx.org_id, "v": ctx.venture_id, "b": board, "l": lst, "t": enc, "p": pos, "a": assignee,
+                 "d": due})).scalar_one()
+        return {"task_id": str(cid), "assigned": assignee is not None, "due": due.isoformat() if due else None}
+
+    @reg.tool("leads.create", Capability.WRITE, "Add a new lead (a possible customer) to the business's leads")
+    async def leads_create(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        import re
+        name = str(p.get("name") or "").strip()[:200]
+        if not name:
+            raise ValueError("a lead needs a name")
+        email = str(p.get("email") or "").strip().lower()[:200] or None
+        if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            raise ValueError("that email address doesn't look right")
+        phone = re.sub(r"[^0-9+]", "", str(p.get("phone") or ""))[:20] or None
+        async with ctx.tx() as conn:
+            lid = (await conn.execute(text(
+                "INSERT INTO leads (org_id, venture_id, name, email, company, phone, source)"
+                " VALUES (:o, :v, :n, :e, :c, :ph, 'assistant') RETURNING id"),
+                {"o": ctx.org_id, "v": ctx.venture_id, "n": name, "e": email,
+                 "c": str(p.get("company") or "").strip()[:200] or None, "ph": phone})).scalar_one()
+        return {"lead_id": str(lid)}
+
+    @reg.tool("indiamart.enquiries", Capability.READ,
+              "The business's recent IndiaMART enquiries (they also arrive as leads by themselves)")
+    async def indiamart_enquiries(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        async with ctx.tx() as conn:
+            on = (await conn.execute(text("SELECT status FROM connectors WHERE venture_id = :v AND provider = 'indiamart'"),
+                                     {"v": ctx.venture_id})).scalar()
+            rows = (await conn.execute(text(
+                "SELECT name, company, email, phone, status, score, created_at FROM leads WHERE venture_id = :v"
+                " AND source = 'indiamart' ORDER BY created_at DESC LIMIT 20"), {"v": ctx.venture_id})).all()
+        if on is None:
+            return {"connected": False, "note": "IndiaMART isn't connected (Settings → Connectors → IndiaMART)"}
+        return {"connected": on == "active", "enquiries": [
+            {"name": r.name, "company": r.company, "email": r.email, "phone": r.phone, "status": r.status,
+             "score": r.score, "came_in": r.created_at.date().isoformat()} for r in rows]}
+
     return reg

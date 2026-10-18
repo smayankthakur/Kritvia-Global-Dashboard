@@ -125,6 +125,24 @@ function Composer({ ventureId }: { ventureId: string }) {
   );
 }
 
+/** Ready-made picks for the add form. Only apps whose MCP address and token are documented. */
+const APP_PICKS = [
+  {
+    key: "zapier",
+    label: "Zapier (8,000+ apps)",
+    name: "zapier",
+    url: "https://mcp.zapier.com/api/v1/connect",
+    help: "In Zapier MCP (mcp.zapier.com): Add MCP server → Other → choose the apps and actions you want → Connect tab → Generate token. Paste the token here; it is shown only once.",
+  },
+  {
+    key: "own",
+    label: "Another app's MCP server",
+    name: "",
+    url: "",
+    help: "Paste the app's MCP server address (https) and, if it needs one, its token. Only addresses on the public internet are accepted.",
+  },
+] as const;
+
 function ConnectedApps({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -133,6 +151,7 @@ function ConnectedApps({ ventureId, canAdmin }: { ventureId: string; canAdmin: b
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/apps", { params: { path: { venture_id: ventureId } } })),
   });
   const [form, setForm] = useState({ name: "", url: "", token: "" });
+  const [pick, setPick] = useState<(typeof APP_PICKS)[number]["key"] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: ["apps", ventureId] });
   const add = useMutation({
@@ -173,8 +192,8 @@ function ConnectedApps({ ventureId, canAdmin }: { ventureId: string; canAdmin: b
           <Plug className="h-4 w-4 text-subtle" aria-hidden /> Connected apps
         </h2>
         <p className="text-sm text-muted">
-          Add any app that offers an MCP server (HubSpot, Zoho, Notion, Shopify or your own). Tools that only read run straight away; anything that changes the
-          app waits for a person to approve it. Included in Growth and above.
+          Add any app that offers an MCP server, or thousands at once through Zapier. Tools that only read run straight away; anything that changes the app waits
+          for a person to approve it. Included in Growth and above.
         </p>
       </div>
       <QueryState query={apps} loading={<SkeletonRows rows={2} />}>
@@ -210,6 +229,26 @@ function ConnectedApps({ ventureId, canAdmin }: { ventureId: string; canAdmin: b
           )
         }
       </QueryState>
+      {canAdmin ? (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick picks">
+          {APP_PICKS.map((p) => (
+            <Button
+              key={p.key}
+              size="sm"
+              variant={pick === p.key ? "primary" : "secondary"}
+              aria-pressed={pick === p.key}
+              onClick={() => {
+                setPick(p.key);
+                setForm({ name: p.name, url: p.url, token: "" });
+                setError(null);
+              }}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      {canAdmin && pick ? <p className="text-sm text-muted">{APP_PICKS.find((p) => p.key === pick)!.help}</p> : null}
       {canAdmin ? (
         <form
           className="grid gap-2 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end"

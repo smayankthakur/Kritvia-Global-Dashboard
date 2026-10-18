@@ -9,6 +9,8 @@ Cron (IST)
                           fire_automations automations made in plain words whose time has come,
                                            and custom workflows' daily checks
   every 5 minutes         poll_gmail       new inquiries, aggregator reports, emailed loan documents
+  every 10 minutes        poll_indiamart   new IndiaMART enquiries -> Lead triage (IndiaMART allows a call
+                                           every 5 minutes)
   every 15 minutes        reembed          embed chunks whose embedding was deferred (Ollama down)
   03:15 daily             purge_expired    retention: delete documents past their deadline
   06:30 daily             morning_check    alert (audit + log) if a scheduled plan is missing or failed
@@ -128,6 +130,11 @@ async def poll_gmail(ctx: dict) -> dict:
     return await poll_gmail_all(ctx["services"])
 
 
+async def poll_indiamart(ctx: dict) -> int:
+    from kritvia_api.services.indiamart import pull_all
+    return await pull_all(ctx["services"])
+
+
 async def reembed(ctx: dict) -> int:
     import uuid
 
@@ -207,6 +214,7 @@ class WorkerSettings:
         cron(sweep, second=35),
         cron(expire_approvals, second=50),
         cron(poll_gmail, minute=_every(5), second=20),
+        cron(poll_indiamart, minute=_every(10), second=45),
         cron(reembed, minute=_every(15), second=40),
         cron(resume_paused, minute=_every(10), second=25),
         cron(purge_expired, hour={3}, minute={15}),
