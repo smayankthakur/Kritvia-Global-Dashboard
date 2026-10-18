@@ -28,7 +28,8 @@ ROLE_TITLES = {"front_desk": "Front desk", "sales": "Sales", "accounts": "Accoun
 DEFAULT_ROLE = {"inbox_assistant": "front_desk", "lead_triage": "sales", "loan_verification": "accounts",
                 "kitchen_daily": "ops", "meeting_digest": "ops", "prospector": "sales",
                 "whatsapp_followup": "sales", "collections": "accounts", "booking_reminders": "front_desk",
-                "reviews": "front_desk", "browser": "ops"}
+                "reviews": "front_desk", "browser": "ops",
+                "voice_call": "front_desk"}
 
 
 class RoleOut(BaseModel):

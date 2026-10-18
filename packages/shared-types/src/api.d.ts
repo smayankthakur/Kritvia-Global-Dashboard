@@ -640,6 +640,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/voice/twilio/{connector_id}/incoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Twilio Incoming */
+        post: operations["twilio_incoming_hooks_voice_twilio__connector_id__incoming_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/voice/twilio/{connector_id}/outgoing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Twilio Outgoing
+         * @description The customer picked up a call Kritvia placed: the approved opening, then the conversation.
+         */
+        post: operations["twilio_outgoing_hooks_voice_twilio__connector_id__outgoing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/voice/twilio/{connector_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Twilio Status */
+        post: operations["twilio_status_hooks_voice_twilio__connector_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/voice/twilio/{connector_id}/turn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Twilio Turn */
+        post: operations["twilio_turn_hooks_voice_twilio__connector_id__turn_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/whatsapp": {
         parameters: {
             query?: never;
@@ -2543,6 +2614,62 @@ export interface paths {
         };
         /** Get Job */
         get: operations["get_job_ventures__venture_id__browser__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Calls */
+        get: operations["list_calls_ventures__venture_id__calls_get"];
+        put?: never;
+        /** Place Call */
+        post: operations["place_call_ventures__venture_id__calls_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/calls/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Call
+         * @description A call in the app: you play the caller (type, or speak with the voice button); Kritvia answers
+         *     exactly as it would on the phone. Test calls make no leads or tasks.
+         */
+        post: operations["test_call_ventures__venture_id__calls_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/calls/{call_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Call */
+        get: operations["get_call_ventures__venture_id__calls__call_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4825,6 +4952,24 @@ export interface paths {
         patch: operations["patch_term_ventures__venture_id__vocabulary__term_id__patch"];
         trace?: never;
     };
+    "/ventures/{venture_id}/voice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Voice */
+        get: operations["get_voice_ventures__venture_id__voice_get"];
+        /** Put Voice */
+        put: operations["put_voice_ventures__venture_id__voice_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/voice/dictate": {
         parameters: {
             query?: never;
@@ -4841,6 +4986,41 @@ export interface paths {
          */
         post: operations["dictate_endpoint_ventures__venture_id__voice_dictate_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/voice/outbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Outbound */
+        put: operations["put_outbound_ventures__venture_id__voice_outbound_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/voice/twilio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Connect Twilio */
+        post: operations["connect_twilio_ventures__venture_id__voice_twilio_post"];
+        /** Disconnect Twilio */
+        delete: operations["disconnect_twilio_ventures__venture_id__voice_twilio_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6274,6 +6454,104 @@ export interface components {
             note: string | null;
             /** Plan Includes */
             plan_includes: boolean;
+        };
+        /** CallDetail */
+        CallDetail: {
+            /** Caller Name */
+            caller_name: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "inbound" | "outbound";
+            /** Duration S */
+            duration_s: number | null;
+            /** Ended At */
+            ended_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lead Id */
+            lead_id: string | null;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Phone
+             * @description masked
+             */
+            phone: string | null;
+            /** Purpose */
+            purpose: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: string | null;
+            /** Test */
+            test: boolean;
+            /** Transcript */
+            transcript: components["schemas"]["CallTurnOut"][];
+            /** Turns */
+            turns: number;
+        };
+        /** CallOut */
+        CallOut: {
+            /** Caller Name */
+            caller_name: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "inbound" | "outbound";
+            /** Duration S */
+            duration_s: number | null;
+            /** Ended At */
+            ended_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lead Id */
+            lead_id: string | null;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Phone
+             * @description masked
+             */
+            phone: string | null;
+            /** Purpose */
+            purpose: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: string | null;
+            /** Test */
+            test: boolean;
+            /** Turns */
+            turns: number;
+        };
+        /** CallTurnOut */
+        CallTurnOut: {
+            /** Text */
+            text: string;
+            /**
+             * Who
+             * @enum {string}
+             */
+            who: "agent" | "caller";
         };
         /** ChatDetailOut */
         ChatDetailOut: {
@@ -8840,6 +9118,24 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** OutboundIn */
+        OutboundIn: {
+            /** Caller Id Kind */
+            caller_id_kind?: ("160" | "landline" | "other") | null;
+            /**
+             * Confirm
+             * @description the admin confirms the registration and that calls are only to the business's own customers, for service (not promotion)
+             * @default false
+             */
+            confirm: boolean;
+            /**
+             * Dlt Entity Id
+             * @description the business's Principal Entity ID on a TRAI DLT platform
+             */
+            dlt_entity_id?: string | null;
+            /** Enabled */
+            enabled: boolean;
+        };
         /** Package */
         "Package-Input": {
             /** Contents */
@@ -9218,6 +9514,15 @@ export interface components {
             place_id: string;
             /** Rating */
             rating: number | null;
+        };
+        /** PlaceIn */
+        PlaceIn: {
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone: string;
+            /** Purpose */
+            purpose: string;
         };
         /** PlanOut */
         PlanOut: {
@@ -11586,6 +11891,44 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** TestIn */
+        TestIn: {
+            /** Call Id */
+            call_id?: string | null;
+            /** Digits */
+            digits?: string | null;
+            /**
+             * Hang Up
+             * @default false
+             */
+            hang_up: boolean;
+            /**
+             * Said
+             * @default
+             */
+            said: string;
+        };
+        /** TestOut */
+        TestOut: {
+            /**
+             * Call Id
+             * Format: uuid
+             */
+            call_id: string;
+            /** Ended */
+            ended: boolean;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "hi-IN" | "en-IN";
+            /** Outcome */
+            outcome: string | null;
+            /** Say */
+            say: string;
+            /** Transfer To */
+            transfer_to?: string | null;
+        };
         /** TicketIn */
         TicketIn: {
             /** Note */
@@ -11837,6 +12180,24 @@ export interface components {
             rejected: number;
             /** Threshold */
             threshold: number;
+        };
+        /** TwilioIn */
+        TwilioIn: {
+            /** Account Sid */
+            account_sid: string;
+            /**
+             * Auth Token
+             * @description checked with Twilio, stored encrypted, never shown again
+             */
+            auth_token: string;
+            /** Phone Number */
+            phone_number: string;
+            /**
+             * Point Number
+             * @description set the number's voice and status webhooks to Kritvia
+             * @default true
+             */
+            point_number: boolean;
         };
         /** UnderstandIn */
         UnderstandIn: {
@@ -12190,12 +12551,118 @@ export interface components {
             /** Imported */
             imported: number;
         };
+        /** VoiceIn */
+        VoiceIn: {
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Greeting */
+            greeting?: string | null;
+            /**
+             * Language
+             * @default hi-IN
+             * @enum {string}
+             */
+            language: "hi-IN" | "en-IN";
+            /**
+             * Max Minutes
+             * @default 8
+             */
+            max_minutes: number;
+            /** Open Days */
+            open_days?: number[];
+            /**
+             * Open From
+             * @default 10:00
+             */
+            open_from: string;
+            /**
+             * Open To
+             * @default 19:00
+             */
+            open_to: string;
+            /** Transfer Number */
+            transfer_number?: string | null;
+            /**
+             * Voice
+             * @default Polly.Aditi
+             * @enum {string}
+             */
+            voice: "Polly.Aditi" | "Polly.Raveena" | "Polly.Kajal-Neural";
+        };
+        /** VoiceNumber */
+        VoiceNumber: {
+            /**
+             * Account
+             * @description the account SID's last 4 characters
+             */
+            account: string;
+            /** Number */
+            number: string;
+            /** Status */
+            status: string;
+            /** Status Url */
+            status_url: string;
+            /** Voice Url */
+            voice_url: string;
+        };
         /** VoiceOptionsOut */
         VoiceOptionsOut: {
             /** Engines */
             engines: components["schemas"]["EngineOut"][];
             /** Languages */
             languages: components["schemas"]["LanguageOut"][];
+        };
+        /** VoiceOut */
+        VoiceOut: {
+            /**
+             * Answering
+             * @description calls to the connected number are answered now
+             */
+            answering: boolean;
+            /** Caller Id Kind */
+            caller_id_kind: ("160" | "landline" | "other") | null;
+            /** Can Admin */
+            can_admin: boolean;
+            /** Dlt Entity Id */
+            dlt_entity_id: string | null;
+            /** Dnd Count */
+            dnd_count: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Greeting */
+            greeting: string | null;
+            /** Greeting Preview */
+            greeting_preview: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "hi-IN" | "en-IN";
+            /** Max Minutes */
+            max_minutes: number;
+            number: components["schemas"]["VoiceNumber"] | null;
+            /** Open Days */
+            open_days: number[];
+            /** Open From */
+            open_from: string;
+            /** Open To */
+            open_to: string;
+            /** Outbound Enabled */
+            outbound_enabled: boolean;
+            /** Plan Includes */
+            plan_includes: boolean;
+            /** Registered At */
+            registered_at: string | null;
+            /** Transfer Number */
+            transfer_number: string | null;
+            /**
+             * Voice
+             * @enum {string}
+             */
+            voice: "Polly.Aditi" | "Polly.Raveena" | "Polly.Kajal-Neural";
         };
         /** VoiceSettings */
         VoiceSettings: {
@@ -12452,6 +12919,20 @@ export interface components {
              * Format: uuid
              */
             run_id: string;
+        };
+        /** PlaceOut */
+        kritvia_api__routers__calls__PlaceOut: {
+            /** Answer */
+            answer: string | null;
+            /** Pending Approval Id */
+            pending_approval_id: string | null;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Status */
+            status: string;
         };
         /** ConsentIn */
         kritvia_api__routers__compliance__ConsentIn: {
@@ -13705,6 +14186,127 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ChatHookOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    twilio_incoming_hooks_voice_twilio__connector_id__incoming_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    twilio_outgoing_hooks_voice_twilio__connector_id__outgoing_post: {
+        parameters: {
+            query: {
+                call: string;
+            };
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    twilio_status_hooks_voice_twilio__connector_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    twilio_turn_hooks_voice_twilio__connector_id__turn_post: {
+        parameters: {
+            query: {
+                call: string;
+                dial?: number;
+            };
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -17957,6 +18559,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrowserJob"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_calls_ventures__venture_id__calls_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    place_call_ventures__venture_id__calls_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["kritvia_api__routers__calls__PlaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_call_ventures__venture_id__calls_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_call_ventures__venture_id__calls__call_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallDetail"];
                 };
             };
             /** @description Validation Error */
@@ -23296,6 +24033,72 @@ export interface operations {
             };
         };
     };
+    get_voice_ventures__venture_id__voice_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_voice_ventures__venture_id__voice_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dictate_endpoint_ventures__venture_id__voice_dictate_post: {
         parameters: {
             query?: never;
@@ -23318,6 +24121,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DictationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_outbound_ventures__venture_id__voice_outbound_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutboundIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_twilio_ventures__venture_id__voice_twilio_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TwilioIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_twilio_ventures__venture_id__voice_twilio_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
                 };
             };
             /** @description Validation Error */

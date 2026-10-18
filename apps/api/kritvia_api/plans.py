@@ -31,13 +31,14 @@ AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assis
                "whatsapp_followup": "WhatsApp follow-ups", "collections": "Payment reminders",
                "booking_reminders": "Booking reminders", "reviews": "Google reviews", "automation": "Automations",
                "custom": "Custom workflows", "trade_watch": "Shipment watch", "trade_update": "Shipment updates",
-               "browser": "Browser agent"}
+               "browser": "Browser agent", "voice_call": "AI phone calls"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
                      "drive": "Google Drive", "whatsapp": "WhatsApp Business", "telegram": "Telegram bot", "slack": "Slack", "razorpay": "Razorpay payment links", "tally": "Tally",
-                     "mcp": "Connected apps (MCP)", "indiamart": "IndiaMART enquiries"}
+                     "mcp": "Connected apps (MCP)", "indiamart": "IndiaMART enquiries",
+                     "voice": "AI phone calls (your Twilio number)"}
 BASIC = frozenset({"gmail", "lead_form"})
 STANDARD = BASIC | {"calendar", "drive", "whatsapp", "telegram", "slack", "razorpay", "indiamart"}
-ALL = STANDARD | {"tally", "mcp"}
+ALL = STANDARD | {"tally", "mcp", "voice"}
 
 
 @dataclass(frozen=True)
@@ -118,7 +119,8 @@ PLANS: dict[str, Plan] = {
                     "Autonomous actions and approval policies", "All integrations, including Tally",
                     "50 GB business memory", "Priority support",
                     "Advanced analytics: 12 months, lead funnel, money owed by age, each agent's results",
-                    "Browser agent: looks things up on websites and fills in forms after your yes"),
+                    "Browser agent: looks things up on websites and fills in forms after your yes",
+                    "AI phone calls: answers your number, calls customers back after your yes"),
         featured=True, support="priority"),
     "scale": Plan(
         "scale", "Scale", 14_999, 1_49_990, 50_000_000, 10, 50, 250 * GB, None, "all", ALL, 0, "advanced",

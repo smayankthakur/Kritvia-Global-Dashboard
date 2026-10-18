@@ -372,4 +372,21 @@ def build_tools() -> ToolRegistry:
         return {"sent": True, "url": page.get("url"), "title": page.get("title"),
                 "text": (page.get("text") or "")[:1500]}
 
+    @reg.tool("voice.call", Capability.SEND,
+              "Phone a customer the business already deals with (a reminder, a callback they asked for); "
+              "Kritvia's AI assistant makes the call after the owner's yes")
+    async def voice_call(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import voice_calls as vc
+        from kritvia_api.services.quota import require_integration
+        from fastapi import HTTPException
+        async with ctx.tx() as conn:
+            try:
+                await require_integration(conn, ctx.venture_id, "voice")
+            except HTTPException as exc:
+                raise vc.CallRefused(str(exc.detail)) from None
+        return await vc.place(ctx.services, vc.Principal(ctx.org_id, ctx.venture_id, ctx.run_as),
+                              phone=str(p.get("phone") or ""), callee=p.get("name"),
+                              purpose=str(p.get("purpose") or "")[:300], opening=p.get("opening"),
+                              created_by=None, approval_id=ok.id if ok else None)
+
     return reg

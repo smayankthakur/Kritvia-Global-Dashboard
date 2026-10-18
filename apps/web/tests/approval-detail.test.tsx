@@ -250,3 +250,20 @@ describe("Website form approvals", () => {
     expect(editableFields("browser.submit", form.payload as Record<string, unknown>)).toEqual([]);
   });
 });
+
+describe("Phone call approvals", () => {
+  const call: Approval = {
+    ...emailApproval,
+    id: "a-call-1",
+    action: "voice.call",
+    title: "Phone Priya",
+    payload: { phone: "+919833000033", name: "Priya", purpose: "tomorrow's 4 pm appointment", opening: "Hello Priya! This is Sharma Sweets's AI assistant." },
+  };
+
+  it("shows who, why and the opening line; the number can't be edited", () => {
+    render(<ApprovalDetail approval={call} onDecide={async (b) => decided(call, b)} />);
+    expect(screen.getByText("Hello Priya! This is Sharma Sweets's AI assistant.")).toBeInTheDocument();
+    expect(screen.getByText(/tomorrow's 4 pm appointment/)).toBeInTheDocument();
+    expect(editableFields("voice.call", call.payload as Record<string, unknown>)).toEqual(["name", "purpose", "opening"]);
+  });
+});

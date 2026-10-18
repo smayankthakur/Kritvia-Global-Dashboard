@@ -60,7 +60,9 @@ export function formToPayload(original: Payload, form: Record<string, string | b
  * so it is approved or rejected as is; a WhatsApp or Telegram recipient never changes. */
 export function editableFields(action: string, payload: Payload): string[] {
   if (action === "whatsapp.template" || action === "browser.submit") return [];
-  return Object.keys(payload).filter((k) => fieldKind(k, payload[k]) !== "readonly" && !(/^(whatsapp|telegram)\./.test(action) && k === "to"));
+  return Object.keys(payload).filter(
+    (k) => fieldKind(k, payload[k]) !== "readonly" && !(/^(whatsapp|telegram)\./.test(action) && k === "to") && !(action === "voice.call" && k === "phone"),
+  );
 }
 
 function WhatsAppPreview({ payload, template, telegram = false }: { payload: Payload; template: boolean; telegram?: boolean }) {
@@ -87,6 +89,25 @@ function WhatsAppPreview({ payload, template, telegram = false }: { payload: Pay
         {displayValue(payload.body)}
       </p>
       {template ? <p className="text-xs text-subtle">WhatsApp approved this template&apos;s wording, so it can be sent or rejected but not edited.</p> : null}
+    </div>
+  );
+}
+
+/** A phone call Kritvia's AI assistant wants to make: who, why, and what it says first. */
+function CallPreview({ payload }: { payload: Payload }) {
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-4">
+      <p className="text-sm">
+        <span className="text-subtle">Phone</span> <span className="font-medium">{displayValue(payload.name) || displayValue(payload.phone)}</span>
+        {payload.name ? <span className="text-subtle"> · {displayValue(payload.phone)}</span> : null}
+      </p>
+      <p className="text-sm">
+        <span className="text-subtle">About</span> {displayValue(payload.purpose)}
+      </p>
+      {payload.opening ? (
+        <p className="max-w-md rounded-lg bg-accent-soft px-3 py-2 text-sm whitespace-pre-wrap text-accent-soft-fg">{displayValue(payload.opening)}</p>
+      ) : null}
+      <p className="text-xs text-subtle">Kritvia says it is your AI assistant, calls only 9 am to 9 pm, and stops if they ask. The number can&apos;t be changed.</p>
     </div>
   );
 }
@@ -166,6 +187,7 @@ function PayloadBody({ action, payload }: { action: string; payload: Payload }) 
   }
   if (action === "telegram.send") return <WhatsAppPreview payload={payload} template={false} telegram />;
   if (action === "browser.submit") return <WebFormPreview payload={payload} />;
+  if (action === "voice.call") return <CallPreview payload={payload} />;
   if (action === "calendar.create_event") {
     const attendees = Array.isArray(payload.attendees) ? (payload.attendees as unknown[]).map(String) : [];
     return (

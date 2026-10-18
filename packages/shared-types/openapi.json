@@ -3169,6 +3169,322 @@
         "title": "BrowserStatus",
         "type": "object"
       },
+      "CallDetail": {
+        "properties": {
+          "caller_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Name"
+          },
+          "direction": {
+            "enum": [
+              "inbound",
+              "outbound"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "masked",
+            "title": "Phone"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "test": {
+            "title": "Test",
+            "type": "boolean"
+          },
+          "transcript": {
+            "items": {
+              "$ref": "#/components/schemas/CallTurnOut"
+            },
+            "title": "Transcript",
+            "type": "array"
+          },
+          "turns": {
+            "title": "Turns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "direction",
+          "test",
+          "status",
+          "outcome",
+          "phone",
+          "caller_name",
+          "purpose",
+          "summary",
+          "turns",
+          "duration_s",
+          "lead_id",
+          "started_at",
+          "ended_at",
+          "transcript"
+        ],
+        "title": "CallDetail",
+        "type": "object"
+      },
+      "CallOut": {
+        "properties": {
+          "caller_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Name"
+          },
+          "direction": {
+            "enum": [
+              "inbound",
+              "outbound"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "masked",
+            "title": "Phone"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "test": {
+            "title": "Test",
+            "type": "boolean"
+          },
+          "turns": {
+            "title": "Turns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "direction",
+          "test",
+          "status",
+          "outcome",
+          "phone",
+          "caller_name",
+          "purpose",
+          "summary",
+          "turns",
+          "duration_s",
+          "lead_id",
+          "started_at",
+          "ended_at"
+        ],
+        "title": "CallOut",
+        "type": "object"
+      },
+      "CallTurnOut": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "who": {
+            "enum": [
+              "agent",
+              "caller"
+            ],
+            "title": "Who",
+            "type": "string"
+          }
+        },
+        "required": [
+          "who",
+          "text"
+        ],
+        "title": "CallTurnOut",
+        "type": "object"
+      },
       "ChatDetailOut": {
         "properties": {
           "chat": {
@@ -9997,6 +10313,54 @@
         "title": "OrgSummary",
         "type": "object"
       },
+      "OutboundIn": {
+        "properties": {
+          "caller_id_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "160",
+                  "landline",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Id Kind"
+          },
+          "confirm": {
+            "default": false,
+            "description": "the admin confirms the registration and that calls are only to the business's own customers, for service (not promotion)",
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "dlt_entity_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{10,25}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the business's Principal Entity ID on a TRAI DLT platform",
+            "title": "Dlt Entity Id"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "OutboundIn",
+        "type": "object"
+      },
       "Package-Input": {
         "properties": {
           "contents": {
@@ -11126,6 +11490,40 @@
           "count"
         ],
         "title": "PlaceHit",
+        "type": "object"
+      },
+      "PlaceIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Phone",
+            "type": "string"
+          },
+          "purpose": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone",
+          "purpose"
+        ],
+        "title": "PlaceIn",
         "type": "object"
       },
       "PlanOut": {
@@ -18160,6 +18558,103 @@
         "title": "TermsIn",
         "type": "object"
       },
+      "TestIn": {
+        "properties": {
+          "call_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
+          },
+          "digits": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9*#]$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digits"
+          },
+          "hang_up": {
+            "default": false,
+            "title": "Hang Up",
+            "type": "boolean"
+          },
+          "said": {
+            "default": "",
+            "maxLength": 600,
+            "title": "Said",
+            "type": "string"
+          }
+        },
+        "title": "TestIn",
+        "type": "object"
+      },
+      "TestOut": {
+        "properties": {
+          "call_id": {
+            "format": "uuid",
+            "title": "Call Id",
+            "type": "string"
+          },
+          "ended": {
+            "title": "Ended",
+            "type": "boolean"
+          },
+          "language": {
+            "enum": [
+              "hi-IN",
+              "en-IN"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "say": {
+            "title": "Say",
+            "type": "string"
+          },
+          "transfer_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer To"
+          }
+        },
+        "required": [
+          "call_id",
+          "say",
+          "ended",
+          "outcome",
+          "language"
+        ],
+        "title": "TestOut",
+        "type": "object"
+      },
       "TicketIn": {
         "properties": {
           "note": {
@@ -18909,6 +19404,42 @@
           "promoted_at"
         ],
         "title": "TrustOut",
+        "type": "object"
+      },
+      "TwilioIn": {
+        "properties": {
+          "account_sid": {
+            "pattern": "^AC[0-9a-f]{32}$",
+            "title": "Account Sid",
+            "type": "string"
+          },
+          "auth_token": {
+            "description": "checked with Twilio, stored encrypted, never shown again",
+            "maxLength": 64,
+            "minLength": 32,
+            "pattern": "^[0-9a-f]{32,64}$",
+            "title": "Auth Token",
+            "type": "string"
+          },
+          "phone_number": {
+            "maxLength": 20,
+            "minLength": 8,
+            "title": "Phone Number",
+            "type": "string"
+          },
+          "point_number": {
+            "default": true,
+            "description": "set the number's voice and status webhooks to Kritvia",
+            "title": "Point Number",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "account_sid",
+          "auth_token",
+          "phone_number"
+        ],
+        "title": "TwilioIn",
         "type": "object"
       },
       "UnderstandIn": {
@@ -19788,6 +20319,121 @@
         "title": "VocabularyImportOut",
         "type": "object"
       },
+      "VoiceIn": {
+        "properties": {
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "greeting": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greeting"
+          },
+          "language": {
+            "default": "hi-IN",
+            "enum": [
+              "hi-IN",
+              "en-IN"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "max_minutes": {
+            "default": 8,
+            "maximum": 20.0,
+            "minimum": 2.0,
+            "title": "Max Minutes",
+            "type": "integer"
+          },
+          "open_days": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 7,
+            "title": "Open Days",
+            "type": "array"
+          },
+          "open_from": {
+            "default": "10:00",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "title": "Open From",
+            "type": "string"
+          },
+          "open_to": {
+            "default": "19:00",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "title": "Open To",
+            "type": "string"
+          },
+          "transfer_number": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer Number"
+          },
+          "voice": {
+            "default": "Polly.Aditi",
+            "enum": [
+              "Polly.Aditi",
+              "Polly.Raveena",
+              "Polly.Kajal-Neural"
+            ],
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "title": "VoiceIn",
+        "type": "object"
+      },
+      "VoiceNumber": {
+        "properties": {
+          "account": {
+            "description": "the account SID's last 4 characters",
+            "title": "Account",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_url": {
+            "title": "Status Url",
+            "type": "string"
+          },
+          "voice_url": {
+            "title": "Voice Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "account",
+          "status",
+          "voice_url",
+          "status_url"
+        ],
+        "title": "VoiceNumber",
+        "type": "object"
+      },
       "VoiceOptionsOut": {
         "properties": {
           "engines": {
@@ -19810,6 +20456,169 @@
           "engines"
         ],
         "title": "VoiceOptionsOut",
+        "type": "object"
+      },
+      "VoiceOut": {
+        "properties": {
+          "answering": {
+            "description": "calls to the connected number are answered now",
+            "title": "Answering",
+            "type": "boolean"
+          },
+          "caller_id_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "160",
+                  "landline",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Id Kind"
+          },
+          "can_admin": {
+            "title": "Can Admin",
+            "type": "boolean"
+          },
+          "dlt_entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dlt Entity Id"
+          },
+          "dnd_count": {
+            "title": "Dnd Count",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "greeting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greeting"
+          },
+          "greeting_preview": {
+            "title": "Greeting Preview",
+            "type": "string"
+          },
+          "language": {
+            "enum": [
+              "hi-IN",
+              "en-IN"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "max_minutes": {
+            "title": "Max Minutes",
+            "type": "integer"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VoiceNumber"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_days": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Open Days",
+            "type": "array"
+          },
+          "open_from": {
+            "title": "Open From",
+            "type": "string"
+          },
+          "open_to": {
+            "title": "Open To",
+            "type": "string"
+          },
+          "outbound_enabled": {
+            "title": "Outbound Enabled",
+            "type": "boolean"
+          },
+          "plan_includes": {
+            "title": "Plan Includes",
+            "type": "boolean"
+          },
+          "registered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registered At"
+          },
+          "transfer_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer Number"
+          },
+          "voice": {
+            "enum": [
+              "Polly.Aditi",
+              "Polly.Raveena",
+              "Polly.Kajal-Neural"
+            ],
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "language",
+          "voice",
+          "greeting",
+          "greeting_preview",
+          "transfer_number",
+          "open_days",
+          "open_from",
+          "open_to",
+          "max_minutes",
+          "outbound_enabled",
+          "dlt_entity_id",
+          "caller_id_kind",
+          "registered_at",
+          "number",
+          "plan_includes",
+          "can_admin",
+          "answering",
+          "dnd_count"
+        ],
+        "title": "VoiceOut",
         "type": "object"
       },
       "VoiceSettings": {
@@ -20337,6 +21146,50 @@
           "run_id"
         ],
         "title": "RunOut",
+        "type": "object"
+      },
+      "kritvia_api__routers__calls__PlaceOut": {
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "pending_approval_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Approval Id"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "pending_approval_id",
+          "answer"
+        ],
+        "title": "PlaceOut",
         "type": "object"
       },
       "kritvia_api__routers__compliance__ConsentIn": {
@@ -22307,6 +23160,181 @@
         "summary": "Telegram Inbound",
         "tags": [
           "connectors"
+        ]
+      }
+    },
+    "/hooks/voice/twilio/{connector_id}/incoming": {
+      "post": {
+        "operationId": "twilio_incoming_hooks_voice_twilio__connector_id__incoming_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Twilio Incoming",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/hooks/voice/twilio/{connector_id}/outgoing": {
+      "post": {
+        "description": "The customer picked up a call Kritvia placed: the approved opening, then the conversation.",
+        "operationId": "twilio_outgoing_hooks_voice_twilio__connector_id__outgoing_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "call",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Twilio Outgoing",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/hooks/voice/twilio/{connector_id}/status": {
+      "post": {
+        "operationId": "twilio_status_hooks_voice_twilio__connector_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Twilio Status",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/hooks/voice/twilio/{connector_id}/turn": {
+      "post": {
+        "operationId": "twilio_turn_hooks_voice_twilio__connector_id__turn_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "call",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dial",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Dial",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Twilio Turn",
+        "tags": [
+          "calls"
         ]
       }
     },
@@ -29239,6 +30267,241 @@
         "summary": "Get Job",
         "tags": [
           "browser"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/calls": {
+      "get": {
+        "operationId": "list_calls_ventures__venture_id__calls_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CallOut"
+                  },
+                  "title": "Response List Calls Ventures  Venture Id  Calls Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Calls",
+        "tags": [
+          "calls"
+        ]
+      },
+      "post": {
+        "operationId": "place_call_ventures__venture_id__calls_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/kritvia_api__routers__calls__PlaceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Place Call",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/calls/test": {
+      "post": {
+        "description": "A call in the app: you play the caller (type, or speak with the voice button); Kritvia answers\nexactly as it would on the phone. Test calls make no leads or tasks.",
+        "operationId": "test_call_ventures__venture_id__calls_test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Call",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/calls/{call_id}": {
+      "get": {
+        "operationId": "get_call_ventures__venture_id__calls__call_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Call",
+        "tags": [
+          "calls"
         ]
       }
     },
@@ -38949,6 +40212,110 @@
         ]
       }
     },
+    "/ventures/{venture_id}/voice": {
+      "get": {
+        "operationId": "get_voice_ventures__venture_id__voice_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Voice",
+        "tags": [
+          "calls"
+        ]
+      },
+      "put": {
+        "operationId": "put_voice_ventures__venture_id__voice_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Voice",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
     "/ventures/{venture_id}/voice/dictate": {
       "post": {
         "description": "Dictation: short recording -> cleaned text in the user's vocabulary.\nmode 'note' also saves it to the knowledge base; 'ask' only returns the text for the caller to ask.",
@@ -39005,6 +40372,168 @@
         "summary": "Dictate Endpoint",
         "tags": [
           "voice"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/voice/outbound": {
+      "put": {
+        "operationId": "put_outbound_ventures__venture_id__voice_outbound_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutboundIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Outbound",
+        "tags": [
+          "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/voice/twilio": {
+      "delete": {
+        "operationId": "disconnect_twilio_ventures__venture_id__voice_twilio_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Disconnect Twilio",
+        "tags": [
+          "calls"
+        ]
+      },
+      "post": {
+        "operationId": "connect_twilio_ventures__venture_id__voice_twilio_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwilioIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Twilio",
+        "tags": [
+          "calls"
         ]
       }
     },

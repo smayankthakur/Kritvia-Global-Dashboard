@@ -39,6 +39,7 @@ class Services:
     razorpay: Any = None           # businesses' own Razorpay accounts (invoice payment links)
     indiamart: Any = None          # IndiaMART Lead Manager Pull API (enquiries)
     browser: Any = None            # the locked-down browser (services/browser) for the browser agent
+    twilio: Any = None             # businesses' own Twilio numbers (AI phone calls)
     worker_id: str = field(default_factory=lambda: f"w-{uuid.uuid4().hex[:8]}")
 
 
