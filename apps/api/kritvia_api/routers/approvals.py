@@ -140,6 +140,9 @@ class DecisionIn(BaseModel):
 
 
 def validate_edit(original: dict[str, Any], edited: dict[str, Any], action: str = "") -> dict[str, Any]:
+    if action == "browser.submit":
+        raise HTTPException(422, "a website form is sent exactly as shown, so it can't be edited here; "
+                                 "reject it with a comment and the browser agent tries again")
     if action == "whatsapp.template":
         raise HTTPException(422, "WhatsApp approved this template's wording, so it can't be edited here; "
                                  "reject it with a comment instead")

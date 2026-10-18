@@ -2499,6 +2499,58 @@ export interface paths {
         patch: operations["update_breach_ventures__venture_id__breaches__breach_id__patch"];
         trace?: never;
     };
+    "/ventures/{venture_id}/browser": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Jobs */
+        get: operations["list_jobs_ventures__venture_id__browser_get"];
+        put?: never;
+        /** Start Job */
+        post: operations["start_job_ventures__venture_id__browser_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/browser/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Browser Status */
+        get: operations["browser_status_ventures__venture_id__browser_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/browser/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job */
+        get: operations["get_job_ventures__venture_id__browser__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/cards": {
         parameters: {
             query?: never;
@@ -6161,6 +6213,67 @@ export interface components {
             key: string;
             /** Words */
             words: number;
+        };
+        /** BrowserField */
+        BrowserField: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** BrowserJob */
+        BrowserJob: {
+            /** Answer */
+            answer: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Form
+             * @description the form waiting for a yes
+             */
+            form?: components["schemas"]["BrowserField"][] | null;
+            /** Outcome */
+            outcome: string | null;
+            /** Pending Approval Id */
+            pending_approval_id: string | null;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Sources */
+            sources: string[];
+            /** Status */
+            status: string;
+            /** Steps */
+            steps: number;
+            /** Task */
+            task: string;
+            /** Url */
+            url: string | null;
+        };
+        /** BrowserJobIn */
+        BrowserJobIn: {
+            /** Task */
+            task: string;
+            /** Url */
+            url?: string | null;
+        };
+        /** BrowserStatus */
+        BrowserStatus: {
+            /** Configured */
+            configured: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Note */
+            note: string | null;
+            /** Plan Includes */
+            plan_includes: boolean;
         };
         /** ChatDetailOut */
         ChatDetailOut: {
@@ -17713,6 +17826,137 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BreachOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_jobs_ventures__venture_id__browser_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserJob"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_job_ventures__venture_id__browser_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrowserJobIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserJob"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    browser_status_ventures__venture_id__browser_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_ventures__venture_id__browser__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserJob"];
                 };
             };
             /** @description Validation Error */

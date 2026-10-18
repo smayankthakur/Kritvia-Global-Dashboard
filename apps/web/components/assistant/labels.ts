@@ -17,6 +17,8 @@ const TOOL_LABELS: Record<string, string> = {
   "indiamart.enquiries": "Looked up IndiaMART enquiries",
   "tasks.create": "New task",
   "leads.create": "New lead",
+  "web.browse": "Looked it up on the web",
+  "team.handoff": "Handed to a team lead",
 };
 
 export function toolLabel(tool: string): string {

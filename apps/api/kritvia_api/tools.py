@@ -337,4 +337,39 @@ def build_tools() -> ToolRegistry:
         from kritvia_api.services import team
         return await team.handoff(ctx, str(p.get("to") or "").strip().lower(), str(p.get("note") or ""))
 
+    @reg.tool("web.browse", Capability.READ,
+              "Look something up on websites (a price, a rate, opening hours, a rule on an official site). "
+              "Only reads pages; it can't sign in or send forms")
+    async def web_browse(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import browser_agent as ba
+        from kritvia_api.services.quota import PlanRestricted, require_agent
+        task = str(p.get("task") or "").strip()[:1500]
+        if len(task) < 5:
+            return {"ok": False, "why": "say what to look up"}
+        async with ctx.tx() as conn:
+            row = (await conn.execute(text(
+                "SELECT coalesce(s.kind, 'general') AS kind, coalesce(c.enabled, true) AS enabled FROM ventures v"
+                " LEFT JOIN venture_settings s ON s.venture_id = v.id LEFT JOIN workflow_configs c"
+                " ON c.venture_id = v.id AND c.workflow = 'browser' WHERE v.id = :v"), {"v": ctx.venture_id})).first()
+            try:
+                await require_agent(conn, ctx.venture_id, "browser", row.kind if row else None)
+            except PlanRestricted as exc:
+                return {"ok": False, "why": str(exc)}
+        if row is not None and not row.enabled:
+            return {"ok": False, "why": "the browser agent is switched off for this business"}
+        try:
+            out = await ba.browse(ctx, ctx.services.browser, task, (str(p.get("url") or "").strip() or None),
+                                  max_actions=8, may_submit=False)
+        except ba.BrowserError as exc:
+            return {"ok": False, "why": str(exc)}
+        return {"ok": True, "answer": out.answer, "pages": out.sources}
+
+    @reg.tool("browser.submit", Capability.SEND, "Send a website form exactly as the person approved it")
+    async def browser_submit(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        page = await ctx.services.browser.submit(
+            str(p["url"]), [{"selector": f["selector"], "value": f["value"], "kind": f.get("kind", "fill")}
+                            for f in p.get("fields") or []], str(p["button"]["selector"]))
+        return {"sent": True, "url": page.get("url"), "title": page.get("title"),
+                "text": (page.get("text") or "")[:1500]}
+
     return reg

@@ -97,6 +97,7 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
     { label: "Bookings", href: `${v}/bookings`, icon: CalendarCheck },
     { label: "Reviews", href: `${v}/reviews`, icon: Star },
     { label: "Automations", href: `${v}/automations`, icon: Repeat },
+    { label: "Browser", href: `${v}/browser`, icon: Globe },
     { label: "Analytics", href: `${v}/analytics`, icon: ChartColumn },
     { label: "Board", href: `${v}/board`, icon: LayoutDashboard },
     { label: "Agents", href: `${v}/agents`, icon: Bot },

@@ -221,3 +221,32 @@ describe("WhatsApp approvals", () => {
     expect(editableFields("gmail.send", { to: "a@b.in", subject: "s", body: "b" })).toEqual(["to", "subject", "body"]);
   });
 });
+
+describe("Website form approvals", () => {
+  const form: Approval = {
+    ...emailApproval,
+    id: "a-web-1",
+    action: "browser.submit",
+    title: "Send the form on sharmasweets.example",
+    payload: {
+      url: "https://sharmasweets.example/bulk",
+      page_title: "Bulk orders",
+      task: "Order 20 kg kaju katli",
+      fields: [
+        { label: "Your name", value: "Browse Shop", selector: "#name", kind: "fill" },
+        { label: "Order", value: "20 kg kaju katli", selector: "#order", kind: "fill" },
+      ],
+      button: { label: "Send order", selector: "#send" },
+    },
+  };
+
+  it("shows the page, every field and the button, and can't be edited", () => {
+    render(<ApprovalDetail approval={form} onDecide={async (b) => decided(form, b)} />);
+    expect(screen.getByText("Bulk orders")).toBeInTheDocument();
+    expect(screen.getByText("https://sharmasweets.example/bulk")).toBeInTheDocument();
+    expect(screen.getByText("20 kg kaju katli")).toBeInTheDocument();
+    expect(screen.getByText("Send order")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /edit/i })).toBeDisabled();
+    expect(editableFields("browser.submit", form.payload as Record<string, unknown>)).toEqual([]);
+  });
+});

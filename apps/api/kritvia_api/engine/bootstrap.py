@@ -11,6 +11,7 @@ from kritvia_api.services.messaging import Messaging
 from kritvia_api.services.model_router import ModelRouter, TierConfig
 from kritvia_api.services.payments import RazorpayClient
 from kritvia_api.services.places import PlacesClient
+from kritvia_api.services.browser_agent import BrowserClient
 from kritvia_api.services.sandbox import HttpSandbox, LocalSandbox
 from kritvia_api.services.slack import SlackClient
 from kritvia_api.services.telegram import TelegramClient
@@ -21,7 +22,7 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
                    sandbox=None, google: GoogleClient | None = None,
                    whatsapp: WhatsAppClient | None = None, places: PlacesClient | None = None,
                    telegram: TelegramClient | None = None, slack: SlackClient | None = None,
-                   indiamart: IndiaMartClient | None = None) -> Services:
+                   indiamart: IndiaMartClient | None = None, browser=None) -> Services:
     s = get_settings()
     from kritvia_api.tools import build_tools
     import kritvia_api.workflows  # noqa: F401  (registers workflows)
@@ -59,6 +60,7 @@ def build_services(*, dispatch_mode: str | None = None, router: ModelRouter | No
         places=places or PlacesClient(s.google_places_api_key),
         razorpay=RazorpayClient(),
         indiamart=indiamart or IndiaMartClient(),
+        browser=browser or BrowserClient(s.browser_url, s.browser_token),
     )
     if isinstance(dispatcher, InlineDispatcher):
         dispatcher.services = services

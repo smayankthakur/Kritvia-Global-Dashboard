@@ -30,7 +30,8 @@ AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assis
                "kitchen_daily": "Nightly kitchen plan", "prospector": "Prospector (outbound sales)",
                "whatsapp_followup": "WhatsApp follow-ups", "collections": "Payment reminders",
                "booking_reminders": "Booking reminders", "reviews": "Google reviews", "automation": "Automations",
-               "custom": "Custom workflows", "trade_watch": "Shipment watch", "trade_update": "Shipment updates"}
+               "custom": "Custom workflows", "trade_watch": "Shipment watch", "trade_update": "Shipment updates",
+               "browser": "Browser agent"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
                      "drive": "Google Drive", "whatsapp": "WhatsApp Business", "telegram": "Telegram bot", "slack": "Slack", "razorpay": "Razorpay payment links", "tally": "Tally",
                      "mcp": "Connected apps (MCP)", "indiamart": "IndiaMART enquiries"}
@@ -116,7 +117,8 @@ PLANS: dict[str, Plan] = {
         highlights=("3 businesses, 15 people", "Every agent: inbox, lead, proposal, document and kitchen",
                     "Autonomous actions and approval policies", "All integrations, including Tally",
                     "50 GB business memory", "Priority support",
-                    "Advanced analytics: 12 months, lead funnel, money owed by age, each agent's results"),
+                    "Advanced analytics: 12 months, lead funnel, money owed by age, each agent's results",
+                    "Browser agent: looks things up on websites and fills in forms after your yes"),
         featured=True, support="priority"),
     "scale": Plan(
         "scale", "Scale", 14_999, 1_49_990, 50_000_000, 10, 50, 250 * GB, None, "all", ALL, 0, "advanced",

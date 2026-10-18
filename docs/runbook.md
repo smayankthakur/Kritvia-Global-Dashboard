@@ -271,3 +271,20 @@ real estate, restaurant/kitchen, something else), which decides the agents and w
 - Safety: codes are stored only as HMAC hashes, last 10 minutes, are single use and die after 5 wrong
   tries. If someone registered an address with a password but never proved it, the real owner signing in
   with a code or Google removes that password and ends its sessions.
+
+## Browser agent (services/browser)
+
+The browser agent runs headless Chromium in its own container (`browser`, built on every deploy). It is
+off until it has a token:
+
+1. **You** (the token is a secret; Claude never writes it): `openssl rand -hex 32`, then add
+   `BROWSER_TOKEN=<that value>` to `/opt/kritvia/.env`.
+2. `sudo /opt/kritvia/infra/scripts/deploy.sh --bg` (or `cd /opt/kritvia/infra && docker compose up -d browser api
+   worker worker-priority`). The first build installs Chromium (a few minutes, ~600 MB image).
+3. Check: `docker compose exec api python -c "import urllib.request as u; print(u.urlopen('http://browser:8200/healthz').read())"`
+   shows `"configured": true`. The Browser page in the app stops saying "isn't set up".
+4. Optional, stronger isolation: once gVisor is installed (`docker info | grep -i runsc`), set `BROWSER_RUNTIME=runsc`
+   in `.env` and recreate the container.
+
+It uses at most 1.5 GB of memory and 1.5 CPUs, one job at a time (others wait up to 45 s, then are told to try
+again). The browser agent comes with Growth, Scale and Enterprise.

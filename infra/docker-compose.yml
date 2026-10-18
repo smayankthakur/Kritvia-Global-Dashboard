@@ -15,6 +15,7 @@ x-app-env: &app-env
   LITELLM_BASE_URL: http://litellm:4000
   TIERS_CONFIG_PATH: /app/tiers.yaml
   SANDBOX_URL: http://sandbox:8100
+  BROWSER_URL: http://browser:8200
 
 # Container logs rotate on disk; scripts/archive-logs.sh keeps a daily copy for one year (CERT-In: 180 days in India;
 # DPDP Rules 2025 r.6: one year). Rotation only bounds disk use between archives.
@@ -97,6 +98,7 @@ services:
     restart: unless-stopped
     env_file: ../.env
     environment: *app-env
+    networks: [default, browsing]
     volumes:
       - ./litellm/tiers.yaml:/app/tiers.yaml:ro
     ports: ["127.0.0.1:8000:8000"]
@@ -116,6 +118,7 @@ services:
     restart: unless-stopped
     env_file: ../.env
     environment: *app-env
+    networks: [default, browsing]
     volumes:
       - ./litellm/tiers.yaml:/app/tiers.yaml:ro
     depends_on:
@@ -130,6 +133,7 @@ services:
     restart: unless-stopped
     env_file: ../.env
     environment: *app-env
+    networks: [default, browsing]
     volumes:
       - ./litellm/tiers.yaml:/app/tiers.yaml:ro
     depends_on:
@@ -198,6 +202,30 @@ services:
     volumes:
       - hfcache:/home/diar/.cache
 
+  # Headless Chromium for the browser agent (services/browser; one job at a time, read-only unless a person
+  # approved a form). Its own network: the internet through its egress guard, and nothing internal except
+  # the API and workers that call it (no database, cache or model gateway). BROWSER_TOKEN empty = off.
+  # Once gVisor is installed (see services/sandbox/README.md), set BROWSER_RUNTIME=runsc in .env.
+  browser:
+    logging: *logging
+    build: { context: ../services/browser }
+    restart: unless-stopped
+    runtime: ${BROWSER_RUNTIME:-runc}
+    environment:
+      BROWSER_TOKEN: ${BROWSER_TOKEN:-}
+      HOME: /home/browser
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m
+      - /home/browser:rw,nosuid,nodev,size=64m,uid=10001,gid=10001
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 1.5
+    pids_limit: 256
+    networks: [browsing]
+
   cloudflared:
     logging: *logging
     profiles: ["tunnel"]
@@ -205,6 +233,10 @@ services:
     restart: unless-stopped
     command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:-}"]
     depends_on: [web, api]
+
+networks:
+  default: {}
+  browsing: {}
 
 volumes:
   pgdata:

@@ -41,7 +41,7 @@ COMPOSE=(docker compose -f docker-compose.yml)
 [ -n "${MANAGED_DATABASE_URL:-}" ] && COMPOSE+=(-f docker-compose.managed.yml)
 
 step "building images (old containers keep serving)"
-if ! "${COMPOSE[@]}" build --pull --quiet migrate sandbox-jobs api worker worker-priority web sandbox >"$BUILD_LOG" 2>&1; then
+if ! "${COMPOSE[@]}" build --pull --quiet migrate sandbox-jobs api worker worker-priority web sandbox browser >"$BUILD_LOG" 2>&1; then
   step "BUILD FAILED; nothing was restarted. Last lines of $BUILD_LOG:"
   tail -25 "$BUILD_LOG"
   exit 1

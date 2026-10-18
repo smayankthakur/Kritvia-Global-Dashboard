@@ -59,7 +59,7 @@ export function formToPayload(original: Payload, form: Record<string, string | b
 /** Fields a person may change before approving. A WhatsApp template's wording was approved by WhatsApp,
  * so it is approved or rejected as is; a WhatsApp or Telegram recipient never changes. */
 export function editableFields(action: string, payload: Payload): string[] {
-  if (action === "whatsapp.template") return [];
+  if (action === "whatsapp.template" || action === "browser.submit") return [];
   return Object.keys(payload).filter((k) => fieldKind(k, payload[k]) !== "readonly" && !(/^(whatsapp|telegram)\./.test(action) && k === "to"));
 }
 
@@ -87,6 +87,32 @@ function WhatsAppPreview({ payload, template, telegram = false }: { payload: Pay
         {displayValue(payload.body)}
       </p>
       {template ? <p className="text-xs text-subtle">WhatsApp approved this template&apos;s wording, so it can be sent or rejected but not edited.</p> : null}
+    </div>
+  );
+}
+
+/** A website form the browser agent wants to send: the page, every field and value, and the button. */
+function WebFormPreview({ payload }: { payload: Payload }) {
+  const fields = Array.isArray(payload.fields) ? (payload.fields as Record<string, unknown>[]) : [];
+  const button = payload.button && typeof payload.button === "object" ? (payload.button as Record<string, unknown>) : {};
+  return (
+    <div className="overflow-hidden rounded-lg border border-border">
+      <div className="space-y-1 border-b border-border bg-surface-2/60 px-4 py-3 text-sm">
+        <p className="font-medium">{displayValue(payload.page_title) || "Website form"}</p>
+        <p className="text-xs break-all text-subtle">{displayValue(payload.url)}</p>
+      </div>
+      <dl className="divide-y divide-border">
+        {fields.map((f, i) => (
+          <div key={`${i}-${displayValue(f.label)}`} className="grid gap-1 px-4 py-2 text-sm sm:grid-cols-[12rem_1fr]">
+            <dt className="text-subtle">{displayValue(f.label)}</dt>
+            <dd className="whitespace-pre-wrap break-words">{displayValue(f.value) || "—"}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="border-t border-border px-4 py-2 text-xs text-subtle">
+        Then presses <span className="font-medium text-fg">{displayValue(button.label) || "Send"}</span>. It is sent exactly as shown on a fresh
+        page; to change anything, reject it with a note.
+      </p>
     </div>
   );
 }
@@ -139,6 +165,7 @@ function PayloadBody({ action, payload }: { action: string; payload: Payload }) 
     return <WhatsAppPreview payload={payload} template={action === "whatsapp.template"} />;
   }
   if (action === "telegram.send") return <WhatsAppPreview payload={payload} template={false} telegram />;
+  if (action === "browser.submit") return <WebFormPreview payload={payload} />;
   if (action === "calendar.create_event") {
     const attendees = Array.isArray(payload.attendees) ? (payload.attendees as unknown[]).map(String) : [];
     return (

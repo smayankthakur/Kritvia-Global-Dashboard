@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # Sandbox runner (services/sandbox). Empty -> LocalSandbox (dev only, not isolated).
     sandbox_url: str = ""
     sandbox_token: str = ""
+    # Browser for the browser agent (services/browser). Empty URL or token -> the agent is off.
+    browser_url: str = ""
+    browser_token: str = ""
 
     # Outbound messages when a venture has no Google connector: 'log' records to the
     # outbox without sending (dogfooding); 'none' fails the step.
