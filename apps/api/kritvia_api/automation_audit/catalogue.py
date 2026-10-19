@@ -82,9 +82,11 @@ JOBS: tuple[Job, ...] = (
         ("wf:lead_triage", "tool:calendar.create_event"), impact=2,
         next="Let customers pick a slot from a booking link, so no approval is needed for the invite."),
     Job("prospecting", "sales", "Find new customers", 4,
-        "The Prospector finds businesses on Google every day and emails them by itself (send without asking). "
-        "First WhatsApp messages wait for one tap, because WhatsApp only allows them from the business's phone.",
-        ("wf:prospector", "tool:places.search", "cron:fire_schedules"), impact=2,
+        "The Prospector finds businesses on Google every day. Email first: businesses with a website are read for "
+        "a contact email and emailed by themselves; businesses without one get a WhatsApp draft for one tap, "
+        "because WhatsApp only allows a first message from the business's own phone.",
+        ("wf:prospector", "tool:places.search", "cron:fire_schedules",
+         "code:apps/api/kritvia_api/services/contact_email.py::async def find"), impact=2,
         gaps=("First WhatsApp touches need one tap from the owner's phone (Meta rule).",)),
     Job("lead_followups", "sales", "Follow up quiet leads", 3,
         "WhatsApp follow-ups and custom workflows find quiet chats and leads and draft a nudge for a yes.",
@@ -110,7 +112,8 @@ JOBS: tuple[Job, ...] = (
     # ------------------------------------------------------------------ service
     Job("reply_messages", "service", "Reply to customer messages", 3,
         "Every email, WhatsApp and Telegram message gets a drafted reply in the customer's language; it goes out "
-        "after a yes, or by itself once the inbox assistant has earned trust.",
+        "after a yes (drafts about to expire are nudged to the owner's phone), or by itself once the inbox "
+        "assistant has earned trust.",
         ("wf:inbox_assistant", "tool:gmail.send", "tool:whatsapp.send", "tool:telegram.send"), impact=3,
         next="Turn on earned trust for routine replies (hours, location, status) and keep a yes for prices."),
     Job("handoff_human", "service", "Hand a customer to a person", 4,
@@ -208,8 +211,7 @@ JOBS: tuple[Job, ...] = (
         ("wf:automation", "code:apps/api/kritvia_api/services/front_door.py::/today"), impact=3),
     Job("system_alerts", "ops", "Alerts when automation breaks", 4,
         "A missing overnight plan raises an alert; budget-paused runs resume; expired drafts end cleanly.",
-        ("cron:morning_check", "cron:resume_paused", "cron:expire_approvals"), impact=2,
-        gaps=("Agents switched on without a time used to sit idle silently; see the integrity checks.",)),
+        ("cron:morning_check", "cron:resume_paused", "cron:expire_approvals", "cron:self_check"), impact=2),
 
     # ------------------------------------------------------------------ marketing
     Job("social_posts", "marketing", "Post on social media", 0,
@@ -287,7 +289,6 @@ PLATFORM: tuple[Capability, ...] = (
                "('invoice paid', 'booking done', 'lead quiet') would let any agent or skill react at once."),
     Capability("health_check", "Each business can see what its agents did and which are stuck", True,
                ("route:GET /ventures/{venture_id}/automation-health",)),
-    Capability("self_check", "Kritvia checks its own automations every day and tells the owner", False, (),
-               "Run the automation health check nightly for every business and send the owner the 'fix' findings "
-               "(an agent on but stuck, runs with nothing to work with, drafts expiring)."),
+    Capability("self_check", "Kritvia checks its own automations every day and tells the owner", True,
+               ("cron:self_check", "cron:nudge_expiring", "code:apps/api/kritvia_api/services/self_check.py::def morning")),
 )

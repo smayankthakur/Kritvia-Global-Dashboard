@@ -8,11 +8,13 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 
 from kritvia_api.engine.core import registry
 
+IST = ZoneInfo("Asia/Kolkata")
 # Where an event agent's work comes from: any one of these connected is enough.
 SOURCES: dict[str, set[str]] = {
     "inbox_assistant": {"google", "whatsapp", "telegram", "email_in"},
@@ -69,8 +71,17 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
         " count(*) FILTER (WHERE a.executed_at IS NOT NULL) AS done"
         " FROM approvals a JOIN workflow_runs r ON r.id = a.run_id"
         " WHERE a.venture_id = :v AND a.created_at >= :s GROUP BY r.workflow"), p)).all()}
-    trusted = {(r.agent, r.action) for r in (await conn.execute(text(
-        "SELECT agent, action FROM agent_trust WHERE venture_id = :v AND auto_run"), p)).all()}
+    trust_rows = (await conn.execute(text(
+        "SELECT t.agent, t.action, t.auto_run, t.consecutive_clean, coalesce(s.trust_threshold, 30) AS threshold"
+        " FROM agent_trust t LEFT JOIN venture_settings s ON s.venture_id = t.venture_id"
+        " WHERE t.venture_id = :v"), p)).all()
+    trusted = {(r.agent, r.action) for r in trust_rows if r.auto_run}
+    ready_for_trust = [r for r in trust_rows if not r.auto_run and r.consecutive_clean >= r.threshold]
+    waiting_now = (await conn.execute(text(
+        "SELECT count(*) AS n, min(expires_at) AS first_expiry FROM approvals"
+        " WHERE venture_id = :v AND status = 'pending'"), p)).first()
+    on_phone = int((await conn.execute(text(
+        "SELECT count(*) FROM approver_links WHERE venture_id = :v"), p)).scalar() or 0)
     calls = (await conn.execute(text(
         "SELECT count(*) FILTER (WHERE direction = 'inbound' AND NOT test) AS answered,"
         " count(*) FILTER (WHERE direction = 'outbound' AND NOT test) AS made"
@@ -83,6 +94,11 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
 
     agents: list[dict[str, Any]] = []
     findings: list[dict[str, str]] = []
+
+    def add(agent: str, level: str, kind_: str, text_: str, path: str = "agents") -> None:
+        """level: fix (something is broken or can't run), check (needs a person), idea (could do more)."""
+        findings.append({"agent": agent, "level": level, "kind": kind_, "text": text_,
+                         "path": f"/v/{venture_id}/{path}"})
     for wf in registry.all():
         cfg = configs.get(wf.name)
         on = bool(cfg and cfg.enabled)
@@ -92,14 +108,12 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
             state = "off"
         elif wf.starts == "clock" and not cfg.schedule:
             state = "on_no_time"
-            findings.append({"agent": wf.name, "level": "fix",
-                             "text": f"{wf.title} is on but has no time set, so it never runs. Set a time "
-                                     f"(usually {wf.default_schedule}) on the Agents page."})
+            add(wf.name, "fix", "on_no_time", f"{wf.title} is on but has no time set, so it never runs. Set a "
+                                              f"time (usually {wf.default_schedule}) on the Agents page.")
         elif wf.name in SOURCES and not (SOURCES[wf.name] & sources):
             state = "on_no_source"
-            findings.append({"agent": wf.name, "level": "fix",
-                             "text": f"{wf.title} is on but nothing feeds it: connect Gmail, WhatsApp, Telegram or "
-                                     "email forwarding."})
+            add(wf.name, "fix", "on_no_source", f"{wf.title} is on but nothing feeds it: connect Gmail, WhatsApp, "
+                                                "Telegram or email forwarding.", "settings")
         else:
             state = "ready"
         r, d = runs.get(wf.name), drafts.get(wf.name)
@@ -120,28 +134,36 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
         }
         agents.append(row)
         if state == "ready" and wf.starts == "clock" and row["runs"] == 0 and days >= 2:
-            findings.append({"agent": wf.name, "level": "check",
-                             "text": f"{wf.title} is ready but hasn't run in {days} days."})
+            add(wf.name, "check", "idle", f"{wf.title} is ready but hasn't run in {days} days.")
         for oc, fix in NOT_SET_UP.items():
             if row["outcomes"].get(oc) and state == "ready":
-                findings.append({"agent": wf.name, "level": "fix",
-                                 "text": f"{wf.title} ran {row['outcomes'][oc]} time(s) with nothing to work with: {fix}."})
+                add(wf.name, "fix", f"not_set_up:{oc}",
+                    f"{wf.title} ran {row['outcomes'][oc]} time(s) with nothing to work with: {fix}.")
         for oc, why in WAITING_ON_A_PERSON.items():
             if row["outcomes"].get(oc):
-                findings.append({"agent": wf.name, "level": "check", "text": f"{wf.title}: {row['outcomes'][oc]} {why}."})
+                add(wf.name, "check", f"waiting:{oc}", f"{wf.title}: {row['outcomes'][oc]} {why}.", "leads")
         if row["failed"]:
-            findings.append({"agent": wf.name, "level": "fix",
-                             "text": f"{wf.title}: {row['failed']} run(s) failed"
-                                     + (f" (last: {row['last_error']})" if row["last_error"] else "") + "."})
+            add(wf.name, "fix", "failed", f"{wf.title}: {row['failed']} run(s) failed"
+                + (f" (last: {row['last_error']})" if row["last_error"] else "") + ".", "runs")
         if row["expired"]:
-            findings.append({"agent": wf.name, "level": "check",
-                             "text": f"{wf.title}: {row['expired']} draft(s) expired waiting for a yes, so they "
-                                     "never went out. Approve from your phone, or let this agent send routine "
-                                     "messages by itself."})
-        if row["drafts"] >= 10 and not row["sent_by_itself"] and not row["edited"] and not row["rejected"]:
-            findings.append({"agent": wf.name, "level": "idea",
-                             "text": f"{wf.title}: every one of {row['drafts']} drafts was approved unchanged. "
-                                     "It may be ready to send routine messages without asking (Trust page)."})
+            add(wf.name, "check", "expired",
+                f"{wf.title}: {row['expired']} draft(s) expired waiting for a yes, so they never went out. "
+                + ("Approve from your phone: link Telegram under Your account." if not on_phone else
+                   "Approve them from your phone when they arrive, or let this agent send routine ones by itself."),
+                "board")
+
+    titles = {**{s.agent: w.title for w in registry.all() for s in w.steps.values()},
+              **{w.name: w.title for w in registry.all()}}
+    for r in ready_for_trust:
+        add(r.agent, "idea", f"trust_ready:{r.agent}:{r.action}",
+            f"{titles.get(r.agent, r.agent)}: the last {r.consecutive_clean} drafts ({r.action}) were approved "
+            "unchanged. It can send these by itself now: one tap on the Trust page.", "trust")
+    if waiting_now and waiting_now.n:
+        add("approvals", "check", "waiting_drafts",
+            f"{waiting_now.n} draft(s) are waiting for your yes"
+            + (f"; the first expires {waiting_now.first_expiry.astimezone(IST):%d %b, %H:%M} IST"
+               if waiting_now.first_expiry else "")
+            + ".", "board")
 
     decided = sum(a["approved"] + a["edited"] + a["rejected"] + a["sent_by_itself"] for a in agents)
     total_runs = sum(a["runs"] for a in agents)
@@ -164,6 +186,7 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
         },
         "agents": agents,
         "findings": findings,
+        "approve_on_phone": on_phone,
     }
 
 

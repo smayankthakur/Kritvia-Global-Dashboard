@@ -113,6 +113,12 @@ async def test_starter_kits_give_clock_agents_their_time(biz):
     clock_on = [w for w, c in configs.items() if c["enabled"] and registry.get(w).starts == "clock"]
     assert clock_on and all(configs[w]["schedule"] == registry.get(w).default_schedule for w in clock_on), configs
     assert configs["reviews"]["schedule"] == "19:00"
+    # the kit's own automations would fire in other tests' worker runs: switch them off here
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        await conn.execute("UPDATE automations SET enabled = false WHERE venture_id = $1", uuid.UUID(v))
+    finally:
+        await conn.close()
 
 
 async def test_the_clock_never_starts_an_event_agent(biz, services):

@@ -15,6 +15,8 @@ Cron (IST)
   every 15 minutes        reembed          embed chunks whose embedding was deferred (Ollama down)
   03:15 daily             purge_expired    retention: delete documents past their deadline
   06:30 daily             morning_check    alert (audit + log) if a scheduled plan is missing or failed
+  08:40 daily             self_check       tell each business's owners what is stuck in their automation
+  every 30 minutes        nudge_expiring   tell owners about drafts that expire within the next hours
 
 Priority worker (PriorityWorkerSettings, service `worker-priority`): runs only the runs of plans with
 priority processing (Scale, Enterprise), from their own queue, and keeps a heartbeat in Valkey so the
@@ -119,6 +121,18 @@ async def fire_automations(ctx: dict) -> int:
     except Exception:  # noqa: BLE001
         log.exception("team check-ins didn't start")
     return n
+
+
+async def self_check(ctx: dict) -> int:
+    """Kritvia checks its own agents every morning and tells the owner what is stuck (services/self_check.py)."""
+    from kritvia_api.services import self_check as sc
+    return await sc.morning(ctx["services"])
+
+
+async def nudge_expiring(ctx: dict) -> int:
+    """Drafts that would expire unseen: one message per business, the cards again in Telegram."""
+    from kritvia_api.services import self_check as sc
+    return await sc.nudge(ctx["services"])
 
 
 async def sweep(ctx: dict) -> int:
@@ -233,6 +247,8 @@ class WorkerSettings:
         cron(resume_paused, minute=_every(10), second=25),
         cron(purge_expired, hour={3}, minute={15}),
         cron(morning_check, hour={6}, minute={30}),
+        cron(self_check, hour={8}, minute={40}, run_at_startup=False),
+        cron(nudge_expiring, minute={7, 37}, second=15, run_at_startup=False),
     ]
     on_startup = startup
     on_shutdown = shutdown

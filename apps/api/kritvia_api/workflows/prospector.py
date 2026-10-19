@@ -6,7 +6,10 @@ Every day at the time the owner picks:
           find   searches Google Maps (Places API) with the owner's searches, keeps operating businesses
                  with a phone number and no website of their own (a page on Instagram, Swiggy or Zomato
                  counts as none, by default), skips anyone already in Leads, and adds up to the daily
-                 number as new leads.
+                 number as new leads. Email first: when the owner also has an offer for businesses that
+                 already have a website (`email_offer`), those are found too, their own site is read for a
+                 contact email (services/contact_email.py), and the ones with an email go first, because an
+                 email can go out by itself while a first WhatsApp needs the owner's tap.
           queue  starts one `touch` run for every prospect whose next touch is due.
 
   touch:  draft -> email:    [approval: gmail.send; goes out alone when the owner switched on
@@ -26,6 +29,7 @@ writes from. Nothing from Google goes into run state, notes or the lead row.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 import uuid
 from datetime import datetime, time, timedelta
@@ -56,6 +60,9 @@ wf = registry.register(Workflow(
         Option("new_per_day", "New prospects a day", "number", 10, min=1, max=25),
         Option("min_reviews", "Skip places with fewer Google reviews than", "number", 10, min=0, max=10000),
         Option("min_rating", "Skip places rated below", "number", 3.5, min=0, max=5),
+        Option("email_offer", "What you offer businesses that already have a website", "text", "",
+               help="Filled in: Kritvia also finds businesses that have their own website, reads it for a contact "
+                    "email and emails them about this, by itself. They go first. Empty: they are skipped."),
         Option("only_no_website", "Only businesses without their own website", "boolean", True,
                help="Off: businesses that already have a website are included too, for when what you sell "
                     "isn't a website (software, services, supplies)."),
@@ -251,6 +258,9 @@ async def find(ctx: RunContext, state: dict) -> Goto | Finish:
     allowed = {"none", "social", "listing"} if cfg.get("social_counts_as_none", True) else {"none"}
     if not cfg.get("only_no_website", True):
         allowed = {"none", "social", "listing", "own"}
+    email_offer = str(cfg.get("email_offer") or "").strip()
+    if email_offer:
+        allowed = allowed | {"own"}
     min_reviews, min_rating = int(cfg.get("min_reviews", 10)), float(cfg.get("min_rating", 3.5))
     skip_chains, skip_hotels = bool(cfg.get("skip_chains", True)), bool(cfg.get("skip_hotels", True))
     candidates, seen, found, errors = [], set(), 0, []
@@ -288,31 +298,60 @@ async def find(ctx: RunContext, state: dict) -> Goto | Finish:
     # Busiest first: more reviews = more customers to lose to a competitor with a website.
     candidates.sort(key=lambda p: -(p.get("review_count") or 0))
 
+    async def unknown(conn, p: dict, email: str | None = None) -> bool:
+        """Not already a prospect, customer or enquiry (same place, phone number or email)."""
+        return (await conn.execute(text(
+            "SELECT 1 FROM leads WHERE venture_id = :v AND (place_id = :pl"
+            " OR right(regexp_replace(coalesce(phone, ''), '\\D', '', 'g'), 10) = :ph"
+            " OR (CAST(:e AS text) IS NOT NULL AND lower(email) = CAST(:e AS text))) LIMIT 1"),
+            {"v": ctx.venture_id, "pl": p["place_id"], "ph": p["phone"][-10:], "e": email})).first() is None
+
+    # Email first: businesses with their own website whose site lists an email. Their website address is
+    # used here and dropped; only the email they publish is kept.
+    emails: dict[str, str] = {}
+    own = [p for p in candidates if p["website_kind"] == "own" and p.get("website")]
+    if own:
+        from kritvia_api.services import contact_email
+        async with ctx.tx() as conn:
+            own = [p for p in own if await unknown(conn, p)][:max(room * 3, room)]
+        sem = asyncio.Semaphore(4)
+
+        async def look(p: dict) -> None:
+            async with sem:
+                e = await contact_email.find(p.get("website"))
+            if e:
+                emails[p["place_id"]] = e
+        await asyncio.gather(*(look(p) for p in own))
+    whatsapp_ok = {"none", "social", "listing"} | ({"own"} if not cfg.get("only_no_website", True) else set())
+    ordered = ([p for p in candidates if p["place_id"] in emails]
+               + [p for p in candidates if p["place_id"] not in emails and p["website_kind"] in whatsapp_ok])
+
     added: list[str] = []
+    by_email = 0
     async with ctx.tx() as conn:
-        for p in candidates:
+        for p in ordered:
             if len(added) >= room:
                 break
-            # Already a prospect, or already a customer or enquiry with this phone number.
-            known = (await conn.execute(text(
-                "SELECT 1 FROM leads WHERE venture_id = :v AND (place_id = :pl"
-                " OR right(regexp_replace(coalesce(phone, ''), '\\D', '', 'g'), 10) = :ph) LIMIT 1"),
-                {"v": ctx.venture_id, "pl": p["place_id"], "ph": p["phone"][-10:]})).first()
-            if known:
+            email = emails.get(p["place_id"])
+            if not await unknown(conn, p, email):
                 continue
             # Only the place ID is kept (Google's terms); the name shown is fetched live by ID.
             lead_id = (await conn.execute(text(
                 "INSERT INTO leads (org_id, venture_id, name, source, status, place_id, place_search, website_kind,"
-                " next_touch_at, last_run_id) VALUES (:o, :v, :n, 'prospector', 'new', :pl, :q, :wk, now(), :run)"
+                " email, next_touch_at, last_run_id)"
+                " VALUES (:o, :v, :n, 'prospector', 'new', :pl, :q, :wk, :e, now(), :run)"
                 " ON CONFLICT (venture_id, place_id) WHERE place_id IS NOT NULL DO NOTHING RETURNING id"),
                 {"o": ctx.org_id, "v": ctx.venture_id, "n": PLACEHOLDER_NAME, "pl": p["place_id"],
-                 "q": p["search"][:300], "wk": p["website_kind"], "run": ctx.run_id})).scalar()
+                 "q": p["search"][:300], "wk": p["website_kind"], "e": email, "run": ctx.run_id})).scalar()
             if lead_id:
                 added.append(str(lead_id))
-    ctx.note(f"{found} places found, {len(candidates)} without a website, {len(added)} new prospects added"
+                by_email += bool(email)
+    ctx.note(f"{found} places found, {len(ordered)} to reach, {len(added)} new prospects added"
+             + (f" ({by_email} by email, {len(added) - by_email} by WhatsApp)" if own else "")
              + (f" ({skipped['chains']} chains and {skipped['hotels']} hotels left out)"
                 if skipped["chains"] or skipped["hotels"] else ""))
     return Goto("queue", update={"summary": {"found": found, "matching": len(candidates), "added": len(added),
+                                             "by_email": by_email, "websites_read": len(own),
                                              "search_errors": len(errors), "skipped_chains": skipped["chains"],
                                              "skipped_hotels": skipped["hotels"]}})
 
@@ -402,15 +441,17 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         return Finish("no_way_to_reach")
 
     biz = await ctx.business()
-    offer = str(cfg.get("offer") or "").strip()
-    language = str(cfg.get("language") or "Hinglish").strip() or "Hinglish"
     kind = lead.website_kind or (place.website_kind if place else "none")
+    email_offer = str(cfg.get("email_offer") or "").strip()
+    # A business that already has a website gets the other offer (it was found for that one).
+    offer = (email_offer if kind == "own" and email_offer else str(cfg.get("offer") or "")).strip()
+    language = str(cfg.get("language") or "Hinglish").strip() or "Hinglish"
     presence = {"none": "no website and no web page at all",
                 "social": "only a social media page" + (f" ({place.website})" if place and place.website else ""),
                 "listing": "only a delivery-app or directory page" + (
                     f" ({place.website})" if place and place.website else ""),
                 "own": "their own website" + (f" ({place.website})" if place and place.website else "")}
-    selling_websites = bool(cfg.get("only_no_website", True))
+    selling_websites = kind != "own" and bool(cfg.get("only_no_website", True))
     name = place.name if place else lead.name
     facts = "\n".join(x for x in (
         f"Business: {name}",
@@ -466,7 +507,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
 
     body = (o.email_body.strip() + f"\n\n{biz.sign_off}\n\n"
             "If you'd rather not hear from us, reply STOP and we won't write again.")
-    subject = (o.subject.strip() or f"A website for {name}")[:120]
+    subject = (o.subject.strip() or (f"A website for {name}" if selling_websites else f"For {name}"))[:120]
     if step and lead.thread_id and not subject.lower().startswith("re:"):
         subject = "Re: " + subject
     return Interrupt(

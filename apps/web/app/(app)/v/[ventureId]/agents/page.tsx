@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { AutomationHealth } from "@/components/settings/automation-health";
 import { WorkflowSettings } from "@/components/settings/workflows";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page";
@@ -34,6 +35,7 @@ export default function AgentsPage() {
           </Button>
         }
       />
+      {v.can_admin || v.is_owner ? <AutomationHealth ventureId={v.id} /> : null}
       <WorkflowSettings ventureId={v.id} kind={v.kind} canAdmin={v.can_admin || v.is_owner} />
     </>
   );

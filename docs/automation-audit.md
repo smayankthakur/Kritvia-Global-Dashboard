@@ -29,6 +29,17 @@ Each job also has a **ceiling** (calls, loan papers, web forms and money keep a 
 - `tests/test_automation_audit.py`: fails when a pointer stops resolving, a level isn't earned, a new agent or
   tool isn't classified, a job drops below `baseline.json`, or an agent can look on and never run.
 
+## Every morning, and before drafts expire
+
+- `self_check` (worker, 08:40 IST): the health check of the last 7 days for every business with an agent on.
+  What needs a person (an agent on but unable to run, runs with nothing to work with, drafts waiting or expired,
+  failures) goes to the owners and admins: a push, Telegram for those who linked it, email for the others. It is
+  sent again only when something new turns up, or once a week while it lasts (`automation_checks`). Ideas such
+  as "this agent can send by itself now" ride along.
+- `nudge_expiring` (worker, every 30 minutes): drafts that expire within 6 hours and nobody was told about. One
+  message per business; Telegram approvers get the cards again with their buttons (`approvals.nudged_at`).
+- The Agents page shows the same check ("Automation check, last 7 days") to admins.
+
 ## Run it
 
 ```

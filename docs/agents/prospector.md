@@ -33,6 +33,19 @@ where every agent is included (Growth, Scale, Enterprise, Internal). Code: `apps
      "I sent it").
    - First message, then up to *Follow-ups* more, *Days between messages* apart. The last one says it is the last.
 
+## Email first (businesses that already have a website)
+
+Fill in **What you offer businesses that already have a website** (`email_offer`) and the Prospector also keeps
+businesses with their own website. For each, it reads the home page and a linked contact or about page (at most
+three public pages, never a form or a login; private and internal addresses are refused) and picks the contact
+email that belongs to the business: an address on the site's own domain first, then a common mail provider.
+
+- Those with an email go first in the day's places, because an email goes out by itself (with "Send without
+  asking" on) while a first WhatsApp needs your tap.
+- They are written to about the email offer, not about a website.
+- Only the email address is kept on the lead. The website address comes from Google Maps and isn't stored.
+- Leave the field empty and businesses with a website are skipped, as before.
+
 ## Replies and opt-outs
 
 - An email reply is matched to the prospect by Gmail thread or email address. The match happens in the
