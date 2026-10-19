@@ -19,7 +19,7 @@ import { api, unwrap, type Schemas } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
 
-type Show = "open" | "overdue" | "paid" | "all";
+type Show = "draft" | "open" | "overdue" | "paid" | "all";
 
 function Row({ inv, onOpen }: { inv: Invoice; onOpen: () => void }) {
   const due = dueLabel(inv);
@@ -70,6 +70,7 @@ export default function InvoicesPage() {
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/workflow-configs", { params: { path: { venture_id: v.id } } })),
   });
   const remindersOn = configs.data?.some((c) => c.workflow === "collections" && c.enabled);
+  const drafts = invoices.data?.totals.draft_count ?? 0;
 
   return (
     <div className="space-y-6">
@@ -99,6 +100,14 @@ export default function InvoicesPage() {
           on the Agents page and Kritvia drafts a polite reminder before and after each due date, for your yes.
         </Notice>
       ) : null}
+      {drafts && show !== "draft" ? (
+        <Notice tone="info" title={`Kritvia drafted ${drafts} invoice${drafts === 1 ? "" : "s"} for you`}>
+          From bookings marked done and proposals customers accepted. Nothing goes to a customer until you check one and press Issue.{" "}
+          <button type="button" onClick={() => setShow("draft")} className="font-medium underline underline-offset-2">
+            Check the drafts
+          </button>
+        </Notice>
+      ) : null}
       {invoices.data ? (
         <Card className="p-4">
           <StatGrid>
@@ -123,6 +132,7 @@ export default function InvoicesPage() {
             { id: "overdue", label: "Overdue" },
             { id: "paid", label: "Paid" },
             { id: "all", label: "All" },
+            ...(drafts || show === "draft" ? [{ id: "draft", label: drafts ? `Drafts (${drafts})` : "Drafts" }] : []),
           ]}
         />
         <label className="relative w-full sm:w-64">
@@ -142,7 +152,9 @@ export default function InvoicesPage() {
               </ul>
             ) : (
               <EmptyState
-                title={show === "paid" ? "Nothing paid yet" : show === "overdue" ? "Nothing overdue" : "No invoices here"}
+                title={
+                  show === "paid" ? "Nothing paid yet" : show === "overdue" ? "Nothing overdue" : show === "draft" ? "No drafts waiting" : "No invoices here"
+                }
                 description={
                   canWrite && show !== "paid" && !q ? "Add an invoice by typing it, from a photo or PDF, or from Tally." : "Try another tab or search."
                 }

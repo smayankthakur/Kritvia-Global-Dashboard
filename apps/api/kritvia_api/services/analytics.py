@@ -38,7 +38,7 @@ async def headline(conn, v: uuid.UUID, start: datetime, end: datetime) -> dict[s
         " WHERE venture_id = :v AND paid_on >= CAST(:s AS date) AND paid_on < CAST(:e AS date)"), p)).first()
     inv = (await conn.execute(text(
         "SELECT count(*) AS n, coalesce(sum(amount_paise), 0) AS total FROM invoices"
-        " WHERE venture_id = :v AND status <> 'cancelled'"
+        " WHERE venture_id = :v AND status NOT IN ('cancelled', 'draft')"
         "   AND coalesce(issued_on, created_at::date) >= CAST(:s AS date) AND coalesce(issued_on, created_at::date) < CAST(:e AS date)"),
         p)).first()
     owed = (await conn.execute(text(
@@ -72,7 +72,7 @@ async def trend(conn, v: uuid.UUID, start: datetime, end: datetime, unit: str) -
         SELECT b.d,
           coalesce((SELECT sum(amount_paise) FROM invoice_payments x WHERE x.venture_id = :v
                      AND date_trunc('{unit}', x.paid_on) = b.d AND x.paid_on >= CAST(:s AS date) AND x.paid_on < CAST(:e AS date)), 0) AS received,
-          coalesce((SELECT sum(amount_paise) FROM invoices x WHERE x.venture_id = :v AND x.status <> 'cancelled'
+          coalesce((SELECT sum(amount_paise) FROM invoices x WHERE x.venture_id = :v AND x.status NOT IN ('cancelled', 'draft')
                      AND date_trunc('{unit}', coalesce(x.issued_on, x.created_at::date)) = b.d
                      AND coalesce(x.issued_on, x.created_at::date) >= CAST(:s AS date)
                      AND coalesce(x.issued_on, x.created_at::date) < CAST(:e AS date)), 0) AS issued,

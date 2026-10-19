@@ -8609,9 +8609,10 @@ export interface components {
             source: string;
             /**
              * Status
+             * @description draft: made by Kritvia (from a done booking or a won proposal), not issued yet
              * @enum {string}
              */
-            status: "open" | "paid" | "cancelled";
+            status: "draft" | "open" | "paid" | "cancelled";
         };
         /** InvoicePatch */
         InvoicePatch: {
@@ -12236,6 +12237,12 @@ export interface components {
         };
         /** Totals */
         Totals: {
+            /**
+             * Draft Count
+             * @description invoices Kritvia drafted that wait to be checked and issued
+             * @default 0
+             */
+            draft_count: number;
             /** Open Count */
             open_count: number;
             /** Outstanding Paise */
@@ -12408,6 +12415,18 @@ export interface components {
             rejected: number;
             /** Threshold */
             threshold: number;
+            /**
+             * Title
+             * @description the agent's name as people see it, e.g. 'Payment reminders'
+             * @default
+             */
+            title: string;
+            /**
+             * What
+             * @description the action in plain words, e.g. 'emails'
+             * @default
+             */
+            what: string;
         };
         /** TwilioIn */
         TwilioIn: {
@@ -20877,7 +20896,7 @@ export interface operations {
     list_invoices_ventures__venture_id__invoices_get: {
         parameters: {
             query?: {
-                show?: "open" | "overdue" | "paid" | "all";
+                show?: "open" | "overdue" | "paid" | "draft" | "all";
                 q?: string | null;
                 limit?: number;
             };

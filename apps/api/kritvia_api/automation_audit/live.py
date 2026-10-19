@@ -80,6 +80,8 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
     waiting_now = (await conn.execute(text(
         "SELECT count(*) AS n, min(expires_at) AS first_expiry FROM approvals"
         " WHERE venture_id = :v AND status = 'pending'"), p)).first()
+    invoice_drafts = int((await conn.execute(text(
+        "SELECT count(*) FROM invoices WHERE venture_id = :v AND status = 'draft'"), p)).scalar() or 0)
     on_phone = int((await conn.execute(text(
         "SELECT count(*) FROM approver_links WHERE venture_id = :v"), p)).scalar() or 0)
     calls = (await conn.execute(text(
@@ -158,6 +160,10 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
         add(r.agent, "idea", f"trust_ready:{r.agent}:{r.action}",
             f"{titles.get(r.agent, r.agent)}: the last {r.consecutive_clean} drafts ({r.action}) were approved "
             "unchanged. It can send these by itself now: one tap on the Trust page.", "trust")
+    if invoice_drafts:
+        add("invoices", "check", "invoice_drafts",
+            f"{invoice_drafts} invoice(s) drafted by Kritvia (from done bookings or won proposals) wait for you to "
+            "check and issue them.", "invoices")
     if waiting_now and waiting_now.n:
         add("approvals", "check", "waiting_drafts",
             f"{waiting_now.n} draft(s) are waiting for your yes"

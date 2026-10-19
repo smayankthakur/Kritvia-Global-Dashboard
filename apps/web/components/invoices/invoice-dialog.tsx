@@ -102,13 +102,19 @@ export function InvoiceDialog({
     due_on: form.due_on,
     notes: form.notes.trim() || null,
   });
+  const isDraft = editing && invoice.status === "draft";
   const save = useMutation({
-    mutationFn: () =>
+    mutationFn: (issue: boolean = false) =>
       editing
-        ? unwrap(api.PATCH("/ventures/{venture_id}/invoices/{invoice_id}", { params: { path: { venture_id: ventureId, invoice_id: invoice.id } }, body: body() }))
+        ? unwrap(
+            api.PATCH("/ventures/{venture_id}/invoices/{invoice_id}", {
+              params: { path: { venture_id: ventureId, invoice_id: invoice.id } },
+              body: issue ? { ...body(), status: "open" } : body(),
+            }),
+          )
         : unwrap(api.POST("/ventures/{venture_id}/invoices", { params: { path: { venture_id: ventureId } }, body: { ...body(), source } })),
-    onSuccess: () => {
-      toast.success(editing ? "Invoice updated" : "Invoice added");
+    onSuccess: (_d, issue) => {
+      toast.success(issue ? "Invoice issued. Reminders and the payment page are on." : editing ? "Invoice updated" : "Invoice added");
       done();
       onClose();
     },
@@ -177,14 +183,14 @@ export function InvoiceDialog({
     enabled: showTally,
   });
 
-  const submit = (e?: FormEvent) => {
+  const submit = (e?: FormEvent, issue = false) => {
     e?.preventDefault();
     const p = formProblem(form);
     if (p) return setError(p);
     setError(null);
-    save.mutate();
+    save.mutate(issue);
   };
-  const readOnly = !canWrite || (editing && invoice.status !== "open");
+  const readOnly = !canWrite || (editing && invoice.status !== "open" && invoice.status !== "draft");
   const flag = (k: string) => (unsure.includes(k) ? "Check this: it wasn't clear on the file" : undefined);
   const due = invoice ? dueLabel(invoice) : null;
 
@@ -195,7 +201,12 @@ export function InvoiceDialog({
       size="lg"
       title={editing ? `${invoice.customer_name}${invoice.number ? ` · ${invoice.number}` : ""}` : "Add an invoice"}
       description={
-        editing ? (
+        isDraft ? (
+          <span className="flex flex-wrap items-center gap-2">
+            {rupees(invoice.amount_paise)}, not issued yet
+            {due ? <Badge tone={due.tone}>{due.text}</Badge> : null}
+          </span>
+        ) : editing ? (
           <span className="flex flex-wrap items-center gap-2">
             {rupees(invoice.balance_paise)} still due of {rupees(invoice.amount_paise)}
             {due ? <Badge tone={due.tone}>{due.text}</Badge> : null}
@@ -210,14 +221,39 @@ export function InvoiceDialog({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" loading={save.isPending} onClick={() => submit()}>
-              {editing ? "Save changes" : "Add invoice"}
-            </Button>
+            {isDraft ? (
+              <>
+                <Button loading={save.isPending && !save.variables} onClick={() => submit()}>
+                  Save draft
+                </Button>
+                <Button variant="primary" loading={save.isPending && Boolean(save.variables)} onClick={() => submit(undefined, true)}>
+                  Issue invoice
+                </Button>
+              </>
+            ) : (
+              <Button variant="primary" loading={save.isPending} onClick={() => submit()}>
+                {editing ? "Save changes" : "Add invoice"}
+              </Button>
+            )}
           </>
         )
       }
     >
       <div className="space-y-4">
+        {isDraft ? (
+          <Notice tone="info" title="Kritvia drafted this invoice">
+            {invoice.source === "booking" ? "From a booking that was marked done." : "From the proposal the customer accepted."} Nothing has
+            gone to the customer. Check the amount and details, then press Issue invoice: it is dated today, gets its payment page, and
+            payment reminders can start.
+            {canWrite ? (
+              <div className="mt-2">
+                <Button size="sm" variant="ghost" loading={patch.isPending} onClick={() => patch.mutate({ status: "cancelled" }, { onSuccess: onClose })}>
+                  Not needed: discard the draft
+                </Button>
+              </div>
+            ) : null}
+          </Notice>
+        ) : null}
         {!editing && canWrite ? (
           <div className="flex flex-wrap gap-2">
             <input

@@ -40,6 +40,20 @@ Each job also has a **ceiling** (calls, loan papers, web forms and money keep a 
   message per business; Telegram approvers get the cards again with their buttons (`approvals.nudged_at`).
 - The Agents page shows the same check ("Automation check, last 7 days") to admins.
 
+## Earned trust and invoices drafted by themselves (0061)
+
+- An agent asks for trust the moment it earns it. Each yes without a change adds to its clean streak for that
+  kind of action (an edit or a rejection resets it). When the streak reaches the business's threshold (30 by
+  default) the owners and admins are asked once, by push, Telegram or email: "Proposals asks: may it send
+  emails by itself?" (`services/trust_ask.py`, audit event `autonomy.asked`). The Trust page shows the same ask
+  with a one-tap "Let it". Sensitive drafts, prices it isn't sure of and plans without autonomy still wait.
+- A booking marked done (for a service with a price) and a lead marked won (with a sent proposal, which becomes
+  accepted) draft an invoice by themselves (database triggers `bookings_done_invoice`, `leads_won_invoice`,
+  `proposals_accepted_invoice`; one draft per booking and per proposal). A draft is not owed: it isn't in the
+  totals, isn't reminded and has no payment page until a person presses Issue on the Invoices page, which dates
+  it today (and, for an old draft, makes it due a week later). Discarding a draft cancels it.
+- The morning check lists drafts waiting to be issued.
+
 ## Run it
 
 ```

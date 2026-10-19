@@ -90,7 +90,7 @@ async def facts(conn, venture_id: uuid.UUID, start: datetime, end: datetime) -> 
         " coalesce(sum(amount_paise - paid_paise) FILTER (WHERE status = 'open'), 0) AS outstanding,"
         " count(*) FILTER (WHERE status = 'open' AND due_on < CAST(:e AS date)) AS overdue_n,"
         " coalesce(sum(amount_paise - paid_paise) FILTER (WHERE status = 'open' AND due_on < CAST(:e AS date)), 0) AS overdue"
-        " FROM invoices WHERE venture_id = :v AND status <> 'cancelled'"), p)).first()
+        " FROM invoices WHERE venture_id = :v AND status NOT IN ('cancelled', 'draft')"), p)).first()
     paid = (await conn.execute(text(
         "SELECT count(*) AS n, coalesce(sum(amount_paise), 0) AS total FROM invoice_payments"
         " WHERE venture_id = :v AND paid_on >= CAST(:s AS date) AND paid_on < CAST(:e AS date)"), p)).first()

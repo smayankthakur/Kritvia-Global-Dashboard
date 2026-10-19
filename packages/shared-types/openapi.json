@@ -8372,7 +8372,9 @@
             "type": "string"
           },
           "status": {
+            "description": "draft: made by Kritvia (from a done booking or a won proposal), not issued yet",
             "enum": [
+              "draft",
               "open",
               "paid",
               "cancelled"
@@ -19032,6 +19034,12 @@
       },
       "Totals": {
         "properties": {
+          "draft_count": {
+            "default": 0,
+            "description": "invoices Kritvia drafted that wait to be checked and issued",
+            "title": "Draft Count",
+            "type": "integer"
+          },
           "open_count": {
             "title": "Open Count",
             "type": "integer"
@@ -19541,6 +19549,18 @@
           "threshold": {
             "title": "Threshold",
             "type": "integer"
+          },
+          "title": {
+            "default": "",
+            "description": "the agent's name as people see it, e.g. 'Payment reminders'",
+            "title": "Title",
+            "type": "string"
+          },
+          "what": {
+            "default": "",
+            "description": "the action in plain words, e.g. 'emails'",
+            "title": "What",
+            "type": "string"
           }
         },
         "required": [
@@ -34291,6 +34311,7 @@
                 "open",
                 "overdue",
                 "paid",
+                "draft",
                 "all"
               ],
               "title": "Show",

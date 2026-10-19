@@ -24,6 +24,7 @@ from kritvia_api.engine.runner import PAYLOAD_PURPOSE
 from kritvia_api.errors import raise_for_db
 from kritvia_api.services.crypto import EnvelopeCrypto
 from kritvia_api.services.quota import org_usage
+from kritvia_api.services.trust_ask import ACTION_WORDS, agent_title, maybe_ask
 
 router = APIRouter(tags=["approvals"])
 
@@ -202,6 +203,8 @@ async def decide(venture_id: uuid.UUID, approval_id: uuid.UUID, body: DecisionIn
     # Cards about this draft in Telegram and Slack now say it was decided (and lose their buttons).
     from kritvia_api.services import chat_approvals
     chat_approvals.settle_later(venture_id, approval_id, who)
+    if decision == "approved":   # a clean yes may have just earned the agent its trust: it asks once
+        await maybe_ask(svc, user_id, venture_id, approval_id)
     return out
 
 
@@ -219,6 +222,8 @@ class TrustOut(BaseModel):
     eligible: bool
     approval_rate: float | None
     promoted_at: datetime | None
+    title: str = Field(default="", description="the agent's name as people see it, e.g. 'Payment reminders'")
+    what: str = Field(default="", description="the action in plain words, e.g. 'emails'")
 
 
 @router.get("/ventures/{venture_id}/trust", response_model=list[TrustOut])
@@ -234,7 +239,8 @@ async def trust(venture_id: uuid.UUID, db: TenantDB) -> list[TrustOut]:
                             rejected=r.rejected, auto_executed=r.auto_executed, consecutive_clean=r.consecutive_clean,
                             auto_run=r.auto_run, threshold=r.threshold, eligible=r.consecutive_clean >= r.threshold,
                             approval_rate=round(r.approved_clean / decided, 3) if decided else None,
-                            promoted_at=r.promoted_at))
+                            promoted_at=r.promoted_at, title=agent_title(r.agent),
+                            what=ACTION_WORDS.get(r.action, r.action)))
     return out
 
 

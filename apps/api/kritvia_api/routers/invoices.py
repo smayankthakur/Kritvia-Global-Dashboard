@@ -109,7 +109,8 @@ class InvoiceOut(BaseModel):
     balance_paise: int
     issued_on: date | None
     due_on: date
-    status: Literal["open", "paid", "cancelled"]
+    status: Literal["draft", "open", "paid", "cancelled"] = Field(
+        description="draft: made by Kritvia (from a done booking or a won proposal), not issued yet")
     overdue_days: int = Field(description="days past the due date while unpaid; 0 when not overdue")
     paid_on: date | None
     notes: str | None
@@ -130,6 +131,7 @@ class Totals(BaseModel):
     overdue_count: int
     open_count: int
     paid_this_month_paise: int
+    draft_count: int = Field(default=0, description="invoices Kritvia drafted that wait to be checked and issued")
 
 
 class InvoicesOut(BaseModel):
@@ -193,13 +195,13 @@ def _db_error(exc: DBAPIError) -> None:
 
 @router.get("/ventures/{venture_id}/invoices", response_model=InvoicesOut)
 async def list_invoices(venture_id: uuid.UUID, db: TenantDB,
-                        show: Literal["open", "overdue", "paid", "all"] = "open",
+                        show: Literal["open", "overdue", "paid", "draft", "all"] = "open",
                         q: str | None = Query(default=None, max_length=100),
                         limit: int = Query(default=200, ge=1, le=500)) -> InvoicesOut:
     await venture_org(db, venture_id)
     today = today_ist()
     where = {"open": "status = 'open'", "overdue": "status = 'open' AND due_on < :today",
-             "paid": "status = 'paid'", "all": "true"}[show]
+             "paid": "status = 'paid'", "draft": "status = 'draft'", "all": "true"}[show]
     params: dict = {"v": venture_id, "today": today, "l": limit}
     if q:
         where += " AND (customer_name ILIKE :q OR number ILIKE :q)"
@@ -212,12 +214,13 @@ async def list_invoices(venture_id: uuid.UUID, db: TenantDB,
         " coalesce(sum(amount_paise - paid_paise) FILTER (WHERE status = 'open' AND due_on < :today), 0) AS overdue,"
         " count(*) FILTER (WHERE status = 'open' AND due_on < :today) AS overdue_count,"
         " count(*) FILTER (WHERE status = 'open') AS open_count,"
+        " count(*) FILTER (WHERE status = 'draft') AS draft_count,"
         # part payments count too (paid_on is the latest payment's date)
         " coalesce(sum(paid_paise) FILTER (WHERE status <> 'cancelled' AND paid_on >= date_trunc('month', CAST(:today AS date))), 0)"
         "   AS paid_month FROM invoices WHERE venture_id = :v"), {"v": venture_id, "today": today})).first()
     return InvoicesOut(invoices=[_out(r) for r in rows], totals=Totals(
         outstanding_paise=t.outstanding, overdue_paise=t.overdue, overdue_count=t.overdue_count,
-        open_count=t.open_count, paid_this_month_paise=t.paid_month))
+        open_count=t.open_count, paid_this_month_paise=t.paid_month, draft_count=t.draft_count))
 
 
 @router.post("/ventures/{venture_id}/invoices", response_model=InvoiceOut, status_code=201)
@@ -256,6 +259,10 @@ async def update_invoice(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: Inv
                                                       "issue a new one")
     if cur.status == "paid" and fields.get("status") is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "this invoice is paid")
+    if cur.status == "draft" and fields.get("status") == "open" and not fields.get("issued_on") and not cur.issued_on:
+        fields["issued_on"] = today_ist()      # issuing a draft Kritvia made dates it today
+        if fields.get("due_on", cur.due_on) == cur.due_on and cur.due_on < fields["issued_on"]:
+            fields["due_on"] = fields["issued_on"] + timedelta(days=7)   # an old draft: due a week from now
     if "amount_paise" in fields and fields["amount_paise"] < cur.paid_paise:
         raise HTTPException(422, "the amount can't be less than what has been paid")
     for k in ("customer_name", "due_on", "amount_paise"):

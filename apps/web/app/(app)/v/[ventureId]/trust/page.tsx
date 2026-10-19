@@ -50,24 +50,27 @@ export default function TrustPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const set = useMutation({
-    mutationFn: ({ row, next }: { row: Trust; next: boolean }) =>
+    mutationFn: ({ row, next, why }: { row: Trust; next: boolean; why?: string }) =>
       unwrap(
         api.POST("/ventures/{venture_id}/trust/{agent}/{action}", {
           params: { path: { venture_id: v.id, agent: row.agent, action: row.action } },
-          body: { auto_run: next, reason: reason.trim() },
+          body: { auto_run: next, reason: (why ?? reason).trim() },
         }),
       ),
-    onSuccess: (rows) => {
+    onSuccess: (rows, vars) => {
       qc.setQueryData(key, rows);
-      toast.success(target?.next ? "Auto-run enabled" : "Auto-run disabled");
+      toast.success(vars.next ? `${vars.row.title || vars.row.agent} now sends ${vars.row.what || vars.row.action} by itself` : "Auto-run disabled");
       setTarget(null);
       setReason("");
     },
-    onError: (e) => {
-      if (e instanceof ApiError && e.status === 409) setErr(`Not earned yet: ${e.detail}`);
-      else setErr(errorMessage(e));
+    onError: (e, vars) => {
+      const msg = e instanceof ApiError && e.status === 409 ? `Not earned yet: ${e.detail}` : errorMessage(e);
+      if (vars.why) toast.error("Could not switch it on", msg);
+      else setErr(msg);
     },
   });
+  // Agents that have earned it and are asking (Kritvia also told the owners by push, Telegram or email).
+  const asking = (q.data ?? []).filter((t) => t.eligible && !t.auto_run);
 
   return (
     <>
@@ -76,6 +79,26 @@ export default function TrustPage() {
         title="Earned autonomy"
         description="An agent may run an action without asking only after a streak of approvals you didn't need to edit; any edit or rejection resets the streak."
       />
+      {asking.length ? (
+        <div className="mb-4 space-y-3" aria-label="Agents asking to send by themselves">
+          {asking.map((t) => (
+            <Notice key={`${t.agent}/${t.action}`} tone="success" title={`${t.title || t.agent} asks: may it send ${t.what || t.action} by itself?`}>
+              The last {t.consecutive_clean} it drafted were approved without a change. From now on it would send these without waiting for you.
+              Anything sensitive, or with a price it isn&apos;t sure of, still waits for you, and you can switch it back here any time.
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  loading={set.isPending && set.variables?.row === t}
+                  onClick={() => set.mutate({ row: t, next: true, why: `Earned: ${t.consecutive_clean} approved unchanged in a row` })}
+                >
+                  Let it
+                </Button>
+              </div>
+            </Notice>
+          ))}
+        </div>
+      ) : null}
       <Card>
         <QueryState
           query={q}
@@ -99,7 +122,7 @@ export default function TrustPage() {
                 {data.map((t) => (
                   <Tr key={`${t.agent}/${t.action}`}>
                     <Td>
-                      <span className="font-medium">{t.agent}</span>
+                      <span className="font-medium">{t.title || t.agent}</span>
                       <span className="block font-mono text-xs text-subtle">{t.action}</span>
                     </Td>
                     <Td className="hidden text-right tabular-nums md:table-cell">{t.approved_clean}</Td>

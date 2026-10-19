@@ -176,7 +176,7 @@ class PayPageOut(BaseModel):
 async def _page(token: str):
     async with tenant_tx(None, "system") as conn:
         r = (await conn.execute(text("SELECT * FROM private.public_invoice(:t)"), {"t": token})).first()
-    if r is None or r.status == "cancelled":
+    if r is None or r.status in ("cancelled", "draft"):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "this payment link isn't valid")
     return r
 

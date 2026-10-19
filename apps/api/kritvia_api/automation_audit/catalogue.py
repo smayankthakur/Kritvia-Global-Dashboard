@@ -73,10 +73,10 @@ JOBS: tuple[Job, ...] = (
         ("wf:lead_triage", "tool:crm.update_lead"), impact=3),
     Job("proposals", "sales", "Send quotes and proposals", 3,
         "A priced proposal is drafted from the rate card for every qualified lead; it goes out after a yes.",
-        ("wf:lead_triage", "tool:gmail.send", "route:POST /ventures/{venture_id}/trust/{agent}/{action}"),
-        impact=3, next="Suggest 'send without asking' to the owner once proposals pass the trust threshold "
-                       "(30 clean approvals), so the agent asks for the promotion instead of waiting to be found.",
-        gaps=("Trust promotion is a manual button the owner has to discover.",)),
+        ("wf:lead_triage", "tool:gmail.send", "route:POST /ventures/{venture_id}/trust/{agent}/{action}",
+         "code:apps/api/kritvia_api/services/trust_ask.py::async def maybe_ask"),
+        impact=3, next="Once the owner lets it, proposals within the rate card go out by themselves; prices it "
+                       "isn't sure of still wait."),
     Job("book_meetings", "sales", "Book discovery calls", 3,
         "A call slot is picked from free calendar time and the invite waits for a yes.",
         ("wf:lead_triage", "tool:calendar.create_event"), impact=2,
@@ -139,13 +139,17 @@ JOBS: tuple[Job, ...] = (
         gaps=("No posting path: replies are copied to Google by hand.",)),
 
     # ------------------------------------------------------------------ finance
-    Job("invoicing", "finance", "Make invoices", 2,
-        "Invoices (and GST invoices) are typed or read from a photo or PDF; a person checks and saves them.",
+    Job("invoicing", "finance", "Make invoices", 3,
+        "A booking marked done or a lead marked won drafts its invoice by itself (from the service price or the "
+        "accepted proposal); a person checks it and presses Issue. Others are typed or read from a photo or PDF.",
         ("route:POST /ventures/{venture_id}/invoices/read", "route:POST /ventures/{venture_id}/invoices/gst",
-         "code:apps/api/kritvia_api/routers/invoices.py::await complete_json("),
-        target=3, impact=3,
-        next="Draft the invoice by itself when a booking is done, a shipment is billed or a proposal is accepted; "
-             "a person approves it."),
+         "code:apps/api/kritvia_api/routers/invoices.py::await complete_json(",
+         "code:apps/api/migrations/0061_earn_trust.sql::CREATE TRIGGER bookings_done_invoice",
+         "code:apps/api/migrations/0061_earn_trust.sql::CREATE TRIGGER leads_won_invoice"),
+        target=4, impact=3,
+        next="Issue drafts by themselves once a business has issued enough unchanged (earned trust for invoices), "
+             "and draft from shipments and kitchen orders too.",
+        gaps=("Drafts are not made from shipments or kitchen orders yet.",)),
     Job("payment_reminders", "finance", "Chase payments", 3,
         "Payment reminders with a pay link are drafted daily before and after the due date; each waits for a yes.",
         ("wf:collections", "cron:fire_schedules", "tool:invoices.search"), impact=3,
@@ -273,8 +277,9 @@ PLATFORM: tuple[Capability, ...] = (
     Capability("approvals_anywhere", "Approve from the phone (Telegram, WhatsApp, Slack)", True,
                ("route:POST /ventures/{venture_id}/approver-links/telegram", "route:POST /hooks/slack/interact")),
     Capability("earned_trust", "Agents earn the right to act alone", True,
-               ("route:POST /ventures/{venture_id}/trust/{agent}/{action}",),
-               "Promotion is manual: suggest it when an agent passes the threshold."),
+               ("route:POST /ventures/{venture_id}/trust/{agent}/{action}",
+                "code:apps/api/kritvia_api/services/trust_ask.py::async def maybe_ask"),
+               "The agent asks the owners once when its streak earns it; one tap on the Trust page lets it."),
     Capability("guardrails", "Guardrails on every outward action (secrets, injection, sensitive data)", True,
                ("code:apps/api/kritvia_api/services/guardrails.py::def protect",)),
     Capability("budgets", "AI budgets per agent, paused runs resume", True, ("cron:resume_paused",)),

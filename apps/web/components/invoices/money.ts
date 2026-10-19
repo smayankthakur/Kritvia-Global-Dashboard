@@ -24,7 +24,7 @@ export function rupees(paise: number): string {
 }
 
 export interface InvoiceLike {
-  status: "open" | "paid" | "cancelled";
+  status: "draft" | "open" | "paid" | "cancelled";
   due_on: string;
   overdue_days: number;
   reminders_paused: boolean;
@@ -33,8 +33,9 @@ export interface InvoiceLike {
   customer_phone?: string | null;
 }
 
-/** "Due in 3 days" / "Due today" / "12 days overdue" / "Paid" / "Cancelled". */
-export function dueLabel(inv: InvoiceLike, today: Date = new Date()): { text: string; tone: "danger" | "warning" | "neutral" | "success" } {
+/** "Due in 3 days" / "Due today" / "12 days overdue" / "Paid" / "Cancelled" / "Draft: check and issue". */
+export function dueLabel(inv: InvoiceLike, today: Date = new Date()): { text: string; tone: "danger" | "warning" | "neutral" | "success" | "info" } {
+  if (inv.status === "draft") return { text: "Draft: check and issue", tone: "info" };
   if (inv.status === "paid") return { text: "Paid", tone: "success" };
   if (inv.status === "cancelled") return { text: "Cancelled", tone: "neutral" };
   if (inv.overdue_days > 0) return { text: `${inv.overdue_days} day${inv.overdue_days === 1 ? "" : "s"} overdue`, tone: "danger" };
