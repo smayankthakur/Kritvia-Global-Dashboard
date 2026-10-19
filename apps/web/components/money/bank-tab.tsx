@@ -15,6 +15,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, multipart, unwrap, type Schemas } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { StatementsByEmail } from "./statements-by-email";
 
 type State = "suggested" | "unmatched" | "confirmed" | "ignored";
 type Line = Schemas["LineOut"];
@@ -29,7 +30,7 @@ function Amount({ paise }: { paise: number }) {
 }
 
 /** Upload a bank statement; Kritvia matches credits to invoices and debits to bills, and a person confirms. */
-export function BankTab({ ventureId, canWrite }: { ventureId: string; canWrite: boolean }) {
+export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; canWrite: boolean; canAdmin: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -127,12 +128,13 @@ export function BankTab({ ventureId, canWrite }: { ventureId: string; canWrite: 
           </div>
           {last ? (
             <p className="text-xs text-subtle">
-              Last upload: {last.account_label ? `${last.account_label}, ` : ""}
+              Last statement{last.source === "email" ? ` (by email from ${last.sender ?? "the bank"})` : ""}: {last.account_label ? `${last.account_label}, ` : ""}
               {last.period_from ? `${formatDate(last.period_from)} to ${formatDate(last.period_to)}` : "no dates"} ({last.lines} lines)
             </p>
           ) : null}
         </Card>
       ) : null}
+      {canWrite ? <StatementsByEmail ventureId={ventureId} canAdmin={canAdmin} /> : null}
       {lines.data && lines.data.sure > 0 && canWrite ? (
         <Notice tone="success" title={`${lines.data.sure} sure match${lines.data.sure === 1 ? "" : "es"}`}>
           The amount is exactly what is owed and the narration names the customer, supplier, invoice number or UPI reference.
@@ -182,6 +184,11 @@ export function BankTab({ ventureId, canWrite }: { ventureId: string; canWrite: 
                       ) : null}
                       {l.match?.confidence && l.state === "suggested" ? (
                         <Badge tone={l.match.confidence === "sure" ? "success" : "warning"}>{l.match.confidence}</Badge>
+                      ) : null}
+                      {l.unverified && l.state !== "confirmed" ? (
+                        <Badge tone="warning" title="This came in a forwarded statement email, which Kritvia can't verify">
+                          check with your bank
+                        </Badge>
                       ) : null}
                     </span>
                     {canWrite ? (

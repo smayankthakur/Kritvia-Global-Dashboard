@@ -145,6 +145,14 @@ async def test_gmails_newer_confirmation_link_is_shown_and_the_owner_told(shop, 
                body=f"click {link}\n")
     assert email_in.gmail_confirmation(email_in.parse(raw)) is None
 
+    # once Gmail really forwards (X-Forwarded-For), the confirmation is done: the card says it is working
+    script_inbox_ok = mail(subject="Delivery time?")
+    fwd = script_inbox_ok.replace(b"Subject:", b"X-Forwarded-For: owner@gmail.com " + address.encode() + b"\nSubject:", 1)
+    res = await client.post("/public/email-in", content=fwd, headers=signed(fwd, address))
+    assert res.status_code == 200, res.text
+    got = (await m.get(f"/ventures/{shop['v']}/connectors/email-forwarding")).json()
+    assert got["gmail_link"] is None and got["forwarded_from"] == "owner@gmail.com" and got["last_mail_at"]
+    assert got["gmail_reads_it"] is False
 
 async def test_only_an_admin_sets_up_forwarding(shop, inbound):
     r = await shop["vera"].post(f"/ventures/{shop['site']}/connectors/email-forwarding")

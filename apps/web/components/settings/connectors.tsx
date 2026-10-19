@@ -865,7 +865,8 @@ function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: 
   const q = useQuery({
     queryKey: key,
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors/email-forwarding", { params: { path: { venture_id: ventureId } } })),
-    refetchInterval: (query) => (query.state.data && !query.state.data.gmail_code && !query.state.data.gmail_link ? 15_000 : false),
+    refetchInterval: (query) =>
+      query.state.data && !query.state.data.gmail_code && !query.state.data.gmail_link && !query.state.data.last_mail_at ? 15_000 : false,
   });
   const create = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/connectors/email-forwarding", { params: { path: { venture_id: ventureId } } })),
@@ -893,6 +894,15 @@ function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: 
         {f ? (
           <>
             <CopyField label="Your forwarding address" value={f.address} />
+            {f.last_mail_at && !f.gmail_link && !f.gmail_code ? (
+              <Notice tone="success" title="Forwarding works">
+                The last email arrived {formatRelative(f.last_mail_at)}
+                {f.forwarded_from ? <> from {f.forwarded_from}</> : null}.
+                {f.gmail_reads_it
+                  ? " Gmail is connected for this mailbox too, so Kritvia reads each email once; forwarded copies only add bills, CVs and bank statements."
+                  : null}
+              </Notice>
+            ) : null}
             {f.gmail_link ? (
               <Notice tone="success" title={`Gmail asks you to confirm forwarding from ${f.gmail_mailbox || "your mailbox"}`}>
                 Only if that is your own mailbox: open Google&apos;s confirmation page and press Confirm. Then, in Gmail&apos;s Forwarding settings,

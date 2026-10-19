@@ -25,6 +25,8 @@ const SCHEDULED: Record<string, { at: string; label: string }> = {
   booking_reminders: { at: "18:00", label: "Drafts tomorrow's booking reminders every day at (IST)" },
   reviews: { at: "19:00", label: "Checks reviews and asks customers every day at (IST)" },
   social: { at: "10:00", label: "Writes the post on your posting days at (IST)" },
+  campaign_ideas: { at: "10:30", label: "Looks for a festival or a slow week on its day at (IST)" },
+  google_listing: { at: "09:30", label: "Checks your Google listing on its day at (IST)" },
 };
 const INSTRUCTION_HINTS: Record<string, string> = {
   inbox_assistant: "e.g. Reply in Hinglish. Delivery takes 3–5 days. Never quote prices; say we will share a quote.",
@@ -37,6 +39,7 @@ const INSTRUCTION_HINTS: Record<string, string> = {
   collections: "e.g. Write in Hinglish. Mention that GST invoices are attached on request. Be extra polite with Kapoor Sweets.",
   booking_reminders: "Reminders are written from the booking itself; add a standing note under the agent's settings.",
   social: "e.g. Mention our free home delivery in Paschim Vihar. Never post on Tuesdays about non-veg.",
+  campaign_ideas: "e.g. Write in Hinglish. Always end with our WhatsApp number for orders.",
 };
 
 export function parseSettingsJson(text: string): { value: Record<string, unknown> | null; error: string | null } {

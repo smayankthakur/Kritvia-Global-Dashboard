@@ -167,6 +167,294 @@
         "title": "AckIn",
         "type": "object"
       },
+      "AdAdviceOut": {
+        "properties": {
+          "points": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "points"
+        ],
+        "title": "AdAdviceOut",
+        "type": "object"
+      },
+      "AdCampaignOut": {
+        "properties": {
+          "campaign": {
+            "title": "Campaign",
+            "type": "string"
+          },
+          "clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clicks"
+          },
+          "cost_per_lead_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Lead Paise"
+          },
+          "leads": {
+            "description": "leads in Kritvia tagged with this campaign",
+            "title": "Leads",
+            "type": "integer"
+          },
+          "platform": {
+            "enum": [
+              "meta",
+              "google",
+              "other"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "results": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "what the ad platform counted (its 'results' or 'conversions')",
+            "title": "Results"
+          },
+          "spend_paise": {
+            "title": "Spend Paise",
+            "type": "integer"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "platform",
+          "campaign",
+          "spend_paise",
+          "clicks",
+          "results",
+          "leads",
+          "won",
+          "cost_per_lead_paise"
+        ],
+        "title": "AdCampaignOut",
+        "type": "object"
+      },
+      "AdPlatformOut": {
+        "properties": {
+          "cost_per_lead_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Lead Paise"
+          },
+          "cost_per_won_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Won Paise"
+          },
+          "leads": {
+            "title": "Leads",
+            "type": "integer"
+          },
+          "platform": {
+            "enum": [
+              "meta",
+              "google",
+              "other"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "spend_paise": {
+            "title": "Spend Paise",
+            "type": "integer"
+          },
+          "untagged_leads": {
+            "description": "leads from this platform without a campaign name",
+            "title": "Untagged Leads",
+            "type": "integer"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          },
+          "words": {
+            "title": "Words",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform",
+          "words",
+          "spend_paise",
+          "leads",
+          "untagged_leads",
+          "won",
+          "cost_per_lead_paise",
+          "cost_per_won_paise"
+        ],
+        "title": "AdPlatformOut",
+        "type": "object"
+      },
+      "AdReportOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          },
+          "platform": {
+            "enum": [
+              "meta",
+              "google",
+              "other"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "spend_paise": {
+            "title": "Spend Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "platform",
+          "file_name",
+          "period_from",
+          "period_to",
+          "rows",
+          "spend_paise",
+          "created_at"
+        ],
+        "title": "AdReportOut",
+        "type": "object"
+      },
+      "AdSummaryOut": {
+        "properties": {
+          "campaigns": {
+            "items": {
+              "$ref": "#/components/schemas/AdCampaignOut"
+            },
+            "title": "Campaigns",
+            "type": "array"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "platforms": {
+            "items": {
+              "$ref": "#/components/schemas/AdPlatformOut"
+            },
+            "title": "Platforms",
+            "type": "array"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "sources": {
+            "description": "every lead source in the period, ads or not",
+            "items": {
+              "$ref": "#/components/schemas/LeadSourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "tracking": {
+            "description": "some leads in the period carry an ad tag",
+            "title": "Tracking",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "days",
+          "since",
+          "platforms",
+          "campaigns",
+          "sources",
+          "tracking"
+        ],
+        "title": "AdSummaryOut",
+        "type": "object"
+      },
       "AgentIn": {
         "properties": {
           "clear_budget": {
@@ -2823,6 +3111,60 @@
         "title": "Body_upload_meeting_ventures__venture_id__meetings_post",
         "type": "object"
       },
+      "Body_upload_report_ventures__venture_id__ads_reports_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "enum": [
+                  "meta",
+                  "google",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_report_ventures__venture_id__ads_reports_post",
+        "type": "object"
+      },
       "Body_upload_sales_ventures__venture_id__kitchen_sales_csv_post": {
         "properties": {
           "file": {
@@ -4167,6 +4509,18 @@
             "title": "Name",
             "type": "string"
           },
+          "occasion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the festival or slow week a suggested campaign is for",
+            "title": "Occasion"
+          },
           "params": {
             "items": {
               "type": "string"
@@ -4221,6 +4575,12 @@
               }
             ],
             "title": "Subject"
+          },
+          "suggested": {
+            "default": false,
+            "description": "written by the Campaign ideas agent",
+            "title": "Suggested",
+            "type": "boolean"
           },
           "template": {
             "anyOf": [
@@ -4564,6 +4924,349 @@
           "status"
         ],
         "title": "CandidatePatch",
+        "type": "object"
+      },
+      "CashForecastOut": {
+        "properties": {
+          "alert_below_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Below Paise"
+          },
+          "below_alert": {
+            "title": "Below Alert",
+            "type": "boolean"
+          },
+          "doubtful_invoices": {
+            "title": "Doubtful Invoices",
+            "type": "integer"
+          },
+          "doubtful_paise": {
+            "title": "Doubtful Paise",
+            "type": "integer"
+          },
+          "fixed_paise": {
+            "title": "Fixed Paise",
+            "type": "integer"
+          },
+          "horizons": {
+            "items": {
+              "$ref": "#/components/schemas/CashHorizonOut"
+            },
+            "title": "Horizons",
+            "type": "array"
+          },
+          "lowest_paise": {
+            "title": "Lowest Paise",
+            "type": "integer"
+          },
+          "lowest_week": {
+            "format": "date",
+            "title": "Lowest Week",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "opening_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "'statement' or 'typed'",
+            "title": "Opening From"
+          },
+          "opening_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening On"
+          },
+          "opening_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Paise"
+          },
+          "salaries_paise": {
+            "title": "Salaries Paise",
+            "type": "integer"
+          },
+          "today": {
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          },
+          "usual_late_days": {
+            "title": "Usual Late Days",
+            "type": "integer"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/CashWeekOut"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "today",
+          "opening_paise",
+          "opening_on",
+          "opening_from",
+          "weeks",
+          "horizons",
+          "lowest_paise",
+          "lowest_week",
+          "below_alert",
+          "alert_below_paise",
+          "usual_late_days",
+          "doubtful_paise",
+          "doubtful_invoices",
+          "salaries_paise",
+          "fixed_paise",
+          "notes"
+        ],
+        "title": "CashForecastOut",
+        "type": "object"
+      },
+      "CashHorizonOut": {
+        "properties": {
+          "closing_paise": {
+            "title": "Closing Paise",
+            "type": "integer"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "in_paise": {
+            "title": "In Paise",
+            "type": "integer"
+          },
+          "out_paise": {
+            "title": "Out Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "in_paise",
+          "out_paise",
+          "closing_paise"
+        ],
+        "title": "CashHorizonOut",
+        "type": "object"
+      },
+      "CashSettingsIn": {
+        "properties": {
+          "alert_below_paise": {
+            "anyOf": [
+              {
+                "maximum": 100000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Below Paise"
+          },
+          "balance_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance On"
+          },
+          "balance_paise": {
+            "anyOf": [
+              {
+                "maximum": 100000000000.0,
+                "minimum": -100000000000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Paise"
+          },
+          "clear_alert": {
+            "default": false,
+            "title": "Clear Alert",
+            "type": "boolean"
+          },
+          "clear_balance": {
+            "default": false,
+            "title": "Clear Balance",
+            "type": "boolean"
+          },
+          "monthly_fixed_paise": {
+            "anyOf": [
+              {
+                "maximum": 100000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Fixed Paise"
+          },
+          "statement_password": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the bank's statement PDF password; '' removes it",
+            "title": "Statement Password"
+          },
+          "statements_by_email": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statements By Email"
+          }
+        },
+        "title": "CashSettingsIn",
+        "type": "object"
+      },
+      "CashSettingsOut": {
+        "properties": {
+          "alert_below_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Below Paise"
+          },
+          "balance_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance On"
+          },
+          "balance_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Paise"
+          },
+          "has_statement_password": {
+            "title": "Has Statement Password",
+            "type": "boolean"
+          },
+          "monthly_fixed_paise": {
+            "title": "Monthly Fixed Paise",
+            "type": "integer"
+          },
+          "statements_by_email": {
+            "title": "Statements By Email",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "balance_paise",
+          "balance_on",
+          "monthly_fixed_paise",
+          "alert_below_paise",
+          "statements_by_email",
+          "has_statement_password"
+        ],
+        "title": "CashSettingsOut",
+        "type": "object"
+      },
+      "CashWeekOut": {
+        "properties": {
+          "closing_paise": {
+            "title": "Closing Paise",
+            "type": "integer"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "in_paise": {
+            "title": "In Paise",
+            "type": "integer"
+          },
+          "out_paise": {
+            "title": "Out Paise",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "in_paise",
+          "out_paise",
+          "closing_paise"
+        ],
+        "title": "CashWeekOut",
         "type": "object"
       },
       "ChatDetailOut": {
@@ -8081,6 +8784,18 @@
             "title": "Connector Id",
             "type": "string"
           },
+          "forwarded_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the mailbox the last forwarded email came from",
+            "title": "Forwarded From"
+          },
           "gmail_code": {
             "anyOf": [
               {
@@ -8114,6 +8829,25 @@
               }
             ],
             "title": "Gmail Mailbox"
+          },
+          "gmail_reads_it": {
+            "default": false,
+            "description": "Gmail is also connected with read access for that mailbox: each email is still handled once",
+            "title": "Gmail Reads It",
+            "type": "boolean"
+          },
+          "last_mail_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "when the last forwarded email arrived",
+            "title": "Last Mail At"
           }
         },
         "required": [
@@ -10999,6 +11733,29 @@
         "title": "LeadPatch",
         "type": "object"
       },
+      "LeadSourceOut": {
+        "properties": {
+          "leads": {
+            "title": "Leads",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source",
+          "leads",
+          "won"
+        ],
+        "title": "LeadSourceOut",
+        "type": "object"
+      },
       "LearnIn": {
         "description": "Either the pair directly, or the text as inserted and as the user left it.",
         "properties": {
@@ -11164,6 +11921,12 @@
             ],
             "title": "State",
             "type": "string"
+          },
+          "unverified": {
+            "default": false,
+            "description": "from an emailed statement whose sender couldn't be checked: compare it with your bank before confirming",
+            "title": "Unverified",
+            "type": "boolean"
           }
         },
         "required": [
@@ -11306,6 +12069,99 @@
           "name"
         ],
         "title": "Listing",
+        "type": "object"
+      },
+      "ListingCheckOut": {
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "google_hours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Google Hours"
+          },
+          "has_phone": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Phone"
+          },
+          "has_website": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Website"
+          },
+          "hours_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours Match"
+          },
+          "kritvia_hours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kritvia Hours"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "checked_at",
+          "hours_match",
+          "google_hours",
+          "kritvia_hours",
+          "has_website",
+          "has_phone",
+          "note"
+        ],
+        "title": "ListingCheckOut",
         "type": "object"
       },
       "ListingIn": {
@@ -14762,6 +15618,17 @@
           "can_edit": {
             "title": "Can Edit",
             "type": "boolean"
+          },
+          "listing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ListingCheckOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the last weekly Google listing check"
           },
           "place": {
             "anyOf": [
@@ -19058,6 +19925,31 @@
               }
             ],
             "title": "Period To"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender"
+          },
+          "source": {
+            "default": "upload",
+            "enum": [
+              "upload",
+              "email"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "verified": {
+            "default": true,
+            "title": "Verified",
+            "type": "boolean"
           }
         },
         "required": [
@@ -30894,6 +31786,285 @@
         ]
       }
     },
+    "/ventures/{venture_id}/ads/advice": {
+      "post": {
+        "operationId": "advice_ventures__venture_id__ads_advice_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdAdviceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Advice",
+        "tags": [
+          "ads"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/ads/reports": {
+      "get": {
+        "operationId": "list_reports_ventures__venture_id__ads_reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdReportOut"
+                  },
+                  "title": "Response List Reports Ventures  Venture Id  Ads Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "ads"
+        ]
+      },
+      "post": {
+        "operationId": "upload_report_ventures__venture_id__ads_reports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_report_ventures__venture_id__ads_reports_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Report",
+        "tags": [
+          "ads"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/ads/reports/{report_id}": {
+      "delete": {
+        "operationId": "delete_report_ventures__venture_id__ads_reports__report_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Report",
+        "tags": [
+          "ads"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/ads/summary": {
+      "get": {
+        "operationId": "get_summary_ventures__venture_id__ads_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Summary",
+        "tags": [
+          "ads"
+        ]
+      }
+    },
     "/ventures/{venture_id}/analytics": {
       "get": {
         "operationId": "analytics_ventures__venture_id__analytics_get",
@@ -36075,6 +37246,158 @@
         "summary": "Move Card",
         "tags": [
           "tasks"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/cash/forecast": {
+      "get": {
+        "operationId": "get_forecast_ventures__venture_id__cash_forecast_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashForecastOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Forecast",
+        "tags": [
+          "cash"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/cash/settings": {
+      "get": {
+        "operationId": "get_settings__ventures__venture_id__cash_settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Settings ",
+        "tags": [
+          "cash"
+        ]
+      },
+      "put": {
+        "operationId": "put_settings_ventures__venture_id__cash_settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Settings",
+        "tags": [
+          "cash"
         ]
       }
     },

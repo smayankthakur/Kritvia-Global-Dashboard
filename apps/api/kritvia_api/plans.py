@@ -24,7 +24,7 @@ MB = 1024 ** 2
 
 CORE_AGENTS = frozenset({"assistant", "inbox_assistant", "lead_triage", "meeting_digest", "whatsapp_followup",
                          "collections", "booking_reminders", "reviews", "automation", "custom", "trade_update",
-                         "social", "campaign", "hiring"})
+                         "social", "campaign", "hiring", "campaign_ideas", "google_listing"})
 KIND_AGENT = {"finance": "loan_verification", "kitchen": "kitchen_daily", "trade": "trade_watch"}
 AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assistant", "lead_triage": "Lead triage & proposals",
                "meeting_digest": "Meeting digests", "loan_verification": "Loan document checks",
@@ -33,7 +33,8 @@ AGENT_NAMES = {"assistant": "Kritvia assistant", "inbox_assistant": "Inbox assis
                "booking_reminders": "Booking reminders", "reviews": "Google reviews", "automation": "Automations",
                "custom": "Custom workflows", "trade_watch": "Shipment watch", "trade_update": "Shipment updates",
                "browser": "Browser agent", "voice_call": "AI phone calls", "social": "Social posts",
-               "campaign": "Campaigns", "hiring": "Hiring"}
+               "campaign": "Campaigns", "hiring": "Hiring", "campaign_ideas": "Campaign ideas",
+               "google_listing": "Google listing check"}
 INTEGRATION_NAMES = {"gmail": "Gmail", "lead_form": "Website lead form", "calendar": "Google Calendar",
                      "drive": "Google Drive", "whatsapp": "WhatsApp Business", "telegram": "Telegram bot", "slack": "Slack", "razorpay": "Razorpay payment links", "tally": "Tally",
                      "mcp": "Connected apps (MCP)", "indiamart": "IndiaMART enquiries",

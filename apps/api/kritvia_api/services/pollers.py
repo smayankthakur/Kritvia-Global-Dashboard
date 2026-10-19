@@ -9,6 +9,13 @@ for depends on the workflows it has enabled:
                                                  parsed by the 23:30 run
   loan_verification mail whose subject carries an application reference (TRU-...)
                                               -> attachments added to that application + a run
+  (Money)           a bank's statement email  -> its CSV/Excel/PDF read into Money → Bank, matched to invoices and
+                                                 bills, owners told (services/bank.py says which senders count)
+
+Forwarded mail (deliver_forwarded) is handled the same way, except that when the business's Gmail is connected
+with read access for the same mailbox, the poller already reads that email: the forwarded copy then only feeds
+the attachment readers (CVs, bills, statements, which the poller doesn't) and is otherwise left alone, so one
+email is never answered twice.
 """
 from __future__ import annotations
 
@@ -99,6 +106,15 @@ async def poll_gmail_venture(services: Services, org_id: uuid.UUID, venture_id: 
                 continue
             n = await HANDLERS[wf](ctx, services, token, msg)
             counts[wf] = counts.get(wf, 0) + n
+    try:
+        async with ctx.tx() as conn:
+            on = (await conn.execute(text("SELECT statements_by_email FROM cash_settings WHERE venture_id = :v"),
+                                     {"v": venture_id})).scalar()
+        if on is not False:
+            if (n := await poll_statements(ctx, services, token, g.email)):
+                counts["statements"] = n
+    except Exception:  # noqa: BLE001 - a statement problem never stops the inbox
+        log.warning("statement scan failed for %s", venture_id, exc_info=True)
     async with ctx.tx() as conn:
         await conn.execute(text("UPDATE connectors SET cursor = now()::text, last_error = NULL, updated_at = now()"
                                 " WHERE id = :id"), {"id": g.id})
@@ -250,6 +266,10 @@ async def deliver_forwarded(services: Services, org_id: uuid.UUID, venture_id: u
         return {"hiring": 1}
     if await _bill_forwarded(ctx, services, msg):
         return {"bills": 1}
+    if await statement_mail(ctx, services, msg.sender_email, msg.subject, msg.attachments, verified=False):
+        return {"statements": 1}
+    if await gmail_reads(ctx, msg):
+        return {"read_by_gmail": 1}
     if "inbox_assistant" in on:
         counts["inbox_assistant"] = await _inbox_forwarded(ctx, services, msg)
         return counts
@@ -258,6 +278,93 @@ async def deliver_forwarded(services: Services, org_id: uuid.UUID, venture_id: u
     if "lead_triage" in on and not counts.get("prospector"):
         counts["lead_triage"] = await _lead_forwarded(ctx, services, msg)
     return counts
+
+
+def forwarded_from(msg) -> str | None:
+    """The mailbox that forwarded this email: Gmail adds X-Forwarded-For: <mailbox> <our address>."""
+    raw = (getattr(msg, "headers", None) or {}).get("x-forwarded-for", "")
+    first = raw.replace(",", " ").split()
+    return first[0].strip("<>").lower() if first and "@" in first[0] else None
+
+
+async def gmail_reads(ctx: RunContext, msg) -> bool:
+    """True when this business's Gmail connection already reads the mailbox the email was forwarded from (or
+    sent to), so the poller handles it and the forwarded copy would only answer it a second time."""
+    from kritvia_api.services.google import SCOPES
+    who = {a.strip().lower() for a in (msg.to or "").split(",") if "@" in a}
+    if (f := forwarded_from(msg)):
+        who.add(f)
+    if not who:
+        return False
+    async with ctx.tx() as conn:
+        g = (await conn.execute(text(
+            "SELECT lower(account_email) AS email, scopes FROM connectors WHERE venture_id = :v AND provider = 'google'"
+            " AND status = 'active' AND last_error IS NULL"), {"v": ctx.venture_id})).first()
+    return bool(g and g.email in who and SCOPES["gmail.readonly"] in (g.scopes or []))
+
+
+async def statement_mail(ctx: RunContext, services: Services, sender: str, subject: str, attachments: list[dict],
+                         *, verified: bool, fetch=None) -> bool:
+    """A bank's statement email: its file is read into Money → Bank and matched, and the owners are told how
+    many payments it shows. `fetch(att)` returns the file's bytes when the attachment only carries an id."""
+    from kritvia_api.routers.bank import ImportProblem, import_statement, statement_password
+    from kritvia_api.services import bank
+    from kritvia_api.services.crypto import EnvelopeCrypto
+    from kritvia_api.services.owner_news import tell_admins
+    att = bank.statement_attachment(sender, subject, attachments)
+    if att is None:
+        return False
+    async with ctx.tx() as conn:
+        on = (await conn.execute(text("SELECT statements_by_email FROM cash_settings WHERE venture_id = :v"),
+                                 {"v": ctx.venture_id})).scalar()
+    if on is False:
+        return False
+    data = att.get("data") if att.get("data") is not None else (await fetch(att) if fetch else b"")
+    name = str(att.get("filename") or "statement.pdf")
+    mime = "application/pdf" if name.lower().endswith(".pdf") else (
+        "text/csv" if name.lower().endswith(".csv") else
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    bank_name = sender.lower().rpartition("@")[2]
+    async with ctx.tx() as conn:
+        try:
+            pw = await statement_password(conn, EnvelopeCrypto(conn, services.keys), ctx.venture_id) \
+                if bank.pdf_encrypted(data or b"") else None
+            got = await import_statement(conn, org=ctx.org_id, venture_id=ctx.venture_id, data=data or b"",
+                                         filename=name, mime=mime, account_label=bank_name, uploaded_by=None,
+                                         password=pw, source="email", sender=sender, verified=verified)
+            subject_out = (f"Bank statement read: {got.new_lines} new line{'s' if got.new_lines != 1 else ''}"
+                           f"{f', {got.sure} sure matches' if got.sure else ''}")
+            body = (f"The statement from {bank_name} ({subject[:120]}) is in Money → Bank: {got.new_lines} new lines, "
+                    f"{got.sure} matched for sure and {got.likely} likely. Nothing is recorded until someone confirms."
+                    + ("" if verified else " It came by forwarded email, so check each match against your bank."))
+        except ImportProblem as exc:
+            subject_out = "A bank statement couldn't be read"
+            body = f"Kritvia got a statement from {bank_name} by email but couldn't read it: {exc}."
+        await tell_admins(services, conn, ctx.venture_id, subject=subject_out, body=body,
+                          path=f"/v/{ctx.venture_id}/money?tab=bank", tag=f"statement-{ctx.venture_id}")
+    return True
+
+
+async def poll_statements(ctx: RunContext, services: Services, token: str, own_email: str | None) -> int:
+    """Statement emails in the connected Gmail (the last 3 days), each once."""
+    google = services.google
+    ids = await google.list_message_ids(
+        token, "has:attachment newer_than:3d (subject:statement OR subject:e-statement)", max_results=10)
+    n = 0
+    for mid in ids:
+        if await _seen(ctx, "gmail:bank_statement", mid):
+            continue
+        msg = await google.get_message(token, mid)
+        await _mark(ctx, "gmail:bank_statement", mid)
+        if own_email and msg.sender_email == own_email.lower():
+            continue
+
+        async def fetch(att, _mid=mid):
+            return await google.get_attachment(token, _mid, att["attachment_id"])
+        if await statement_mail(ctx, services, msg.sender_email, msg.subject, msg.attachments,
+                                verified=msg.authenticated, fetch=fetch):
+            n += 1
+    return n
 
 
 async def _inbox_forwarded(ctx: RunContext, services: Services, msg) -> int:

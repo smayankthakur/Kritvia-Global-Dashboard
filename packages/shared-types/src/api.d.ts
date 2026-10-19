@@ -2074,6 +2074,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/ads/advice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Advice */
+        post: operations["advice_ventures__venture_id__ads_advice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/ads/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reports */
+        get: operations["list_reports_ventures__venture_id__ads_reports_get"];
+        put?: never;
+        /** Upload Report */
+        post: operations["upload_report_ventures__venture_id__ads_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/ads/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Report */
+        delete: operations["delete_report_ventures__venture_id__ads_reports__report_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/ads/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Summary */
+        get: operations["get_summary_ventures__venture_id__ads_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/analytics": {
         parameters: {
             query?: never;
@@ -3268,6 +3337,41 @@ export interface paths {
          * @description Drag and drop: into any list on any board of the same business, at a position.
          */
         post: operations["move_card_ventures__venture_id__cards__card_id__move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/cash/forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Forecast */
+        get: operations["get_forecast_ventures__venture_id__cash_forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/cash/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings__ventures__venture_id__cash_settings_get"];
+        /** Put Settings */
+        put: operations["put_settings_ventures__venture_id__cash_settings_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6280,6 +6384,116 @@ export interface components {
             /** Invoice Ids */
             invoice_ids: string[];
         };
+        /** AdAdviceOut */
+        AdAdviceOut: {
+            /** Points */
+            points: string[];
+        };
+        /** AdCampaignOut */
+        AdCampaignOut: {
+            /** Campaign */
+            campaign: string;
+            /** Clicks */
+            clicks: number | null;
+            /** Cost Per Lead Paise */
+            cost_per_lead_paise: number | null;
+            /**
+             * Leads
+             * @description leads in Kritvia tagged with this campaign
+             */
+            leads: number;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "meta" | "google" | "other";
+            /**
+             * Results
+             * @description what the ad platform counted (its 'results' or 'conversions')
+             */
+            results: number | null;
+            /** Spend Paise */
+            spend_paise: number;
+            /** Won */
+            won: number;
+        };
+        /** AdPlatformOut */
+        AdPlatformOut: {
+            /** Cost Per Lead Paise */
+            cost_per_lead_paise: number | null;
+            /** Cost Per Won Paise */
+            cost_per_won_paise: number | null;
+            /** Leads */
+            leads: number;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "meta" | "google" | "other";
+            /** Spend Paise */
+            spend_paise: number;
+            /**
+             * Untagged Leads
+             * @description leads from this platform without a campaign name
+             */
+            untagged_leads: number;
+            /** Won */
+            won: number;
+            /** Words */
+            words: string;
+        };
+        /** AdReportOut */
+        AdReportOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** File Name */
+            file_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Period From */
+            period_from: string | null;
+            /** Period To */
+            period_to: string | null;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "meta" | "google" | "other";
+            /** Rows */
+            rows: number;
+            /** Spend Paise */
+            spend_paise: number;
+        };
+        /** AdSummaryOut */
+        AdSummaryOut: {
+            /** Campaigns */
+            campaigns: components["schemas"]["AdCampaignOut"][];
+            /** Days */
+            days: number;
+            /** Platforms */
+            platforms: components["schemas"]["AdPlatformOut"][];
+            /**
+             * Since
+             * Format: date
+             */
+            since: string;
+            /**
+             * Sources
+             * @description every lead source in the period, ads or not
+             */
+            sources: components["schemas"]["LeadSourceOut"][];
+            /**
+             * Tracking
+             * @description some leads in the period carry an ad tag
+             */
+            tracking: boolean;
+        };
         /** AgentIn */
         AgentIn: {
             /**
@@ -7243,6 +7457,17 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** Body_upload_report_ventures__venture_id__ads_reports_post */
+        Body_upload_report_ventures__venture_id__ads_reports_post: {
+            /** File */
+            file: string;
+            /** Period From */
+            period_from?: string | null;
+            /** Period To */
+            period_to?: string | null;
+            /** Platform */
+            platform?: ("meta" | "google" | "other") | null;
+        };
         /** Body_upload_sales_ventures__venture_id__kitchen_sales_csv_post */
         Body_upload_sales_ventures__venture_id__kitchen_sales_csv_post: {
             /** File */
@@ -7743,6 +7968,11 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /**
+             * Occasion
+             * @description the festival or slow week a suggested campaign is for
+             */
+            occasion?: string | null;
             /** Params */
             params: string[];
             /** Recipients */
@@ -7760,6 +7990,12 @@ export interface components {
             status: "draft" | "waiting" | "sending" | "sent" | "rejected" | "cancelled" | "failed";
             /** Subject */
             subject: string | null;
+            /**
+             * Suggested
+             * @description written by the Campaign ideas agent
+             * @default false
+             */
+            suggested: boolean;
             /** Template */
             template: string | null;
             /** Template Id */
@@ -7863,6 +8099,123 @@ export interface components {
              * @enum {string}
              */
             status: "shortlisted" | "rejected" | "hired" | "screened";
+        };
+        /** CashForecastOut */
+        CashForecastOut: {
+            /** Alert Below Paise */
+            alert_below_paise: number | null;
+            /** Below Alert */
+            below_alert: boolean;
+            /** Doubtful Invoices */
+            doubtful_invoices: number;
+            /** Doubtful Paise */
+            doubtful_paise: number;
+            /** Fixed Paise */
+            fixed_paise: number;
+            /** Horizons */
+            horizons: components["schemas"]["CashHorizonOut"][];
+            /** Lowest Paise */
+            lowest_paise: number;
+            /**
+             * Lowest Week
+             * Format: date
+             */
+            lowest_week: string;
+            /** Notes */
+            notes: string[];
+            /**
+             * Opening From
+             * @description 'statement' or 'typed'
+             */
+            opening_from: string | null;
+            /** Opening On */
+            opening_on: string | null;
+            /** Opening Paise */
+            opening_paise: number | null;
+            /** Salaries Paise */
+            salaries_paise: number;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Usual Late Days */
+            usual_late_days: number;
+            /** Weeks */
+            weeks: components["schemas"]["CashWeekOut"][];
+        };
+        /** CashHorizonOut */
+        CashHorizonOut: {
+            /** Closing Paise */
+            closing_paise: number;
+            /** Days */
+            days: number;
+            /** In Paise */
+            in_paise: number;
+            /** Out Paise */
+            out_paise: number;
+        };
+        /** CashSettingsIn */
+        CashSettingsIn: {
+            /** Alert Below Paise */
+            alert_below_paise?: number | null;
+            /** Balance On */
+            balance_on?: string | null;
+            /** Balance Paise */
+            balance_paise?: number | null;
+            /**
+             * Clear Alert
+             * @default false
+             */
+            clear_alert: boolean;
+            /**
+             * Clear Balance
+             * @default false
+             */
+            clear_balance: boolean;
+            /** Monthly Fixed Paise */
+            monthly_fixed_paise?: number | null;
+            /**
+             * Statement Password
+             * @description the bank's statement PDF password; '' removes it
+             */
+            statement_password?: string | null;
+            /** Statements By Email */
+            statements_by_email?: boolean | null;
+        };
+        /** CashSettingsOut */
+        CashSettingsOut: {
+            /** Alert Below Paise */
+            alert_below_paise: number | null;
+            /** Balance On */
+            balance_on: string | null;
+            /** Balance Paise */
+            balance_paise: number | null;
+            /** Has Statement Password */
+            has_statement_password: boolean;
+            /** Monthly Fixed Paise */
+            monthly_fixed_paise: number;
+            /** Statements By Email */
+            statements_by_email: boolean;
+        };
+        /** CashWeekOut */
+        CashWeekOut: {
+            /** Closing Paise */
+            closing_paise: number;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** In Paise */
+            in_paise: number;
+            /** Out Paise */
+            out_paise: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
         /** ChatDetailOut */
         ChatDetailOut: {
@@ -9217,6 +9570,11 @@ export interface components {
              * Format: uuid
              */
             connector_id: string;
+            /**
+             * Forwarded From
+             * @description the mailbox the last forwarded email came from
+             */
+            forwarded_from?: string | null;
             /** Gmail Code */
             gmail_code?: string | null;
             /**
@@ -9226,6 +9584,17 @@ export interface components {
             gmail_link?: string | null;
             /** Gmail Mailbox */
             gmail_mailbox?: string | null;
+            /**
+             * Gmail Reads It
+             * @description Gmail is also connected with read access for that mailbox: each email is still handled once
+             * @default false
+             */
+            gmail_reads_it: boolean;
+            /**
+             * Last Mail At
+             * @description when the last forwarded email arrived
+             */
+            last_mail_at?: string | null;
         };
         /** FreeModelOut */
         FreeModelOut: {
@@ -10224,6 +10593,15 @@ export interface components {
             /** Status */
             status?: ("new" | "contacted" | "replied" | "qualified" | "proposal" | "won" | "lost" | "archived") | null;
         };
+        /** LeadSourceOut */
+        LeadSourceOut: {
+            /** Leads */
+            leads: number;
+            /** Source */
+            source: string;
+            /** Won */
+            won: number;
+        };
         /**
          * LearnIn
          * @description Either the pair directly, or the text as inserted and as the user left it.
@@ -10286,6 +10664,12 @@ export interface components {
              * @enum {string}
              */
             state: "unmatched" | "suggested" | "confirmed" | "ignored";
+            /**
+             * Unverified
+             * @description from an emailed statement whose sender couldn't be checked: compare it with your bank before confirming
+             * @default false
+             */
+            unverified: boolean;
         };
         /** LinesOut */
         LinesOut: {
@@ -10345,6 +10729,23 @@ export interface components {
              * @default
              */
             title: string;
+        };
+        /** ListingCheckOut */
+        ListingCheckOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Google Hours */
+            google_hours: string | null;
+            /** Has Phone */
+            has_phone: boolean | null;
+            /** Has Website */
+            has_website: boolean | null;
+            /** Hours Match */
+            hours_match: boolean | null;
+            /** Kritvia Hours */
+            kritvia_hours: string | null;
+            /** Note */
+            note: string | null;
         };
         /** ListingIn */
         ListingIn: {
@@ -11713,6 +12114,8 @@ export interface components {
             business_profile?: string | null;
             /** Can Edit */
             can_edit: boolean;
+            /** @description the last weekly Google listing check */
+            listing?: components["schemas"]["ListingCheckOut"] | null;
             place: components["schemas"]["kritvia_api__routers__reviews__PlaceOut"] | null;
             /**
              * Problem
@@ -12957,6 +13360,19 @@ export interface components {
             period_from: string | null;
             /** Period To */
             period_to: string | null;
+            /** Sender */
+            sender?: string | null;
+            /**
+             * Source
+             * @default upload
+             * @enum {string}
+             */
+            source: "upload" | "email";
+            /**
+             * Verified
+             * @default true
+             */
+            verified: boolean;
         };
         /** StatusIn */
         StatusIn: {
@@ -19265,6 +19681,168 @@ export interface operations {
             };
         };
     };
+    advice_ventures__venture_id__ads_advice_post: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdAdviceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_ventures__venture_id__ads_reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdReportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_report_ventures__venture_id__ads_reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_report_ventures__venture_id__ads_reports_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_report_ventures__venture_id__ads_reports__report_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_summary_ventures__venture_id__ads_summary_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdSummaryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     analytics_ventures__venture_id__analytics_get: {
         parameters: {
             query?: {
@@ -22177,6 +22755,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskCardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_forecast_ventures__venture_id__cash_forecast_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashForecastOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings__ventures__venture_id__cash_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_ventures__venture_id__cash_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashSettingsOut"];
                 };
             };
             /** @description Validation Error */

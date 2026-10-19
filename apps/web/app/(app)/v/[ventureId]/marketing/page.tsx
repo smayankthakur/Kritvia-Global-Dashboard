@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { AdsTab } from "@/components/marketing/ads-tab";
 import { CampaignsTab } from "@/components/marketing/campaigns-tab";
 import { SocialTab } from "@/components/marketing/social-tab";
 import { PageHeader } from "@/components/ui/page";
@@ -13,14 +14,16 @@ function Marketing() {
   const params = useSearchParams();
   const router = useRouter();
   const path = usePathname();
-  const tab = params.get("tab") === "campaigns" ? "campaigns" : "social";
+  const raw = params.get("tab");
+  const tab = raw === "campaigns" || raw === "ads" ? raw : "social";
   const canAdmin = Boolean(v.can_admin || v.is_owner);
+  const canWrite = v.access === "write";
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={v.venture_name}
         title="Marketing"
-        description="Posts for your Google profile and Facebook Page, and campaigns to customers who agreed to hear from you. Everything goes out after your yes."
+        description="Posts for your Google profile and Facebook Page, campaigns to customers who agreed to hear from you, and what your ads bring in. Everything goes out after your yes."
       />
       <Tabs
         label="Marketing"
@@ -29,9 +32,12 @@ function Marketing() {
         items={[
           { id: "social", label: "Social posts" },
           { id: "campaigns", label: "Campaigns" },
+          { id: "ads", label: "Ads" },
         ]}
       />
-      {tab === "social" ? <SocialTab ventureId={v.id} canAdmin={canAdmin} /> : <CampaignsTab ventureId={v.id} canAdmin={canAdmin} />}
+      {tab === "social" ? <SocialTab ventureId={v.id} canAdmin={canAdmin} /> : null}
+      {tab === "campaigns" ? <CampaignsTab ventureId={v.id} canAdmin={canAdmin} /> : null}
+      {tab === "ads" ? <AdsTab ventureId={v.id} canWrite={canWrite} canAdmin={canAdmin} /> : null}
     </div>
   );
 }

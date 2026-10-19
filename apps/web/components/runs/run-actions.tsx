@@ -52,6 +52,8 @@ export const WORKFLOW_LABEL: Record<string, string> = {
   trade_update: "Shipment update",
   meeting_digest: "Meeting digest",
   prospector: "Prospector",
+  campaign_ideas: "Campaign ideas",
+  google_listing: "Google listing check",
 };
 
 export function workflowLabel(w: string): string {

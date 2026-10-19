@@ -14,7 +14,34 @@ import { Notice, PageHeader } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
+import { formatRelative } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
+
+/** The weekly Google listing check (agent "Google listing check"): opening hours, website and phone. */
+function ListingCheck({ check }: { check: Schemas["ListingCheckOut"] }) {
+  const missing = [check.has_website === false ? "a website" : null, check.has_phone === false ? "a phone number" : null].filter(Boolean);
+  return (
+    <Card className="space-y-2 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium">Google listing check</span>
+        {check.hours_match === true ? <Badge tone="success">hours match</Badge> : null}
+        {check.hours_match === false ? <Badge tone="warning">hours differ</Badge> : null}
+        {check.checked_at ? <span className="text-xs text-subtle">checked {formatRelative(check.checked_at)}</span> : null}
+      </div>
+      {check.hours_match === false ? (
+        <p className="text-muted">
+          Google shows {check.google_hours}; Kritvia has {check.kritvia_hours}. An update is waiting for your yes in{" "}
+          <Link className="text-accent underline underline-offset-2" href="/inbox">
+            Approvals
+          </Link>
+          .
+        </p>
+      ) : null}
+      {check.note ? <p className="text-muted">To compare hours, {check.note}.</p> : null}
+      {missing.length ? <p className="text-muted">Your Google listing has no {missing.join(" or ")}: add it in Google Business Profile so customers can reach you.</p> : null}
+    </Card>
+  );
+}
 
 type Data = Schemas["ReviewsOut"];
 
@@ -163,6 +190,7 @@ export default function ReviewsPage() {
             ) : null}
             {d.problem ? <Notice tone="warning" title="Google Maps can't be read">{d.problem}</Notice> : null}
             <BusinessProfileCard ventureId={v.id} access={d.business_access} listing={d.business_profile ?? null} canAdmin={d.can_edit} />
+            {d.listing ? <ListingCheck check={d.listing} /> : null}
             {!d.settings.place_id ? (
               d.can_edit ? <FindListing ventureId={v.id} onPicked={() => void qc.invalidateQueries({ queryKey: ["reviews", v.id] })} /> : <EmptyState title="No Google listing chosen" description="An admin chooses it here." />
             ) : (

@@ -4,6 +4,7 @@ run in the sandbox."""
 from __future__ import annotations
 
 import dataclasses
+import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -440,6 +441,32 @@ def build_tools() -> ToolRegistry:
                                     " updated_at = now() WHERE id = :r AND venture_id = :v"),
                                {"d": comment[:2000], "r": uuid.UUID(str(p["reply_id"])), "v": ctx.venture_id})
         return {"posted": True, "channel": "google"}
+
+    @reg.tool("ads.summary", Capability.READ,
+              "What the business spent on Meta and Google ads (from uploaded reports) and the leads and sales each "
+              "campaign brought, with cost per lead; Kritvia never spends or changes ads")
+    async def ads_summary(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.routers.ads import summary
+        days = max(7, min(365, int(p.get("days") or 30)))
+        async with ctx.tx() as conn:
+            s = await summary(conn, ctx.venture_id, days)
+        return s.model_dump(mode="json")
+
+    @reg.tool("google.listing_update", Capability.WRITE,
+              "Put the opening hours Kritvia knows on the business's Google Business Profile, as approved")
+    async def google_listing_update(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import gbp
+        hours = {d: [(str(a), str(b)) for a, b in v] for d, v in dict(p.get("hours") or {}).items() if d in gbp.WEEK}
+        for spans in hours.values():
+            for a, b in spans:
+                if not (re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", a) and re.fullmatch(r"([01]\d|2[0-4]):[0-5]\d", b)):
+                    raise ValueError("opening hours must be HH:MM")
+        async with ctx.tx() as conn:
+            prof = await gbp.profile(ctx.services, conn, ctx.venture_id)
+        if not prof.location or prof.location != str(p.get("location")):
+            raise ValueError("the business's Google listing changed since this was asked; check again")
+        await ctx.services.google.gbp_set_hours(prof.token, prof.location, gbp.to_google(hours))
+        return {"updated": True, "hours": gbp.words(hours)}
 
     @reg.tool("social.post", Capability.SEND,
               "Post an update on the business's Google Business Profile and/or Facebook Page")

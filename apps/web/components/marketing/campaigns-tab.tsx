@@ -198,7 +198,10 @@ export function CampaignsTab({ ventureId, canAdmin }: { ventureId: string; canAd
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted">The list is fixed when the campaign asks for your yes; exactly those people get it, in batches.</p>
+        <p className="text-sm text-muted">
+          The list is fixed when the campaign asks for your yes; exactly those people get it, in batches. Turn on the Campaign ideas agent (Agents page)
+          and Kritvia suggests one for each festival and slow fortnight.
+        </p>
         {canAdmin ? (
           <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>
             New campaign
@@ -212,7 +215,10 @@ export function CampaignsTab({ ventureId, canAdmin }: { ventureId: string; canAd
               <ul className="divide-y divide-border" aria-label="Campaigns">
                 {d.map((c) => (
                   <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 py-3">
-                    <span className="min-w-0 truncate font-medium">{c.name}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium">{c.name}</span>
+                      {c.suggested ? <Badge tone="info">suggested by Kritvia</Badge> : null}
+                    </span>
                     <Badge tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Badge>
                     <span className="text-xs text-subtle">
                       {c.channel === "whatsapp" ? `WhatsApp · ${c.template ?? "template"}` : `Email · ${c.subject ?? ""}`} · {AUDIENCE[c.audience]}

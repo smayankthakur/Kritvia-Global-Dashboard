@@ -9,6 +9,7 @@ to ask customers for a review.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -52,6 +53,16 @@ class PlaceOut(BaseModel):
     write_review_url: str
 
 
+class ListingCheckOut(BaseModel):
+    checked_at: datetime | None
+    hours_match: bool | None
+    google_hours: str | None
+    kritvia_hours: str | None
+    has_website: bool | None
+    has_phone: bool | None
+    note: str | None
+
+
 class ReviewsOut(BaseModel):
     settings: ReviewSettings
     place: PlaceOut | None
@@ -62,6 +73,7 @@ class ReviewsOut(BaseModel):
     business_profile: str | None = Field(default=None, description="the Google Business Profile listing replies "
                                                                      "are posted to, when linked")
     business_access: bool = Field(default=False, description="Google is connected with Business Profile access")
+    listing: ListingCheckOut | None = Field(default=None, description="the last weekly Google listing check")
 
 
 @router.get("/ventures/{venture_id}/reviews", response_model=ReviewsOut)
@@ -77,6 +89,12 @@ async def reviews(venture_id: uuid.UUID, db: TenantDB, svc: Svc) -> ReviewsOut:
     out = ReviewsOut(settings=settings, place=None, reviews=[], problem=None, can_edit=admin, agent_on=on,
                      business_profile=(s.gbp_title or s.gbp_location) if s and s.gbp_location else None,
                      business_access=await gbp.has_access(db, venture_id))
+    if s is not None and s.listing_state:
+        ls = dict(s.listing_state)
+        out.listing = ListingCheckOut(checked_at=s.listing_checked_at, hours_match=ls.get("hours_match"),
+                                      google_hours=ls.get("google_hours"), kritvia_hours=ls.get("kritvia_hours"),
+                                      has_website=ls.get("has_website"), has_phone=ls.get("has_phone"),
+                                      note=ls.get("note"))
     if not settings.place_id:
         return out
     access = await places_for(db, svc, venture_id)

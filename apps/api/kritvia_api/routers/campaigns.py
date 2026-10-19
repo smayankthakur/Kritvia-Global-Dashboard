@@ -56,6 +56,8 @@ class CampaignOut(BaseModel):
     skipped: int
     created_at: datetime
     sent_at: datetime | None
+    occasion: str | None = Field(default=None, description="the festival or slow week a suggested campaign is for")
+    suggested: bool = Field(default=False, description="written by the Campaign ideas agent")
 
 
 class AudienceOut(BaseModel):
@@ -77,7 +79,7 @@ def _out(r) -> CampaignOut:
     return CampaignOut(id=r.id, name=r.name, channel=r.channel, audience=r.audience, template_id=r.template_id,
                        template=r.template, params=list(r.params or []), subject=r.subject, body=r.body,
                        status=r.status, recipients=r.recipients, sent=r.sent, failed=r.failed, skipped=r.skipped,
-                       created_at=r.created_at, sent_at=r.sent_at)
+                       created_at=r.created_at, sent_at=r.sent_at, occasion=r.occasion, suggested=r.suggested)
 
 
 @router.get("/ventures/{venture_id}/campaigns", response_model=list[CampaignOut])

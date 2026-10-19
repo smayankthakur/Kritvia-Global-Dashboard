@@ -151,6 +151,9 @@ def validate_edit(original: dict[str, Any], edited: dict[str, Any], action: str 
         raise HTTPException(422, "only the post's text can be edited here")
     if action == "google.review_reply" and changed - {"comment"}:
         raise HTTPException(422, "only the reply's text can be edited here")
+    if action == "google.listing_update" and changed:
+        raise HTTPException(422, "the hours go to Google exactly as Kritvia has them; change them in Kritvia (Bookings "
+                                 "or Calls) and the next check offers them again")
     if action == "browser.submit":
         raise HTTPException(422, "a website form is sent exactly as shown, so it can't be edited here; "
                                  "reject it with a comment and the browser agent tries again")

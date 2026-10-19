@@ -42,7 +42,7 @@ def test_agents_that_look_on_can_run(report):
     assert not report["integrity"], report["integrity"]
     clock = {w.name for w in registry.all() if w.starts == "clock"}
     assert clock == {"prospector", "collections", "kitchen_daily", "trade_watch", "whatsapp_followup", "reviews",
-                     "booking_reminders", "social"}
+                     "booking_reminders", "social", "campaign_ideas", "google_listing"}
     assert {w.name for w in registry.all() if w.starts == "request"} == {"assistant", "browser", "voice_call",
                                                                           "trade_update", "campaign"}
 

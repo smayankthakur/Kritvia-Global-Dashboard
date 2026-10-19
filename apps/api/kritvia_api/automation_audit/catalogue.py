@@ -161,13 +161,15 @@ JOBS: tuple[Job, ...] = (
         "team to confirm.",
         ("route:POST /hooks/razorpay/{connector_id}", "route:POST /public/pay/{token}/paid"), impact=3,
         next="Match UPI and bank credits from a bank statement or SMS alerts to open invoices."),
-    Job("bank_reconciliation", "finance", "Match the bank statement", 2,
-        "An uploaded statement (CSV, Excel or PDF from any bank) is read and every credit matched to an invoice "
-        "and every debit to a bill; one tap records all the sure matches.",
+    Job("bank_reconciliation", "finance", "Match the bank statement", 3,
+        "The bank's statement email (forwarded, or read from Gmail) or an uploaded CSV, Excel or PDF is read by "
+        "itself, every credit matched to an invoice and every debit to a bill, and the owners told; one tap "
+        "records the sure matches (one by one for a forwarded statement nobody could vouch for).",
         ("route:POST /ventures/{venture_id}/bank/statements", "route:POST /ventures/{venture_id}/bank/confirm-sure",
+         "route:POST /public/email-in", "code:apps/api/kritvia_api/services/pollers.py::async def statement_mail(",
          "code:apps/api/kritvia_api/services/bank.py::def match(", "tool:bank.unmatched"), target=3, impact=2,
-        next="Statements arriving by themselves (bank e-statements forwarded, or an account aggregator).",
-        gaps=("A person uploads the statement; password-protected PDFs need the CSV instead.",)),
+        next="An account aggregator feed (RBI AA) instead of statement emails.",
+        gaps=("A password-protected PDF needs the statement password saved on Money → Bank.",)),
     Job("bills_expenses", "finance", "Pay bills and track expenses", 3,
         "Supplier bills are typed, read from a photo or PDF, or filed from a forwarded email; owners are reminded "
         "before they fall due, and a bank debit marks them paid. Kritvia never pays.",
@@ -189,10 +191,13 @@ JOBS: tuple[Job, ...] = (
          "route:GET /hooks/tally/{connector_id}/sales"), target=3, impact=2,
         next="Receipts (payments) into Tally as well as sales.",
         gaps=("The companion runs on the Tally PC (Windows Task Scheduler); Tally has no cloud API.",)),
-    Job("cash_forecast", "finance", "Know the cash position ahead", 2,
-        "The assistant answers money questions from the numbers it has (dues, paid, overdue).",
-        ("tool:business.numbers", "tool:invoices.search"), target=3, impact=2,
-        next="A weekly 30/60/90-day cash view from invoices due, bills due and past payment times."),
+    Job("cash_forecast", "finance", "Know the cash position ahead", 3,
+        "Thirteen weeks ahead from open invoices (when each customer usually pays), bills, salaries and fixed "
+        "costs, from the last statement's balance; every Monday the owners hear the next 30/60/90 days and any "
+        "week that dips below their level.",
+        ("route:GET /ventures/{venture_id}/cash/forecast", "route:GET,PUT /ventures/{venture_id}/cash/settings",
+         "cron:cash_week", "tool:business.numbers"), target=3, impact=2,
+        next="Suggest which dues to chase first when a tight week is coming."),
 
     # ------------------------------------------------------------------ operations
     Job("tasks_from_work", "ops", "Turn conversations into tasks", 4,
@@ -240,22 +245,31 @@ JOBS: tuple[Job, ...] = (
         ("wf:social", "tool:social.post", "cron:fire_schedules", "route:PUT /ventures/{venture_id}/connectors/facebook"),
         target=3, impact=2, next="Instagram posts with a photo; earned trust for posts without offers.",
         gaps=("Instagram isn't posted to yet (it needs a photo per post).",)),
-    Job("campaigns", "marketing", "WhatsApp and email campaigns", 2,
-        "A WhatsApp template or an email goes to opted-in customers only, with one yes for the whole fixed list; "
-        "STOP and one-click unsubscribe are honoured.",
-        ("wf:campaign", "tool:campaign.send", "route:GET,POST /ventures/{venture_id}/campaigns",
+    Job("campaigns", "marketing", "WhatsApp and email campaigns", 3,
+        "Once a week Kritvia looks for a festival two or three weeks away or a slow fortnight and writes an email "
+        "campaign; it goes to customers only, with one yes for the whole fixed list; STOP and one-click "
+        "unsubscribe are honoured.",
+        ("wf:campaign_ideas", "wf:campaign", "tool:campaign.send", "route:GET,POST /ventures/{venture_id}/campaigns",
          "route:POST /public/campaign-unsubscribe"), target=3, impact=2,
-        next="The assistant suggests a campaign for a festival or a slow week (a yes still sends it)."),
-    Job("content_writing", "marketing", "Write marketing content", 2,
-        "The assistant writes posts, offers and emails when asked.",
-        ("wf:assistant",), target=3, impact=1,
-        next="Learned skills that write the weekly offer by themselves for a yes."),
-    Job("local_seo", "marketing", "Google listing and local SEO", 1,
-        "The business's Google place is linked for reviews; the listing itself is kept up by hand.",
-        ("route:GET /ventures/{venture_id}/reviews/find-place",), target=3, impact=2,
-        next="Keep hours, photos and posts on the Google Business Profile in step with Kritvia."),
-    Job("ads", "marketing", "Run ads", 0, "Not in Kritvia.", (), target=2, impact=1,
-        next="Read ad spend and leads per source; suggest changes (never spend by itself)."),
+        next="Suggest WhatsApp campaigns too, with the business's approved marketing template."),
+    Job("content_writing", "marketing", "Write marketing content", 3,
+        "Posts are written on the owner's days and festival or slow-week emails once a week, by themselves, for a "
+        "yes; the assistant writes anything else when asked.",
+        ("wf:social", "wf:campaign_ideas", "wf:assistant"), target=3, impact=1,
+        next="Learn the owner's edits so drafts need fewer changes."),
+    Job("local_seo", "marketing", "Google listing and local SEO", 3,
+        "Every week the Google Business Profile is checked against Kritvia: different opening hours are put on "
+        "Google after a yes, a missing website or phone is pointed out, and posts go up on the owner's days.",
+        ("wf:google_listing", "tool:google.listing_update", "wf:social",
+         "route:GET /ventures/{venture_id}/reviews/find-place"), target=3, impact=2,
+        next="Photos from the business's own uploads, after a yes."),
+    Job("ads", "marketing", "Run ads", 2,
+        "Uploaded Meta and Google Ads reports are set against the leads each campaign brought (UTM tags, gclid, "
+        "fbclid on website-form leads): cost per lead and per sale, and plain-words advice. Kritvia never spends.",
+        ("route:POST /ventures/{venture_id}/ads/reports", "route:GET /ventures/{venture_id}/ads/summary",
+         "route:POST /ventures/{venture_id}/ads/advice", "tool:ads.summary",
+         "code:apps/api/kritvia_api/workflows/lead_triage.py::def ad_tags("), ceiling=3, target=2, impact=1,
+        next="Read spend from the ad accounts directly (Meta Marketing API / Google Ads API, read-only)."),
 
     # ------------------------------------------------------------------ people
     Job("hiring", "people", "Hire people", 3,

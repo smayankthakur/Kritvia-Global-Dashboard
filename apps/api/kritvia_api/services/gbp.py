@@ -51,3 +51,60 @@ async def profile(services, conn, venture_id: uuid.UUID) -> Profile:
     s = (await conn.execute(text("SELECT gbp_location, gbp_title FROM review_settings WHERE venture_id = :v"),
                             {"v": venture_id})).first()
     return Profile(token=token, location=s.gbp_location if s else None, title=s.gbp_title if s else None)
+
+
+# ------------------------------------------------------------------------------------- opening hours --
+WEEK = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+GOOGLE_DAYS = ("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
+Hours = dict[str, list[tuple[str, str]]]          # {"mon": [("10:00", "19:00")], ...}; a missing day is closed
+
+
+def _hm(t: dict | None) -> str:
+    t = t or {}
+    h, m = int(t.get("hours", 0) or 0), int(t.get("minutes", 0) or 0)
+    return "24:00" if h == 24 else f"{h:02d}:{m:02d}"
+
+
+def from_google(listing: dict) -> Hours:
+    out: Hours = {}
+    for p in (listing.get("regularHours") or {}).get("periods", []):
+        day = p.get("openDay", "")
+        if day in GOOGLE_DAYS:
+            out.setdefault(WEEK[GOOGLE_DAYS.index(day)], []).append((_hm(p.get("openTime")), _hm(p.get("closeTime"))))
+    return {d: sorted(v) for d, v in out.items()}
+
+
+def to_google(hours: Hours) -> list[dict]:
+    periods = []
+    for d in WEEK:
+        for a, b in hours.get(d, []):
+            ah, am = (int(x) for x in a.split(":"))
+            bh, bm = (int(x) for x in b.split(":"))
+            periods.append({"openDay": GOOGLE_DAYS[WEEK.index(d)], "openTime": {"hours": ah, "minutes": am},
+                            "closeDay": GOOGLE_DAYS[WEEK.index(d)], "closeTime": {"hours": bh, "minutes": bm}})
+    return periods
+
+
+async def our_hours(conn, venture_id: uuid.UUID) -> tuple[Hours, str] | None:
+    """The opening hours Kritvia knows: the booking hours (Bookings page) if set, else the phone assistant's
+    office hours (Calls page). None when neither is set."""
+    b = (await conn.execute(text("SELECT hours FROM booking_settings WHERE venture_id = :v"), {"v": venture_id})).scalar()
+    if b:
+        got = {d: sorted((str(x[0]), str(x[1])) for x in b.get(d, []) if len(x) == 2) for d in WEEK if b.get(d)}
+        if got:
+            return got, "booking hours"
+    p = (await conn.execute(text("SELECT open_days, open_from, open_to FROM phone_settings WHERE venture_id = :v"),
+                            {"v": venture_id})).first()
+    if p is not None:
+        return {WEEK[i]: [(p.open_from, p.open_to)] for i in sorted(set(p.open_days))}, "office hours (Calls page)"
+    return None
+
+
+def words(h: Hours) -> str:
+    if not h:
+        return "no hours"
+    parts = []
+    for d in WEEK:
+        spans = h.get(d)
+        parts.append(f"{d.capitalize()} {', '.join(f'{a}-{b}' for a, b in spans)}" if spans else f"{d.capitalize()} closed")
+    return "; ".join(parts)

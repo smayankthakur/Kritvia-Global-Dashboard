@@ -10,6 +10,10 @@
   POST /ventures/{v}/bank/confirm-sure        confirm every 'sure' match in one go
   POST /ventures/{v}/bank/rematch             match again (after adding invoices or bills)
 
+Statements also arrive by email (services/pollers.py): forwarded to the business's Kritvia address or read from
+its Gmail. One whose sender Kritvia couldn't check (forwarded mail) is marked unverified, and its lines are only
+ever 'likely' matches, so each is confirmed one by one and never in the one-tap 'confirm all sure'.
+
 The statement file isn't kept; only its lines are. Matching is code (services/bank.py), never a model.
 """
 from __future__ import annotations
@@ -23,7 +27,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, sta
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
-from kritvia_api.deps import TenantDB, UserId, venture_org
+from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.services import bank
 from kritvia_api.services.textextract import ExtractionError, extract_text
 from kritvia_api.services.uploads import read_checked
@@ -45,6 +49,9 @@ class StatementOut(BaseModel):
     lines: int
     credits_paise: int
     debits_paise: int
+    source: Literal["upload", "email"] = "upload"
+    sender: str | None = None
+    verified: bool = True
     created_at: datetime
 
 
@@ -73,6 +80,8 @@ class LineOut(BaseModel):
     amount_paise: int = Field(description="credit > 0, debit < 0")
     state: Literal["unmatched", "suggested", "confirmed", "ignored"]
     match: MatchOut | None
+    unverified: bool = Field(default=False, description="from an emailed statement whose sender couldn't be checked: "
+                                                        "compare it with your bank before confirming")
 
 
 class LinesOut(BaseModel):
@@ -90,8 +99,9 @@ async def rematch(db, venture_id: uuid.UUID) -> tuple[int, int]:
         "SELECT id, vendor, number, amount_paise - paid_paise AS bal FROM bills"
         " WHERE venture_id = :v AND status = 'open' AND amount_paise > paid_paise"), {"v": venture_id})).all()
     lines = (await db.execute(text(
-        "SELECT id, amount_paise, narration, coalesce(reference, '') AS ref FROM bank_lines"
-        " WHERE venture_id = :v AND state IN ('unmatched', 'suggested') ORDER BY line_date, created_at"),
+        "SELECT l.id, l.amount_paise, l.narration, coalesce(l.reference, '') AS ref, s.verified FROM bank_lines l"
+        " JOIN bank_statements s ON s.id = l.statement_id"
+        " WHERE l.venture_id = :v AND l.state IN ('unmatched', 'suggested') ORDER BY l.line_date, l.created_at"),
         {"v": venture_id})).all()
     found = bank.match(
         [(str(x.id), x.amount_paise, f"{x.narration} {x.ref}") for x in lines],
@@ -102,6 +112,8 @@ async def rematch(db, venture_id: uuid.UUID) -> tuple[int, int]:
         m = found.get(str(x.id))
         if m:
             kind, mt = m
+            if not x.verified and mt.confidence == "sure":   # an emailed statement nobody could vouch for
+                mt = bank.Match(mt.id, "likely")
             sure += mt.confidence == "sure"
             likely += mt.confidence == "likely"
             await db.execute(text(
@@ -118,33 +130,49 @@ def _statement(r) -> StatementOut:
     return StatementOut(**r._mapping)
 
 
-@router.post("/ventures/{venture_id}/bank/statements", response_model=UploadOut, status_code=201)
-async def upload_statement(venture_id: uuid.UUID, user_id: UserId, db: TenantDB, file: UploadFile = File(...),
-                           account_label: str | None = Form(default=None, max_length=80)) -> UploadOut:
-    org = await venture_org(db, venture_id)
-    await can_write(db, venture_id)
-    data, mime = await read_checked(file, "statement", max_mb=15)
+class ImportProblem(Exception):
+    """The file isn't a statement Kritvia can read (the message says why, for a person)."""
+
+
+async def statement_password(db, crypto, venture_id: uuid.UUID) -> str | None:
+    enc = (await db.execute(text("SELECT statement_password_enc FROM cash_settings WHERE venture_id = :v"),
+                            {"v": venture_id})).scalar()
+    return (await crypto.decrypt_str(venture_id, "cash.statement_password", enc)) if enc else None
+
+
+async def import_statement(db, *, org: uuid.UUID, venture_id: uuid.UUID, data: bytes, filename: str, mime: str,
+                           account_label: str | None, uploaded_by: uuid.UUID | None, password: str | None = None,
+                           source: str = "upload", sender: str | None = None, verified: bool = True) -> UploadOut:
+    """Reads a statement file into bank lines (lines already seen are skipped) and matches them."""
     pdf_text = None
     if mime == "application/pdf":
-        if b"/Encrypt" in data[:200_000] or b"/Encrypt" in data[-4000:]:
-            raise HTTPException(422, "this PDF is password-protected; download the statement as CSV or Excel "
-                                     "from netbanking instead")
-        try:
-            ex = await asyncio.to_thread(extract_text, data, file.filename or "statement.pdf", mime)
-        except ExtractionError as exc:
-            raise HTTPException(422, f"couldn't read this PDF: {exc}") from None
-        pdf_text = ex.text
+        if bank.pdf_encrypted(data):
+            if not password:
+                raise ImportProblem("this PDF is password-protected: save the statement password on Money → Bank, "
+                                    "or download the statement as CSV or Excel from netbanking")
+            try:
+                pdf_text = await asyncio.to_thread(bank.pdf_text, data, password)
+            except bank.StatementError as exc:
+                raise ImportProblem(str(exc)) from None
+        else:
+            try:
+                ex = await asyncio.to_thread(extract_text, data, filename or "statement.pdf", mime)
+            except ExtractionError as exc:
+                raise ImportProblem(f"couldn't read this PDF: {exc}") from None
+            pdf_text = ex.text
     try:
-        st = await asyncio.to_thread(bank.read, data, file.filename or "statement.csv", pdf_text)
+        st = await asyncio.to_thread(bank.read, data, filename or "statement.csv", pdf_text)
     except bank.StatementError as exc:
-        raise HTTPException(422, str(exc)) from None
+        raise ImportProblem(str(exc)) from None
     first, last = st.period
     sid = (await db.execute(text(
         "INSERT INTO bank_statements (org_id, venture_id, account_label, file_name, period_from, period_to, lines,"
-        " credits_paise, debits_paise, uploaded_by) VALUES (:o, :v, :a, :f, :p1, :p2, :n, :c, :d, :u) RETURNING id"),
-        {"o": org, "v": venture_id, "a": (account_label or "").strip() or None,
-         "f": (file.filename or "")[:200] or None, "p1": first, "p2": last, "n": len(st.lines), "c": st.credits,
-         "d": st.debits, "u": user_id})).scalar_one()
+        " credits_paise, debits_paise, uploaded_by, source, sender, verified)"
+        " VALUES (:o, :v, :a, :f, :p1, :p2, :n, :c, :d, :u, :src, :snd, :ok) RETURNING id"),
+        {"o": org, "v": venture_id, "a": (account_label or "").strip()[:80] or None,
+         "f": (filename or "")[:200] or None, "p1": first, "p2": last, "n": len(st.lines), "c": st.credits,
+         "d": st.debits, "u": uploaded_by, "src": source, "snd": (sender or "")[:254] or None,
+         "ok": verified})).scalar_one()
     new = 0
     for ln in st.lines:
         r = await db.execute(text(
@@ -158,6 +186,23 @@ async def upload_statement(venture_id: uuid.UUID, user_id: UserId, db: TenantDB,
     row = (await db.execute(text("SELECT * FROM bank_statements WHERE id = :s"), {"s": sid})).first()
     return UploadOut(statement=_statement(row), new_lines=new, already_seen=len(st.lines) - new, sure=sure,
                      likely=likely)
+
+
+@router.post("/ventures/{venture_id}/bank/statements", response_model=UploadOut, status_code=201)
+async def upload_statement(venture_id: uuid.UUID, user_id: UserId, db: TenantDB, svc: Svc,
+                           file: UploadFile = File(...),
+                           account_label: str | None = Form(default=None, max_length=80)) -> UploadOut:
+    from kritvia_api.services.crypto import EnvelopeCrypto
+    org = await venture_org(db, venture_id)
+    await can_write(db, venture_id)
+    data, mime = await read_checked(file, "statement", max_mb=15)
+    password = await statement_password(db, EnvelopeCrypto(db, svc.keys), venture_id) \
+        if mime == "application/pdf" and bank.pdf_encrypted(data) else None
+    try:
+        return await import_statement(db, org=org, venture_id=venture_id, data=data, filename=file.filename or "",
+                                      mime=mime, account_label=account_label, uploaded_by=user_id, password=password)
+    except ImportProblem as exc:
+        raise HTTPException(422, str(exc)) from None
 
 
 @router.get("/ventures/{venture_id}/bank/statements", response_model=list[StatementOut])
@@ -182,8 +227,9 @@ async def delete_statement(venture_id: uuid.UUID, statement_id: uuid.UUID, db: T
 LINE_SQL = (
     "SELECT l.id, l.line_date, l.narration, l.reference, l.amount_paise, l.state, l.match_kind, l.match_id,"
     " l.confidence, coalesce(i.customer_name, b.vendor) AS party, coalesce(i.number, b.number, '') AS number,"
-    " coalesce(i.amount_paise - i.paid_paise, b.amount_paise - b.paid_paise, 0) AS balance"
-    " FROM bank_lines l"
+    " coalesce(i.amount_paise - i.paid_paise, b.amount_paise - b.paid_paise, 0) AS balance,"
+    " NOT st.verified AS unverified"
+    " FROM bank_lines l JOIN bank_statements st ON st.id = l.statement_id"
     " LEFT JOIN invoices i ON l.match_kind = 'invoice' AND i.id = l.match_id"
     " LEFT JOIN bills b ON l.match_kind = 'bill' AND b.id = l.match_id")
 
@@ -194,7 +240,7 @@ def _line(r) -> LineOut:
         m = MatchOut(kind=r.match_kind, id=r.match_id, party=r.party, number=r.number, balance_paise=r.balance,
                      confidence=r.confidence)
     return LineOut(id=r.id, line_date=r.line_date, narration=r.narration, reference=r.reference,
-                   amount_paise=r.amount_paise, state=r.state, match=m)
+                   amount_paise=r.amount_paise, state=r.state, match=m, unverified=bool(r.unverified))
 
 
 @router.get("/ventures/{venture_id}/bank/lines", response_model=LinesOut)

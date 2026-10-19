@@ -52,6 +52,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
     "invoices.search": {"show": "unpaid (default), overdue or paid", "customer": "optional: part of a customer's name"},
     "bills.search": {"show": "unpaid (default), overdue or paid", "vendor": "optional: part of a supplier's name"},
     "bank.unmatched": {},
+    "ads.summary": {"days": "optional: how many days back (default 30)"},
     "events.recent": {"hours": "optional: how far back, in hours (default 24)", "kind": "optional: e.g. invoice.paid"},
     "routines.create": {"name": "a short name", "instructions": "the job as numbered steps",
                         "trigger": "schedule, on_event or manual", "freq": "for schedule: daily, weekly or monthly",
@@ -80,7 +81,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
                               "description": "optional"},
 }
 REQUIRED: dict[str, tuple[str, ...]] = {
-    "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "bills.search": (), "bank.unmatched": (), "events.recent": (),
+    "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "bills.search": (), "bank.unmatched": (), "ads.summary": (), "events.recent": (),
     "routines.create": ("name", "instructions", "trigger"), "shipments.search": (), "crm.update_lead": ("lead_id",),
     "business.numbers": (), "tasks.search": (), "approvals.waiting": (), "indiamart.enquiries": (),
     "team.handoff": ("to", "note"),

@@ -10,6 +10,7 @@ import logging
 import re
 import secrets
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -38,6 +39,10 @@ class ForwardingOut(BaseModel):
     gmail_link: str | None = Field(default=None, description="Gmail's confirmation link (newer Gmail sends a link "
                                                               "instead of a code): open it to finish")
     gmail_mailbox: str | None = None
+    last_mail_at: datetime | None = Field(default=None, description="when the last forwarded email arrived")
+    forwarded_from: str | None = Field(default=None, description="the mailbox the last forwarded email came from")
+    gmail_reads_it: bool = Field(default=False, description="Gmail is also connected with read access for that "
+                                                            "mailbox: each email is still handled once")
 
 
 def _local(slug: str) -> str:
@@ -70,9 +75,18 @@ async def get_forwarding(venture_id: uuid.UUID, db: TenantDB) -> ForwardingOut |
         " AND status = 'active'"), {"v": venture_id})).first()
     if row is None:
         return None
+    from kritvia_api.services.google import SCOPES
     meta = dict(row.meta or {})
+    last = meta.get("last_mail_at")
+    src = meta.get("forwarded_from") or meta.get("gmail_mailbox")
+    g = (await db.execute(text("SELECT lower(account_email) AS email, scopes FROM connectors WHERE venture_id = :v"
+                               " AND provider = 'google' AND status = 'active'"), {"v": venture_id})).first()
     return ForwardingOut(connector_id=row.id, address=row.account_email, gmail_code=meta.get("gmail_code") or None,
-                         gmail_link=meta.get("gmail_link") or None, gmail_mailbox=meta.get("gmail_mailbox"))
+                         gmail_link=meta.get("gmail_link") or None, gmail_mailbox=meta.get("gmail_mailbox"),
+                         last_mail_at=datetime.fromisoformat(last) if last else None,
+                         forwarded_from=meta.get("forwarded_from"),
+                         gmail_reads_it=bool(g and src and g.email == src.lower()
+                                             and SCOPES["gmail.readonly"] in (g.scopes or [])))
 
 
 class EmailInOut(BaseModel):
@@ -125,8 +139,14 @@ async def email_inbound(request: Request, svc: Svc) -> EmailInOut:
             except Exception:  # noqa: BLE001 - the code or link is on Settings either way
                 logging.getLogger(__name__).info("forwarding confirmation note failed", exc_info=True)
             return EmailInOut(accepted=True, confirmation=True)
-        await conn.execute(text("UPDATE connectors SET cursor = now()::text, updated_at = now() WHERE id = :id"),
-                           {"id": p.connector_id})
+        # Mail is arriving: note when and from which mailbox; once Gmail itself forwards, its confirmation is done.
+        from kritvia_api.services.pollers import forwarded_from
+        via = forwarded_from(msg)
+        await conn.execute(text(
+            "UPDATE connectors SET cursor = now()::text, updated_at = now(), meta = (CASE WHEN CAST(:f AS text) IS NULL"
+            " THEN meta ELSE meta - 'gmail_code' - 'gmail_link' || jsonb_build_object('forwarded_from', CAST(:f AS text))"
+            " END) || jsonb_build_object('last_mail_at', CAST(:t AS text)) WHERE id = :id"),
+            {"id": p.connector_id, "f": via, "t": datetime.now(UTC).isoformat()})
     if not await _plan_allows(p.run_as, p.venture_id, "gmail"):
         return EmailInOut(accepted=False)
     started = await deliver_forwarded(svc, p.org_id, p.venture_id, p.run_as, msg)

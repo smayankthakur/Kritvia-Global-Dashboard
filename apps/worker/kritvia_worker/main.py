@@ -147,6 +147,12 @@ async def gstr1_ready(ctx: dict) -> int:
     return await money_watch.gstr1_ready(ctx["services"])
 
 
+async def cash_week(ctx: dict) -> int:
+    """Mondays 09:05 IST: the cash position for the next 30/60/90 days to each business's owners and admins."""
+    from kritvia_api.services import cash
+    return await cash.cash_week(ctx["services"])
+
+
 async def dispatch_events(ctx: dict) -> int:
     """The business event stream: skills that start right after an event, and "tell me when" alerts."""
     from kritvia_api.services import events
@@ -284,6 +290,7 @@ class WorkerSettings:
         cron(nudge_expiring, minute={7, 37}, second=15, run_at_startup=False),
         cron(bills_due, hour={9}, minute={15}, run_at_startup=False),
         cron(gstr1_ready, hour={9}, minute={25}, run_at_startup=False),
+        cron(cash_week, hour={9}, minute={5}, run_at_startup=False),
         cron(dispatch_events, second=20, run_at_startup=False),
         cron(attendance_check, hour={12}, minute={5}, run_at_startup=False),
         cron(purge_candidates, hour={3}, minute={35}, run_at_startup=False),

@@ -154,11 +154,13 @@ async def upsert_lead(ctx: RunContext, state: dict) -> Goto:
         else:
             lead_id = (await conn.execute(text(
                 "INSERT INTO leads (org_id, venture_id, name, email, company, source, phone, budget_inr, timeline,"
-                " details_enc, last_run_id) VALUES (:o, :v, :n, :e, :c, :s, :p, :b, :t, :d, :r) RETURNING id"),
+                " details_enc, last_run_id, ad_source, ad_campaign)"
+                " VALUES (:o, :v, :n, :e, :c, :s, :p, :b, :t, :d, :r, :as, :ac) RETURNING id"),
                 {"o": ctx.org_id, "v": ctx.venture_id, "n": name[:200], "e": email,
                  "c": company and canonical(company) and company[:200], "s": inp.get("source", ctx.trigger_kind),
                  "p": ex.get("phone"), "b": state.get("budget_inr"), "t": ex.get("timeline"), "d": enc,
-                 "r": ctx.run_id})).scalar_one()
+                 "r": ctx.run_id, "as": inp.get("ad_source") if inp.get("ad_source") in ("meta", "google") else None,
+                 "ac": (str(inp.get("ad_campaign") or "")[:120] or None) if inp.get("ad_source") else None})).scalar_one()
             dup = False
     return Goto("retrieve", update={"lead_id": str(lead_id), "duplicate": dup,
                                     "summary": {"lead_id": str(lead_id), "duplicate": dup}},
@@ -462,4 +464,33 @@ def lead_from_webhook(payload: dict[str, Any]) -> dict[str, Any]:
         email = None
     return {"source": "webhook", "from_name": pick("name", "full_name", "from_name"), "from_email": email,
             "company": pick("company", "organisation", "organization"),
-            "subject": pick("subject") or "Website inquiry", "body": message}
+            "subject": pick("subject") or "Website inquiry", "body": message, **ad_tags(payload)}
+
+
+AD_SOURCES = {"facebook": "meta", "fb": "meta", "instagram": "meta", "ig": "meta", "meta": "meta",
+              "google": "google", "adwords": "google", "googleads": "google", "youtube": "google"}
+
+
+def ad_tags(payload: dict[str, Any]) -> dict[str, str]:
+    """Which ad brought a website-form lead: the page's UTM tags (utm_source, utm_campaign, also nested under
+    "utm"), or Google's gclid / Meta's fbclid click ids. Only paid sources are kept (utm_medium cpc/paid/ads, or
+    a click id), so a free Instagram bio link isn't counted as an ad."""
+    utm = payload.get("utm") if isinstance(payload.get("utm"), dict) else {}
+
+    def get(k: str) -> str:
+        v = payload.get(f"utm_{k}") or utm.get(k) or utm.get(f"utm_{k}") or ""
+        return v.strip() if isinstance(v, str) else ""
+    src, medium, campaign = get("source").lower(), get("medium").lower(), get("campaign")
+    platform = AD_SOURCES.get(re.sub(r"[^a-z]", "", src))
+    if not platform and payload.get("gclid"):
+        platform = "google"
+    if not platform and payload.get("fbclid"):
+        platform = "meta"
+    paid = bool(payload.get("gclid") or payload.get("fbclid")) or medium in (
+        "cpc", "ppc", "paid", "paid_social", "paidsocial", "ads", "ad", "display", "paid-social", "cpm")
+    if not platform or not paid:
+        return {}
+    out = {"ad_source": platform}
+    if campaign:
+        out["ad_campaign"] = campaign[:120]
+    return out

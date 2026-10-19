@@ -181,6 +181,18 @@ class GoogleClient:
     async def gbp_reply(self, token: str, review_name: str, comment: str) -> dict[str, Any]:
         return await self._req("PUT", f"{GBP_V4}/{review_name}/reply", token, json={"comment": comment})
 
+    async def gbp_listing(self, token: str, location: str) -> dict[str, Any]:
+        """The listing's title, opening hours, website and main phone (Business Information API)."""
+        info = location[location.index("locations/"):]
+        return await self._req("GET", f"{GBP_INFO}/{info}", token,
+                               params={"readMask": "name,title,regularHours,websiteUri,phoneNumbers"})
+
+    async def gbp_set_hours(self, token: str, location: str, periods: list[dict[str, Any]]) -> dict[str, Any]:
+        """Replaces the listing's regular opening hours."""
+        info = location[location.index("locations/"):]
+        return await self._req("PATCH", f"{GBP_INFO}/{info}", token, params={"updateMask": "regularHours"},
+                               json={"regularHours": {"periods": periods}})
+
     async def gbp_post(self, token: str, location: str, summary: str) -> dict[str, Any]:
         """A 'What's new' update on the business's Google profile."""
         return await self._req("POST", f"{GBP_V4}/{location}/localPosts", token,

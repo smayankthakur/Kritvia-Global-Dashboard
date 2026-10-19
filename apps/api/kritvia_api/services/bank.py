@@ -357,6 +357,66 @@ def read(data: bytes, filename: str, pdf_text: str | None = None) -> Statement:
     return st
 
 
+# ------------------------------------------------------------------------------- PDFs with a password --
+def pdf_encrypted(data: bytes) -> bool:
+    return b"/Encrypt" in data[:200_000] or b"/Encrypt" in data[-4000:]
+
+
+def pdf_text(data: bytes, password: str) -> str:
+    """The text of a password-protected statement PDF (most banks' e-statements are: the password is usually
+    the customer ID or part of the date of birth). The password stays in memory only for this call."""
+    from pypdf import PdfReader
+    from pypdf.errors import PdfReadError
+    try:
+        r = PdfReader(io.BytesIO(data))
+        if r.is_encrypted and not r.decrypt(password):
+            raise StatementError("the saved statement password doesn't open this PDF: check it on Money → Bank")
+        txt = "\n".join((p.extract_text() or "") for p in r.pages[:60])
+    except StatementError:
+        raise
+    except (PdfReadError, ValueError, KeyError, NotImplementedError) as exc:
+        raise StatementError(f"couldn't read this PDF ({type(exc).__name__})") from None
+    if len(txt.strip()) < 20:
+        raise StatementError("the PDF has no readable text")
+    return txt
+
+
+# ----------------------------------------------------------------------------------- statements by email --
+# Indian banks' statement senders (subdomains count: alerts.hdfcbank.net, estatement.icicibank.com, ...).
+BANK_DOMAINS = (
+    "hdfcbank.net", "hdfcbank.com", "hdfcbank.bank.in", "icicibank.com", "icici.bank.in", "sbi.co.in",
+    "onlinesbi.sbi", "sbi.bank.in", "axisbank.com", "axis.bank.in", "kotak.com", "kotak.bank.in", "yesbank.in",
+    "idfcfirstbank.com", "indusind.com", "pnb.co.in", "bankofbaroda.com", "bankofbaroda.co.in", "canarabank.com",
+    "canarabank.in", "unionbankofindia.co.in", "unionbankofindia.bank.in", "federalbank.co.in", "rblbank.com",
+    "aubank.in", "bandhanbank.com", "idbibank.co.in", "idbi.bank.in", "bankofindia.co.in", "centralbankofindia.co.in",
+    "iob.in", "ucobank.co.in", "indianbank.in", "dbs.com", "sc.com", "hsbc.co.in", "citi.com", "equitasbank.com",
+    "ujjivansfb.in", "jkbank.com", "southindianbank.com", "karurvysyabank.co.in", "tmb.in", "dcbbank.com",
+    "csb.co.in", "kvb.co.in", "cityunionbank.com", "saraswatbank.com", "cosmosbank.com",
+)
+STATEMENT_SUBJECT = re.compile(r"(?i)\b(e-?statement|account statement|statement of account|statement for|"
+                               r"monthly statement|bank statement)\b")
+STATEMENT_FILES = (".pdf", ".csv", ".xlsx")
+
+
+def from_bank(sender_email: str) -> bool:
+    dom = (sender_email or "").lower().rpartition("@")[2]
+    return any(dom == d or dom.endswith("." + d) for d in BANK_DOMAINS)
+
+
+def statement_attachment(sender_email: str, subject: str, attachments: list[dict]) -> dict | None:
+    """The statement file in a bank's statement email, or None when the email isn't one. Credit-card
+    statements are left alone (they don't show the business's receipts)."""
+    if not from_bank(sender_email) or not STATEMENT_SUBJECT.search(subject or ""):
+        return None
+    if re.search(r"(?i)credit card|card statement", subject or ""):
+        return None
+    for a in attachments:
+        name = str(a.get("filename") or "").lower()
+        if name.endswith(STATEMENT_FILES) and 0 < int(a.get("size") or 0) <= 15 * 1024 * 1024:
+            return a
+    return None
+
+
 # ----------------------------------------------------------------------------------------- matching --
 STOP_WORDS = {"pvt", "ltd", "private", "limited", "the", "and", "llp", "co", "company", "india", "traders",
               "enterprises", "services", "solutions", "shop", "store", "mr", "mrs", "ms", "sri", "shri", "smt",
