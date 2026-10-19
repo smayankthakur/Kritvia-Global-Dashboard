@@ -8809,6 +8809,11 @@ export interface components {
             connector_id: string;
             /** Gmail Code */
             gmail_code?: string | null;
+            /**
+             * Gmail Link
+             * @description Gmail's confirmation link (newer Gmail sends a link instead of a code): open it to finish
+             */
+            gmail_link?: string | null;
             /** Gmail Mailbox */
             gmail_mailbox?: string | null;
         };

@@ -5,12 +5,14 @@ inbound endpoint is public but only accepts messages signed by the Cloudflare em
 """
 from __future__ import annotations
 
+import logging
+
 import re
 import secrets
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from kritvia_api.config import get_settings
@@ -33,6 +35,8 @@ class ForwardingOut(BaseModel):
     connector_id: uuid.UUID
     address: str
     gmail_code: str | None = None
+    gmail_link: str | None = Field(default=None, description="Gmail's confirmation link (newer Gmail sends a link "
+                                                              "instead of a code): open it to finish")
     gmail_mailbox: str | None = None
 
 
@@ -67,8 +71,8 @@ async def get_forwarding(venture_id: uuid.UUID, db: TenantDB) -> ForwardingOut |
     if row is None:
         return None
     meta = dict(row.meta or {})
-    return ForwardingOut(connector_id=row.id, address=row.account_email, gmail_code=meta.get("gmail_code"),
-                         gmail_mailbox=meta.get("gmail_mailbox"))
+    return ForwardingOut(connector_id=row.id, address=row.account_email, gmail_code=meta.get("gmail_code") or None,
+                         gmail_link=meta.get("gmail_link") or None, gmail_mailbox=meta.get("gmail_mailbox"))
 
 
 class EmailInOut(BaseModel):
@@ -102,11 +106,24 @@ async def email_inbound(request: Request, svc: Svc) -> EmailInOut:
     confirm = email_in.gmail_confirmation(msg)
     async with tenant_tx(p.run_as, "agent", "email_in") as conn:
         if confirm:
-            # Gmail asks the new forwarding address to confirm; the owner copies this code into Gmail.
+            # Gmail asks the new forwarding address to confirm: the owner enters the code in Gmail, or (newer
+            # Gmail) opens the confirmation link. Both are shown on Settings, and the owners are told now.
             await conn.execute(text(
                 "UPDATE connectors SET meta = meta || jsonb_build_object('gmail_code', CAST(:c AS text),"
-                " 'gmail_mailbox', CAST(:m AS text)), updated_at = now() WHERE id = :id"),
-                {"c": confirm["code"], "m": confirm["mailbox"], "id": p.connector_id})
+                " 'gmail_link', CAST(:l AS text), 'gmail_mailbox', CAST(:m AS text)), updated_at = now()"
+                " WHERE id = :id"),
+                {"c": confirm["code"], "l": confirm["link"], "m": confirm["mailbox"], "id": p.connector_id})
+            try:
+                from kritvia_api.services.owner_news import tell_admins
+                who = confirm["mailbox"] or "your mailbox"
+                how = ("open Kritvia's Settings and press Confirm in Gmail (it opens Google's own confirmation page)"
+                       if confirm["link"] else f"enter the code {confirm['code']} in Gmail's forwarding settings")
+                await tell_admins(svc, conn, p.venture_id, subject=f"Finish email forwarding from {who}",
+                                  body=f"Gmail asks to confirm forwarding {who} to Kritvia. To finish, {how}. Only do "
+                                       f"this if {who} is your own mailbox.",
+                                  path=f"/v/{p.venture_id}/settings", tag=f"gmail-forwarding-{p.venture_id}")
+            except Exception:  # noqa: BLE001 - the code or link is on Settings either way
+                logging.getLogger(__name__).info("forwarding confirmation note failed", exc_info=True)
             return EmailInOut(accepted=True, confirmation=True)
         await conn.execute(text("UPDATE connectors SET cursor = now()::text, updated_at = now() WHERE id = :id"),
                            {"id": p.connector_id})

@@ -865,7 +865,7 @@ function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: 
   const q = useQuery({
     queryKey: key,
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors/email-forwarding", { params: { path: { venture_id: ventureId } } })),
-    refetchInterval: (query) => (query.state.data && !query.state.data.gmail_code ? 15_000 : false),
+    refetchInterval: (query) => (query.state.data && !query.state.data.gmail_code && !query.state.data.gmail_link ? 15_000 : false),
   });
   const create = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/connectors/email-forwarding", { params: { path: { venture_id: ventureId } } })),
@@ -893,15 +893,30 @@ function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: 
         {f ? (
           <>
             <CopyField label="Your forwarding address" value={f.address} />
-            {f.gmail_code ? (
+            {f.gmail_link ? (
+              <Notice tone="success" title={`Gmail asks you to confirm forwarding from ${f.gmail_mailbox || "your mailbox"}`}>
+                Only if that is your own mailbox: open Google&apos;s confirmation page and press Confirm. Then, in Gmail&apos;s Forwarding settings,
+                choose &ldquo;Forward a copy of incoming mail&rdquo; and Save.
+                <div className="mt-2">
+                  <a
+                    className="text-sm font-medium text-accent underline underline-offset-2"
+                    href={f.gmail_link}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Confirm in Gmail
+                  </a>
+                </div>
+              </Notice>
+            ) : f.gmail_code ? (
               <Notice tone="success">
                 Gmail sent a confirmation code for {f.gmail_mailbox || "your mailbox"}: <strong className="font-mono">{f.gmail_code}</strong>. Enter it in Gmail to finish.
               </Notice>
             ) : null}
             <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
               <li>In Gmail, open Settings → See all settings → Forwarding and POP/IMAP → Add a forwarding address.</li>
-              <li>Paste the address above. Gmail sends a confirmation code; it appears here within a minute.</li>
-              <li>Enter the code in Gmail, choose &ldquo;Forward a copy of incoming mail&rdquo; and keep Gmail&apos;s copy. Save.</li>
+              <li>Paste the address above. Gmail sends a confirmation (a link or a code); it appears here within a minute.</li>
+              <li>Confirm it, then choose &ldquo;Forward a copy of incoming mail&rdquo; and keep Gmail&apos;s copy. Save.</li>
             </ol>
             <p className="text-xs text-subtle">
               Outlook, Zoho Mail and others work too: add a rule that forwards incoming mail to this address. Forwarded mail can&apos;t be checked for who

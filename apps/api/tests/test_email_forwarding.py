@@ -120,6 +120,32 @@ async def test_gmail_confirmation_code_is_shown_to_the_owner(shop, inbound, clie
     assert got["gmail_code"] == "481516234" and got["gmail_mailbox"] == "owner@gmail.com"
 
 
+async def test_gmails_newer_confirmation_link_is_shown_and_the_owner_told(shop, inbound, client):
+    from kritvia_api.services.mailer import get_mailer
+    m = shop["mayank"]
+    address = (await m.post(f"/ventures/{shop['v']}/connectors/email-forwarding")).json()["address"]
+    link = "https://mail.google.com/mail/vf-%5BANGjdJ9abc%5D-Xyz123_abcdefgh"
+    raw = mail(frm="Gmail Team <forwarding-noreply@google.com>",
+               subject="(Gmail Forwarding confirmation – Receive mail from owner@gmail.com",
+               body="owner@gmail.com has requested to automatically forward mail to your email\naddress "
+                    f"{address}.\n\nTo allow owner@gmail.com to automatically forward mail to your address,\n"
+                    f"please click the link below to confirm the request:\n\n{link}\n\nThanks for using Gmail.\n")
+    before = len(get_mailer().outbox)
+    res = await client.post("/public/email-in", content=raw, headers=signed(raw, address))
+    assert res.json()["confirmation"] is True and res.json()["started"] == {}
+    got = (await m.get(f"/ventures/{shop['v']}/connectors/email-forwarding")).json()
+    assert got["gmail_link"] == link and got["gmail_mailbox"] == "owner@gmail.com" and got["gmail_code"] is None
+    told = [x for x in get_mailer().outbox[before:] if "Finish email forwarding" in x["Subject"]]
+    assert told and "owner@gmail.com" in told[0]["Subject"]
+    # a link anywhere but Google's own mail domain is never offered
+    raw = mail(frm="Gmail Team <forwarding-noreply@google.com>",
+               subject="Gmail Forwarding confirmation", body="click https://evil.example.com/mail/vf-abcdefghijk\n")
+    assert email_in.gmail_confirmation(email_in.parse(raw)) is None
+    raw = mail(frm="Someone <forwarding-noreply@g00gle.com>", subject="Gmail Forwarding confirmation",
+               body=f"click {link}\n")
+    assert email_in.gmail_confirmation(email_in.parse(raw)) is None
+
+
 async def test_only_an_admin_sets_up_forwarding(shop, inbound):
     r = await shop["vera"].post(f"/ventures/{shop['site']}/connectors/email-forwarding")
     assert r.status_code == 404

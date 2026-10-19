@@ -7521,6 +7521,18 @@
             ],
             "title": "Gmail Code"
           },
+          "gmail_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Gmail's confirmation link (newer Gmail sends a link instead of a code): open it to finish",
+            "title": "Gmail Link"
+          },
           "gmail_mailbox": {
             "anyOf": [
               {

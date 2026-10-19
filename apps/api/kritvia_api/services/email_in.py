@@ -102,15 +102,24 @@ def parse(raw: bytes) -> InboundMail:
 
 
 CONFIRM_CODE = re.compile(r"(?:confirmation code|#)\s*:?\s*(\d{6,12})", re.I)
+# Gmail's newer confirmation has no code, only a link on Google's own domain:
+#   https://mail.google.com/mail/vf-%5B...%5D-...   (older: mail-settings.google.com/mail/vf-...)
+CONFIRM_LINK = re.compile(r"https://(?:mail|mail-settings)\.google\.com/mail/(?:u/\d+/)?vf-[^\s<>\"')\]]{8,600}")
+REQUESTER = re.compile(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+) has requested", re.I)
 
 
 def gmail_confirmation(m: InboundMail) -> dict[str, str] | None:
-    """Gmail's 'confirm this forwarding address' message: the code and the mailbox asking."""
-    if m.sender_email != GMAIL_CONFIRM_SENDER or "forwarding confirmation" not in m.subject.lower():
+    """Gmail's 'confirm this forwarding address' message: the code (older messages) or the confirmation link
+    (newer ones), and the mailbox asking. The link is only ever one on Google's own mail domain."""
+    if m.sender_email != GMAIL_CONFIRM_SENDER:
+        return None
+    text = f"{m.subject}\n{m.body}"
+    if "forwarding confirmation" not in text.lower():
         return None
     code = CONFIRM_CODE.search(m.subject) or CONFIRM_CODE.search(m.body)
-    who = re.search(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+)", m.subject.split("from", 1)[-1]) or \
-        re.search(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+) has requested", m.body)
-    if not code:
+    link = CONFIRM_LINK.search(m.body)
+    who = REQUESTER.search(m.body) or re.search(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+)", m.subject.split("from", 1)[-1])
+    if not code and not link:
         return None
-    return {"code": code.group(1), "mailbox": who.group(1).lower() if who else ""}
+    return {"code": code.group(1) if code else "", "link": link.group(0) if link else "",
+            "mailbox": who.group(1).lower() if who else ""}
