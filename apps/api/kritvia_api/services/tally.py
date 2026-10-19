@@ -171,3 +171,49 @@ def render_document(vouchers: list[Voucher], summary: dict[str, Any], *, busines
             bits.append(f"— {v.narration[:200]}")
         lines.append(" ".join(bits))
     return "\n".join(lines)
+
+
+# ------------------------------------------------------------------ Kritvia -> Tally (sales vouchers) --
+def _x(s: str | None) -> str:
+    from xml.sax.saxutils import escape
+    return escape((s or "").strip(), {'"': "&quot;"})
+
+
+def _amt(paise: int) -> str:
+    return f"{paise / 100:.2f}"
+
+
+def sales_voucher_xml(inv: dict[str, Any], ledgers: dict[str, str]) -> str:
+    """One Kritvia invoice as a Tally import request: the customer's ledger (made under Sundry Debtors if it
+    isn't there) and a Sales voucher. Debits are negative in Tally's XML."""
+    party = (inv["customer_name"] or "Customer")[:100]
+    total = int(inv["amount_paise"])
+    lines = [(party, -total, True)]
+    if inv.get("kind") == "gst" and inv.get("taxable_paise") is not None:
+        lines.append((ledgers["sales"], int(inv["taxable_paise"]), False))
+        for k in ("cgst", "sgst", "igst"):
+            if int(inv.get(f"{k}_paise") or 0):
+                lines.append((ledgers[k], int(inv[f"{k}_paise"]), False))
+        rest = total - sum(a for _, a, d in lines if not d)
+        if rest:                                   # rounding, if the invoice total was rounded off
+            lines.append((ledgers["round_off"], rest, False))
+    else:
+        lines.append((ledgers["sales"], total, False))
+    entries = "".join(
+        f"<ALLLEDGERENTRIES.LIST><LEDGERNAME>{_x(name)}</LEDGERNAME>"
+        f"<ISDEEMEDPOSITIVE>{'Yes' if debit else 'No'}</ISDEEMEDPOSITIVE>"
+        f"{'<ISPARTYLEDGER>Yes</ISPARTYLEDGER>' if debit else ''}"
+        f"<AMOUNT>{_amt(amount)}</AMOUNT></ALLLEDGERENTRIES.LIST>" for name, amount, debit in lines)
+    day = inv["issued_on"].strftime("%Y%m%d")
+    gstin = f"<PARTYGSTIN>{_x(inv['customer_gstin'])}</PARTYGSTIN>" if inv.get("customer_gstin") else ""
+    return ("<ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA>"
+            "<REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME></REQUESTDESC><REQUESTDATA>"
+            f'<TALLYMESSAGE xmlns:UDF="TallyUDF"><LEDGER NAME="{_x(party)}" ACTION="Create">'
+            f"<NAME.LIST><NAME>{_x(party)}</NAME></NAME.LIST><PARENT>Sundry Debtors</PARENT>{gstin}</LEDGER>"
+            "</TALLYMESSAGE>"
+            f'<TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER VCHTYPE="Sales" ACTION="Create">'
+            f"<DATE>{day}</DATE><VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>"
+            f"<VOUCHERNUMBER>{_x(inv['number'] or '')}</VOUCHERNUMBER>"
+            f"<PARTYLEDGERNAME>{_x(party)}</PARTYLEDGERNAME>{gstin}"
+            f"<NARRATION>{_x(('Kritvia invoice ' + (inv['number'] or '')).strip())}</NARRATION>"
+            f"{entries}</VOUCHER></TALLYMESSAGE></REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>")

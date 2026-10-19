@@ -83,6 +83,44 @@ def build_tools() -> ToolRegistry:
             "total_still_due": rupees(sum(r.amount_paise - r.paid_paise for r in rows if r.status == "open"))
             if rows else rupees(0)}
 
+    @reg.tool("bills.search", Capability.READ, "Look up the business's supplier bills: what it owes whom, and when")
+    async def bills_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from datetime import datetime
+
+        from kritvia_api.workflows.collections import nice_date, rupees
+        from kritvia_api.workflows.common import IST
+        show = str(p.get("show") or "unpaid")
+        where = {"overdue": "status = 'open' AND due_on < :today", "paid": "status = 'paid'"}.get(show, "status = 'open'")
+        params: dict[str, Any] = {"v": ctx.venture_id, "today": datetime.now(IST).date()}
+        q = str(p.get("vendor") or "").strip()
+        if q:
+            where += " AND vendor ILIKE :q"
+            params["q"] = f"%{q}%"
+        async with ctx.tx() as conn:
+            rows = (await conn.execute(text(
+                "SELECT vendor, number, amount_paise, paid_paise, due_on, status, paid_on, category FROM bills"
+                f" WHERE venture_id = :v AND {where} ORDER BY due_on LIMIT 30"), params)).all()
+        return {"bills": [{"supplier": r.vendor, "bill": r.number or "(no number)", "total": rupees(r.amount_paise),
+                           "still_due": rupees(r.amount_paise - r.paid_paise), "due": nice_date(r.due_on),
+                           "status": r.status, "category": r.category,
+                           "paid_on": nice_date(r.paid_on) if r.paid_on else None} for r in rows],
+                "total_still_due": rupees(sum(r.amount_paise - r.paid_paise for r in rows if r.status == "open"))}
+
+    @reg.tool("bank.unmatched", Capability.READ,
+              "Bank statement lines Kritvia hasn't matched to an invoice or a bill yet, and the matches waiting for a yes")
+    async def bank_unmatched(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.workflows.collections import nice_date, rupees
+        async with ctx.tx() as conn:
+            rows = (await conn.execute(text(
+                "SELECT line_date, left(narration, 80) AS narration, amount_paise, state, confidence FROM bank_lines"
+                " WHERE venture_id = :v AND state IN ('unmatched', 'suggested') ORDER BY line_date DESC LIMIT 30"),
+                {"v": ctx.venture_id})).all()
+        return {"lines": [{"date": nice_date(r.line_date), "narration": r.narration,
+                           "amount": ("+" if r.amount_paise > 0 else "-") + rupees(abs(r.amount_paise)),
+                           "state": "matched, waiting for a yes" if r.state == "suggested" else "not matched",
+                           "confidence": r.confidence} for r in rows],
+                "where": "Money → Bank in Kritvia"}
+
     @reg.tool("shipments.search", Capability.READ, "Look up the business's shipment files: stage, dates, documents still needed, alerts")
     async def shipments_search(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
         from datetime import datetime
@@ -388,5 +426,37 @@ def build_tools() -> ToolRegistry:
                               phone=str(p.get("phone") or ""), callee=p.get("name"),
                               purpose=str(p.get("purpose") or "")[:300], opening=p.get("opening"),
                               created_by=None, approval_id=ok.id if ok else None)
+
+    @reg.tool("google.review_reply", Capability.SEND,
+              "Post the business's reply to a Google review on its Business Profile, as the person approved it")
+    async def google_review_reply(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import gbp
+        comment = str(p.get("comment") or "").strip()[:4000]
+        async with ctx.tx() as conn:
+            prof = await gbp.profile(ctx.services, conn, ctx.venture_id)
+        await ctx.services.google.gbp_reply(prof.token, str(p["review_name"]), comment)
+        async with ctx.tx() as conn:
+            await conn.execute(text("UPDATE review_replies SET status = 'posted', draft = :d, posted_at = now(),"
+                                    " updated_at = now() WHERE id = :r AND venture_id = :v"),
+                               {"d": comment[:2000], "r": uuid.UUID(str(p["reply_id"])), "v": ctx.venture_id})
+        return {"posted": True, "channel": "google"}
+
+    @reg.tool("social.post", Capability.SEND,
+              "Post an update on the business's Google Business Profile and/or Facebook Page")
+    async def social_post(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import social
+        return await social.publish(ctx, uuid.UUID(str(p["post_id"])), str(p.get("body") or ""),
+                                    list(p.get("channels") or []))
+
+    @reg.tool("campaign.send", Capability.SEND,
+              "Send one campaign message to its fixed list of customers who agreed to hear from the business")
+    async def campaign_send(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        async with ctx.tx() as conn:
+            n = (await conn.execute(text(
+                "UPDATE campaigns SET status = 'sending' WHERE id = :c AND venture_id = :v AND status = 'waiting'"
+                " RETURNING recipients"), {"c": uuid.UUID(str(p["campaign_id"])), "v": ctx.venture_id})).scalar()
+        if n is None:
+            return {"started": False, "why": "the campaign was cancelled or already sent"}
+        return {"started": True, "recipients": int(n)}
 
     return reg

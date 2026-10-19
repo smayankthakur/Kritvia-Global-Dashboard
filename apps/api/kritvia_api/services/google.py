@@ -31,7 +31,14 @@ SCOPES = {
     "calendar.events": "https://www.googleapis.com/auth/calendar.events",
     "drive.readonly": "https://www.googleapis.com/auth/drive.readonly",
     "drive.file": "https://www.googleapis.com/auth/drive.file",
+    # Google Business Profile: post review replies and updates. Google must also approve the project for the
+    # Business Profile APIs (a one-time access request).
+    "business.manage": "https://www.googleapis.com/auth/business.manage",
 }
+GBP_ACCOUNTS = "https://mybusinessaccountmanagement.googleapis.com/v1/accounts"
+GBP_INFO = "https://mybusinessbusinessinformation.googleapis.com/v1"
+GBP_V4 = "https://mybusiness.googleapis.com/v4"
+STARS = {"ONE": 1, "TWO": 2, "THREE": 3, "FOUR": 4, "FIVE": 5}
 # Restricted scopes (gmail.readonly, drive.readonly) need Google's paid security assessment (CASA) past
 # 100 users. Everyone else connects with these: send mail, calendar, and only the Drive files they pick.
 # Their incoming mail arrives by forwarding (services/email_in.py).
@@ -145,6 +152,39 @@ class GoogleClient:
         if r.status_code >= 400:
             raise GoogleError(f"{method} {url.split('?')[0]} -> HTTP {r.status_code}")
         return r.json() if r.content else {}
+
+    # --- Google Business Profile ---------------------------------------------
+    async def gbp_locations(self, token: str) -> list[dict[str, str]]:
+        """The Business Profile locations this Google account manages: name 'accounts/N/locations/M', title."""
+        out: list[dict[str, str]] = []
+        accounts = (await self._req("GET", GBP_ACCOUNTS, token, params={"pageSize": 20})).get("accounts", [])
+        for a in accounts[:20]:
+            got = await self._req("GET", f"{GBP_INFO}/{a['name']}/locations", token,
+                                  params={"readMask": "name,title,storefrontAddress", "pageSize": 100})
+            for loc in got.get("locations", []):
+                addr = loc.get("storefrontAddress") or {}
+                lines = ", ".join([*addr.get("addressLines", []), addr.get("locality", "")]).strip(", ")
+                out.append({"name": f"{a['name']}/{loc['name']}", "title": loc.get("title", ""), "address": lines})
+        return out
+
+    async def gbp_reviews(self, token: str, location: str) -> list[dict[str, Any]]:
+        """The location's latest reviews: name, rating 1-5, reviewer, comment, and whether it has a reply."""
+        got = await self._req("GET", f"{GBP_V4}/{location}/reviews", token, params={"pageSize": 50})
+        out = []
+        for r in got.get("reviews", []):
+            out.append({"name": r.get("name", ""), "rating": STARS.get(r.get("starRating", ""), 0),
+                        "author": (r.get("reviewer") or {}).get("displayName", "A customer"),
+                        "text": r.get("comment", ""), "when": r.get("createTime", ""),
+                        "replied": bool((r.get("reviewReply") or {}).get("comment"))})
+        return out
+
+    async def gbp_reply(self, token: str, review_name: str, comment: str) -> dict[str, Any]:
+        return await self._req("PUT", f"{GBP_V4}/{review_name}/reply", token, json={"comment": comment})
+
+    async def gbp_post(self, token: str, location: str, summary: str) -> dict[str, Any]:
+        """A 'What's new' update on the business's Google profile."""
+        return await self._req("POST", f"{GBP_V4}/{location}/localPosts", token,
+                               json={"languageCode": "en-IN", "summary": summary, "topicType": "STANDARD"})
 
     # --- Gmail ----------------------------------------------------------------
     async def list_message_ids(self, token: str, query: str, max_results: int = 25) -> list[str]:

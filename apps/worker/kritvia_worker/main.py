@@ -135,6 +135,18 @@ async def nudge_expiring(ctx: dict) -> int:
     return await sc.nudge(ctx["services"])
 
 
+async def bills_due(ctx: dict) -> int:
+    """Supplier bills due within 3 days or overdue: the owners are told once a day (services/money_watch.py)."""
+    from kritvia_api.services import money_watch
+    return await money_watch.bills_due(ctx["services"])
+
+
+async def gstr1_ready(ctx: dict) -> int:
+    """On the 3rd: last month's GSTR-1 is ready to download."""
+    from kritvia_api.services import money_watch
+    return await money_watch.gstr1_ready(ctx["services"])
+
+
 async def sweep(ctx: dict) -> int:
     return await sweep_runs(ctx["services"])
 
@@ -249,6 +261,8 @@ class WorkerSettings:
         cron(morning_check, hour={6}, minute={30}),
         cron(self_check, hour={8}, minute={40}, run_at_startup=False),
         cron(nudge_expiring, minute={7, 37}, second=15, run_at_startup=False),
+        cron(bills_due, hour={9}, minute={15}, run_at_startup=False),
+        cron(gstr1_ready, hour={9}, minute={25}, run_at_startup=False),
     ]
     on_startup = startup
     on_shutdown = shutdown

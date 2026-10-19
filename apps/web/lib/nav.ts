@@ -27,6 +27,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   ListChecks,
+  Megaphone,
   MessageCircle,
   MessageSquareText,
   Mic,
@@ -43,6 +44,7 @@ import {
   TrendingUp,
   Users,
   UsersRound,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { VentureKind } from "./access";
@@ -95,8 +97,10 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
     { label: "Assistant", href: `${v}/assistant`, icon: MessageSquareText },
     { label: "Chats", href: `${v}/whatsapp`, icon: MessageCircle },
     { label: "Invoices", href: `${v}/invoices`, icon: IndianRupee },
+    { label: "Money", href: `${v}/money`, icon: Wallet },
     { label: "Bookings", href: `${v}/bookings`, icon: CalendarCheck },
     { label: "Reviews", href: `${v}/reviews`, icon: Star },
+    { label: "Marketing", href: `${v}/marketing`, icon: Megaphone },
     { label: "Automations", href: `${v}/automations`, icon: Repeat },
     { label: "Browser", href: `${v}/browser`, icon: Globe },
     { label: "Calls", href: `${v}/calls`, icon: PhoneCall },

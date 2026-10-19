@@ -42,9 +42,9 @@ def test_agents_that_look_on_can_run(report):
     assert not report["integrity"], report["integrity"]
     clock = {w.name for w in registry.all() if w.starts == "clock"}
     assert clock == {"prospector", "collections", "kitchen_daily", "trade_watch", "whatsapp_followup", "reviews",
-                     "booking_reminders"}
+                     "booking_reminders", "social"}
     assert {w.name for w in registry.all() if w.starts == "request"} == {"assistant", "browser", "voice_call",
-                                                                          "trade_update"}
+                                                                          "trade_update", "campaign"}
 
 
 def test_levels_must_be_earned():

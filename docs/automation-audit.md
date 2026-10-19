@@ -54,6 +54,13 @@ Each job also has a **ceiling** (calls, loan papers, web forms and money keep a 
   it today (and, for an old draft, makes it due a week later). Discarding a draft cancels it.
 - The morning check lists drafts waiting to be issued.
 
+## Fill the gaps (0062)
+
+Bank statement matching, supplier bills (with `bills_due` reminders), the GSTR-1 export (with `gstr1_ready` on
+the 3rd), the Tally companion sync, Google Business Profile replies, social posts and campaigns: see
+[money-and-marketing.md](money-and-marketing.md). The morning check also lists bank matches waiting and overdue
+bills. Scorecard: autonomy 74 (from 67).
+
 ## Run it
 
 ```

@@ -78,16 +78,17 @@ class Messaging:
 
     async def _record(self, ctx: RunContext, approval_id: uuid.UUID, *, channel: str, recipient: str,
                       subject: str | None, body: str, transport: str, status: str,
-                      provider_id: str | None = None, error: str | None = None) -> None:
+                      provider_id: str | None = None, error: str | None = None,
+                      campaign_recipient: uuid.UUID | None = None) -> None:
         async with ctx.tx() as conn:
             enc = await ctx.crypto(conn).encrypt(ctx.venture_id, "outbox.body", body)
             await conn.execute(
                 text("INSERT INTO outbox_messages (org_id, venture_id, approval_id, channel, recipient, subject,"
-                     " body_enc, transport, status, provider_message_id, error)"
-                     " VALUES (:o, :v, :a, :c, :r, :s, :b, :t, :st, :p, :e)"),
+                     " body_enc, transport, status, provider_message_id, error, campaign_recipient_id)"
+                     " VALUES (:o, :v, :a, :c, :r, :s, :b, :t, :st, :p, :e, :cr)"),
                 {"o": ctx.org_id, "v": ctx.venture_id, "a": approval_id, "c": channel, "r": recipient[:500],
                  "s": (subject or "")[:500], "b": enc, "t": transport, "st": status, "p": provider_id,
-                 "e": error})
+                 "e": error, "cr": campaign_recipient})
 
     async def _chat(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, body: str, status: str,
                     provider_id: str | None = None, error: str | None = None, kind: str = "text",
@@ -101,7 +102,8 @@ class Messaging:
 
     async def send_email(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, subject: str, body: str,
                          cc: list[str] | None = None, thread_id: str | None = None,
-                         attachments: list[tuple[str, str, bytes]] | None = None) -> dict[str, Any]:
+                         attachments: list[tuple[str, str, bytes]] | None = None,
+                         campaign_recipient: uuid.UUID | None = None) -> dict[str, Any]:
         if not to or "@" not in to:
             raise MessagingError("recipient email is missing or invalid")
         google = await self._google_token(ctx, "gmail.send")
@@ -112,17 +114,17 @@ class Messaging:
                                                     thread_id=thread_id, sender=g.email, attachments=attachments)
             except Exception as exc:
                 await self._record(ctx, approval_id, channel="email", recipient=to, subject=subject, body=body,
-                                   transport="gmail", status="failed", error=str(exc)[:300])
+                                   transport="gmail", status="failed", error=str(exc)[:300], campaign_recipient=campaign_recipient)
                 raise MessagingError(f"gmail send failed: {exc}") from exc
             await self._record(ctx, approval_id, channel="email", recipient=to, subject=subject, body=body,
-                               transport="gmail", status="sent", provider_id=sent["id"])
+                               transport="gmail", status="sent", provider_id=sent["id"], campaign_recipient=campaign_recipient)
             return {"transport": "gmail", "status": "sent", "message_id": sent["id"],
                     "thread_id": sent.get("thread_id") or thread_id or ""}
         if self.fallback == "log":
             await self._record(ctx, approval_id, channel="email", recipient=to, subject=subject,
                                body=body + (f"\n\n[attachments: {', '.join(a[0] for a in attachments)}]"
                                             if attachments else ""),
-                               transport="log", status="logged")
+                               transport="log", status="logged", campaign_recipient=campaign_recipient)
             return {"transport": "log", "status": "logged"}
         raise MessagingError("no email connector for this venture (connect Google in Settings)")
 
@@ -215,7 +217,8 @@ class Messaging:
         raise MessagingError("no Telegram bot for this business (connect one in Settings → Connectors)")
 
     async def send_whatsapp_template(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str,
-                                     template_id: str, params: list[Any]) -> dict[str, Any]:
+                                     template_id: str, params: list[Any],
+                                     campaign_recipient: uuid.UUID | None = None) -> dict[str, Any]:
         """Sends one of the business's approved templates to someone who agreed to hear from it. The text
         is rendered again from the template, so what goes out is exactly what was approved."""
         from kritvia_api.services import wa_templates
@@ -231,7 +234,7 @@ class Messaging:
         if not (wa and self.whatsapp is not None):
             if self.fallback == "log":
                 await self._record(ctx, approval_id, channel="whatsapp", recipient=contact.phone, subject=t.name,
-                                   body=body, transport="log", status="logged")
+                                   body=body, transport="log", status="logged", campaign_recipient=campaign_recipient)
                 return {"transport": "log", "status": "logged"}
             raise MessagingError("no WhatsApp connector for this venture (connect WhatsApp in Settings)")
         try:
@@ -239,12 +242,12 @@ class Messaging:
                                                     params=clean)
         except WhatsAppError as exc:
             await self._record(ctx, approval_id, channel="whatsapp", recipient=contact.phone, subject=t.name,
-                               body=body, transport="whatsapp", status="failed", error=str(exc)[:300])
+                               body=body, transport="whatsapp", status="failed", error=str(exc)[:300], campaign_recipient=campaign_recipient)
             await self._chat(ctx, approval_id, to=contact.phone, body=body, status="failed", error=str(exc),
                              kind="template")
             raise MessagingError(str(exc)) from exc
         await self._record(ctx, approval_id, channel="whatsapp", recipient=contact.phone, subject=t.name, body=body,
-                           transport="whatsapp", status="sent", provider_id=mid)
+                           transport="whatsapp", status="sent", provider_id=mid, campaign_recipient=campaign_recipient)
         await self._chat(ctx, approval_id, to=contact.phone, body=body, status="sent", provider_id=mid,
                          kind="template")
         return {"transport": "whatsapp", "status": "sent", "message_id": mid, "template": t.name}

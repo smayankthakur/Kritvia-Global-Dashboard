@@ -50,6 +50,8 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
     "web.browse": {"task": "what to find out on the web, with the site if you know it",
                    "url": "optional: the page to start on"},
     "invoices.search": {"show": "unpaid (default), overdue or paid", "customer": "optional: part of a customer's name"},
+    "bills.search": {"show": "unpaid (default), overdue or paid", "vendor": "optional: part of a supplier's name"},
+    "bank.unmatched": {},
     "shipments.search": {"query": "optional: file number, buyer/supplier/client, reference, BL/AWB, container or customs no.",
                          "show": "open (default) or all"},
     "leads.search": {"query": "a name, company, email or phone to look for (may be empty)",
@@ -72,7 +74,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
                               "description": "optional"},
 }
 REQUIRED: dict[str, tuple[str, ...]] = {
-    "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "shipments.search": (), "crm.update_lead": ("lead_id",),
+    "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "bills.search": (), "bank.unmatched": (), "shipments.search": (), "crm.update_lead": ("lead_id",),
     "business.numbers": (), "tasks.search": (), "approvals.waiting": (), "indiamart.enquiries": (),
     "team.handoff": ("to", "note"),
     "web.browse": ("task",),

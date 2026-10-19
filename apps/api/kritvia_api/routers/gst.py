@@ -339,3 +339,81 @@ async def public_document(token: str, request: Request) -> InvoiceDocument:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "this invoice link isn't valid")
     async with tenant_tx(r.run_as, "agent", "payments") as conn:
         return await _document(conn, r.invoice_id, r.venture_id)
+
+
+# ------------------------------------------------------------------------------------------- GSTR-1 --
+class Gstr1Out(BaseModel):
+    month: str = Field(description="YYYY-MM")
+    gstin: str
+    totals: dict[str, int]
+    due_on: date = Field(description="the 11th of the next month (monthly filers)")
+    problems: list[str]
+
+
+def _month(month: str) -> tuple[date, date]:
+    m = re.fullmatch(r"(20\d\d)-(0[1-9]|1[0-2])", month or "")
+    if not m:
+        raise HTTPException(422, "month must look like 2026-09")
+    y, mo = int(m.group(1)), int(m.group(2))
+    first = date(y, mo, 1)
+    nxt = date(y + (mo == 12), mo % 12 + 1, 1)
+    from datetime import timedelta
+    return first, nxt - timedelta(days=1)
+
+
+async def _gstr1(db, venture_id: uuid.UUID, month: str):
+    from kritvia_api.services import gstr1
+    await venture_org(db, venture_id)
+    p = await _profile(db, venture_id)
+    if p is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "add the business's GST details first (Invoices → New GST invoice)")
+    first, last = _month(month)
+    rows = (await db.execute(text(
+        "SELECT id, number, issued_on, customer_name, customer_gstin, place_of_supply, reverse_charge, amount_paise,"
+        " status FROM invoices WHERE venture_id = :v AND kind = 'gst' AND status <> 'draft'"
+        " AND issued_on BETWEEN :a AND :b ORDER BY issued_on, number"), {"v": venture_id, "a": first, "b": last})).all()
+    items = (await db.execute(text(
+        "SELECT invoice_id, hsn_sac, description, qty, unit, gst_rate, taxable_paise, cgst_paise, sgst_paise,"
+        " igst_paise FROM invoice_items WHERE invoice_id = ANY(:ids) ORDER BY invoice_id, position"),
+        {"ids": [r.id for r in rows]})).all() if rows else []
+    by_inv: dict[uuid.UUID, list[gstr1.Item]] = {}
+    for it in items:
+        by_inv.setdefault(it.invoice_id, []).append(gstr1.Item(
+            hsn=it.hsn_sac, description=it.description, qty=Decimal(it.qty), unit=it.unit, rate=Decimal(it.gst_rate),
+            taxable=it.taxable_paise, cgst=it.cgst_paise, sgst=it.sgst_paise, igst=it.igst_paise))
+    invs = [gstr1.Inv(number=r.number, issued_on=r.issued_on, customer_name=r.customer_name,
+                      customer_gstin=r.customer_gstin, place_of_supply=r.place_of_supply,
+                      reverse_charge=r.reverse_charge, amount_paise=r.amount_paise, status=r.status,
+                      items=by_inv.get(r.id, [])) for r in rows]
+    return p, first, gstr1.build(p.gstin, p.state_code, first.year, first.month, invs)
+
+
+@router.get("/ventures/{venture_id}/gst/gstr1", response_model=Gstr1Out)
+async def gstr1_summary(venture_id: uuid.UUID, db: TenantDB, month: str) -> Gstr1Out:
+    """What the month's GSTR-1 holds, and anything to fix before filing."""
+    p, first, g = await _gstr1(db, venture_id, month)
+    problems = []
+    if g["totals"]["missing_hsn"]:
+        problems.append(f"{g['totals']['missing_hsn']} invoice line(s) have no HSN/SAC code; add one before filing")
+    if not g["totals"]["invoices"]:
+        problems.append("no tax invoices were issued in Kritvia this month (a nil return, or invoices made elsewhere)")
+    due = date(first.year + (first.month == 12), first.month % 12 + 1, 11)
+    return Gstr1Out(month=month, gstin=p.gstin, totals=g["totals"], due_on=due, problems=problems)
+
+
+@router.get("/ventures/{venture_id}/gst/gstr1/file")
+async def gstr1_file(venture_id: uuid.UUID, db: TenantDB, month: str, format: str = "xlsx"):
+    """The month's GSTR-1 as an Excel workbook (the GST offline tool's sheets) or as GSTR-1 JSON."""
+    from fastapi.responses import Response
+
+    from kritvia_api.services.xlsx import workbook
+    p, first, g = await _gstr1(db, venture_id, month)
+    name = f"GSTR1_{p.gstin}_{first.strftime('%m%Y')}"
+    if format == "json":
+        return Response(json.dumps(g["json"], indent=2), media_type="application/json",
+                        headers={"Content-Disposition": f'attachment; filename="{name}.json"'})
+    if format != "xlsx":
+        raise HTTPException(422, "format is xlsx or json")
+    return Response(workbook(g["sheets"]),
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f'attachment; filename="{name}.xlsx"'})

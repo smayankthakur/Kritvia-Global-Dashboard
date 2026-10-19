@@ -11,7 +11,7 @@ from kritvia_api.bodylimit import BodyLimitMiddleware
 from kritvia_api.config import get_settings
 from kritvia_api.db.session import dispose_engine
 from kritvia_api.errors import sqlstate
-from kritvia_api.routers import (agent_team, ai_models, browser, calls, analytics, api_keys, custom_workflows, automations, bookings, chat_approvals, coupons, device_link, email_in, sso, teams, trade, first_win, gst, approvals, assistant, audit, auth, billing, board, compliance, connectors, dashboard, invoices, kitchen, knowledge, leads,
+from kritvia_api.routers import (agent_team, ai_models, bank, bills, browser, campaigns, social, calls, analytics, api_keys, custom_workflows, automations, bookings, chat_approvals, coupons, device_link, email_in, sso, teams, trade, first_win, gst, approvals, assistant, audit, auth, billing, board, compliance, connectors, dashboard, invoices, kitchen, knowledge, leads,
                                  notice, orgs, partners, payments, privacy, push, reviews, sitelytc, skills, support, tally, task_boards, truhome, ventures, voice, whatsapp_chats, workflows)
 
 UNSAFE_DEFAULTS = ("dev-only-secret",)
@@ -96,7 +96,8 @@ def create_app() -> FastAPI:
               approvals.router, sitelytc.router, knowledge.router, truhome.router, kitchen.router,
               compliance.router, connectors.router, dashboard.router, voice.router, billing.router, support.router, assistant.router, tally.router,
               board.router, push.router, notice.router, ai_models.router, task_boards.router, privacy.router,
-              email_in.router, whatsapp_chats.router, invoices.router, chat_approvals.router, payments.router, first_win.router, gst.router, bookings.router, reviews.router, automations.router, partners.router, device_link.router, coupons.router, analytics.router, api_keys.router, custom_workflows.router, sso.router, trade.router, teams.router, skills.router, agent_team.router, browser.router, calls.router):
+              email_in.router, whatsapp_chats.router, invoices.router, chat_approvals.router, payments.router, first_win.router, gst.router, bookings.router, reviews.router, automations.router, partners.router, device_link.router, coupons.router, analytics.router, api_keys.router, custom_workflows.router, sso.router, trade.router, teams.router, skills.router, agent_team.router, browser.router, calls.router,
+              bank.router, bills.router, campaigns.router, social.router):
         app.include_router(r)
 
     @app.get("/healthz", tags=["ops"])

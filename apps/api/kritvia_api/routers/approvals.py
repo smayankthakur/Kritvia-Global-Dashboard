@@ -143,6 +143,14 @@ class DecisionIn(BaseModel):
 def validate_edit(original: dict[str, Any], edited: dict[str, Any], action: str = "") -> dict[str, Any]:
     if action == "voice.call" and "phone" in edited and edited["phone"] != original.get("phone"):
         raise HTTPException(422, "the number to call can't be changed; reject it and ask again")
+    changed = {k for k, v in edited.items() if v != original.get(k)}
+    if action == "campaign.send" and changed:
+        raise HTTPException(422, "a campaign is sent to the list exactly as it was fixed; change the campaign on "
+                                 "the Marketing page and send it again instead")
+    if action == "social.post" and changed - {"body"}:
+        raise HTTPException(422, "only the post's text can be edited here")
+    if action == "google.review_reply" and changed - {"comment"}:
+        raise HTTPException(422, "only the reply's text can be edited here")
     if action == "browser.submit":
         raise HTTPException(422, "a website form is sent exactly as shown, so it can't be edited here; "
                                  "reject it with a comment and the browser agent tries again")

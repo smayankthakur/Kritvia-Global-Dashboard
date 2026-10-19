@@ -637,6 +637,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/tally/{connector_id}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Companion Import
+         * @description The companion's Day Book export from Tally (raw XML body).
+         */
+        post: operations["companion_import_hooks_tally__connector_id__import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/tally/{connector_id}/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Companion Sales
+         * @description Kritvia's invoices Tally doesn't have yet, each as a ready Tally import request (oldest first, 100 at a
+         *     time). The companion posts each one to Tally and acknowledges the ones Tally created.
+         */
+        get: operations["companion_sales_hooks_tally__connector_id__sales_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/tally/{connector_id}/sales/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Companion Ack */
+        post: operations["companion_ack_hooks_tally__connector_id__sales_ack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/telegram/{connector_id}": {
         parameters: {
             query?: never;
@@ -1625,6 +1683,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/campaign-unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Campaign Unsubscribe */
+        post: operations["campaign_unsubscribe_public_campaign_unsubscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/coupons/{code}": {
         parameters: {
             query?: never;
@@ -2372,6 +2447,216 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/bank/confirm-sure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Sure */
+        post: operations["confirm_sure_ventures__venture_id__bank_confirm_sure_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bank/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Lines */
+        get: operations["list_lines_ventures__venture_id__bank_lines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bank/lines/{line_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Line */
+        post: operations["confirm_line_ventures__venture_id__bank_lines__line_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bank/lines/{line_id}/ignore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ignore Line */
+        post: operations["ignore_line_ventures__venture_id__bank_lines__line_id__ignore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bank/lines/{line_id}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Line */
+        post: operations["reset_line_ventures__venture_id__bank_lines__line_id__reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bank/rematch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rematch Lines */
+        post: operations["rematch_lines_ventures__venture_id__bank_rematch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bank/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Statements */
+        get: operations["list_statements_ventures__venture_id__bank_statements_get"];
+        put?: never;
+        /** Upload Statement */
+        post: operations["upload_statement_ventures__venture_id__bank_statements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bank/statements/{statement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Statement */
+        delete: operations["delete_statement_ventures__venture_id__bank_statements__statement_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Bills */
+        get: operations["list_bills_ventures__venture_id__bills_get"];
+        put?: never;
+        /** Create Bill */
+        post: operations["create_bill_ventures__venture_id__bills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bills/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Bill
+         * @description Reads a bill's photo or PDF and returns the fields for a person to check. Nothing is saved.
+         */
+        post: operations["read_bill_ventures__venture_id__bills_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bills/{bill_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Bill */
+        delete: operations["delete_bill_ventures__venture_id__bills__bill_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Bill */
+        patch: operations["update_bill_ventures__venture_id__bills__bill_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bills/{bill_id}/paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bill Paid */
+        post: operations["bill_paid_ventures__venture_id__bills__bill_id__paid_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/board": {
         parameters: {
             query?: never;
@@ -2682,6 +2967,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/business-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose Listing */
+        put: operations["choose_listing_ventures__venture_id__business_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/business-profile/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gbp Locations */
+        get: operations["gbp_locations_ventures__venture_id__business_profile_locations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/calls": {
         parameters: {
             query?: never;
@@ -2737,6 +3056,95 @@ export interface paths {
          * @description Delete a call and what was said in it (a do-not-call request it led to stays).
          */
         delete: operations["delete_call_ventures__venture_id__calls__call_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Campaigns */
+        get: operations["list_campaigns_ventures__venture_id__campaigns_get"];
+        put?: never;
+        /** Create Campaign */
+        post: operations["create_campaign_ventures__venture_id__campaigns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/campaigns/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audience Size */
+        get: operations["audience_size_ventures__venture_id__campaigns_audience_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/campaigns/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Campaign */
+        delete: operations["delete_campaign_ventures__venture_id__campaigns__campaign_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/campaigns/{campaign_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Campaign
+         * @description Stops a campaign: a draft or one waiting for its yes is cancelled; one sending stops after its batch.
+         */
+        post: operations["cancel_campaign_ventures__venture_id__campaigns__campaign_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/campaigns/{campaign_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Campaign */
+        post: operations["send_campaign_ventures__venture_id__campaigns__campaign_id__send_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2887,6 +3295,24 @@ export interface paths {
          */
         post: operations["create_forwarding_ventures__venture_id__connectors_email_forwarding_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/facebook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Connect Facebook */
+        put: operations["connect_facebook_ventures__venture_id__connectors_facebook_put"];
+        post?: never;
+        /** Disconnect Facebook */
+        delete: operations["disconnect_facebook_ventures__venture_id__connectors_facebook_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3085,6 +3511,63 @@ export interface paths {
          *     period is safe) and a summary document is filed in Knowledge so answers cite it.
          */
         post: operations["import_tally_ventures__venture_id__connectors_tally_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/tally/ledgers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Ledgers
+         * @description The Tally ledger names Kritvia's invoices are posted to (they must exist in Tally).
+         */
+        put: operations["set_ledgers_ventures__venture_id__connectors_tally_ledgers_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/tally/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sync Status */
+        get: operations["sync_status_ventures__venture_id__connectors_tally_sync_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/connectors/tally/sync-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make Sync Key
+         * @description A new sync key for the Tally companion (the old one stops working). Shown once.
+         */
+        post: operations["make_sync_key_ventures__venture_id__connectors_tally_sync_key_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3537,6 +4020,46 @@ export interface paths {
         get: operations["get_profile_ventures__venture_id__gst_profile_get"];
         /** Put Profile */
         put: operations["put_profile_ventures__venture_id__gst_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/gst/gstr1": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gstr1 Summary
+         * @description What the month's GSTR-1 holds, and anything to fix before filing.
+         */
+        get: operations["gstr1_summary_ventures__venture_id__gst_gstr1_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/gst/gstr1/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gstr1 File
+         * @description The month's GSTR-1 as an Excel workbook (the GST offline tool's sheets) or as GSTR-1 JSON.
+         */
+        get: operations["gstr1_file_ventures__venture_id__gst_gstr1_file_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -4249,6 +4772,26 @@ export interface paths {
         patch: operations["edit_reply_ventures__venture_id__review_replies__reply_id__patch"];
         trace?: never;
     };
+    "/ventures/{venture_id}/review-replies/{reply_id}/post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Reply
+         * @description Posts the reply on Google now (a person pressing Post is the yes).
+         */
+        post: operations["post_reply_ventures__venture_id__review_replies__reply_id__post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/review-settings": {
         parameters: {
             query?: never;
@@ -4683,6 +5226,40 @@ export interface paths {
         get: operations["skill_runs_ventures__venture_id__skills__skill_id__runs_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/social": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_ventures__venture_id__social_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/social/draft-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft Now */
+        post: operations["draft_now_ventures__venture_id__social_draft_now_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5471,6 +6048,11 @@ export interface components {
             /** Overall Mape */
             overall_mape: number | null;
         };
+        /** AckIn */
+        AckIn: {
+            /** Invoice Ids */
+            invoice_ids: string[];
+        };
         /** AgentIn */
         AgentIn: {
             /**
@@ -5958,6 +6540,16 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** AudienceOut */
+        AudienceOut: {
+            /**
+             * Capped
+             * @description more than a campaign can take; the first ones are used
+             */
+            capped: boolean;
+            /** People */
+            people: number;
+        };
         /** AuditOut */
         AuditOut: {
             /** Action */
@@ -6136,6 +6728,66 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** BillDraft */
+        BillDraft: {
+            /** Amount Paise */
+            amount_paise: number | null;
+            /** Bill Date */
+            bill_date: string | null;
+            /** Category */
+            category: string | null;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /** Gst Paise */
+            gst_paise: number;
+            /** Number */
+            number: string;
+            /** Unsure */
+            unsure: string[];
+            /** Vendor */
+            vendor: string;
+            /** Vendor Gstin */
+            vendor_gstin: string | null;
+        };
+        /** BillIn */
+        BillIn: {
+            /** Amount Paise */
+            amount_paise: number;
+            /** Bill Date */
+            bill_date?: string | null;
+            /** Category */
+            category?: string | null;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /**
+             * Gst Paise
+             * @default 0
+             */
+            gst_paise: number;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Number
+             * @default
+             */
+            number: string;
+            /**
+             * Source
+             * @default manual
+             * @enum {string}
+             */
+            source: "manual" | "file";
+            /** Vendor */
+            vendor: string;
+            /** Vendor Gstin */
+            vendor_gstin?: string | null;
+        };
         /** BillOut */
         BillOut: {
             /** Amount Paise */
@@ -6147,6 +6799,44 @@ export interface components {
             invoice_id: string;
             /** Number */
             number: string;
+        };
+        /** BillPatch */
+        BillPatch: {
+            /** Amount Paise */
+            amount_paise?: number | null;
+            /** Bill Date */
+            bill_date?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Due On */
+            due_on?: string | null;
+            /** Gst Paise */
+            gst_paise?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Number */
+            number?: string | null;
+            /** Status */
+            status?: ("open" | "cancelled") | null;
+            /** Vendor */
+            vendor?: string | null;
+            /** Vendor Gstin */
+            vendor_gstin?: string | null;
+        };
+        /** BillTotals */
+        BillTotals: {
+            /** Due This Week Paise */
+            due_this_week_paise: number;
+            /** Open Count */
+            open_count: number;
+            /** Overdue Count */
+            overdue_count: number;
+            /** Overdue Paise */
+            overdue_paise: number;
+            /** Paid This Month Paise */
+            paid_this_month_paise: number;
+            /** To Pay Paise */
+            to_pay_paise: number;
         };
         /** BillingEvent */
         BillingEvent: {
@@ -6193,6 +6883,12 @@ export interface components {
             legal_name: string;
             /** State Code */
             state_code?: string | null;
+        };
+        /** BillsOut */
+        BillsOut: {
+            /** Bills */
+            bills: components["schemas"]["SupplierBillOut"][];
+            totals: components["schemas"]["BillTotals"];
         };
         /** BoardOut */
         BoardOut: {
@@ -6251,6 +6947,11 @@ export interface components {
             /** Files */
             files: string[];
         };
+        /** Body_read_bill_ventures__venture_id__bills_read_post */
+        Body_read_bill_ventures__venture_id__bills_read_post: {
+            /** File */
+            file: string;
+        };
         /** Body_read_invoice_ventures__venture_id__invoices_read_post */
         Body_read_invoice_ventures__venture_id__invoices_read_post: {
             /** File */
@@ -6308,6 +7009,13 @@ export interface components {
         };
         /** Body_upload_sales_ventures__venture_id__kitchen_sales_csv_post */
         Body_upload_sales_ventures__venture_id__kitchen_sales_csv_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_upload_statement_ventures__venture_id__bank_statements_post */
+        Body_upload_statement_ventures__venture_id__bank_statements_post: {
+            /** Account Label */
+            account_label?: string | null;
             /** File */
             file: string;
         };
@@ -6715,6 +7423,91 @@ export interface components {
              * @enum {string}
              */
             who: "agent" | "caller";
+        };
+        /** CampaignIn */
+        CampaignIn: {
+            /**
+             * Audience
+             * @default customers
+             * @enum {string}
+             */
+            audience: "opted_in" | "customers" | "recent_customers";
+            /** Body */
+            body?: string | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "whatsapp" | "email";
+            /** Name */
+            name: string;
+            /**
+             * Params
+             * @description WhatsApp: the template's blanks
+             */
+            params?: string[];
+            /** Subject */
+            subject?: string | null;
+            /**
+             * Template Id
+             * @description WhatsApp: one of the business's approved templates
+             */
+            template_id?: string | null;
+        };
+        /** CampaignOut */
+        CampaignOut: {
+            /**
+             * Audience
+             * @enum {string}
+             */
+            audience: "opted_in" | "customers" | "recent_customers";
+            /** Body */
+            body: string | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "whatsapp" | "email";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Failed */
+            failed: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Params */
+            params: string[];
+            /** Recipients */
+            recipients: number;
+            /** Sent */
+            sent: number;
+            /** Sent At */
+            sent_at: string | null;
+            /** Skipped */
+            skipped: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "waiting" | "sending" | "sent" | "rejected" | "cancelled" | "failed";
+            /** Subject */
+            subject: string | null;
+            /** Template */
+            template: string | null;
+            /** Template Id */
+            template_id: string | null;
+        };
+        /** CampaignUnsubscribeIn */
+        CampaignUnsubscribeIn: {
+            /** Token */
+            token: string;
         };
         /** ChatDetailOut */
         ChatDetailOut: {
@@ -7132,6 +7925,25 @@ export interface components {
             paid_out: boolean;
             /** Paid Paise */
             paid_paise: number;
+        };
+        /** ConfirmIn */
+        ConfirmIn: {
+            /** Match Id */
+            match_id?: string | null;
+            /**
+             * Match Kind
+             * @description to choose another match
+             */
+            match_kind?: ("invoice" | "bill") | null;
+        };
+        /** ConfirmSureOut */
+        ConfirmSureOut: {
+            /** Confirmed */
+            confirmed: number;
+            /** Paid Bills */
+            paid_bills: number;
+            /** Paid Invoices */
+            paid_invoices: number;
         };
         /** ConnectorOut */
         ConnectorOut: {
@@ -7891,6 +8703,20 @@ export interface components {
             /** Status Url */
             status_url: string;
         };
+        /** FacebookIn */
+        FacebookIn: {
+            /** Page Id */
+            page_id: string;
+            /** Page Token */
+            page_token: string;
+        };
+        /** FacebookOut */
+        FacebookOut: {
+            /** Page Id */
+            page_id: string;
+            /** Page Name */
+            page_name: string;
+        };
         /** FactOut */
         FactOut: {
             /**
@@ -8056,6 +8882,12 @@ export interface components {
         };
         /** GoogleStartIn */
         GoogleStartIn: {
+            /**
+             * Business Profile
+             * @description also ask to manage the Google Business Profile (post review replies and updates)
+             * @default false
+             */
+            business_profile: boolean;
             /**
              * Nonce
              * @description random value the web app also stores in an httpOnly cookie; binds the OAuth callback to the browser that started it
@@ -8235,6 +9067,28 @@ export interface components {
             state: components["schemas"]["State"] | null;
             /** States */
             states: components["schemas"]["State"][];
+        };
+        /** Gstr1Out */
+        Gstr1Out: {
+            /**
+             * Due On
+             * Format: date
+             * @description the 11th of the next month (monthly filers)
+             */
+            due_on: string;
+            /** Gstin */
+            gstin: string;
+            /**
+             * Month
+             * @description YYYY-MM
+             */
+            month: string;
+            /** Problems */
+            problems: string[];
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -8914,6 +9768,45 @@ export interface components {
             learned: boolean;
             term?: components["schemas"]["TermOut"] | null;
         };
+        /** LineOut */
+        LineOut: {
+            /**
+             * Amount Paise
+             * @description credit > 0, debit < 0
+             */
+            amount_paise: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Line Date
+             * Format: date
+             */
+            line_date: string;
+            match: components["schemas"]["MatchOut"] | null;
+            /** Narration */
+            narration: string;
+            /** Reference */
+            reference: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "unmatched" | "suggested" | "confirmed" | "ignored";
+        };
+        /** LinesOut */
+        LinesOut: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Lines */
+            lines: components["schemas"]["LineOut"][];
+            /** Sure */
+            sure: number;
+        };
         /** LinkAnswerIn */
         LinkAnswerIn: {
             /** Approve */
@@ -8946,6 +9839,28 @@ export interface components {
              * @enum {string}
              */
             status: "waiting" | "claimed" | "approved" | "rejected" | "used" | "expired";
+        };
+        /** Listing */
+        Listing: {
+            /**
+             * Address
+             * @default
+             */
+            address: string;
+            /** Name */
+            name: string;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        };
+        /** ListingIn */
+        ListingIn: {
+            /** Name */
+            name?: string | null;
+            /** Title */
+            title?: string | null;
         };
         /** LoanDocOut */
         LoanDocOut: {
@@ -8988,6 +9903,27 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** MatchOut */
+        MatchOut: {
+            /** Balance Paise */
+            balance_paise: number;
+            /** Confidence */
+            confidence: ("sure" | "likely") | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "invoice" | "bill";
+            /** Number */
+            number: string;
+            /** Party */
+            party: string;
         };
         /** MeAccessOut */
         MeAccessOut: {
@@ -9375,6 +10311,18 @@ export interface components {
              */
             reference?: string | null;
         };
+        /** PaidIn */
+        PaidIn: {
+            /**
+             * Amount Paise
+             * @description default: what is still due
+             */
+            amount_paise?: number | null;
+            /** Paid On */
+            paid_on?: string | null;
+            /** Reference */
+            reference?: string | null;
+        };
         /** PartnerDetails */
         PartnerDetails: {
             /** City */
@@ -9745,6 +10693,36 @@ export interface components {
              */
             target_date: string;
         };
+        /** PostOut */
+        PostOut: {
+            /** Body */
+            body: string;
+            /** Channels */
+            channels: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Posted At */
+            posted_at: string | null;
+            /** Results */
+            results: {
+                [key: string]: unknown;
+            };
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "drafted" | "posted" | "partly_posted" | "failed" | "dismissed";
+            /** Topic */
+            topic: string | null;
+        };
         /** PracticeOut */
         PracticeOut: {
             /** Reply To */
@@ -10059,6 +11037,13 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** RematchOut */
+        RematchOut: {
+            /** Likely */
+            likely: number;
+            /** Sure */
+            sure: number;
+        };
         /** RemoveIn */
         RemoveIn: {
             /**
@@ -10101,6 +11086,12 @@ export interface components {
         };
         /** ReplyOut */
         ReplyOut: {
+            /**
+             * Can Post
+             * @description Kritvia can post this reply on Google (Business Profile)
+             * @default false
+             */
+            can_post: boolean;
             /** Draft */
             draft: string;
             /**
@@ -10198,6 +11189,17 @@ export interface components {
         ReviewsOut: {
             /** Agent On */
             agent_on: boolean;
+            /**
+             * Business Access
+             * @description Google is connected with Business Profile access
+             * @default false
+             */
+            business_access: boolean;
+            /**
+             * Business Profile
+             * @description the Google Business Profile listing replies are posted to, when linked
+             */
+            business_profile?: string | null;
             /** Can Edit */
             can_edit: boolean;
             place: components["schemas"]["kritvia_api__routers__reviews__PlaceOut"] | null;
@@ -10302,6 +11304,13 @@ export interface components {
             title: string;
             /** Workflow */
             workflow: string;
+        };
+        /** SalesOut */
+        SalesOut: {
+            /** Vouchers */
+            vouchers: {
+                [key: string]: string;
+            }[];
         };
         /** SampleOut */
         SampleOut: {
@@ -11056,6 +12065,29 @@ export interface components {
             /** Slots */
             slots: string[];
         };
+        /** SocialOut */
+        SocialOut: {
+            /** Agent On */
+            agent_on: boolean;
+            /**
+             * Channels
+             * @description where posts can go now: google, facebook
+             */
+            channels: {
+                [key: string]: string;
+            };
+            /** Facebook Page */
+            facebook_page: string | null;
+            /**
+             * Google Business Access
+             * @description Google is connected with Business Profile access
+             */
+            google_business_access: boolean;
+            /** Google Listing */
+            google_listing: string | null;
+            /** Posts */
+            posts: components["schemas"]["PostOut"][];
+        };
         /** SpeechIn */
         SpeechIn: {
             /** Stt Model */
@@ -11269,6 +12301,33 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** StatementOut */
+        StatementOut: {
+            /** Account Label */
+            account_label: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Credits Paise */
+            credits_paise: number;
+            /** Debits Paise */
+            debits_paise: number;
+            /** File Name */
+            file_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lines */
+            lines: number;
+            /** Period From */
+            period_from: string | null;
+            /** Period To */
+            period_to: string | null;
+        };
         /** StatusIn */
         StatusIn: {
             /**
@@ -11371,6 +12430,57 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** SupplierBillOut */
+        SupplierBillOut: {
+            /** Amount Paise */
+            amount_paise: number;
+            /** Balance Paise */
+            balance_paise: number;
+            /** Bill Date */
+            bill_date: string | null;
+            /** Category */
+            category: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /** Gst Paise */
+            gst_paise: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: string;
+            /** Overdue Days */
+            overdue_days: number;
+            /** Paid On */
+            paid_on: string | null;
+            /** Paid Paise */
+            paid_paise: number;
+            /** Paid Ref */
+            paid_ref: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "paid" | "cancelled";
+            /** Vendor */
+            vendor: string;
+            /** Vendor Gstin */
+            vendor_gstin: string | null;
+        };
         /** SupportIn */
         SupportIn: {
             /**
@@ -11395,12 +12505,64 @@ export interface components {
              */
             website: string;
         };
+        /** SyncKeyOut */
+        SyncKeyOut: {
+            /**
+             * Connector Id
+             * Format: uuid
+             */
+            connector_id: string;
+            /** Hook Url */
+            hook_url: string;
+            /** Key */
+            key: string;
+        };
         /** SyncOut */
         SyncOut: {
             /** Started */
             started: {
                 [key: string]: number;
             };
+        };
+        /** SyncSettings */
+        SyncSettings: {
+            /**
+             * Cgst Ledger
+             * @default CGST
+             */
+            cgst_ledger: string;
+            /**
+             * Igst Ledger
+             * @default IGST
+             */
+            igst_ledger: string;
+            /**
+             * Round Off Ledger
+             * @default Round Off
+             */
+            round_off_ledger: string;
+            /**
+             * Sales Ledger
+             * @default Sales
+             */
+            sales_ledger: string;
+            /**
+             * Sgst Ledger
+             * @default SGST
+             */
+            sgst_ledger: string;
+        };
+        /** SyncStatusOut */
+        SyncStatusOut: {
+            /** Connected */
+            connected: boolean;
+            /** Has Key */
+            has_key: boolean;
+            /** Last Sync */
+            last_sync: string | null;
+            ledgers: components["schemas"]["SyncSettings"];
+            /** Waiting Invoices */
+            waiting_invoices: number;
         };
         /** TallyImportOut */
         TallyImportOut: {
@@ -12546,6 +13708,21 @@ export interface components {
             token: string;
             /** Url */
             url: string;
+        };
+        /** UploadOut */
+        UploadOut: {
+            /** Already Seen */
+            already_seen: number;
+            /** Likely */
+            likely: number;
+            /** New Lines */
+            new_lines: number;
+            statement: components["schemas"]["StatementOut"];
+            /**
+             * Sure
+             * @description lines matched with confidence: one tap confirms them all
+             */
+            sure: number;
         };
         /** UploadResultOut */
         UploadResultOut: {
@@ -14541,6 +15718,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    companion_import_hooks_tally__connector_id__import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TallyImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    companion_sales_hooks_tally__connector_id__sales_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    companion_ack_hooks_tally__connector_id__sales_ack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AckIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -16696,6 +17972,41 @@ export interface operations {
             };
         };
     };
+    campaign_unsubscribe_public_campaign_unsubscribe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignUnsubscribeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     coupon_info_public_coupons__code__get: {
         parameters: {
             query?: never;
@@ -18142,6 +19453,504 @@ export interface operations {
             };
         };
     };
+    confirm_sure_ventures__venture_id__bank_confirm_sure_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmSureOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_lines_ventures__venture_id__bank_lines_get: {
+        parameters: {
+            query?: {
+                state?: "unmatched" | "suggested" | "confirmed" | "ignored" | "all";
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_line_ventures__venture_id__bank_lines__line_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ignore_line_ventures__venture_id__bank_lines__line_id__ignore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_line_ventures__venture_id__bank_lines__line_id__reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rematch_lines_ventures__venture_id__bank_rematch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RematchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_statements_ventures__venture_id__bank_statements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatementOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_statement_ventures__venture_id__bank_statements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_statement_ventures__venture_id__bank_statements_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_statement_ventures__venture_id__bank_statements__statement_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bills_ventures__venture_id__bills_get: {
+        parameters: {
+            query?: {
+                show?: "open" | "overdue" | "paid" | "all";
+                q?: string | null;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_bill_ventures__venture_id__bills_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierBillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_bill_ventures__venture_id__bills_read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_read_bill_ventures__venture_id__bills_read_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillDraft"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_bill_ventures__venture_id__bills__bill_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                bill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_bill_ventures__venture_id__bills__bill_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                bill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierBillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bill_paid_ventures__venture_id__bills__bill_id__paid_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                bill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaidIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierBillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     board_ventures__venture_id__board_get: {
         parameters: {
             query?: never;
@@ -19017,6 +20826,72 @@ export interface operations {
             };
         };
     };
+    choose_listing_ventures__venture_id__business_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingIn"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gbp_locations_ventures__venture_id__business_profile_locations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Listing"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_calls_ventures__venture_id__calls_get: {
         parameters: {
             query?: {
@@ -19170,6 +21045,200 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_campaigns_ventures__venture_id__campaigns_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_campaign_ventures__venture_id__campaigns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audience_size_ventures__venture_id__campaigns_audience_get: {
+        parameters: {
+            query: {
+                channel: "whatsapp" | "email";
+                audience: "opted_in" | "customers" | "recent_customers";
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudienceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_campaign_ventures__venture_id__campaigns__campaign_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_campaign_ventures__venture_id__campaigns__campaign_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_campaign_ventures__venture_id__campaigns__campaign_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartedOut"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -19477,6 +21546,70 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ForwardingOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_facebook_ventures__venture_id__connectors_facebook_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FacebookIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FacebookOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disconnect_facebook_ventures__venture_id__connectors_facebook_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -19818,6 +21951,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TallyImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_ledgers_ventures__venture_id__connectors_tally_ledgers_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_status_ventures__venture_id__connectors_tally_sync_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    make_sync_key_ventures__venture_id__connectors_tally_sync_key_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncKeyOut"];
                 };
             };
             /** @description Validation Error */
@@ -20880,6 +23110,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GstProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gstr1_summary_ventures__venture_id__gst_gstr1_get: {
+        parameters: {
+            query: {
+                month: string;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Gstr1Out"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gstr1_file_ventures__venture_id__gst_gstr1_file_get: {
+        parameters: {
+            query: {
+                month: string;
+                format?: string;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -22693,6 +24990,38 @@ export interface operations {
             };
         };
     };
+    post_reply_ventures__venture_id__review_replies__reply_id__post_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                reply_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     put_settings_ventures__venture_id__review_settings_put: {
         parameters: {
             query?: never;
@@ -23790,6 +26119,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SkillRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_ventures__venture_id__social_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draft_now_ventures__venture_id__social_draft_now_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartedOut"];
                 };
             };
             /** @description Validation Error */

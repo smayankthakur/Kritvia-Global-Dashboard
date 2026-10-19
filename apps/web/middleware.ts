@@ -15,6 +15,7 @@ const PUBLIC_PAGES = [
   "/accessibility",
   "/privacy-request",
   "/unsubscribe",
+  "/unsubscribe/campaign",
   "/security",
   "/help",
   "/status",

@@ -33,6 +33,7 @@ class ReplyOut(BaseModel):
     id: uuid.UUID
     draft: str
     status: str
+    can_post: bool = Field(default=False, description="Kritvia can post this reply on Google (Business Profile)")
 
 
 class ReviewOut(BaseModel):
@@ -58,6 +59,9 @@ class ReviewsOut(BaseModel):
     problem: str | None = Field(description="why Google couldn't be read, in words the owner can act on")
     can_edit: bool
     agent_on: bool
+    business_profile: str | None = Field(default=None, description="the Google Business Profile listing replies "
+                                                                     "are posted to, when linked")
+    business_access: bool = Field(default=False, description="Google is connected with Business Profile access")
 
 
 @router.get("/ventures/{venture_id}/reviews", response_model=ReviewsOut)
@@ -69,7 +73,10 @@ async def reviews(venture_id: uuid.UUID, db: TenantDB, svc: Svc) -> ReviewsOut:
     admin = bool((await db.execute(text("SELECT private.can_admin_venture(:v)"), {"v": venture_id})).scalar())
     on = bool((await db.execute(text("SELECT enabled FROM workflow_configs WHERE venture_id = :v AND workflow = 'reviews'"),
                                 {"v": venture_id})).scalar())
-    out = ReviewsOut(settings=settings, place=None, reviews=[], problem=None, can_edit=admin, agent_on=on)
+    from kritvia_api.services import gbp
+    out = ReviewsOut(settings=settings, place=None, reviews=[], problem=None, can_edit=admin, agent_on=on,
+                     business_profile=(s.gbp_title or s.gbp_location) if s and s.gbp_location else None,
+                     business_access=await gbp.has_access(db, venture_id))
     if not settings.place_id:
         return out
     access = await places_for(db, svc, venture_id)
@@ -82,13 +89,16 @@ async def reviews(venture_id: uuid.UUID, db: TenantDB, svc: Svc) -> ReviewsOut:
         out.problem = f"Google Maps couldn't be read right now ({str(exc)[:120]})"
         return out
     replies = {r.review_key: r for r in (await db.execute(text(
-        "SELECT id, review_key, draft, status FROM review_replies WHERE venture_id = :v"), {"v": venture_id})).all()}
+        "SELECT id, review_key, draft, status, review_name FROM review_replies WHERE venture_id = :v"),
+        {"v": venture_id})).all()}
     out.place = PlaceOut(name=got["name"], rating=got["rating"], count=got["count"], maps_url=got["maps_url"],
                          write_review_url=write_review_url(settings.place_id))
     for rv in got["reviews"]:
         r = replies.get(review_key(rv["name"]))
         out.reviews.append(ReviewOut(rating=rv["rating"], text=rv["text"], author=rv["author"], when=rv["when"],
-                                     reply=ReplyOut(id=r.id, draft=r.draft, status=r.status) if r else None))
+                                     reply=ReplyOut(id=r.id, draft=r.draft, status=r.status,
+                                                    can_post=bool(r.review_name and out.business_access))
+                                     if r else None))
     return out
 
 
@@ -147,3 +157,29 @@ async def edit_reply(venture_id: uuid.UUID, reply_id: uuid.UUID, body: ReplyPatc
     if r is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "reply not found")
     return ReplyOut(id=r.id, draft=r.draft, status=r.status)
+
+
+@router.post("/ventures/{venture_id}/review-replies/{reply_id}/post", response_model=ReplyOut)
+async def post_reply(venture_id: uuid.UUID, reply_id: uuid.UUID, db: TenantDB, svc: Svc) -> ReplyOut:
+    """Posts the reply on Google now (a person pressing Post is the yes)."""
+    from kritvia_api.services import gbp
+    from kritvia_api.services.google import GoogleError
+    await venture_org(db, venture_id)
+    if not (await db.execute(text("SELECT private.can_admin_venture(:v)"), {"v": venture_id})).scalar():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "only the business's admins can post on Google")
+    r = (await db.execute(text("SELECT id, draft, status, review_name FROM review_replies WHERE id = :r AND venture_id = :v"),
+                          {"r": reply_id, "v": venture_id})).first()
+    if r is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "reply not found")
+    if not r.review_name:
+        raise HTTPException(status.HTTP_409_CONFLICT, "this review came from Google Maps; copy the reply into Google")
+    try:
+        prof = await gbp.profile(svc, db, venture_id)
+        await svc.google.gbp_reply(prof.token, r.review_name, r.draft)
+    except gbp.NotConnected as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    except GoogleError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Google didn't take the reply ({exc})") from None
+    await db.execute(text("UPDATE review_replies SET status = 'posted', posted_at = now(), updated_at = now()"
+                          " WHERE id = :r"), {"r": reply_id})
+    return ReplyOut(id=r.id, draft=r.draft, status="posted", can_post=False)

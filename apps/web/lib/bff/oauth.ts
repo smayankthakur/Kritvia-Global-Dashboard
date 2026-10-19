@@ -92,10 +92,11 @@ async function startConnector(
   if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
   if (!csrfOk(req)) return csrfRefused(req);
   let ventureId = "";
+  let businessProfile = false;
   try {
-    ventureId = String(
-      ((await req.json()) as { venture_id?: string }).venture_id ?? "",
-    );
+    const b = (await req.json()) as { venture_id?: string; business_profile?: boolean };
+    ventureId = String(b.venture_id ?? "");
+    businessProfile = provider === "google" && b.business_profile === true;
   } catch {
     /* handled below */
   }
@@ -104,7 +105,7 @@ async function startConnector(
   }
   const nonce = randomNonce();
   const upstream = await proxyRequest(
-    innerRequest(req, "POST", { nonce }),
+    innerRequest(req, "POST", businessProfile ? { nonce, business_profile: true } : { nonce }),
     ["ventures", ventureId, "connectors", provider, START_PATH[provider]],
     deps,
   );

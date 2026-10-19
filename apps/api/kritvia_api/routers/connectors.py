@@ -88,6 +88,8 @@ class GoogleStartIn(BaseModel):
     nonce: str = Field(min_length=32, max_length=128,
                        description="random value the web app also stores in an httpOnly cookie; binds the "
                                    "OAuth callback to the browser that started it")
+    business_profile: bool = Field(default=False, description="also ask to manage the Google Business Profile "
+                                                                "(post review replies and updates)")
 
 
 def _nonce_hash(nonce: str) -> str:
@@ -104,7 +106,10 @@ async def google_start(venture_id: uuid.UUID, body: GoogleStartIn, user_id: User
     from kritvia_api.services.google import DEFAULT_SCOPES, SEND_ONLY_SCOPES
     read_plans = {p.strip() for p in s.google_read_plans.split(",") if p.strip()}
     plan = await plan_for_venture(db, venture_id)
-    scopes = DEFAULT_SCOPES if plan.code in read_plans else SEND_ONLY_SCOPES
+    scopes = list(DEFAULT_SCOPES if plan.code in read_plans else SEND_ONLY_SCOPES)
+    if body.business_profile:
+        from kritvia_api.services.google import SCOPES
+        scopes.append(SCOPES["business.manage"])
     state = jwt.encode({"typ": "oauth", "v": str(venture_id), "u": str(user_id), "nh": _nonce_hash(body.nonce),
                         "exp": datetime.now(UTC) + timedelta(minutes=10)}, s.jwt_secret, algorithm=s.jwt_algorithm)
     return AuthUrlOut(url=svc.google.authorization_url(state, scopes))

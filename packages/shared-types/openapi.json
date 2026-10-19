@@ -149,6 +149,24 @@
         "title": "AccuracyOut",
         "type": "object"
       },
+      "AckIn": {
+        "properties": {
+          "invoice_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Invoice Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "invoice_ids"
+        ],
+        "title": "AckIn",
+        "type": "object"
+      },
       "AgentIn": {
         "properties": {
           "clear_budget": {
@@ -1417,6 +1435,25 @@
         "title": "Attention",
         "type": "object"
       },
+      "AudienceOut": {
+        "properties": {
+          "capped": {
+            "description": "more than a campaign can take; the first ones are used",
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "people": {
+            "title": "People",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "people",
+          "capped"
+        ],
+        "title": "AudienceOut",
+        "type": "object"
+      },
       "AuditOut": {
         "properties": {
           "action": {
@@ -1855,6 +1892,190 @@
         "title": "AutonomyIn",
         "type": "object"
       },
+      "BillDraft": {
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paise"
+          },
+          "bill_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Date"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "gst_paise": {
+            "title": "Gst Paise",
+            "type": "integer"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "unsure": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unsure",
+            "type": "array"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          },
+          "vendor_gstin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Gstin"
+          }
+        },
+        "required": [
+          "vendor",
+          "number",
+          "vendor_gstin",
+          "amount_paise",
+          "gst_paise",
+          "bill_date",
+          "due_on",
+          "category",
+          "unsure"
+        ],
+        "title": "BillDraft",
+        "type": "object"
+      },
+      "BillIn": {
+        "properties": {
+          "amount_paise": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 9999999999999.0,
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "bill_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Date"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "gst_paise": {
+            "default": 0,
+            "maximum": 9999999999999.0,
+            "minimum": 0.0,
+            "title": "Gst Paise",
+            "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "default": "",
+            "maxLength": 60,
+            "title": "Number",
+            "type": "string"
+          },
+          "source": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "file"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "vendor": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Vendor",
+            "type": "string"
+          },
+          "vendor_gstin": {
+            "anyOf": [
+              {
+                "maxLength": 15,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Gstin"
+          }
+        },
+        "required": [
+          "vendor",
+          "amount_paise",
+          "due_on"
+        ],
+        "title": "BillIn",
+        "type": "object"
+      },
       "BillOut": {
         "properties": {
           "amount_paise": {
@@ -1877,6 +2098,176 @@
           "amount_paise"
         ],
         "title": "BillOut",
+        "type": "object"
+      },
+      "BillPatch": {
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 9999999999999.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Paise"
+          },
+          "bill_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Date"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due On"
+          },
+          "gst_paise": {
+            "anyOf": [
+              {
+                "maximum": 9999999999999.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst Paise"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "vendor": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor"
+          },
+          "vendor_gstin": {
+            "anyOf": [
+              {
+                "maxLength": 15,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Gstin"
+          }
+        },
+        "title": "BillPatch",
+        "type": "object"
+      },
+      "BillTotals": {
+        "properties": {
+          "due_this_week_paise": {
+            "title": "Due This Week Paise",
+            "type": "integer"
+          },
+          "open_count": {
+            "title": "Open Count",
+            "type": "integer"
+          },
+          "overdue_count": {
+            "title": "Overdue Count",
+            "type": "integer"
+          },
+          "overdue_paise": {
+            "title": "Overdue Paise",
+            "type": "integer"
+          },
+          "paid_this_month_paise": {
+            "title": "Paid This Month Paise",
+            "type": "integer"
+          },
+          "to_pay_paise": {
+            "title": "To Pay Paise",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "to_pay_paise",
+          "open_count",
+          "due_this_week_paise",
+          "overdue_paise",
+          "overdue_count",
+          "paid_this_month_paise"
+        ],
+        "title": "BillTotals",
         "type": "object"
       },
       "BillingEvent": {
@@ -2059,6 +2450,26 @@
         "title": "BillingProfile",
         "type": "object"
       },
+      "BillsOut": {
+        "properties": {
+          "bills": {
+            "items": {
+              "$ref": "#/components/schemas/SupplierBillOut"
+            },
+            "title": "Bills",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/BillTotals"
+          }
+        },
+        "required": [
+          "bills",
+          "totals"
+        ],
+        "title": "BillsOut",
+        "type": "object"
+      },
       "BoardOut": {
         "properties": {
           "budgets_editable": {
@@ -2233,6 +2644,20 @@
         "title": "Body_public_upload_public_upload__token__post",
         "type": "object"
       },
+      "Body_read_bill_ventures__venture_id__bills_read_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_read_bill_ventures__venture_id__bills_read_post",
+        "type": "object"
+      },
       "Body_read_invoice_ventures__venture_id__invoices_read_post": {
         "properties": {
           "file": {
@@ -2372,6 +2797,32 @@
           "file"
         ],
         "title": "Body_upload_sales_ventures__venture_id__kitchen_sales_csv_post",
+        "type": "object"
+      },
+      "Body_upload_statement_ventures__venture_id__bank_statements_post": {
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_statement_ventures__venture_id__bank_statements_post",
         "type": "object"
       },
       "Body_voice_input_ventures__venture_id__transcribe_post": {
@@ -3485,6 +3936,249 @@
         "title": "CallTurnOut",
         "type": "object"
       },
+      "CampaignIn": {
+        "properties": {
+          "audience": {
+            "default": "customers",
+            "enum": [
+              "opted_in",
+              "customers",
+              "recent_customers"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "channel": {
+            "enum": [
+              "whatsapp",
+              "email"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "description": "WhatsApp: the template's blanks",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Params",
+            "type": "array"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WhatsApp: one of the business's approved templates",
+            "title": "Template Id"
+          }
+        },
+        "required": [
+          "name",
+          "channel"
+        ],
+        "title": "CampaignIn",
+        "type": "object"
+      },
+      "CampaignOut": {
+        "properties": {
+          "audience": {
+            "enum": [
+              "opted_in",
+              "customers",
+              "recent_customers"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "channel": {
+            "enum": [
+              "whatsapp",
+              "email"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Params",
+            "type": "array"
+          },
+          "recipients": {
+            "title": "Recipients",
+            "type": "integer"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "waiting",
+              "sending",
+              "sent",
+              "rejected",
+              "cancelled",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "channel",
+          "audience",
+          "template_id",
+          "template",
+          "params",
+          "subject",
+          "body",
+          "status",
+          "recipients",
+          "sent",
+          "failed",
+          "skipped",
+          "created_at",
+          "sent_at"
+        ],
+        "title": "CampaignOut",
+        "type": "object"
+      },
+      "CampaignUnsubscribeIn": {
+        "properties": {
+          "token": {
+            "maxLength": 500,
+            "minLength": 40,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "CampaignUnsubscribeIn",
+        "type": "object"
+      },
       "ChatDetailOut": {
         "properties": {
           "chat": {
@@ -4493,6 +5187,63 @@
           "paid_out"
         ],
         "title": "Commission",
+        "type": "object"
+      },
+      "ConfirmIn": {
+        "properties": {
+          "match_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Id"
+          },
+          "match_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invoice",
+                  "bill"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "to choose another match",
+            "title": "Match Kind"
+          }
+        },
+        "title": "ConfirmIn",
+        "type": "object"
+      },
+      "ConfirmSureOut": {
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "integer"
+          },
+          "paid_bills": {
+            "title": "Paid Bills",
+            "type": "integer"
+          },
+          "paid_invoices": {
+            "title": "Paid Invoices",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confirmed",
+          "paid_invoices",
+          "paid_bills"
+        ],
+        "title": "ConfirmSureOut",
         "type": "object"
       },
       "ConnectorOut": {
@@ -6479,6 +7230,47 @@
         "title": "ExotelNumber",
         "type": "object"
       },
+      "FacebookIn": {
+        "properties": {
+          "page_id": {
+            "maxLength": 30,
+            "minLength": 5,
+            "pattern": "^[0-9]+$",
+            "title": "Page Id",
+            "type": "string"
+          },
+          "page_token": {
+            "maxLength": 1000,
+            "minLength": 20,
+            "title": "Page Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id",
+          "page_token"
+        ],
+        "title": "FacebookIn",
+        "type": "object"
+      },
+      "FacebookOut": {
+        "properties": {
+          "page_id": {
+            "title": "Page Id",
+            "type": "string"
+          },
+          "page_name": {
+            "title": "Page Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page_id",
+          "page_name"
+        ],
+        "title": "FacebookOut",
+        "type": "object"
+      },
       "FactOut": {
         "properties": {
           "chunk_id": {
@@ -6908,6 +7700,12 @@
       },
       "GoogleStartIn": {
         "properties": {
+          "business_profile": {
+            "default": false,
+            "description": "also ask to manage the Google Business Profile (post review replies and updates)",
+            "title": "Business Profile",
+            "type": "boolean"
+          },
           "nonce": {
             "description": "random value the web app also stores in an httpOnly cookie; binds the OAuth callback to the browser that started it",
             "maxLength": 128,
@@ -7392,6 +8190,48 @@
           "next_number"
         ],
         "title": "GstProfileOut",
+        "type": "object"
+      },
+      "Gstr1Out": {
+        "properties": {
+          "due_on": {
+            "description": "the 11th of the next month (monthly filers)",
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "gstin": {
+            "title": "Gstin",
+            "type": "string"
+          },
+          "month": {
+            "description": "YYYY-MM",
+            "title": "Month",
+            "type": "string"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "month",
+          "gstin",
+          "totals",
+          "due_on",
+          "problems"
+        ],
+        "title": "Gstr1Out",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -9474,6 +10314,100 @@
         "title": "LearnOut",
         "type": "object"
       },
+      "LineOut": {
+        "properties": {
+          "amount_paise": {
+            "description": "credit > 0, debit < 0",
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "line_date": {
+            "format": "date",
+            "title": "Line Date",
+            "type": "string"
+          },
+          "match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "narration": {
+            "title": "Narration",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "state": {
+            "enum": [
+              "unmatched",
+              "suggested",
+              "confirmed",
+              "ignored"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "line_date",
+          "narration",
+          "reference",
+          "amount_paise",
+          "state",
+          "match"
+        ],
+        "title": "LineOut",
+        "type": "object"
+      },
+      "LinesOut": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "sure": {
+            "title": "Sure",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lines",
+          "counts",
+          "sure"
+        ],
+        "title": "LinesOut",
+        "type": "object"
+      },
       "LinkAnswerIn": {
         "properties": {
           "approve": {
@@ -9548,6 +10482,61 @@
           "expires_at"
         ],
         "title": "LinkStateOut",
+        "type": "object"
+      },
+      "Listing": {
+        "properties": {
+          "address": {
+            "default": "",
+            "title": "Address",
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^accounts/[0-9]{1,30}/locations/[0-9]{1,30}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 160,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Listing",
+        "type": "object"
+      },
+      "ListingIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "pattern": "^accounts/[0-9]{1,30}/locations/[0-9]{1,30}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ListingIn",
         "type": "object"
       },
       "LoanDocOut": {
@@ -9644,6 +10633,60 @@
           "password"
         ],
         "title": "LoginIn",
+        "type": "object"
+      },
+      "MatchOut": {
+        "properties": {
+          "balance_paise": {
+            "title": "Balance Paise",
+            "type": "integer"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sure",
+                  "likely"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "invoice",
+              "bill"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "party": {
+            "title": "Party",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "party",
+          "number",
+          "balance_paise",
+          "confidence"
+        ],
+        "title": "MatchOut",
         "type": "object"
       },
       "MeAccessOut": {
@@ -10608,6 +11651,50 @@
           }
         },
         "title": "PaidClaimIn",
+        "type": "object"
+      },
+      "PaidIn": {
+        "properties": {
+          "amount_paise": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 9999999999999.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "default: what is still due",
+            "title": "Amount Paise"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "title": "PaidIn",
         "type": "object"
       },
       "PartnerDetails": {
@@ -11656,6 +12743,82 @@
         "title": "PlanOut",
         "type": "object"
       },
+      "PostOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
+          "results": {
+            "additionalProperties": true,
+            "title": "Results",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "drafted",
+              "posted",
+              "partly_posted",
+              "failed",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          }
+        },
+        "required": [
+          "id",
+          "topic",
+          "body",
+          "channels",
+          "status",
+          "results",
+          "created_at",
+          "posted_at"
+        ],
+        "title": "PostOut",
+        "type": "object"
+      },
       "PracticeOut": {
         "properties": {
           "reply_to": {
@@ -12388,6 +13551,24 @@
         "title": "RegisterIn",
         "type": "object"
       },
+      "RematchOut": {
+        "properties": {
+          "likely": {
+            "title": "Likely",
+            "type": "integer"
+          },
+          "sure": {
+            "title": "Sure",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sure",
+          "likely"
+        ],
+        "title": "RematchOut",
+        "type": "object"
+      },
       "RemoveIn": {
         "properties": {
           "confirm": {
@@ -12471,6 +13652,12 @@
       },
       "ReplyOut": {
         "properties": {
+          "can_post": {
+            "default": false,
+            "description": "Kritvia can post this reply on Google (Business Profile)",
+            "title": "Can Post",
+            "type": "boolean"
+          },
           "draft": {
             "title": "Draft",
             "type": "string"
@@ -12711,6 +13898,24 @@
           "agent_on": {
             "title": "Agent On",
             "type": "boolean"
+          },
+          "business_access": {
+            "default": false,
+            "description": "Google is connected with Business Profile access",
+            "title": "Business Access",
+            "type": "boolean"
+          },
+          "business_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the Google Business Profile listing replies are posted to, when linked",
+            "title": "Business Profile"
           },
           "can_edit": {
             "title": "Can Edit",
@@ -12978,6 +14183,25 @@
           "workflow"
         ],
         "title": "RunIn",
+        "type": "object"
+      },
+      "SalesOut": {
+        "properties": {
+          "vouchers": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Vouchers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "vouchers"
+        ],
+        "title": "SalesOut",
         "type": "object"
       },
       "SampleOut": {
@@ -15951,6 +17175,66 @@
         "title": "SlotsOut",
         "type": "object"
       },
+      "SocialOut": {
+        "properties": {
+          "agent_on": {
+            "title": "Agent On",
+            "type": "boolean"
+          },
+          "channels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "where posts can go now: google, facebook",
+            "title": "Channels",
+            "type": "object"
+          },
+          "facebook_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facebook Page"
+          },
+          "google_business_access": {
+            "description": "Google is connected with Business Profile access",
+            "title": "Google Business Access",
+            "type": "boolean"
+          },
+          "google_listing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Google Listing"
+          },
+          "posts": {
+            "items": {
+              "$ref": "#/components/schemas/PostOut"
+            },
+            "title": "Posts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "channels",
+          "facebook_page",
+          "google_business_access",
+          "google_listing",
+          "agent_on",
+          "posts"
+        ],
+        "title": "SocialOut",
+        "type": "object"
+      },
       "SpeechIn": {
         "properties": {
           "stt_model": {
@@ -16521,6 +17805,91 @@
         "title": "State",
         "type": "object"
       },
+      "StatementOut": {
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credits_paise": {
+            "title": "Credits Paise",
+            "type": "integer"
+          },
+          "debits_paise": {
+            "title": "Debits Paise",
+            "type": "integer"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "title": "Lines",
+            "type": "integer"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          }
+        },
+        "required": [
+          "id",
+          "account_label",
+          "file_name",
+          "period_from",
+          "period_to",
+          "lines",
+          "credits_paise",
+          "debits_paise",
+          "created_at"
+        ],
+        "title": "StatementOut",
+        "type": "object"
+      },
       "StatusIn": {
         "properties": {
           "status": {
@@ -16790,6 +18159,156 @@
         "title": "SuggestionOut",
         "type": "object"
       },
+      "SupplierBillOut": {
+        "properties": {
+          "amount_paise": {
+            "title": "Amount Paise",
+            "type": "integer"
+          },
+          "balance_paise": {
+            "title": "Balance Paise",
+            "type": "integer"
+          },
+          "bill_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Date"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "gst_paise": {
+            "title": "Gst Paise",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "overdue_days": {
+            "title": "Overdue Days",
+            "type": "integer"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "paid_paise": {
+            "title": "Paid Paise",
+            "type": "integer"
+          },
+          "paid_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Ref"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "paid",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          },
+          "vendor_gstin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Gstin"
+          }
+        },
+        "required": [
+          "id",
+          "vendor",
+          "number",
+          "vendor_gstin",
+          "amount_paise",
+          "gst_paise",
+          "paid_paise",
+          "balance_paise",
+          "bill_date",
+          "due_on",
+          "overdue_days",
+          "category",
+          "notes",
+          "status",
+          "paid_on",
+          "paid_ref",
+          "source",
+          "created_at"
+        ],
+        "title": "SupplierBillOut",
+        "type": "object"
+      },
       "SupportIn": {
         "properties": {
           "email": {
@@ -16838,6 +18357,30 @@
         "title": "SupportIn",
         "type": "object"
       },
+      "SyncKeyOut": {
+        "properties": {
+          "connector_id": {
+            "format": "uuid",
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "hook_url": {
+            "title": "Hook Url",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connector_id",
+          "key",
+          "hook_url"
+        ],
+        "title": "SyncKeyOut",
+        "type": "object"
+      },
       "SyncOut": {
         "properties": {
           "started": {
@@ -16852,6 +18395,76 @@
           "started"
         ],
         "title": "SyncOut",
+        "type": "object"
+      },
+      "SyncSettings": {
+        "properties": {
+          "cgst_ledger": {
+            "default": "CGST",
+            "title": "Cgst Ledger",
+            "type": "string"
+          },
+          "igst_ledger": {
+            "default": "IGST",
+            "title": "Igst Ledger",
+            "type": "string"
+          },
+          "round_off_ledger": {
+            "default": "Round Off",
+            "title": "Round Off Ledger",
+            "type": "string"
+          },
+          "sales_ledger": {
+            "default": "Sales",
+            "title": "Sales Ledger",
+            "type": "string"
+          },
+          "sgst_ledger": {
+            "default": "SGST",
+            "title": "Sgst Ledger",
+            "type": "string"
+          }
+        },
+        "title": "SyncSettings",
+        "type": "object"
+      },
+      "SyncStatusOut": {
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "has_key": {
+            "title": "Has Key",
+            "type": "boolean"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "ledgers": {
+            "$ref": "#/components/schemas/SyncSettings"
+          },
+          "waiting_invoices": {
+            "title": "Waiting Invoices",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connected",
+          "has_key",
+          "last_sync",
+          "waiting_invoices",
+          "ledgers"
+        ],
+        "title": "SyncStatusOut",
         "type": "object"
       },
       "TallyImportOut": {
@@ -19809,6 +21422,39 @@
           "expires_at"
         ],
         "title": "UploadLinkOut",
+        "type": "object"
+      },
+      "UploadOut": {
+        "properties": {
+          "already_seen": {
+            "title": "Already Seen",
+            "type": "integer"
+          },
+          "likely": {
+            "title": "Likely",
+            "type": "integer"
+          },
+          "new_lines": {
+            "title": "New Lines",
+            "type": "integer"
+          },
+          "statement": {
+            "$ref": "#/components/schemas/StatementOut"
+          },
+          "sure": {
+            "description": "lines matched with confidence: one tap confirms them all",
+            "title": "Sure",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "statement",
+          "new_lines",
+          "already_seen",
+          "sure",
+          "likely"
+        ],
+        "title": "UploadOut",
         "type": "object"
       },
       "UploadResultOut": {
@@ -23587,6 +25233,149 @@
         ]
       }
     },
+    "/hooks/tally/{connector_id}/import": {
+      "post": {
+        "description": "The companion's Day Book export from Tally (raw XML body).",
+        "operationId": "companion_import_hooks_tally__connector_id__import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TallyImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Companion Import",
+        "tags": [
+          "tally"
+        ]
+      }
+    },
+    "/hooks/tally/{connector_id}/sales": {
+      "get": {
+        "description": "Kritvia's invoices Tally doesn't have yet, each as a ready Tally import request (oldest first, 100 at a\ntime). The companion posts each one to Tally and acknowledges the ones Tally created.",
+        "operationId": "companion_sales_hooks_tally__connector_id__sales_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Companion Sales",
+        "tags": [
+          "tally"
+        ]
+      }
+    },
+    "/hooks/tally/{connector_id}/sales/ack": {
+      "post": {
+        "operationId": "companion_ack_hooks_tally__connector_id__sales_ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Companion Ack Hooks Tally  Connector Id  Sales Ack Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Companion Ack",
+        "tags": [
+          "tally"
+        ]
+      }
+    },
     "/hooks/telegram/{connector_id}": {
       "post": {
         "description": "One update from a business's bot. Telegram sends the secret set with the webhook in a header;\nwithout it nothing is read. A customer's message in a private chat is kept in their chat and\nstarts the inbox assistant (deduplicated), like a WhatsApp message. Answers 200 once the secret\nchecks out, so Telegram does not retry.",
@@ -26992,6 +28781,49 @@
         ]
       }
     },
+    "/public/campaign-unsubscribe": {
+      "post": {
+        "operationId": "campaign_unsubscribe_public_campaign_unsubscribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignUnsubscribeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Campaign Unsubscribe Public Campaign Unsubscribe Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Campaign Unsubscribe",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
     "/public/coupons/{code}": {
       "get": {
         "operationId": "coupon_info_public_coupons__code__get",
@@ -29303,6 +31135,903 @@
         ]
       }
     },
+    "/ventures/{venture_id}/bank/confirm-sure": {
+      "post": {
+        "operationId": "confirm_sure_ventures__venture_id__bank_confirm_sure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmSureOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Sure",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bank/lines": {
+      "get": {
+        "operationId": "list_lines_ventures__venture_id__bank_lines_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "suggested",
+              "enum": [
+                "unmatched",
+                "suggested",
+                "confirmed",
+                "ignored",
+                "all"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Lines",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bank/lines/{line_id}/confirm": {
+      "post": {
+        "operationId": "confirm_line_ventures__venture_id__bank_lines__line_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Line",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bank/lines/{line_id}/ignore": {
+      "post": {
+        "operationId": "ignore_line_ventures__venture_id__bank_lines__line_id__ignore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ignore Line",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bank/lines/{line_id}/reset": {
+      "post": {
+        "operationId": "reset_line_ventures__venture_id__bank_lines__line_id__reset_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reset Line",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bank/rematch": {
+      "post": {
+        "operationId": "rematch_lines_ventures__venture_id__bank_rematch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RematchOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rematch Lines",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bank/statements": {
+      "get": {
+        "operationId": "list_statements_ventures__venture_id__bank_statements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StatementOut"
+                  },
+                  "title": "Response List Statements Ventures  Venture Id  Bank Statements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Statements",
+        "tags": [
+          "bank"
+        ]
+      },
+      "post": {
+        "operationId": "upload_statement_ventures__venture_id__bank_statements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_statement_ventures__venture_id__bank_statements_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Statement",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bank/statements/{statement_id}": {
+      "delete": {
+        "operationId": "delete_statement_ventures__venture_id__bank_statements__statement_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Statement",
+        "tags": [
+          "bank"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bills": {
+      "get": {
+        "operationId": "list_bills_ventures__venture_id__bills_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "show",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "overdue",
+                "paid",
+                "all"
+              ],
+              "title": "Show",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Bills",
+        "tags": [
+          "bills"
+        ]
+      },
+      "post": {
+        "operationId": "create_bill_ventures__venture_id__bills_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierBillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Bill",
+        "tags": [
+          "bills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bills/read": {
+      "post": {
+        "description": "Reads a bill's photo or PDF and returns the fields for a person to check. Nothing is saved.",
+        "operationId": "read_bill_ventures__venture_id__bills_read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_read_bill_ventures__venture_id__bills_read_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Bill",
+        "tags": [
+          "bills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bills/{bill_id}": {
+      "delete": {
+        "operationId": "delete_bill_ventures__venture_id__bills__bill_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Bill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Bill",
+        "tags": [
+          "bills"
+        ]
+      },
+      "patch": {
+        "operationId": "update_bill_ventures__venture_id__bills__bill_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Bill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierBillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Bill",
+        "tags": [
+          "bills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bills/{bill_id}/paid": {
+      "post": {
+        "operationId": "bill_paid_ventures__venture_id__bills__bill_id__paid_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Bill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaidIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierBillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bill Paid",
+        "tags": [
+          "bills"
+        ]
+      }
+    },
     "/ventures/{venture_id}/board": {
       "get": {
         "operationId": "board_ventures__venture_id__board_get",
@@ -30857,6 +33586,116 @@
         ]
       }
     },
+    "/ventures/{venture_id}/business-profile": {
+      "put": {
+        "operationId": "choose_listing_ventures__venture_id__business_profile_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingIn"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Choose Listing",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/business-profile/locations": {
+      "get": {
+        "operationId": "gbp_locations_ventures__venture_id__business_profile_locations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Listing"
+                  },
+                  "title": "Response Gbp Locations Ventures  Venture Id  Business Profile Locations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Gbp Locations",
+        "tags": [
+          "social"
+        ]
+      }
+    },
     "/ventures/{venture_id}/calls": {
       "get": {
         "operationId": "list_calls_ventures__venture_id__calls_get",
@@ -31139,6 +33978,357 @@
         "summary": "Get Call",
         "tags": [
           "calls"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/campaigns": {
+      "get": {
+        "operationId": "list_campaigns_ventures__venture_id__campaigns_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CampaignOut"
+                  },
+                  "title": "Response List Campaigns Ventures  Venture Id  Campaigns Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Campaigns",
+        "tags": [
+          "campaigns"
+        ]
+      },
+      "post": {
+        "operationId": "create_campaign_ventures__venture_id__campaigns_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/campaigns/audience": {
+      "get": {
+        "operationId": "audience_size_ventures__venture_id__campaigns_audience_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "enum": [
+                "whatsapp",
+                "email"
+              ],
+              "title": "Channel",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "audience",
+            "required": true,
+            "schema": {
+              "enum": [
+                "opted_in",
+                "customers",
+                "recent_customers"
+              ],
+              "title": "Audience",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudienceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Audience Size",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/campaigns/{campaign_id}": {
+      "delete": {
+        "operationId": "delete_campaign_ventures__venture_id__campaigns__campaign_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/campaigns/{campaign_id}/cancel": {
+      "post": {
+        "description": "Stops a campaign: a draft or one waiting for its yes is cancelled; one sending stops after its batch.",
+        "operationId": "cancel_campaign_ventures__venture_id__campaigns__campaign_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Campaign",
+        "tags": [
+          "campaigns"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/campaigns/{campaign_id}/send": {
+      "post": {
+        "operationId": "send_campaign_ventures__venture_id__campaigns__campaign_id__send_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Campaign",
+        "tags": [
+          "campaigns"
         ]
       }
     },
@@ -31749,6 +34939,103 @@
         ]
       }
     },
+    "/ventures/{venture_id}/connectors/facebook": {
+      "delete": {
+        "operationId": "disconnect_facebook_ventures__venture_id__connectors_facebook_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Disconnect Facebook",
+        "tags": [
+          "social"
+        ]
+      },
+      "put": {
+        "operationId": "connect_facebook_ventures__venture_id__connectors_facebook_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FacebookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FacebookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Facebook",
+        "tags": [
+          "social"
+        ]
+      }
+    },
     "/ventures/{venture_id}/connectors/google/drive-import": {
       "post": {
         "description": "Pull Drive files (proposals, SOPs, templates) into the knowledge base.",
@@ -32312,6 +35599,162 @@
           }
         ],
         "summary": "Import Tally",
+        "tags": [
+          "tally"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/tally/ledgers": {
+      "put": {
+        "description": "The Tally ledger names Kritvia's invoices are posted to (they must exist in Tally).",
+        "operationId": "set_ledgers_ventures__venture_id__connectors_tally_ledgers_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Ledgers",
+        "tags": [
+          "tally"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/tally/sync": {
+      "get": {
+        "operationId": "sync_status_ventures__venture_id__connectors_tally_sync_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync Status",
+        "tags": [
+          "tally"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/connectors/tally/sync-key": {
+      "post": {
+        "description": "A new sync key for the Tally companion (the old one stops working). Shown once.",
+        "operationId": "make_sync_key_ventures__venture_id__connectors_tally_sync_key_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncKeyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Make Sync Key",
         "tags": [
           "tally"
         ]
@@ -34282,6 +37725,130 @@
           }
         ],
         "summary": "Put Profile",
+        "tags": [
+          "gst"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/gst/gstr1": {
+      "get": {
+        "description": "What the month's GSTR-1 holds, and anything to fix before filing.",
+        "operationId": "gstr1_summary_ventures__venture_id__gst_gstr1_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "title": "Month",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gstr1Out"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Gstr1 Summary",
+        "tags": [
+          "gst"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/gst/gstr1/file": {
+      "get": {
+        "description": "The month's GSTR-1 as an Excel workbook (the GST offline tool's sheets) or as GSTR-1 JSON.",
+        "operationId": "gstr1_file_ventures__venture_id__gst_gstr1_file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "title": "Month",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "xlsx",
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Gstr1 File",
         "tags": [
           "gst"
         ]
@@ -37493,6 +41060,65 @@
         ]
       }
     },
+    "/ventures/{venture_id}/review-replies/{reply_id}/post": {
+      "post": {
+        "description": "Posts the reply on Google now (a person pressing Post is the yes).",
+        "operationId": "post_reply_ventures__venture_id__review_replies__reply_id__post_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "reply_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reply Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Reply",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/ventures/{venture_id}/review-settings": {
       "put": {
         "operationId": "put_settings_ventures__venture_id__review_settings_put",
@@ -39532,6 +43158,102 @@
         "summary": "Skill Runs",
         "tags": [
           "skills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/social": {
+      "get": {
+        "operationId": "overview_ventures__venture_id__social_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Overview",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/social/draft-now": {
+      "post": {
+        "operationId": "draft_now_ventures__venture_id__social_draft_now_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Draft Now",
+        "tags": [
+          "social"
         ]
       }
     },

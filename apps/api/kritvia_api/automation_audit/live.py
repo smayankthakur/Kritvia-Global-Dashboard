@@ -26,7 +26,8 @@ ALWAYS_FED = {"loan_verification", "meeting_digest", "automation", "custom"}
 NOT_SET_UP = {
     "no_template": "choose a WhatsApp template in its settings",
     "no_reference_data": "add menu, recipes and stock on the Kitchen page (or switch it off if this isn't a kitchen)",
-    "not_set_up": "finish its setup (for reviews: choose the Google Maps listing)",
+    "not_set_up": "finish its setup (reviews: choose the Google listing; social posts: connect the Facebook Page "
+                  "or Google with Business Profile on the Marketing page)",
     "places_not_set_up": "add a Google Places key",
 }
 # Outcomes where the agent did its part and the next step is a person's.
@@ -82,6 +83,10 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
         " WHERE venture_id = :v AND status = 'pending'"), p)).first()
     invoice_drafts = int((await conn.execute(text(
         "SELECT count(*) FROM invoices WHERE venture_id = :v AND status = 'draft'"), p)).scalar() or 0)
+    money = (await conn.execute(text(
+        "SELECT (SELECT count(*) FROM bank_lines WHERE venture_id = :v AND state = 'suggested') AS bank_waiting,"
+        " (SELECT count(*) FROM bills WHERE venture_id = :v AND status = 'open'"
+        "  AND due_on < (now() AT TIME ZONE 'Asia/Kolkata')::date) AS bills_overdue"), p)).first()
     on_phone = int((await conn.execute(text(
         "SELECT count(*) FROM approver_links WHERE venture_id = :v"), p)).scalar() or 0)
     calls = (await conn.execute(text(
@@ -164,6 +169,13 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
         add("invoices", "check", "invoice_drafts",
             f"{invoice_drafts} invoice(s) drafted by Kritvia (from done bookings or won proposals) wait for you to "
             "check and issue them.", "invoices")
+    if money.bank_waiting:
+        add("bank", "check", "bank_matches",
+            f"{money.bank_waiting} bank statement line(s) are matched to invoices or bills and wait for your yes; "
+            "one tap records the sure ones.", "money?tab=bank")
+    if money.bills_overdue:
+        add("bills", "check", "bills_overdue",
+            f"{money.bills_overdue} supplier bill(s) are past their due date.", "money?tab=bills")
     if waiting_now and waiting_now.n:
         add("approvals", "check", "waiting_drafts",
             f"{waiting_now.n} draft(s) are waiting for your yes"

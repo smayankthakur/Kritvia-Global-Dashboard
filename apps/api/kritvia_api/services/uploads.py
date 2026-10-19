@@ -21,7 +21,8 @@ AUDIO_EXTS = {".webm": "audio/webm", ".ogg": "audio/ogg", ".oga": "audio/ogg", "
               ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".wav": "audio/wav",
               ".flac": "audio/flac", ".aac": "audio/aac"}
 OTHER_EXTS = {".pdf": "application/pdf",
-              ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+              ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
 
 KINDS: dict[str, set[str]] = {
     "document": {".pdf", ".docx", *IMAGE_EXTS, ".txt", ".md", ".csv", ".json", ".eml", ".vtt", ".srt", ".html", ".htm"},
@@ -29,9 +30,11 @@ KINDS: dict[str, set[str]] = {
     "audio": set(AUDIO_EXTS),
     "csv": {".csv", ".txt"},
     "xml": {".xml", ".txt"},
+    "statement": {".csv", ".txt", ".xlsx", ".pdf"},
 }
 KIND_TEXT = {"document": "PDF, Word (.docx), image or text files", "image_or_pdf": "PDF and image files",
-             "audio": "audio recordings (webm, ogg, mp3, m4a, wav, flac)", "csv": "CSV files", "xml": "Tally XML exports"}
+             "audio": "audio recordings (webm, ogg, mp3, m4a, wav, flac)", "csv": "CSV files", "xml": "Tally XML exports",
+             "statement": "bank statements as CSV, Excel (.xlsx) or PDF"}
 
 
 def extension(filename: str | None) -> str:
@@ -57,6 +60,8 @@ def _magic_ok(ext: str, data: bytes) -> bool:
         return data[:1024].lstrip().startswith(b"%PDF-")
     if ext == ".docx":
         return data.startswith(b"PK\x03\x04") and b"word/" in data[:65536]
+    if ext == ".xlsx":
+        return data.startswith(b"PK\x03\x04") and b"xl/" in data[:65536]
     if ext == ".png":
         return data.startswith(b"\x89PNG\r\n\x1a\n")
     if ext in (".jpg", ".jpeg"):

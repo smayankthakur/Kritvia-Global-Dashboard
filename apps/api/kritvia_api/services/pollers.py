@@ -245,6 +245,8 @@ async def deliver_forwarded(services: Services, org_id: uuid.UUID, venture_id: u
         on = {r.workflow for r in (await conn.execute(text(
             "SELECT workflow FROM workflow_configs WHERE venture_id = :v AND enabled"), {"v": venture_id})).all()}
     counts: dict[str, int] = {}
+    if await _bill_forwarded(ctx, services, msg):
+        return {"bills": 1}
     if "inbox_assistant" in on:
         counts["inbox_assistant"] = await _inbox_forwarded(ctx, services, msg)
         return counts
@@ -279,3 +281,55 @@ async def _lead_forwarded(ctx: RunContext, services: Services, msg) -> int:
         return 1
     except DuplicateTrigger:
         return 0
+
+
+BILL_SUBJECT = re.compile(r"\b(invoice|bill|tax invoice|payment due|proforma|statement of account|बिल)\b", re.I)
+BILL_FILES = (".pdf", ".png", ".jpg", ".jpeg", ".webp")
+
+
+async def _bill_forwarded(ctx: RunContext, services: Services, msg) -> bool:
+    """A supplier's bill forwarded to the business's Kritvia address (a bill or invoice in the subject, with a
+    PDF or photo): read and filed under Money → Bills, marked as from email so a person checks it is real
+    before paying. Kritvia never pays a bill."""
+    import asyncio
+
+    from kritvia_api.routers.bills import read_bill_text
+    from kritvia_api.services.textextract import ExtractionError, extract_text
+    if not BILL_SUBJECT.search(msg.subject or ""):
+        return False
+    files = [a for a in msg.attachments if str(a.get("filename", "")).lower().endswith(BILL_FILES)
+             and 0 < int(a.get("size") or 0) <= 15 * 1024 * 1024]
+    if not files:
+        return False
+    f = files[0]
+    try:
+        ex = await asyncio.to_thread(extract_text, f["data"], f["filename"], f.get("mime") or "application/pdf")
+    except ExtractionError:
+        return False
+    body = (ex.text or "").strip()
+    if len(body) < 20:
+        return False
+    async with ctx.tx() as conn:
+        biz = (await conn.execute(text("SELECT business_name FROM venture_settings WHERE venture_id = :v"),
+                                  {"v": ctx.venture_id})).scalar()
+    try:
+        d = await read_bill_text(services, ctx.org_id, ctx.venture_id, ctx.run_as, body, biz, agent=True)
+    except Exception:  # noqa: BLE001 - unreadable: the email goes on to the inbox as usual
+        log.info("forwarded bill not readable", exc_info=True)
+        return False
+    if not d.amount_paise or not d.vendor:
+        return False
+    try:
+        async with ctx.tx() as conn:
+            await conn.execute(text(
+                "INSERT INTO bills (org_id, venture_id, vendor, number, vendor_gstin, amount_paise, gst_paise,"
+                " bill_date, due_on, category, notes, source)"
+                " VALUES (:o, :v, :ve, :n, :g, :a, :gst, :bd, :d, :c, :no, 'email')"),
+                {"o": ctx.org_id, "v": ctx.venture_id, "ve": d.vendor, "n": d.number, "g": d.vendor_gstin,
+                 "a": d.amount_paise, "gst": d.gst_paise, "bd": d.bill_date, "d": d.due_on, "c": d.category,
+                 "no": (f"From an email from {msg.sender_email}: {msg.subject}"[:900]
+                        + ". Check it is genuine before paying.")})
+    except Exception:  # noqa: BLE001 - most often the same bill forwarded twice (bills_number_uq)
+        log.info("forwarded bill not filed", exc_info=True)
+        return True
+    return True
