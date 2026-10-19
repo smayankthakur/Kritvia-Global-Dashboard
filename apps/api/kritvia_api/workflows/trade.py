@@ -35,13 +35,13 @@ watch_wf = registry.register(Workflow(
                 "and C&F jobs not billed.",
     options=(
         Option("quiet", "Stay quiet on days when nothing needs attention", "boolean", True),
-    )))
+    ), default_schedule="09:00"))
 
 update_wf = registry.register(Workflow(
     "trade_update", title="Shipment updates", start="draft", venture_kinds=("trade", "general"),
     trigger="When you choose Send update on a shipment",
     description="Writes a status update to your buyer, supplier or client from the shipment file and sends it "
-                "by email or WhatsApp after your yes."))
+                "by email or WhatsApp after your yes.", starts="request"))
 
 MAX_LINES = 40
 

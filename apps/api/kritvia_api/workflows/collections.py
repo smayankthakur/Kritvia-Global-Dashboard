@@ -52,7 +52,7 @@ wf = registry.register(Workflow(
         Option("whatsapp_template", "WhatsApp template for reminders (optional)", "text", "",
                help="Its name on WhatsApp → Templates. Used for customers without an email who chat with you on "
                     "WhatsApp, e.g. 'Hi {{1}}, a reminder that ₹{{2}} for invoice {{3}} was due on {{4}}.'"),
-    )))
+    ), default_schedule="10:00"))
 
 MAX_PER_DAY = 40
 

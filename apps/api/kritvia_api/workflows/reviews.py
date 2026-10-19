@@ -33,7 +33,7 @@ wf = registry.register(Workflow(
     options=(
         Option("ask_note", "Add to every review request (optional)", "text", "",
                help="e.g. 'It takes 30 seconds and helps a small business a lot.'"),
-    )))
+    ), default_schedule="19:00"))
 
 MAX_ASKS = 30
 

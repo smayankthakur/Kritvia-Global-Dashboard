@@ -77,7 +77,10 @@ async def fire_schedules(ctx: dict, now: datetime | None = None) -> int:
     async with tenant_tx(None, "system") as conn:
         due = (await conn.execute(text("SELECT * FROM private.scheduled_workflows(:t)"), {"t": hhmm})).all()
     started = 0
+    from kritvia_api.engine.core import registry
     for d in due:
+        if d.workflow in registry and registry.get(d.workflow).starts != "clock":
+            continue   # it starts on messages, uploads or requests: a clock run would start empty and fail
         inp = {}
         if d.workflow == "kitchen_daily":
             inp["target_date"] = (now.date() + timedelta(days=1)).isoformat()

@@ -14,7 +14,7 @@ from kritvia_api.engine.core import ApprovalRequest, Finish, Interrupt, Workflow
 wf = registry.register(Workflow(
     "voice_call", title="AI phone calls", start="ask", trigger="When you ask Kritvia to call a customer",
     description="Kritvia's AI assistant phones a customer for you (a reminder, a callback they asked for) after "
-                "your yes, and answers your business number. Calls say they are from an AI assistant."))
+                "your yes, and answers your business number. Calls say they are from an AI assistant.", starts="request"))
 
 
 @wf.step("ask", agent="voice")

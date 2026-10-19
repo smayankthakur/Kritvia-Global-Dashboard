@@ -42,7 +42,7 @@ wf = registry.register(Workflow(
         Option("max_followups", "Follow-ups per chat until they write again", "number", 1, min=1, max=3),
         Option("only_leads", "Only chats that are open leads", "boolean", True,
                help="Off: any quiet chat Kritvia handles, e.g. an order question, gets a follow-up."),
-    )))
+    ), default_schedule="11:00"))
 
 MAX_PER_DAY = 30
 OPEN_LEAD = ("new", "contacted", "replied", "qualified", "proposal")

@@ -493,6 +493,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/automation/scorecard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Automation Scorecard
+         * @description Every business job, how far Kritvia does it by itself, and what would take it further (from the code).
+         */
+        get: operations["automation_scorecard_automation_scorecard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/checklists/template": {
         parameters: {
             query?: never;
@@ -2237,6 +2257,26 @@ export interface paths {
         };
         /** Get Item */
         get: operations["get_item_ventures__venture_id__assistant__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/automation-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Automation Health
+         * @description What this business's agents did by themselves, and which are on but can't run. Read-only; admins only.
+         */
+        get: operations["automation_health_ventures__venture_id__automation_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13150,12 +13190,24 @@ export interface components {
         };
         /** WorkflowOut */
         WorkflowOut: {
+            /**
+             * Default Schedule
+             * @description clock agents: the time used when none is set
+             */
+            default_schedule?: string | null;
             /** Description */
             description: string;
             /** Name */
             name: string;
             /** Options */
             options: components["schemas"]["OptionOut"][];
+            /**
+             * Starts
+             * @description clock: every day at a time; event: on a message, upload or record; request: when someone asks
+             * @default event
+             * @enum {string}
+             */
+            starts: "clock" | "event" | "request";
             /** Steps */
             steps: {
                 [key: string]: string;
@@ -14289,6 +14341,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    automation_scorecard_automation_scorecard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -17770,6 +17844,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssistantItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    automation_health_ventures__venture_id__automation_health_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

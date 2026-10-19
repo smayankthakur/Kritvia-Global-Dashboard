@@ -28,7 +28,7 @@ wf = registry.register(Workflow(
     options=(
         Option("note", "Add to every reminder (optional)", "text", "",
                help="e.g. 'Please come 5 minutes early. Parking is behind the building.'"),
-    )))
+    ), default_schedule="18:00"))
 
 MAX_PER_DAY = 100
 

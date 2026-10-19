@@ -53,7 +53,7 @@ async def headline(conn, v: uuid.UUID, start: datetime, end: datetime) -> dict[s
         " count(*) FILTER (WHERE status = 'no_show') AS no_show FROM bookings"
         " WHERE venture_id = :v AND starts_at >= :s AND starts_at < :e"), p)).first()
     dr = (await conn.execute(text(
-        "SELECT count(*) AS made, count(*) FILTER (WHERE status IN ('approved', 'edited', 'executed')) AS approved,"
+        "SELECT count(*) AS made, count(*) FILTER (WHERE status IN ('approved', 'edited', 'auto_approved')) AS approved,"
         " count(*) FILTER (WHERE status = 'rejected') AS rejected FROM approvals"
         " WHERE venture_id = :v AND created_at >= :s AND created_at < :e"), p)).first()
     return {"received_paise": int(money.received), "payments": int(money.payments), "invoices_issued": int(inv.n),
@@ -80,7 +80,7 @@ async def trend(conn, v: uuid.UUID, start: datetime, end: datetime, unit: str) -
                      AND x.created_at >= :s AND x.created_at < :e) AS leads,
           (SELECT count(*) FROM approvals x WHERE x.venture_id = :v AND date_trunc('{unit}', x.created_at AT TIME ZONE 'Asia/Kolkata') = b.d
                      AND x.created_at >= :s AND x.created_at < :e) AS drafts,
-          (SELECT count(*) FROM approvals x WHERE x.venture_id = :v AND x.status IN ('approved', 'edited', 'executed')
+          (SELECT count(*) FROM approvals x WHERE x.venture_id = :v AND x.status IN ('approved', 'edited', 'auto_approved')
                      AND date_trunc('{unit}', x.created_at AT TIME ZONE 'Asia/Kolkata') = b.d
                      AND x.created_at >= :s AND x.created_at < :e) AS approved
         FROM b ORDER BY b.d"""), {"v": v, "s": start.replace(tzinfo=None), "e": end.replace(tzinfo=None)})).all()
@@ -109,7 +109,7 @@ async def advanced(conn, v: uuid.UUID, start: datetime, end: datetime) -> dict[s
                "rejected": int(r.rejected), "median_minutes": float(r.median) if r.median is not None else None}
               for r in (await conn.execute(text(
                   "SELECT coalesce(agent, 'agent') AS agent, count(*) AS n,"
-                  " count(*) FILTER (WHERE status IN ('approved', 'executed')) AS ok,"
+                  " count(*) FILTER (WHERE status IN ('approved', 'auto_approved')) AS ok,"
                   " count(*) FILTER (WHERE status = 'edited') AS edited,"
                   " count(*) FILTER (WHERE status = 'rejected') AS rejected,"
                   " round((percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM decided_at - created_at) / 60)"
@@ -120,7 +120,7 @@ async def advanced(conn, v: uuid.UUID, start: datetime, end: datetime) -> dict[s
         "SELECT CASE WHEN action LIKE 'gmail.%' OR action LIKE 'email.%' THEN 'email'"
         "            WHEN action LIKE 'whatsapp.%' THEN 'whatsapp' WHEN action LIKE 'telegram.%' THEN 'telegram'"
         "            ELSE 'other' END AS ch, count(*) AS n,"
-        " count(*) FILTER (WHERE status IN ('approved', 'edited', 'executed')) AS ok"
+        " count(*) FILTER (WHERE status IN ('approved', 'edited', 'auto_approved')) AS ok"
         " FROM approvals WHERE venture_id = :v AND created_at >= :s AND created_at < :e GROUP BY 1 ORDER BY n DESC"),
         p)).all()]
     ai = [{"agent": r.wf, "tokens": int(r.tokens), "calls": int(r.calls)} for r in (await conn.execute(text(

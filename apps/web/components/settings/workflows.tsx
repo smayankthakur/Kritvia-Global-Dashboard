@@ -127,7 +127,8 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
       unwrap(
         api.PUT("/ventures/{venture_id}/workflow-configs/{workflow}", {
           params: { path: { venture_id: ventureId, workflow: wf.name } },
-          body: { enabled, schedule: schedule || null, settings: { ...(parsed.value ?? {}), ...opts.settings }, instructions },
+          // Only agents that run on a clock have a time; the others start when there is something to do.
+          body: { enabled, schedule: SCHEDULED[wf.name] ? schedule || null : null, settings: { ...(parsed.value ?? {}), ...opts.settings }, instructions },
         }),
       ),
     onSuccess: () => {
@@ -204,11 +205,6 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
       ) : null}
       {advanced ? (
         <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
-          {!SCHEDULED[wf.name] ? (
-            <Field label="Also run daily at (IST)" error={schedErr} hint="Optional" className="max-w-[12rem]">
-              <TimeField clearable placeholder="Not daily" value={schedule} disabled={!canAdmin} onChange={setSchedule} />
-            </Field>
-          ) : null}
           <Field label="Extra settings (JSON)" error={parsed.error} hint="For settings without a field above, e.g. gmail_query, source_weights.">
             <Textarea rows={Math.min(8, Math.max(2, text.split("\n").length))} value={text} disabled={!canAdmin} onChange={(e) => setText(e.target.value)} className="font-mono text-xs" spellCheck={false} />
           </Field>

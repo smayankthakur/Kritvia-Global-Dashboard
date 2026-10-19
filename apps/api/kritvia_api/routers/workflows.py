@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -38,6 +38,10 @@ class WorkflowOut(BaseModel):
     venture_kinds: list[str]
     steps: list[dict[str, str]]
     options: list[OptionOut]
+    starts: Literal["clock", "event", "request"] = Field(
+        default="event", description="clock: every day at a time; event: on a message, upload or record; "
+                                     "request: when someone asks")
+    default_schedule: str | None = Field(default=None, description="clock agents: the time used when none is set")
 
 
 @router.get("/workflows", response_model=list[WorkflowOut])
@@ -45,7 +49,8 @@ async def catalogue(_: UserId) -> list[WorkflowOut]:
     return [WorkflowOut(name=w.name, title=w.title, description=w.description, trigger=w.trigger,
                         venture_kinds=list(w.venture_kinds),
                         steps=[{"name": s.name, "agent": s.agent} for s in w.steps.values()],
-                        options=[OptionOut(**o.__dict__) for o in w.options])
+                        options=[OptionOut(**o.__dict__) for o in w.options],
+                        starts=w.starts, default_schedule=w.default_schedule)
             for w in registry.all()]
 
 
@@ -88,6 +93,13 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
         raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found")
     if len(json.dumps(body.settings)) > 20000:
         raise HTTPException(422, "settings too large")
+    wf = registry.get(workflow)
+    if body.schedule and wf.starts != "clock":
+        # An agent that starts on messages, uploads or requests has nothing to work on at a set time: a daily run
+        # would start empty and fail.
+        raise HTTPException(422, f"{wf.title} starts by itself when there is something to do; it doesn't run "
+                                 "at a set time")
+    schedule = body.schedule or (wf.default_schedule if body.enabled else None)
     if body.enabled:
         kind = (await db.execute(text("SELECT coalesce(kind, 'general') FROM venture_settings WHERE venture_id = :v"),
                                  {"v": venture_id})).scalar()
@@ -104,7 +116,7 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
                 " schedule = EXCLUDED.schedule, settings = EXCLUDED.settings, instructions = EXCLUDED.instructions,"
                 " updated_by = EXCLUDED.updated_by, updated_at = now()"
                 " RETURNING workflow, enabled, schedule, settings, instructions, updated_at"),
-                {"o": org, "v": venture_id, "w": workflow, "e": body.enabled, "s": body.schedule,
+                {"o": org, "v": venture_id, "w": workflow, "e": body.enabled, "s": schedule,
                  "st": json.dumps(body.settings), "i": body.instructions.strip(), "u": user_id})).first()
         if workflow == "prospector":
             # "Send without asking" grants the Prospector's trust, on plans where agents may act alone.
@@ -293,3 +305,26 @@ async def sample_run(venture_id: uuid.UUID, user_id: UserId, svc: Svc, db: Tenan
     except ValueError as exc:
         raise HTTPException(402 if isinstance(exc, PlanRestricted) else 422, str(exc)) from None
     return SampleOut(run_id=run_id, workflow=workflow)
+
+
+_SCORECARD: dict[str, Any] = {}
+
+
+@router.get("/automation/scorecard", response_model=dict[str, Any])
+async def automation_scorecard(_: UserId, request: Request) -> dict[str, Any]:
+    """Every business job, how far Kritvia does it by itself, and what would take it further (from the code)."""
+    from kritvia_api.automation_audit.audit import Index, run
+    if not _SCORECARD:
+        _SCORECARD.update(run(Index.build(request.app.openapi())))
+    return _SCORECARD
+
+
+@router.get("/ventures/{venture_id}/automation-health", response_model=dict[str, Any])
+async def automation_health(venture_id: uuid.UUID, db: TenantDB,
+                            days: int = Query(default=30, ge=1, le=90)) -> dict[str, Any]:
+    """What this business's agents did by themselves, and which are on but can't run. Read-only; admins only."""
+    from kritvia_api.automation_audit.live import health
+    await venture_org(db, venture_id)
+    if not (await db.execute(text("SELECT private.can_admin_venture(:v)"), {"v": venture_id})).scalar():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found")
+    return await health(db, venture_id, days=days)

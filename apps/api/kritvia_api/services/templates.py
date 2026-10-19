@@ -179,12 +179,16 @@ async def apply(db, keys, venture_id: uuid.UUID, org_id: uuid.UUID, user_id: uui
         except PlanRestricted as exc:
             added["skipped"].append(f"{title}: {exc}")
             continue
+        # An agent that runs on a clock gets its usual time: switched on without one, it would never run.
         done = (await db.execute(text(
-            "INSERT INTO workflow_configs (org_id, venture_id, workflow, enabled, settings, instructions, role, updated_by)"
-            " VALUES (:o, :v, :w, true, '{}'::jsonb, '', :role, :u) ON CONFLICT (venture_id, workflow) DO UPDATE SET enabled = true,"
-            " updated_by = EXCLUDED.updated_by, updated_at = now() WHERE NOT workflow_configs.enabled RETURNING workflow"),
-            {"o": org_id, "v": venture_id, "w": wf, "u": user_id,
-                         "role": DEFAULT_ROLE.get(wf, "ops")})).first()
+            "INSERT INTO workflow_configs (org_id, venture_id, workflow, enabled, schedule, settings, instructions, role,"
+            " updated_by) VALUES (:o, :v, :w, true, :s, '{}'::jsonb, '', :role, :u) ON CONFLICT (venture_id, workflow)"
+            " DO UPDATE SET enabled = true, schedule = coalesce(workflow_configs.schedule, EXCLUDED.schedule),"
+            " updated_by = EXCLUDED.updated_by, updated_at = now()"
+            " WHERE NOT workflow_configs.enabled OR (workflow_configs.schedule IS NULL AND EXCLUDED.schedule IS NOT NULL)"
+            " RETURNING workflow"),
+            {"o": org_id, "v": venture_id, "w": wf, "u": user_id, "s": registry.get(wf).default_schedule,
+             "role": DEFAULT_ROLE.get(wf, "ops")})).first()
         if done:
             added["agents"].append(title)
 

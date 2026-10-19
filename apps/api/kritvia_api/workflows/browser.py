@@ -25,7 +25,7 @@ MAX_ACTIONS = 15
 wf = registry.register(Workflow(
     "browser", title="Browser agent", start="browse", trigger="When you give it a job",
     description="Uses websites for you on a locked-down browser: looks things up and fills in forms. A form is "
-                "sent only after your yes; it never signs in, pays or types passwords."))
+                "sent only after your yes; it never signs in, pays or types passwords.", starts="request"))
 
 
 def _host(url: str | None) -> str:

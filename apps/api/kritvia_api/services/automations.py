@@ -106,7 +106,7 @@ async def facts(conn, venture_id: uuid.UUID, start: datetime, end: datetime) -> 
         "SELECT count(*) AS new, count(*) FILTER (WHERE status = 'won') AS won FROM leads"
         " WHERE venture_id = :v AND created_at >= :s AND created_at < :e"), p)).first()
     drafts = (await conn.execute(text(
-        "SELECT count(*) AS made, count(*) FILTER (WHERE status IN ('approved', 'edited', 'executed')) AS approved"
+        "SELECT count(*) AS made, count(*) FILTER (WHERE status IN ('approved', 'edited', 'auto_approved')) AS approved"
         " FROM approvals WHERE venture_id = :v AND created_at >= :s AND created_at < :e"), p)).first()
     due = (await conn.execute(text(
         "SELECT count(*) AS n, coalesce(sum(amount_paise - paid_paise), 0) AS owed FROM invoices"

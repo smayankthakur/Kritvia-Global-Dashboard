@@ -69,7 +69,7 @@ wf = registry.register(Workflow(
         Option("send_without_asking", "Send emails and answer replies without asking me", "boolean", True,
                help="Off: every message waits for your approval. Messages that quote a price the offer "
                     "doesn't contain, or that the agent isn't sure about, always wait for you."),
-    )))
+    ), default_schedule="10:30"))
 
 PLACEHOLDER_NAME = "Business on Google Maps"   # leads.name for a prospect until they reply
 MAX_SEARCHES = 5

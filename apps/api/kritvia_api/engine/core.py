@@ -115,6 +115,8 @@ class Workflow:
         authorize_input: Callable[[Any, uuid.UUID, dict[str, Any]], Awaitable[None]] | None = None,
         options: tuple[Option, ...] = (),
         trigger: str = "manual",
+        starts: Literal["clock", "event", "request"] = "event",
+        default_schedule: str | None = None,
     ) -> None:
         """authorize_input(conn, venture_id, input) runs in the STARTING USER's RLS
         transaction and must raise LookupError if the input references records that
@@ -124,6 +126,11 @@ class Workflow:
         self.name, self.title, self.start, self.description = name, title, start, description
         self.venture_kinds, self.version, self.max_steps = venture_kinds, version, max_steps
         self.options, self.trigger = options, trigger   # trigger: what starts it, for the Agents page
+        # starts: "clock" agents run every day at a time (default_schedule, HH:MM IST, used when one is switched
+        # on without a time); "event" agents start on a message, upload, call or record; "request" agents only
+        # when a person (or the assistant) asks. Only clock agents may be given a daily time.
+        self.starts = "clock" if default_schedule else starts
+        self.default_schedule = default_schedule
         self.steps: dict[str, StepSpec] = {}
 
     def defaults(self) -> dict[str, Any]:

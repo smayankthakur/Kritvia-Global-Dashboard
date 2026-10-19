@@ -108,7 +108,7 @@ wf = registry.register(Workflow(
     trigger="You ask it something on the Assistant page or by voice",
     description="Ask for anything in plain words, in English, Hindi or Hinglish. The assistant works out the "
                 "steps, looks things up in your business memory, numbers, tasks, leads and connected apps, and "
-                "drafts emails, WhatsApp messages, meetings, tasks, new leads and lead updates for you to approve."))
+                "drafts emails, WhatsApp messages, meetings, tasks, new leads and lead updates for you to approve.", starts="request"))
 
 
 ToolInfo = tuple[Capability, str, dict[str, str], tuple[str, ...]]   # capability, description, fields, required

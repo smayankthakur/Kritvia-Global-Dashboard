@@ -21390,6 +21390,18 @@
       },
       "WorkflowOut": {
         "properties": {
+          "default_schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "clock agents: the time used when none is set",
+            "title": "Default Schedule"
+          },
           "description": {
             "title": "Description",
             "type": "string"
@@ -21404,6 +21416,17 @@
             },
             "title": "Options",
             "type": "array"
+          },
+          "starts": {
+            "default": "event",
+            "description": "clock: every day at a time; event: on a message, upload or record; request: when someone asks",
+            "enum": [
+              "clock",
+              "event",
+              "request"
+            ],
+            "title": "Starts",
+            "type": "string"
           },
           "steps": {
             "items": {
@@ -23304,6 +23327,35 @@
         "summary": "Sso Start",
         "tags": [
           "sso"
+        ]
+      }
+    },
+    "/automation/scorecard": {
+      "get": {
+        "description": "Every business job, how far Kritvia does it by itself, and what would take it further (from the code).",
+        "operationId": "automation_scorecard_automation_scorecard_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Automation Scorecard Automation Scorecard Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Automation Scorecard",
+        "tags": [
+          "workflows"
         ]
       }
     },
@@ -28762,6 +28814,69 @@
         "summary": "Get Item",
         "tags": [
           "assistant"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/automation-health": {
+      "get": {
+        "description": "What this business's agents did by themselves, and which are on but can't run. Read-only; admins only.",
+        "operationId": "automation_health_ventures__venture_id__automation_health_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Automation Health Ventures  Venture Id  Automation Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Automation Health",
+        "tags": [
+          "workflows"
         ]
       }
     },

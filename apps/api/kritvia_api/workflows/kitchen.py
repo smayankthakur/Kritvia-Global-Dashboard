@@ -35,7 +35,7 @@ wf = registry.register(Workflow(
         Option("safety_stock_pct", "Safety stock %", "number", 10, min=0, max=100),
         Option("history_days", "Days of sales history to learn from", "number", 120, min=14, max=730),
         Option("min_history_days", "Minimum days of history before forecasting", "number", 7, min=1, max=60),
-    )))
+    ), default_schedule="23:30"))
 
 DEFAULTS = {"history_days": 120, "safety_stock_pct": 10, "min_history_days": 7}
 MULT_MIN, MULT_MAX = 0.5, 2.0
