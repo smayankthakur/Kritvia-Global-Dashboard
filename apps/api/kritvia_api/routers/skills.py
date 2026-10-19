@@ -53,13 +53,14 @@ class SkillOut(BaseModel):
     instructions: str
     lessons: list[str]
     lessons_learned: int
-    trigger: Literal["manual", "schedule", "event"]
+    trigger: Literal["manual", "schedule", "event", "on_event"]
     freq: Literal["daily", "weekly", "monthly"] | None
     weekdays: list[int]
     day_of_month: int | None
     at_time: str | None
     event: Literal["invoice_overdue", "invoice_paid", "booking_done", "lead_new", "lead_quiet"] | None
     wait_days: int
+    on_event: str | None = None
     when: str
     enabled: bool
     next_run_at: datetime | None
@@ -102,6 +103,7 @@ def _out(s: dict, user_id: uuid.UUID, admin: bool) -> SkillOut:
     return SkillOut(id=s["id"], name=s["name"], instructions=s["instructions"], lessons=s["lesson_list"],
                     lessons_learned=s["lessons"], trigger=s["trigger"], freq=s["freq"], weekdays=list(s["weekdays"] or []),
                     day_of_month=s["day_of_month"], at_time=s["at_time"], event=s["event"], wait_days=s["wait_days"],
+                    on_event=s.get("on_event"),
                     when=sk.describe(s), enabled=s["enabled"], next_run_at=s["next_run_at"], last_run_at=s["last_run_at"],
                     last_error=s["last_error"], runs=s["runs"], mine=s["created_by"] == user_id,
                     can_edit=admin or s["created_by"] == user_id, created_at=s["created_at"])
@@ -170,21 +172,20 @@ async def _write(db, svc, venture_id: uuid.UUID, body: SkillIn, *, skill_id: uui
         raise HTTPException(422, str(exc)) from None
     tz = await sk.tz_of(db, venture_id)
     nxt = sk.next_time(d.model_dump(), tz, datetime.now(UTC)) if body.enabled else None
-    enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, sk.INSTRUCTIONS, d.instructions)
+    crypto = EnvelopeCrypto(db, svc.keys)
+    enc = await crypto.encrypt(venture_id, sk.INSTRUCTIONS, d.instructions)
     p = {"o": org, "v": venture_id, "u": user_id, "n": d.name, "i": enc, "t": d.trigger, "f": d.freq, "w": d.weekdays,
-         "dm": d.day_of_month, "at": d.at_time, "ev": d.event, "wd": d.wait_days, "en": body.enabled, "nx": nxt,
-         "src": body.source_run_id, "id": skill_id}
+         "dm": d.day_of_month, "at": d.at_time, "ev": d.event, "wd": d.wait_days, "oe": d.on_event,
+         "en": body.enabled, "nx": nxt, "src": body.source_run_id, "id": skill_id}
     try:
         async with db.begin_nested():
             if skill_id is None:
-                return (await db.execute(text(
-                    "INSERT INTO skills (org_id, venture_id, created_by, name, instructions_enc, trigger, freq, weekdays,"
-                    " day_of_month, at_time, event, wait_days, enabled, next_run_at, source_run_id)"
-                    " VALUES (:o, :v, :u, :n, :i, :t, :f, :w, :dm, :at, :ev, :wd, :en, :nx, :src) RETURNING id"), p)).scalar_one()
+                return await sk.create(db, crypto, org_id=org, venture_id=venture_id, created_by=user_id, d=d,
+                                       enabled=body.enabled, source_run_id=body.source_run_id)
             await db.execute(text(
                 "UPDATE skills SET name = :n, instructions_enc = :i, trigger = :t, freq = :f, weekdays = :w,"
-                " day_of_month = :dm, at_time = :at, event = :ev, wait_days = :wd, enabled = :en, next_run_at = :nx,"
-                " last_error = NULL, updated_at = now() WHERE id = :id AND venture_id = :v"), p)
+                " day_of_month = :dm, at_time = :at, event = :ev, wait_days = :wd, on_event = :oe, enabled = :en,"
+                " next_run_at = :nx, last_error = NULL, updated_at = now() WHERE id = :id AND venture_id = :v"), p)
             return skill_id
     except DBAPIError as exc:
         if "skills_name_idx" in str(exc):

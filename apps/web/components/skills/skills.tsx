@@ -27,6 +27,21 @@ const EVENTS: Record<string, string> = {
   lead_new: "A new lead came in",
   lead_quiet: "A lead has gone quiet",
 };
+/** Things that just happened, for skills that start right after one (the business's event stream). */
+const STREAM: Record<string, string> = {
+  "invoice.paid": "An invoice is paid in full",
+  "payment.received": "A payment is received",
+  "invoice.issued": "An invoice is issued",
+  "lead.new": "A new lead comes in",
+  "lead.won": "A lead is won",
+  "booking.new": "A booking is made",
+  "booking.done": "A booking is done",
+  "booking.cancelled": "A booking is cancelled",
+  "booking.no_show": "A customer doesn't turn up",
+  "bill.new": "A supplier bill comes in",
+  "review.new": "A new Google review",
+  "candidate.new": "Someone applies for a job",
+};
 const EXAMPLES = [
   "When an invoice is 7 days overdue, WhatsApp the customer a polite reminder and add a task for Ravi to call them",
   "Every Friday at 6 pm, tell me which leads went quiet this week and draft a follow-up for each",
@@ -101,12 +116,30 @@ function SkillEditor({
           <Textarea rows={6} value={d.instructions} onChange={(e) => set({ instructions: e.target.value })} maxLength={2000} />
         </Field>
         <Field label="When it runs">
-          <Select value={d.trigger} onChange={(e) => set({ trigger: e.target.value as Draft["trigger"] })}>
+          <Select
+            value={d.trigger}
+            onChange={(e) => {
+              const trigger = e.target.value as Draft["trigger"];
+              set({ trigger, ...(trigger === "on_event" && !d.on_event ? { on_event: "invoice.paid" } : {}) });
+            }}
+          >
             <option value="manual">When I run it</option>
             <option value="schedule">On a schedule</option>
-            <option value="event">When something happens</option>
+            <option value="on_event">Right after something happens</option>
+            <option value="event">Some days after something happens</option>
           </Select>
         </Field>
+        {d.trigger === "on_event" ? (
+          <Field label="Right after">
+            <Select value={d.on_event ?? "invoice.paid"} onChange={(e) => set({ on_event: e.target.value })}>
+              {Object.entries(STREAM).map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
         {d.trigger === "schedule" ? (
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="How often">

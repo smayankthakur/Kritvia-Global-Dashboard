@@ -147,6 +147,27 @@ async def gstr1_ready(ctx: dict) -> int:
     return await money_watch.gstr1_ready(ctx["services"])
 
 
+async def dispatch_events(ctx: dict) -> int:
+    """The business event stream: skills that start right after an event, and "tell me when" alerts."""
+    from kritvia_api.services import events
+    return (await events.dispatch(ctx["services"]))["events"]
+
+
+async def attendance_check(ctx: dict) -> int:
+    """At 12:05 IST: who hasn't checked in yet (services/people.py)."""
+    from kritvia_api.services import people
+    return await people.missing_today(ctx["services"])
+
+
+async def purge_candidates(ctx: dict) -> int:
+    """CVs are deleted 180 days after their role closes."""
+    from sqlalchemy import text
+
+    from kritvia_api.db.session import tenant_tx
+    async with tenant_tx(None, "system") as conn:
+        return int((await conn.execute(text("SELECT private.purge_old_candidates()"))).scalar() or 0)
+
+
 async def sweep(ctx: dict) -> int:
     return await sweep_runs(ctx["services"])
 
@@ -263,6 +284,9 @@ class WorkerSettings:
         cron(nudge_expiring, minute={7, 37}, second=15, run_at_startup=False),
         cron(bills_due, hour={9}, minute={15}, run_at_startup=False),
         cron(gstr1_ready, hour={9}, minute={25}, run_at_startup=False),
+        cron(dispatch_events, second=20, run_at_startup=False),
+        cron(attendance_check, hour={12}, minute={5}, run_at_startup=False),
+        cron(purge_candidates, hour={3}, minute={35}, run_at_startup=False),
     ]
     on_startup = startup
     on_shutdown = shutdown

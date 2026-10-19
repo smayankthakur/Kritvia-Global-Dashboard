@@ -258,10 +258,18 @@ JOBS: tuple[Job, ...] = (
         next="Read ad spend and leads per source; suggest changes (never spend by itself)."),
 
     # ------------------------------------------------------------------ people
-    Job("hiring", "people", "Hire people", 0, "Not in Kritvia.", (), target=3, impact=1,
-        next="Screen CVs that arrive by email against a role and shortlist for a yes."),
-    Job("attendance_payroll", "people", "Attendance and salaries", 0, "Not in Kritvia.", (), target=2, impact=1,
-        next="Attendance from WhatsApp check-ins and a monthly salary sheet for the accountant."),
+    Job("hiring", "people", "Hire people", 3,
+        "Every CV for an open role (uploaded, or emailed with the role's code) is read and scored against it with "
+        "reasons; shortlisted people get an interview invite after a yes. It never rejects anyone by itself.",
+        ("wf:hiring", "route:POST /ventures/{venture_id}/jobs/{job_id}/candidates", "route:POST /public/email-in",
+         "code:apps/api/kritvia_api/services/people.py::async def cv_forwarded("), target=3, impact=1,
+        next="Post the role on job boards and schedule interviews from free calendar time."),
+    Job("attendance_payroll", "people", "Attendance and salaries", 3,
+        "Staff send IN / OUT to the business's WhatsApp; owners hear at noon who hasn't come in; the month adds up "
+        "to a salary estimate sheet for the accountant.",
+        ("route:POST /hooks/whatsapp", "cron:attendance_check", "route:GET /ventures/{venture_id}/attendance/sheet",
+         "code:apps/api/kritvia_api/services/people.py::async def whatsapp_checkin("), target=3, impact=1,
+        next="Leave requests on WhatsApp, approved by the owner with one tap."),
 
     # ------------------------------------------------------------------ knowledge
     Job("file_knowledge", "knowledge", "Remember everything", 4,
@@ -277,8 +285,10 @@ JOBS: tuple[Job, ...] = (
         ("wf:assistant", "tool:mcp.call", "tool:approvals.waiting", "tool:leads.create"), target=3, impact=3,
         next="Let the assistant start skills and automations it suggests ('do this every Monday'), with a yes."),
     Job("learned_skills", "knowledge", "Learn a routine and repeat it", 3,
-        "A routine done once becomes a skill that runs on a schedule or event and learns from edits.",
-        ("route:POST /ventures/{venture_id}/skills/from-request", "cron:fire_automations"), impact=2,
+        "A routine done once becomes a skill that runs on a schedule, or right after something happens, and learns "
+        "from edits. The assistant sets up the routines it suggests, after one yes.",
+        ("route:POST /ventures/{venture_id}/skills/from-request", "cron:fire_automations", "tool:routines.create",
+         "cron:dispatch_events"), impact=2,
         next="Earned trust per skill once its last runs went out unchanged."),
 )
 
@@ -309,9 +319,11 @@ PLATFORM: tuple[Capability, ...] = (
     Capability("agent_team", "Agents work as a team with hand-offs", True, ("tool:team.handoff",)),
     Capability("voice_everywhere", "Talk to it: voice notes, phone calls, dictation", True,
                ("route:POST /ventures/{venture_id}/voice/dictate", "wf:voice_call")),
-    Capability("events_bus", "One event stream every agent can react to", False, (),
-               "Today each agent watches its own source (polls, webhooks, nightly finds). A shared event stream "
-               "('invoice paid', 'booking done', 'lead quiet') would let any agent or skill react at once."),
+    Capability("events_bus", "One event stream every agent can react to", True,
+               ("cron:dispatch_events", "route:GET /ventures/{venture_id}/events", "tool:events.recent",
+                "code:apps/api/migrations/0063_operating_system.sql::CREATE TRIGGER invoices_events"),
+               "Database triggers write every lead, invoice, payment, booking, bill, review, opt-out and application; "
+               "skills react within a minute and owners get 'tell me when' alerts."),
     Capability("health_check", "Each business can see what its agents did and which are stuck", True,
                ("route:GET /ventures/{venture_id}/automation-health",)),
     Capability("self_check", "Kritvia checks its own automations every day and tells the owner", True,

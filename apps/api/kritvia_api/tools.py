@@ -459,4 +459,36 @@ def build_tools() -> ToolRegistry:
             return {"started": False, "why": "the campaign was cancelled or already sent"}
         return {"started": True, "recipients": int(n)}
 
+    @reg.tool("routines.create", Capability.WRITE,
+              "Set up a routine: a job the assistant then does by itself on a schedule or right after something "
+              "happens (the person approves the routine once; what it drafts still waits for a yes)")
+    async def routines_create(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import skills as sk
+        assert ok is not None
+        fields = {k: p.get(k) for k in sk.Draft.model_fields if k in p}
+        d = sk.clean(sk.Draft(**fields))
+        async with ctx.tx() as conn:
+            who = (await conn.execute(text("SELECT decided_by FROM approvals WHERE id = :a"), {"a": ok.id})).scalar()
+            n = (await conn.execute(text("SELECT count(*) FROM skills WHERE venture_id = :v"),
+                                    {"v": ctx.venture_id})).scalar()
+            if int(n or 0) >= sk.MAX_SKILLS:
+                return {"created": False, "why": f"a business can have up to {sk.MAX_SKILLS} routines and skills"}
+            sid = await sk.create(conn, ctx.crypto(conn), org_id=ctx.org_id, venture_id=ctx.venture_id,
+                                  created_by=who or ctx.run_as, d=d)
+        return {"created": True, "routine": d.name, "when": sk.describe(d.model_dump()), "skill_id": str(sid)}
+
+    @reg.tool("events.recent", Capability.READ,
+              "What happened in the business lately: leads, invoices, payments, bookings, bills, reviews, applications")
+    async def events_recent(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from datetime import UTC, datetime, timedelta
+
+        from kritvia_api.services import events
+        hours = min(max(int(p.get("hours") or 24), 1), 24 * 31)
+        kind = str(p.get("kind") or "").strip() or None
+        async with ctx.tx() as conn:
+            got = await events.recent(conn, ctx.venture_id, limit=40, kind=kind,
+                                      since=datetime.now(UTC) - timedelta(hours=hours))
+        return {"events": [{"what": e["summary"], "kind": e["kind"], "when": e["occurred_at"].isoformat()} for e in got],
+                "kinds": sorted(events.KINDS)}
+
     return reg

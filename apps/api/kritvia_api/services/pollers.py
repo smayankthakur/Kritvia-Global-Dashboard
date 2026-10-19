@@ -245,6 +245,9 @@ async def deliver_forwarded(services: Services, org_id: uuid.UUID, venture_id: u
         on = {r.workflow for r in (await conn.execute(text(
             "SELECT workflow FROM workflow_configs WHERE venture_id = :v AND enabled"), {"v": venture_id})).all()}
     counts: dict[str, int] = {}
+    from kritvia_api.services import people
+    if await people.cv_forwarded(ctx, services, msg):
+        return {"hiring": 1}
     if await _bill_forwarded(ctx, services, msg):
         return {"bills": 1}
     if "inbox_assistant" in on:

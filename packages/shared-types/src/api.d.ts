@@ -2340,6 +2340,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Day View */
+        get: operations["day_view_ventures__venture_id__attendance_get"];
+        /** Mark */
+        put: operations["mark_ventures__venture_id__attendance_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/attendance/sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sheet */
+        get: operations["sheet_ventures__venture_id__attendance_sheet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/attendance/sheet/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sheet File */
+        get: operations["sheet_file_ventures__venture_id__attendance_sheet_file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/automation-health": {
         parameters: {
             query?: never;
@@ -3150,6 +3202,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/candidates/{candidate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Candidate */
+        get: operations["candidate_ventures__venture_id__candidates__candidate_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Decide Candidate */
+        patch: operations["decide_candidate_ventures__venture_id__candidates__candidate_id__patch"];
+        trace?: never;
+    };
     "/ventures/{venture_id}/cards": {
         parameters: {
             query?: never;
@@ -3915,6 +3985,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/event-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Alerts */
+        get: operations["list_alerts_ventures__venture_id__event_alerts_get"];
+        put?: never;
+        /** Add Alert */
+        post: operations["add_alert_ventures__venture_id__event_alerts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/event-alerts/{alert_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Alert */
+        delete: operations["remove_alert_ventures__venture_id__event_alerts__alert_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events */
+        get: operations["list_events_ventures__venture_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/events/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kinds */
+        get: operations["kinds_ventures__venture_id__events_kinds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/facts": {
         parameters: {
             query?: never;
@@ -4173,6 +4312,59 @@ export interface paths {
          * @description Records money received. Paid in full: the invoice is paid and reminders stop.
          */
         post: operations["record_payment_ventures__venture_id__invoices__invoice_id__payment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Jobs */
+        get: operations["list_jobs_ventures__venture_id__jobs_get"];
+        put?: never;
+        /** Add Job */
+        post: operations["add_job_ventures__venture_id__jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Job */
+        patch: operations["edit_job_ventures__venture_id__jobs__job_id__patch"];
+        trace?: never;
+    };
+    "/ventures/{venture_id}/jobs/{job_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Candidates */
+        get: operations["list_candidates_ventures__venture_id__jobs__job_id__candidates_get"];
+        put?: never;
+        /** Upload Cv */
+        post: operations["upload_cv_ventures__venture_id__jobs__job_id__candidates_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5264,6 +5456,41 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Staff */
+        get: operations["list_staff_ventures__venture_id__staff_get"];
+        put?: never;
+        /** Add Staff */
+        post: operations["add_staff_ventures__venture_id__staff_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/staff/{staff_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Staff */
+        patch: operations["edit_staff_ventures__venture_id__staff__staff_id__patch"];
         trace?: never;
     };
     "/ventures/{venture_id}/tally": {
@@ -6957,6 +7184,15 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Body_upload_cv_ventures__venture_id__jobs__job_id__candidates_post */
+        Body_upload_cv_ventures__venture_id__jobs__job_id__candidates_post: {
+            /** Email */
+            email?: string | null;
+            /** File */
+            file: string;
+            /** Name */
+            name?: string | null;
+        };
         /** Body_upload_document_ventures__venture_id__documents_post */
         Body_upload_document_ventures__venture_id__documents_post: {
             /**
@@ -7326,6 +7562,31 @@ export interface components {
             /** Plan Includes */
             plan_includes: boolean;
         };
+        /** BusinessEventOut */
+        BusinessEventOut: {
+            /** Amount Paise */
+            amount_paise: number | null;
+            /** Id */
+            id: number;
+            /** Kind */
+            kind: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Subject Id */
+            subject_id: string | null;
+            /** Subject Table */
+            subject_table: string;
+            /** Summary */
+            summary: string;
+            /**
+             * What
+             * @description the kind in words
+             */
+            what: string;
+        };
         /** CallDetail */
         CallDetail: {
             /** Caller Name */
@@ -7508,6 +7769,100 @@ export interface components {
         CampaignUnsubscribeIn: {
             /** Token */
             token: string;
+        };
+        /** CandidateDetail */
+        CandidateDetail: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Cv */
+            cv: string;
+            /** Email */
+            email: string | null;
+            /** File Name */
+            file_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Reasons */
+            reasons: string | null;
+            /** Score */
+            score: number | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "upload" | "email";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "screened" | "shortlisted" | "invited" | "rejected" | "hired";
+            /** Verdict */
+            verdict: ("shortlist" | "maybe" | "reject") | null;
+        };
+        /** CandidateOut */
+        CandidateOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email */
+            email: string | null;
+            /** File Name */
+            file_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Reasons */
+            reasons: string | null;
+            /** Score */
+            score: number | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "upload" | "email";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "screened" | "shortlisted" | "invited" | "rejected" | "hired";
+            /** Verdict */
+            verdict: ("shortlist" | "maybe" | "reject") | null;
+        };
+        /** CandidatePatch */
+        CandidatePatch: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "shortlisted" | "rejected" | "hired" | "screened";
         };
         /** ChatDetailOut */
         ChatDetailOut: {
@@ -8233,6 +8588,29 @@ export interface components {
             /** Words */
             words: number;
         };
+        /** DayRow */
+        DayRow: {
+            /** In At */
+            in_at: string | null;
+            /** Late */
+            late: boolean;
+            /** Name */
+            name: string;
+            /** Out At */
+            out_at: string | null;
+            /** Source */
+            source: ("whatsapp" | "manual") | null;
+            /**
+             * Staff Id
+             * Format: uuid
+             */
+            staff_id: string;
+            /**
+             * Status
+             * @description None: nothing marked yet
+             */
+            status: ("present" | "half_day" | "absent" | "leave") | null;
+        };
         /** DecideIn */
         DecideIn: {
             /** Approve */
@@ -8620,6 +8998,29 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** EventAlertIn */
+        EventAlertIn: {
+            /** Kind */
+            kind: string;
+            /** Min Paise */
+            min_paise?: number | null;
+        };
+        /** EventAlertOut */
+        EventAlertOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Last Sent At */
+            last_sent_at: string | null;
+            /** Min Paise */
+            min_paise: number | null;
+            /** Words */
+            words: string;
+        };
         /** EventIn */
         EventIn: {
             /**
@@ -8633,6 +9034,15 @@ export interface components {
             name: string;
             /** Note */
             note?: string | null;
+        };
+        /** EventKindOut */
+        EventKindOut: {
+            /** Has Amount */
+            has_amount: boolean;
+            /** Kind */
+            kind: string;
+            /** Words */
+            words: string;
         };
         /** EventOut */
         EventOut: {
@@ -9562,6 +9972,82 @@ export interface components {
             /** Unit Price Minor */
             unit_price_minor: number;
         };
+        /** JobIn */
+        JobIn: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Location */
+            location?: string | null;
+            /**
+             * Must Have
+             * @default
+             */
+            must_have: string;
+            /**
+             * Nice To Have
+             * @default
+             */
+            nice_to_have: string;
+            /** Title */
+            title: string;
+        };
+        /** JobOut */
+        JobOut: {
+            /**
+             * Apply By Email
+             * @description send CVs here with the code in the subject
+             */
+            apply_by_email: string | null;
+            /** Candidates */
+            candidates: number;
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Location */
+            location: string | null;
+            /** Must Have */
+            must_have: string;
+            /** Nice To Have */
+            nice_to_have: string;
+            /** Shortlisted */
+            shortlisted: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            /** Title */
+            title: string;
+        };
+        /** JobPatch */
+        JobPatch: {
+            /** Description */
+            description?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Must Have */
+            must_have?: string | null;
+            /** Nice To Have */
+            nice_to_have?: string | null;
+            /** Status */
+            status?: ("open" | "closed") | null;
+            /** Title */
+            title?: string | null;
+        };
         /** KeyOut */
         KeyOut: {
             /** Hint */
@@ -9908,6 +10394,26 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** MarkIn */
+        MarkIn: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Staff Id
+             * Format: uuid
+             */
+            staff_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "present" | "half_day" | "absent" | "leave";
         };
         /** MatchOut */
         MatchOut: {
@@ -11406,6 +11912,39 @@ export interface components {
             /** Allow Training Models */
             allow_training_models: boolean;
         };
+        /** SheetRow */
+        SheetRow: {
+            /** Absent */
+            absent: number;
+            /** Half Days */
+            half_days: number;
+            /** Late */
+            late: number;
+            /** Leave */
+            leave: number;
+            /** Name */
+            name: string;
+            /** Pay Estimate Paise */
+            pay_estimate_paise: number;
+            /**
+             * Pay Kind
+             * @enum {string}
+             */
+            pay_kind: "monthly" | "daily";
+            /** Pay Paise */
+            pay_paise: number;
+            /** Present */
+            present: number;
+            /** Role */
+            role: string | null;
+            /**
+             * Staff Id
+             * Format: uuid
+             */
+            staff_id: string;
+            /** Working Days */
+            working_days: number;
+        };
         /** ShipmentIn */
         ShipmentIn: {
             /** Arrived On */
@@ -11861,11 +12400,16 @@ export interface components {
              */
             name: string;
             /**
+             * On Event
+             * @description for trigger on_event: what it starts right after, e.g. invoice.paid, lead.new, booking.done, review.new
+             */
+            on_event?: string | null;
+            /**
              * Trigger
              * @default manual
              * @enum {string}
              */
-            trigger: "manual" | "schedule" | "event";
+            trigger: "manual" | "schedule" | "event" | "on_event";
             /**
              * Wait Days
              * @default 0
@@ -11913,6 +12457,11 @@ export interface components {
              * @description a short name, 2-6 words, e.g. 'Overdue invoice reminders'
              */
             name: string;
+            /**
+             * On Event
+             * @description for trigger on_event: what it starts right after, e.g. invoice.paid, lead.new, booking.done, review.new
+             */
+            on_event?: string | null;
             /** Source Run Id */
             source_run_id?: string | null;
             /**
@@ -11920,7 +12469,7 @@ export interface components {
              * @default manual
              * @enum {string}
              */
-            trigger: "manual" | "schedule" | "event";
+            trigger: "manual" | "schedule" | "event" | "on_event";
             /**
              * Wait Days
              * @default 0
@@ -11972,13 +12521,15 @@ export interface components {
             name: string;
             /** Next Run At */
             next_run_at: string | null;
+            /** On Event */
+            on_event?: string | null;
             /** Runs */
             runs: number;
             /**
              * Trigger
              * @enum {string}
              */
-            trigger: "manual" | "schedule" | "event";
+            trigger: "manual" | "schedule" | "event" | "on_event";
             /** Wait Days */
             wait_days: number;
             /** Weekdays */
@@ -12245,6 +12796,63 @@ export interface components {
             /** Max Uses */
             max_uses?: number | null;
         };
+        /** StaffIn */
+        StaffIn: {
+            /** Name */
+            name: string;
+            /**
+             * Pay Kind
+             * @default monthly
+             * @enum {string}
+             */
+            pay_kind: "monthly" | "daily";
+            /**
+             * Pay Paise
+             * @default 0
+             */
+            pay_paise: number;
+            /**
+             * Phone
+             * @description their WhatsApp number, for IN / OUT
+             */
+            phone?: string | null;
+            /** Role */
+            role?: string | null;
+            /**
+             * Starts At
+             * Format: time
+             * @default 10:00:00
+             */
+            starts_at: string;
+        };
+        /** StaffOut */
+        StaffOut: {
+            /** Active */
+            active: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Pay Kind
+             * @enum {string}
+             */
+            pay_kind: "monthly" | "daily";
+            /** Pay Paise */
+            pay_paise: number;
+            /** Phone */
+            phone: string | null;
+            /** Role */
+            role: string | null;
+            /**
+             * Starts At
+             * Format: time
+             */
+            starts_at: string;
+        };
         /** StaffPartner */
         StaffPartner: {
             /** City */
@@ -12283,6 +12891,23 @@ export interface components {
             status: string;
             /** Upi Id */
             upi_id: string | null;
+        };
+        /** StaffPatch */
+        StaffPatch: {
+            /** Active */
+            active?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Pay Kind */
+            pay_kind?: ("monthly" | "daily") | null;
+            /** Pay Paise */
+            pay_paise?: number | null;
+            /** Phone */
+            phone?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
         };
         /** StageOut */
         StageOut: {
@@ -19192,6 +19817,140 @@ export interface operations {
             };
         };
     };
+    day_view_ventures__venture_id__attendance_get: {
+        parameters: {
+            query?: {
+                day?: string | null;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_ventures__venture_id__attendance_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sheet_ventures__venture_id__attendance_sheet_get: {
+        parameters: {
+            query: {
+                month: string;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sheet_file_ventures__venture_id__attendance_sheet_file_get: {
+        parameters: {
+            query: {
+                month: string;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     automation_health_ventures__venture_id__automation_health_get: {
         parameters: {
             query?: {
@@ -21256,6 +22015,74 @@ export interface operations {
             };
         };
     };
+    candidate_ventures__venture_id__candidates__candidate_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_candidate_ventures__venture_id__candidates__candidate_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidatePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_card_ventures__venture_id__cards_post: {
         parameters: {
             query?: never;
@@ -22893,6 +23720,167 @@ export interface operations {
             };
         };
     };
+    list_alerts_ventures__venture_id__event_alerts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventAlertOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_alert_ventures__venture_id__event_alerts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventAlertIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventAlertOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_alert_ventures__venture_id__event_alerts__alert_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_events_ventures__venture_id__events_get: {
+        parameters: {
+            query?: {
+                kind?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusinessEventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    kinds_ventures__venture_id__events_kinds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventKindOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_facts_ventures__venture_id__facts_get: {
         parameters: {
             query?: {
@@ -23456,6 +24444,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_jobs_ventures__venture_id__jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_job_ventures__venture_id__jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_job_ventures__venture_id__jobs__job_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_candidates_ventures__venture_id__jobs__job_id__candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_cv_ventures__venture_id__jobs__job_id__candidates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_cv_ventures__venture_id__jobs__job_id__candidates_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateOut"];
                 };
             };
             /** @description Validation Error */
@@ -26186,6 +27344,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StartedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_staff_ventures__venture_id__staff_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_staff_ventures__venture_id__staff_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_staff_ventures__venture_id__staff__staff_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                staff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOut"];
                 };
             };
             /** @description Validation Error */

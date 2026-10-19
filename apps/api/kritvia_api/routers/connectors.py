@@ -747,6 +747,11 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
         if p is None or not await _plan_allows(p.run_as, p.venture_id, "whatsapp"):
             ignored += 1
             continue
+        # Staff checking in or out (IN / OUT) are noted on the attendance sheet, not kept as customer chats.
+        from kritvia_api.services import people
+        if await people.whatsapp_checkin(p, m, svc):
+            accepted += 1
+            continue
         # A team member who linked this number (link code, buttons, asking the business) is never a customer.
         from kritvia_api.services import chat_approvals
         if await chat_approvals.whatsapp_update(p, m, svc):

@@ -42,13 +42,15 @@ class Draft(BaseModel):
     instructions: str = Field(max_length=2000, description="the job as numbered steps in plain words, in the "
                                                            "person's language; general (no one-off names or dates "
                                                            "unless the job is always about them)")
-    trigger: Literal["manual", "schedule", "event"] = "manual"
+    trigger: Literal["manual", "schedule", "event", "on_event"] = "manual"
     freq: Literal["daily", "weekly", "monthly"] | None = None
     weekdays: list[int] = Field(default_factory=list, description="0 = Monday … 6 = Sunday (weekly only)")
     day_of_month: int | None = Field(default=None, description="1-28 (monthly only)")
     at_time: str | None = Field(default=None, description="HH:MM, 24-hour, in the business's time zone")
     event: Literal["invoice_overdue", "invoice_paid", "booking_done", "lead_new", "lead_quiet"] | None = None
     wait_days: int = Field(default=0, ge=0, le=60)
+    on_event: str | None = Field(default=None, description="for trigger on_event: what it starts right after, e.g. "
+                                                           "invoice.paid, lead.new, booking.done, review.new")
 
 
 def describe(s: dict[str, Any]) -> str:
@@ -62,6 +64,9 @@ def describe(s: dict[str, Any]) -> str:
         return f"Every day at {s['at_time']}"
     if s["trigger"] == "event":
         return f"{cw.describe(s['event'], int(s.get('wait_days') or 0))} (checked daily at {s['at_time']})"
+    if s["trigger"] == "on_event":
+        from kritvia_api.services.events import describe as words
+        return f"Right after: {words(str(s.get('on_event') or '')).lower()}"
     return "When you run it"
 
 
@@ -73,7 +78,15 @@ def clean(d: Draft) -> Draft:
         raise ValueError("a skill needs a name and its steps")
     if d.trigger == "manual":
         d.freq, d.weekdays, d.day_of_month, d.at_time, d.event, d.wait_days = None, [], None, None, None, 0
+        d.on_event = None
         return d
+    if d.trigger == "on_event":
+        from kritvia_api.services.events import KINDS
+        if d.on_event not in KINDS:
+            raise ValueError("say what it should start right after: " + ", ".join(sorted(KINDS)))
+        d.freq, d.weekdays, d.day_of_month, d.at_time, d.event, d.wait_days = None, [], None, None, None, 0
+        return d
+    d.on_event = None
     hh_mm = (d.at_time or "").strip()
     try:
         hh, mm = (int(x) for x in hh_mm.split(":"))
@@ -112,8 +125,11 @@ SYSTEM = ("You turn a person's words into a repeatable job for a small business'
           "things up (numbers, invoices, leads, tasks, bookings, documents, connected apps) and draft emails, WhatsApp "
           "messages, meetings, tasks and new leads, which a person approves. Write the job as short numbered steps in "
           "the person's language. Keep it general: it will run many times. Say when it runs only if the person said "
-          "so: a schedule (daily / weekly on weekdays / monthly, at a time) or an event (invoice_overdue, "
-          "invoice_paid, booking_done, lead_new, lead_quiet, with wait_days). Otherwise trigger is manual.")
+          "so: a schedule (daily / weekly on weekdays / monthly, at a time), an event checked daily (invoice_overdue, "
+          "invoice_paid, booking_done, lead_new, lead_quiet, with wait_days), or right after something happens "
+          "(trigger on_event, with on_event one of: invoice.paid, invoice.issued, payment.received, lead.new, lead.won, "
+          "booking.new, booking.done, booking.cancelled, bill.new, review.new, candidate.new). Otherwise trigger is "
+          "manual.")
 
 
 async def understand(router, call_ctx, words: str) -> Draft:
@@ -145,6 +161,21 @@ def compose(name: str, instructions: str, lessons: list[str], record: dict[str, 
 
 
 # ------------------------------------------------------------------- storage --
+async def create(conn, crypto, *, org_id: uuid.UUID, venture_id: uuid.UUID, created_by: uuid.UUID, d: Draft,
+                 enabled: bool = True, source_run_id: uuid.UUID | None = None) -> uuid.UUID:
+    """Saves a checked draft as a skill (the Skills page, and routines the assistant sets up after a yes)."""
+    tz = await tz_of(conn, venture_id)
+    nxt = next_time(d.model_dump(), tz, datetime.now(UTC)) if enabled else None
+    enc = await crypto.encrypt(venture_id, INSTRUCTIONS, d.instructions)
+    return (await conn.execute(text(
+        "INSERT INTO skills (org_id, venture_id, created_by, name, instructions_enc, trigger, freq, weekdays,"
+        " day_of_month, at_time, event, wait_days, on_event, enabled, next_run_at, source_run_id)"
+        " VALUES (:o, :v, :u, :n, :i, :t, :f, :w, :dm, :at, :ev, :wd, :oe, :en, :nx, :src) RETURNING id"),
+        {"o": org_id, "v": venture_id, "u": created_by, "n": d.name, "i": enc, "t": d.trigger, "f": d.freq,
+         "w": d.weekdays, "dm": d.day_of_month, "at": d.at_time, "ev": d.event, "wd": d.wait_days, "oe": d.on_event,
+         "en": enabled, "nx": nxt, "src": source_run_id})).scalar_one()
+
+
 async def load(conn, crypto, venture_id: uuid.UUID, skill_id: uuid.UUID) -> dict[str, Any] | None:
     r = (await conn.execute(text("SELECT * FROM skills WHERE id = :s AND venture_id = :v"),
                             {"s": skill_id, "v": venture_id})).first()

@@ -52,6 +52,12 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
     "invoices.search": {"show": "unpaid (default), overdue or paid", "customer": "optional: part of a customer's name"},
     "bills.search": {"show": "unpaid (default), overdue or paid", "vendor": "optional: part of a supplier's name"},
     "bank.unmatched": {},
+    "events.recent": {"hours": "optional: how far back, in hours (default 24)", "kind": "optional: e.g. invoice.paid"},
+    "routines.create": {"name": "a short name", "instructions": "the job as numbered steps",
+                        "trigger": "schedule, on_event or manual", "freq": "for schedule: daily, weekly or monthly",
+                        "weekdays": "for weekly: list of 0 (Monday) … 6 (Sunday)", "day_of_month": "for monthly: 1-28",
+                        "at_time": "for schedule: HH:MM", "on_event": "for on_event: e.g. invoice.paid, lead.new, "
+                        "booking.done, review.new, bill.new, candidate.new"},
     "shipments.search": {"query": "optional: file number, buyer/supplier/client, reference, BL/AWB, container or customs no.",
                          "show": "open (default) or all"},
     "leads.search": {"query": "a name, company, email or phone to look for (may be empty)",
@@ -74,7 +80,8 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
                               "description": "optional"},
 }
 REQUIRED: dict[str, tuple[str, ...]] = {
-    "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "bills.search": (), "bank.unmatched": (), "shipments.search": (), "crm.update_lead": ("lead_id",),
+    "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "bills.search": (), "bank.unmatched": (), "events.recent": (),
+    "routines.create": ("name", "instructions", "trigger"), "shipments.search": (), "crm.update_lead": ("lead_id",),
     "business.numbers": (), "tasks.search": (), "approvals.waiting": (), "indiamart.enquiries": (),
     "team.handoff": ("to", "note"),
     "web.browse": ("task",),
@@ -187,6 +194,9 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
         "ready to send, in the language the person used (Hinglish if they wrote Hinglish).\n"
         "- Answer in the person's language, short and clear. Say what you did and what is waiting for "
         "their approval.\n"
+        "- When the person wants something done regularly ('every Monday…', 'whenever a payment comes in…'), "
+        "or you suggest a routine and they agree, set it up with routines.create (they approve it once) instead "
+        "of only describing it. Never set one up they didn't ask for or agree to.\n"
         + ("- You have used all your tool steps: answer now with what you have.\n" if out_of_steps else "")
         + f"\nTools:\n{_tool_list(tools)}")
     prompt = (f"The person asked:\n{request}\n\nWhat has happened so far:\n{_log_text(log)}\n\n"
@@ -244,6 +254,23 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
         assert t is not None
         args = {"to": to, "template": t.title, "template_id": str(t.id), "language": t.language, "params": clean,
                 "body": body}
+
+    if s.tool == "routines.create":
+        # The card shows the routine exactly as it will be saved, and when it runs, in words.
+        from kritvia_api.services import skills as sk
+        if state["input"].get("skill_id"):
+            log.append({"n": n, "tool": s.tool, "ok": False, "result": "a routine can't set up other routines"})
+            return Goto("think", update={"log": log})
+        try:
+            raw = dict(args)
+            if isinstance(raw.get("weekdays"), str):
+                raw["weekdays"] = [int(x) for x in str(raw["weekdays"]).replace(",", " ").split() if x.isdigit()]
+            d = sk.clean(sk.Draft(**{k: v for k, v in raw.items() if k in sk.Draft.model_fields}))
+        except (ValueError, TypeError) as exc:
+            log.append({"n": n, "tool": s.tool, "ok": False, "result": f"that routine isn't complete: {str(exc)[:200]}"})
+            return Goto("think", update={"log": log}, note="routines.create: incomplete")
+        args = {**d.model_dump(), "when": sk.describe(d.model_dump())}
+        s.title = f"Set up a routine: {d.name} ({args['when']})"
 
     # write / send: an approval on the board; nothing happens until a person says yes
     title = (s.title or f"{s.tool} for: {request[:80]}")[:140]
