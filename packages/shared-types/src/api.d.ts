@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/app-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Store */
+        get: operations["store_app_store_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app-store/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Review */
+        post: operations["request_review_app_store_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approvals/inbox": {
         parameters: {
             query?: never;
@@ -18,6 +52,23 @@ export interface paths {
         get: operations["inbox_approvals_inbox_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/apps/oauth/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Oauth Complete */
+        post: operations["oauth_complete_apps_oauth_complete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -588,6 +639,27 @@ export interface paths {
         get: operations["healthz_healthz_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/apps/{app_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * App Hook
+         * @description An installed app tells the business something happened. The app sends its secret as a bearer token;
+         *     only a short summary is kept, as an 'app.event' on the business's event stream.
+         */
+        post: operations["app_hook_hooks_apps__app_id__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1758,6 +1830,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/mcp-client.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mcp Client Document
+         * @description Kritvia's OAuth Client ID Metadata Document (its address is the client_id).
+         */
+        get: operations["mcp_client_document_public_mcp_client_json_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/notice/{venture_id}": {
         parameters: {
             query?: never;
@@ -1933,6 +2025,40 @@ export interface paths {
         get: operations["readyz_readyz_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff Apps */
+        get: operations["staff_apps_staff_apps_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/apps/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff Review */
+        post: operations["staff_review_staff_apps_review_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2381,6 +2507,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/apps/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Github Analyse */
+        post: operations["github_analyse_ventures__venture_id__apps_github_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/apps/github/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Github Skills */
+        post: operations["github_skills_ventures__venture_id__apps_github_skills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/apps/github/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Github Submit */
+        post: operations["github_submit_ventures__venture_id__apps_github_submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/apps/hosted": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Hosted */
+        post: operations["add_hosted_ventures__venture_id__apps_hosted_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/apps/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Oauth Start */
+        post: operations["oauth_start_ventures__venture_id__apps_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/apps/{app_id}": {
         parameters: {
             query?: never;
@@ -2393,6 +2604,24 @@ export interface paths {
         post?: never;
         /** Remove App */
         delete: operations["remove_app_ventures__venture_id__apps__app_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/apps/{app_id}/hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make Hook */
+        post: operations["make_hook_ventures__venture_id__apps__app_id__hook_post"];
+        /** Remove Hook */
+        delete: operations["remove_hook_ventures__venture_id__apps__app_id__hook_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6717,20 +6946,70 @@ export interface components {
             /** Keys */
             keys: components["schemas"]["ApiKeyOut"][];
         };
+        /** AppHookIn */
+        AppHookIn: {
+            /** Accepted */
+            accepted: boolean;
+        };
+        /** AppHookOut */
+        AppHookOut: {
+            /**
+             * Secret
+             * @description shown once: the app sends it as 'Authorization: Bearer <secret>'
+             */
+            secret: string;
+            /** Url */
+            url: string;
+        };
         /** AppIn */
         AppIn: {
+            /**
+             * Auth
+             * @description how the token is sent (default: bearer when a token is given)
+             */
+            auth?: ("none" | "bearer" | "header" | "basic") | null;
+            /**
+             * Base Url
+             * @description openapi: the API's address, if the description doesn't say
+             */
+            base_url?: string | null;
+            /** Catalog Id */
+            catalog_id?: string | null;
+            /** Header Name */
+            header_name?: string | null;
+            /**
+             * Kind
+             * @default mcp
+             * @enum {string}
+             */
+            kind: "mcp" | "openapi";
             /**
              * Name
              * @description short name, e.g. hubspot
              */
             name: string;
-            /** Token */
+            /**
+             * Token
+             * @description for basic: user:password
+             */
             token?: string | null;
-            /** Url */
+            /**
+             * Url
+             * @description the MCP address, or the OpenAPI description's address
+             */
             url: string;
         };
         /** AppOut */
         AppOut: {
+            /**
+             * Auth
+             * @enum {string}
+             */
+            auth: "none" | "bearer" | "header" | "basic" | "oauth";
+            /** Catalog Id */
+            catalog_id: string | null;
+            /** Has Hook */
+            has_hook: boolean;
             /** Has Token */
             has_token: boolean;
             /**
@@ -6738,6 +7017,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "mcp" | "hosted" | "openapi";
             /** Last Error */
             last_error: string | null;
             /** Name */
@@ -6753,6 +7037,16 @@ export interface components {
             updated_at: string;
             /** Url */
             url: string;
+        };
+        /** AppReviewAsk */
+        AppReviewAsk: {
+            /** Id */
+            id: string;
+        };
+        /** AppReviewAskOut */
+        AppReviewAskOut: {
+            /** Status */
+            status: string;
         };
         /** AppTool */
         AppTool: {
@@ -8274,6 +8568,71 @@ export interface components {
              * Format: date
              */
             start: string;
+        };
+        /** CatalogApp */
+        CatalogApp: {
+            /** Auth Modes */
+            auth_modes: string[];
+            /** Description */
+            description: string | null;
+            /** Docs Url */
+            docs_url: string | null;
+            /** Egress Hosts */
+            egress_hosts: string[];
+            /** Env */
+            env?: components["schemas"]["CatalogEnv"][];
+            /** Header Name */
+            header_name: string | null;
+            /** Id */
+            id: string;
+            /** Installable */
+            installable: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "mcp" | "hosted" | "skills";
+            /**
+             * Package
+             * @description hosted: registry type, name and version
+             */
+            package?: string | null;
+            /** Repo Url */
+            repo_url: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "kritvia" | "registry" | "github";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "listed" | "pending" | "approved" | "rejected";
+            /** Title */
+            title: string;
+            /** Url */
+            url: string | null;
+        };
+        /** CatalogEnv */
+        CatalogEnv: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Name */
+            name: string;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Secret
+             * @default false
+             */
+            secret: boolean;
         };
         /** ChatDetailOut */
         ChatDetailOut: {
@@ -9868,6 +10227,76 @@ export interface components {
              */
             run_id: string;
         };
+        /** GithubIn */
+        GithubIn: {
+            /** Url */
+            url: string;
+        };
+        /** GithubOut */
+        GithubOut: {
+            /** Archived */
+            archived: boolean;
+            /** @description hosted: its entry in the store, if sent in */
+            catalog?: components["schemas"]["CatalogApp"] | null;
+            /** Description */
+            description: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "skills" | "remote" | "hosted" | "none";
+            /** License */
+            license: string | null;
+            /** Package */
+            package: string | null;
+            /** Remote */
+            remote: string | null;
+            /** Repo */
+            repo: string;
+            /** Repo Url */
+            repo_url: string;
+            /** Skills */
+            skills: components["schemas"]["GithubSkill"][];
+            /** Stars */
+            stars: number;
+            /** Title */
+            title: string;
+            /**
+             * Unpublished
+             * @description an MCP server that isn't published (npm/PyPI)
+             */
+            unpublished?: string | null;
+        };
+        /** GithubSkill */
+        GithubSkill: {
+            /** Description */
+            description: string;
+            /** Instructions */
+            instructions: string;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+        };
+        /** GithubSkillsIn */
+        GithubSkillsIn: {
+            /** Paths */
+            paths: string[];
+            /** Url */
+            url: string;
+        };
+        /** GithubSkillsOut */
+        GithubSkillsOut: {
+            /** Skill Ids */
+            skill_ids: string[];
+        };
+        /** GithubSubmitIn */
+        GithubSubmitIn: {
+            /** Note */
+            note?: string | null;
+            /** Url */
+            url: string;
+        };
         /** GoogleCompleteIn */
         GoogleCompleteIn: {
             /** Code */
@@ -10133,6 +10562,20 @@ export interface components {
              * @enum {string}
              */
             handled_by: "kritvia" | "person";
+        };
+        /** HostedIn */
+        HostedIn: {
+            /** Catalog Id */
+            catalog_id: string;
+            /**
+             * Env
+             * @description the app's settings (API keys…), stored encrypted
+             */
+            env?: {
+                [key: string]: string;
+            };
+            /** Name */
+            name: string;
         };
         /** IdOut */
         IdOut: {
@@ -11310,6 +11753,45 @@ export interface components {
             /** Workflows */
             workflows: string[];
         };
+        /** OAuthCompleteIn */
+        OAuthCompleteIn: {
+            /** Code */
+            code: string;
+            /** Iss */
+            iss?: string | null;
+            /** Nonce */
+            nonce: string;
+            /** State */
+            state: string;
+        };
+        /** OAuthCompleteOut */
+        OAuthCompleteOut: {
+            app: components["schemas"]["AppOut"];
+            /**
+             * Venture Id
+             * Format: uuid
+             */
+            venture_id: string;
+        };
+        /** OAuthStartIn */
+        OAuthStartIn: {
+            /** Catalog Id */
+            catalog_id?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Nonce
+             * @description set by the web app; binds the sign-in to this browser
+             */
+            nonce: string;
+            /** Url */
+            url: string;
+        };
+        /** OAuthStartOut */
+        OAuthStartOut: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
         /** OfferOut */
         OfferOut: {
             /**
@@ -12349,6 +12831,23 @@ export interface components {
             note?: string | null;
             /** Retain Days */
             retain_days: number;
+        };
+        /** ReviewIn */
+        ReviewIn: {
+            /**
+             * Egress Hosts
+             * @description the internet sites it may reach, e.g. api.example.com
+             */
+            egress_hosts?: string[];
+            /** Id */
+            id: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "approved" | "rejected" | "pending";
         };
         /** ReviewOut */
         ReviewOut: {
@@ -13452,6 +13951,62 @@ export interface components {
             email: string;
             /** Nonce */
             nonce: string;
+        };
+        /** StaffApp */
+        StaffApp: {
+            /** Auth Modes */
+            auth_modes: string[];
+            /** Description */
+            description: string | null;
+            /** Docs Url */
+            docs_url: string | null;
+            /** Egress Hosts */
+            egress_hosts: string[];
+            /** Env */
+            env?: components["schemas"]["CatalogEnv"][];
+            /** Header Name */
+            header_name: string | null;
+            /** Id */
+            id: string;
+            /** Installable */
+            installable: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "mcp" | "hosted" | "skills";
+            /**
+             * Package
+             * @description hosted: registry type, name and version
+             */
+            package?: string | null;
+            /** Repo Url */
+            repo_url: string | null;
+            /** Review Note */
+            review_note: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "kritvia" | "registry" | "github";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "listed" | "pending" | "approved" | "rejected";
+            /** Submitted By */
+            submitted_by: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Url */
+            url: string | null;
         };
         /** StaffCoupon */
         StaffCoupon: {
@@ -16110,6 +16665,72 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    store_app_store_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                source?: ("kritvia" | "registry" | "github") | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogApp"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_review_app_store_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppReviewAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppReviewAskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     inbox_approvals_inbox_get: {
         parameters: {
             query?: {
@@ -16128,6 +16749,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    oauth_complete_apps_oauth_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthCompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthCompleteOut"];
                 };
             };
             /** @description Validation Error */
@@ -17077,6 +17731,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    app_hook_hooks_apps__app_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                app_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppHookIn"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -19490,6 +20175,28 @@ export interface operations {
             };
         };
     };
+    mcp_client_document_public_mcp_client_json_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     public_notice_public_notice__venture_id__get: {
         parameters: {
             query?: never;
@@ -19836,6 +20543,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    staff_apps_staff_apps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffApp"][];
+                };
+            };
+        };
+    };
+    staff_review_staff_apps_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffApp"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -20730,7 +21490,244 @@ export interface operations {
             };
         };
     };
+    github_analyse_ventures__venture_id__apps_github_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GithubIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GithubOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    github_skills_ventures__venture_id__apps_github_skills_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GithubSkillsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GithubSkillsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    github_submit_ventures__venture_id__apps_github_submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GithubSubmitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogApp"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_hosted_ventures__venture_id__apps_hosted_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HostedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    oauth_start_ventures__venture_id__apps_oauth_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthStartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthStartOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     remove_app_ventures__venture_id__apps__app_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                app_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    make_hook_ventures__venture_id__apps__app_id__hook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                app_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppHookOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_hook_ventures__venture_id__apps__app_id__hook_delete: {
         parameters: {
             query?: never;
             header?: never;

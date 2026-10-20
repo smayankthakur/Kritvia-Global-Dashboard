@@ -43,6 +43,7 @@ KINDS: dict[str, str] = {
     "campaign.sent": "A campaign is sent",
     "candidate.new": "Someone applies for a job",
     "candidate.shortlisted": "A candidate is shortlisted",
+    "app.event": "An installed app sends news (App store)",
 }
 # Kinds whose record a skill can be told about (the same facts as event-started custom workflows).
 RECORD_OF = {"leads": "lead", "invoices": "invoice", "bookings": "booking"}

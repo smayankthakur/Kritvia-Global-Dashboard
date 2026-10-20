@@ -364,3 +364,71 @@ export async function completeSso(req: Request, deps: ProxyDeps): Promise<Respon
   headers.set("location", target.toString());
   return new Response(null, { status: 303, headers });
 }
+
+/**
+ * Sign in to an app from the App store (MCP OAuth), bound to this browser like Google.
+ * start:    POST /api/oauth/mcp/start {venture_id, name, url, catalog_id?}
+ *           -> nonce cookie (kv_oauth) -> API /ventures/{v}/apps/oauth/start {nonce, …} -> the app's sign-in address
+ * callback: GET /api/oauth/mcp/callback?code&state&iss -> API /apps/oauth/complete {code, state, iss, nonce}
+ *           -> back to /v/<venture>/apps?app=connected|denied|invalid_state|forbidden|exchange_failed
+ */
+export async function startMcp(req: Request, deps: ProxyDeps): Promise<Response> {
+  if (!isSameOrigin(req, deps.trustedOrigins)) return forbiddenOrigin();
+  if (!csrfOk(req)) return csrfRefused(req);
+  let b: { venture_id?: string; name?: string; url?: string; catalog_id?: string | null } = {};
+  try {
+    b = (await req.json()) as typeof b;
+  } catch {
+    /* handled below */
+  }
+  const ventureId = String(b.venture_id ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(ventureId)) {
+    return Response.json({ detail: "venture_id is required" }, { status: 422 });
+  }
+  const nonce = randomNonce();
+  const upstream = await proxyRequest(
+    innerRequest(req, "POST", { name: b.name ?? "", url: b.url ?? "", catalog_id: b.catalog_id ?? null, nonce }),
+    ["ventures", ventureId, "apps", "oauth", "start"],
+    deps,
+  );
+  const headers = new Headers({ "content-type": "application/json", "cache-control": "no-store" });
+  for (const c of setCookiesOf(upstream)) headers.append("set-cookie", c);
+  if (upstream.ok) {
+    headers.append(
+      "set-cookie",
+      serializeCookie(OAUTH_COOKIE, nonce, { httpOnly: true, secure: deps.secureCookies, sameSite: "Lax", maxAge: 900, path: COOKIE_PATH }),
+    );
+  }
+  return new Response(await upstream.text(), { status: upstream.status, headers });
+}
+
+export async function completeMcp(req: Request, deps: ProxyDeps): Promise<Response> {
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const iss = url.searchParams.get("iss");
+  const nonce = parseCookies(req.headers.get("cookie"))[OAUTH_COOKIE];
+  const headers = new Headers({ "cache-control": "no-store" });
+  headers.append("set-cookie", serializeCookie(OAUTH_COOKIE, "", { httpOnly: true, secure: deps.secureCookies, maxAge: 0, path: COOKIE_PATH }));
+  let back = new URL("/", publicOrigin(req));
+  let outcome = "denied";
+  if (url.searchParams.get("error") || !code || !state) {
+    outcome = "denied";
+  } else if (!nonce) {
+    outcome = "invalid_state";
+  } else {
+    const upstream = await proxyRequest(innerRequest(req, "POST", { code, state, iss, nonce }), ["apps", "oauth", "complete"], deps);
+    for (const c of setCookiesOf(upstream)) headers.append("set-cookie", c);
+    if (upstream.ok) {
+      const out = (await upstream.json()) as { venture_id: string; app: { name: string } };
+      outcome = "connected";
+      back = new URL(`/v/${out.venture_id}/apps`, publicOrigin(req));
+      back.searchParams.set("name", out.app.name);
+    } else {
+      outcome = upstream.status === 400 ? "invalid_state" : upstream.status === 403 || upstream.status === 404 ? "forbidden" : "exchange_failed";
+    }
+  }
+  back.searchParams.set("app", outcome);
+  headers.set("location", back.toString());
+  return new Response(null, { status: 303, headers });
+}

@@ -1,6 +1,10 @@
 """Connected apps through MCP (the Model Context Protocol): a business adds the address of an app's MCP
 server (HubSpot, Zoho, Notion, Shopify, a custom one…) and the general assistant can use that app's tools.
 
+Kinds of app (patch 0095, the App store): `mcp` (an https MCP server; no auth, a bearer token, the app's own
+header, basic, or OAuth via services/mcp_oauth.py), `hosted` (a reviewed package run in services/mcp-runner,
+url runner:<id>), and `openapi` (any web app by its OpenAPI description, services/openapi_app.py).
+
 Transport: MCP "Streamable HTTP" (JSON-RPC 2.0 over POST; the answer comes back as JSON or as a short
 server-sent-event stream). Only what the assistant needs: initialize, tools/list, tools/call.
 
@@ -19,6 +23,7 @@ Safety:
 from __future__ import annotations
 
 import asyncio
+import base64
 import ipaddress
 import json
 import re
@@ -48,6 +53,14 @@ transport: httpx.AsyncBaseTransport | None = None     # tests inject a mock
 
 class McpError(Exception):
     pass
+
+
+class NeedsAuth(McpError):
+    """The app's OAuth sign-in has expired and couldn't be refreshed (the app is now marked 'needs_auth')."""
+
+
+class NotStarted(McpError):
+    """The MCP runner has no instance for this hosted app (it restarted): configure it and try again."""
 
 
 @dataclass
@@ -92,30 +105,63 @@ async def check_url(url: str) -> str:
 
 
 # --------------------------------------------------------------------------------- protocol --
-class Client:
-    """One MCP session: initialize, then list or call tools."""
+def auth_headers(auth: str, secret: str | None, header_name: str | None = None) -> dict[str, str]:
+    """How an app's token is sent: Authorization: Bearer, a header of the app's own, or basic auth
+    ("user:password", or an API key and secret)."""
+    if not secret or auth == "none":
+        return {}
+    if auth == "header" and header_name:
+        return {header_name: secret}
+    if auth == "basic":
+        return {"Authorization": "Basic " + base64.b64encode(secret.encode()).decode()}
+    return {"Authorization": f"Bearer {secret}"}
 
-    def __init__(self, url: str, token: str | None) -> None:
-        self.url, self.token, self.session_id = url, token, None
+
+def runner_endpoint(url: str) -> str:
+    from kritvia_api.config import get_settings
+    base = get_settings().mcp_runner_url.rstrip("/")
+    if not base:
+        raise McpError("hosted apps aren't switched on on this server (MCP_RUNNER_URL)")
+    return f"{base}/mcp/{url.removeprefix('runner:')}"
+
+
+def runner_headers() -> dict[str, str]:
+    from kritvia_api.config import get_settings
+    return {"Authorization": f"Bearer {get_settings().mcp_runner_token}"}
+
+
+class Client:
+    """One MCP session: initialize, then list or call tools. `url` is an https address, or runner:<id> for
+    an app hosted in Kritvia's sandboxed MCP runner."""
+
+    def __init__(self, url: str, token: str | None = None, *, headers: dict[str, str] | None = None) -> None:
+        self.url, self.session_id = url, None
+        self.hosted = url.startswith("runner:")
+        self.extra = dict(headers if headers is not None else auth_headers("bearer", token))
+        if self.hosted:
+            self.extra.update(runner_headers())
         self._ids = 0
 
     def _headers(self) -> dict[str, str]:
         h = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json",
-             "MCP-Protocol-Version": PROTOCOL_VERSION}
-        if self.token:
-            h["Authorization"] = f"Bearer {self.token}"
+             "MCP-Protocol-Version": PROTOCOL_VERSION, **self.extra}
         if self.session_id:
             h["Mcp-Session-Id"] = self.session_id
         return h
 
     async def _post(self, client: httpx.AsyncClient, msg: dict[str, Any]) -> dict[str, Any] | None:
-        await check_url(self.url)
+        if self.hosted:
+            target = runner_endpoint(self.url)
+        else:
+            target = await check_url(self.url)
         try:
-            r = await client.post(self.url, json=msg, headers=self._headers())
+            r = await client.post(target, json=msg, headers=self._headers())
         except httpx.TransportError as exc:
             raise McpError(f"could not reach the app ({type(exc).__name__})") from exc
+        if self.hosted and r.status_code == 409:
+            raise NotStarted("the app isn't running yet")
         if r.status_code in (401, 403):
-            raise McpError("the app refused the token (check it in Connected apps)")
+            raise McpError("the app refused the token (check it in the App store)")
         if r.status_code >= 400 and r.status_code != 202:
             raise McpError(f"the app answered HTTP {r.status_code}")
         if len(r.content) > MAX_BYTES:
@@ -222,11 +268,127 @@ def tool_from_json(server: str, d: dict[str, Any]) -> AppTool:
                    required=tuple(d.get("required") or ()))
 
 
+# ---------------------------------------------------------------------- the four kinds of app --
+@dataclass
+class Link:
+    """How to reach one installed app, with its secret already decrypted."""
+    id: uuid.UUID | None
+    kind: str                         # mcp | hosted | openapi
+    url: str
+    headers: dict[str, str]
+    spec: dict[str, Any] | None = None
+    runner: dict[str, Any] | None = None   # hosted: {package, env, egress_hosts}
+
+
+async def configure_runner(instance: str, cfg: dict[str, Any]) -> None:
+    """Start (or restart) a hosted app's sandboxed instance in the MCP runner."""
+    from kritvia_api.config import get_settings
+    base = get_settings().mcp_runner_url.rstrip("/")
+    if not base:
+        raise McpError("hosted apps aren't switched on on this server (MCP_RUNNER_URL)")
+    async with httpx.AsyncClient(transport=transport, timeout=120, follow_redirects=False) as client:
+        try:
+            r = await client.put(f"{base}/instances/{instance}", json=cfg, headers=runner_headers())
+        except httpx.TransportError as exc:
+            raise McpError(f"the app runner couldn't be reached ({type(exc).__name__})") from None
+    if r.status_code >= 400:
+        try:
+            why = str(r.json().get("detail", ""))[:200]
+        except ValueError:
+            why = ""
+        raise McpError(f"the app couldn't be started{': ' + why if why else ''}")
+
+
+async def stop_runner(instance: str) -> None:
+    from kritvia_api.config import get_settings
+    base = get_settings().mcp_runner_url.rstrip("/")
+    if not base:
+        return
+    try:
+        async with httpx.AsyncClient(transport=transport, timeout=30) as client:
+            await client.delete(f"{base}/instances/{instance}", headers=runner_headers())
+    except httpx.TransportError:
+        pass
+
+
+async def link_tools(link: Link, server: str) -> list[AppTool]:
+    if link.kind == "openapi":
+        from kritvia_api.services import openapi_app
+        return openapi_app.tools(link.spec or {}, server)
+    client = Client(link.url, headers=link.headers)
+    if link.kind == "hosted":
+        try:
+            return await client.list_tools(server)
+        except NotStarted:
+            await configure_runner(link.url.removeprefix("runner:"), link.runner or {})
+            return await Client(link.url, headers=link.headers).list_tools(server)
+    return await client.list_tools(server)
+
+
+async def link_call(link: Link, tool: str, args: dict[str, Any]) -> str:
+    if link.kind == "openapi":
+        from kritvia_api.services import openapi_app
+        return await openapi_app.call(link.spec or {}, tool, args, link.headers)
+    if link.kind == "hosted":
+        try:
+            return await Client(link.url, headers=link.headers).call(tool, args)
+        except NotStarted:
+            await configure_runner(link.url.removeprefix("runner:"), link.runner or {})
+    return await Client(link.url, headers=link.headers).call(tool, args)
+
+
+async def hosted_config(conn, catalog_id: str | None, env: dict[str, str]) -> dict[str, Any]:
+    """What the runner needs to start a hosted app: the reviewed package, the hosts it may reach, its settings."""
+    row = (await conn.execute(text(
+        "SELECT package, egress_hosts FROM app_catalog WHERE id = :c AND kind = 'hosted'"
+        " AND (status = 'approved' OR (source = 'kritvia' AND status = 'listed'))"), {"c": catalog_id})).first()
+    if row is None or not row.package:
+        raise McpError("this app hasn't been approved by Kritvia's team")
+    return {"package": row.package, "egress_hosts": list(row.egress_hosts or []), "env": env}
+
+
+async def load_link(conn, crypto, venture_id: uuid.UUID, row: Any) -> Link:
+    """A connection for an mcp_servers row (id, kind, url, auth, header_name, token_enc, oauth_enc, spec,
+    catalog_id). OAuth tokens are refreshed when they are about to expire; if that fails the app is marked
+    'needs_auth' and someone signs in again in the App store."""
+    secret = None
+    if row.token_enc:
+        secret = (await crypto.decrypt(venture_id, TOKEN_PURPOSE, row.token_enc)).decode()
+    kind, auth = getattr(row, "kind", "mcp") or "mcp", getattr(row, "auth", "bearer") or "bearer"
+    if kind == "hosted":
+        try:
+            env = json.loads(secret or "{}")
+        except ValueError:
+            env = {}
+        cfg = await hosted_config(conn, row.catalog_id, env)
+        return Link(row.id, kind, row.url, {}, runner=cfg)
+    if auth == "oauth":
+        from kritvia_api.services import mcp_oauth
+        if not row.oauth_enc:
+            raise McpError("sign in to this app again in the App store")
+        tok = json.loads((await crypto.decrypt(venture_id, mcp_oauth.PURPOSE, row.oauth_enc)).decode())
+        if mcp_oauth.needs_refresh(tok):
+            try:
+                tok = await mcp_oauth.refresh(tok)
+            except McpError:
+                await conn.execute(text("SELECT private.mcp_save_oauth(:id, NULL, 'needs_auth')"), {"id": row.id})
+                raise NeedsAuth("the app's sign-in has expired: sign in again in the App store") from None
+            enc = await crypto.encrypt(venture_id, mcp_oauth.PURPOSE, json.dumps(tok))
+            await conn.execute(text("SELECT private.mcp_save_oauth(:id, :e, 'active')"), {"id": row.id, "e": enc})
+        headers = {"Authorization": f"Bearer {tok['access_token']}"}
+    else:
+        headers = auth_headers(auth, secret, row.header_name)
+    return Link(row.id, kind, row.url, headers, spec=row.spec)
+
+
+ROW_COLS = "id, name, kind, url, auth, header_name, token_enc, oauth_enc, spec, catalog_id, tools"
+
+
 # --------------------------------------------------------------------- what the assistant sees --
 async def _servers(ctx: RunContext) -> list[Any]:
     async with ctx.tx() as conn:
         return (await conn.execute(text(
-            "SELECT id, name, url, token_enc, tools FROM mcp_servers WHERE venture_id = :v AND status = 'active'"
+            "SELECT id, name, tools FROM mcp_servers WHERE venture_id = :v AND status = 'active'"
             " ORDER BY name"), {"v": ctx.venture_id})).all()
 
 
@@ -254,22 +416,28 @@ async def call(ctx: RunContext, full_name: str, args: dict[str, Any]) -> str:
     server, tool = split_name(full_name)
     async with ctx.tx() as conn:
         row = (await conn.execute(text(
-            "SELECT id, url, token_enc, tools FROM mcp_servers WHERE venture_id = :v AND name = :n"
-            " AND status = 'active'"), {"v": ctx.venture_id, "n": server})).first()
+            f"SELECT {ROW_COLS} FROM mcp_servers WHERE venture_id = :v AND name = :n AND status = 'active'"),
+            {"v": ctx.venture_id, "n": server})).first()
         if row is None:
             raise McpError(f"the connected app {server!r} isn't set up")
         if not any(d.get("name") == tool for d in (row.tools or [])):
             raise McpError(f"the app {server!r} has no tool {tool!r}")
-        token = None
-        if row.token_enc:
-            token = (await ctx.crypto(conn).decrypt(ctx.venture_id, TOKEN_PURPOSE, row.token_enc)).decode()
+        try:
+            link = await load_link(conn, ctx.crypto(conn), ctx.venture_id, row)
+        except NeedsAuth as exc:
+            expired = exc                      # keep the 'needs_auth' mark: leave the transaction normally
+        else:
+            expired = None
+    if expired is not None:
+        raise expired
     clean = {k: v for k, v in args.items() if k != "mcp_tool"}
-    return await Client(row.url, token).call(tool, clean)
+    return await link_call(link, tool, clean)
 
 
 def new_id() -> uuid.UUID:
     return uuid.uuid4()
 
 
-__all__ = ["PREFIX", "McpError", "AppTool", "Client", "check_url", "tools_for", "call", "split_name",
-           "tool_to_json", "tool_from_json", "NAME_RE", "TOKEN_PURPOSE"]
+__all__ = ["PREFIX", "McpError", "NeedsAuth", "NotStarted", "AppTool", "Client", "Link", "check_url", "tools_for", "call",
+           "split_name", "tool_to_json", "tool_from_json", "NAME_RE", "TOKEN_PURPOSE", "auth_headers", "load_link",
+           "link_tools", "link_call", "hosted_config", "configure_runner", "stop_runner", "ROW_COLS"]

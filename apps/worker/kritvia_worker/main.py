@@ -17,6 +17,7 @@ Cron (IST)
   06:30 daily             morning_check    alert (audit + log) if a scheduled plan is missing or failed
   08:40 daily             self_check       tell each business's owners what is stuck in their automation
   every 30 minutes        nudge_expiring   tell owners about drafts that expire within the next hours
+  hourly (:17)            sync_app_store   the official MCP Registry into the App store
 
 Priority worker (PriorityWorkerSettings, service `worker-priority`): runs only the runs of plans with
 priority processing (Scale, Enterprise), from their own queue, and keeps a heartbeat in Valkey so the
@@ -281,6 +282,16 @@ async def watchdog_check(ctx: dict) -> int:
     return len(await watchdog.check(ctx["services"]))
 
 
+async def sync_app_store(ctx: dict) -> dict:
+    """Hourly: the official MCP Registry into the App store (services/app_catalog.py)."""
+    from kritvia_api.services import app_catalog
+    try:
+        return await app_catalog.sync_registry()
+    except Exception:  # noqa: BLE001 - the store keeps what it had
+        log.exception("MCP registry sync failed")
+        return {}
+
+
 async def priority_shutdown(ctx: dict) -> None:
     try:
         await ctx["redis"].delete(PRIORITY_HEARTBEAT)
@@ -308,6 +319,7 @@ class WorkerSettings:
         cron(cash_week, hour={9}, minute={5}, run_at_startup=False),
         cron(heartbeat, second={0, 30}),
         cron(watchdog_check, second=50, run_at_startup=False),
+        cron(sync_app_store, minute={17}, second=30),
         cron(dispatch_events, second=20, run_at_startup=False),
         cron(attendance_check, hour={12}, minute={5}, run_at_startup=False),
         cron(purge_candidates, hour={3}, minute={35}, run_at_startup=False),

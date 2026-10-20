@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     # Browser for the browser agent (services/browser). Empty URL or token -> the agent is off.
     browser_url: str = ""
     browser_token: str = ""
+    # App store (patch 0095): the sandboxed MCP runner for reviewed apps from npm/PyPI/containers
+    # (services/mcp-runner; empty URL -> hosted apps are off), and the official MCP Registry it lists.
+    mcp_runner_url: str = ""
+    mcp_runner_token: str = ""
+    mcp_registry_url: str = "https://registry.modelcontextprotocol.io"
 
     # Outbound messages when a venture has no Google connector: 'log' records to the
     # outbox without sending (dogfooding); 'none' fails the step.

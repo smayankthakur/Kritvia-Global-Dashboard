@@ -856,8 +856,104 @@
         "title": "ApiKeysOut",
         "type": "object"
       },
+      "AppHookIn": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "AppHookIn",
+        "type": "object"
+      },
+      "AppHookOut": {
+        "properties": {
+          "secret": {
+            "description": "shown once: the app sends it as 'Authorization: Bearer <secret>'",
+            "title": "Secret",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "secret"
+        ],
+        "title": "AppHookOut",
+        "type": "object"
+      },
       "AppIn": {
         "properties": {
+          "auth": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "bearer",
+                  "header",
+                  "basic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "how the token is sent (default: bearer when a token is given)",
+            "title": "Auth"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "openapi: the API's address, if the description doesn't say",
+            "title": "Base Url"
+          },
+          "catalog_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Id"
+          },
+          "header_name": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9-]{1,60}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Name"
+          },
+          "kind": {
+            "default": "mcp",
+            "enum": [
+              "mcp",
+              "openapi"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "name": {
             "description": "short name, e.g. hubspot",
             "pattern": "^[a-z][a-z0-9_]{1,23}$",
@@ -874,9 +970,11 @@
                 "type": "null"
               }
             ],
+            "description": "for basic: user:password",
             "title": "Token"
           },
           "url": {
+            "description": "the MCP address, or the OpenAPI description's address",
             "maxLength": 500,
             "minLength": 10,
             "title": "Url",
@@ -892,6 +990,32 @@
       },
       "AppOut": {
         "properties": {
+          "auth": {
+            "enum": [
+              "none",
+              "bearer",
+              "header",
+              "basic",
+              "oauth"
+            ],
+            "title": "Auth",
+            "type": "string"
+          },
+          "catalog_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Id"
+          },
+          "has_hook": {
+            "title": "Has Hook",
+            "type": "boolean"
+          },
           "has_token": {
             "title": "Has Token",
             "type": "boolean"
@@ -899,6 +1023,15 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "mcp",
+              "hosted",
+              "openapi"
+            ],
+            "title": "Kind",
             "type": "string"
           },
           "last_error": {
@@ -940,14 +1073,45 @@
         "required": [
           "id",
           "name",
+          "kind",
           "url",
+          "auth",
           "status",
           "has_token",
+          "has_hook",
+          "catalog_id",
           "tools",
           "last_error",
           "updated_at"
         ],
         "title": "AppOut",
+        "type": "object"
+      },
+      "AppReviewAsk": {
+        "properties": {
+          "id": {
+            "maxLength": 200,
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AppReviewAsk",
+        "type": "object"
+      },
+      "AppReviewAskOut": {
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "AppReviewAskOut",
         "type": "object"
       },
       "AppTool": {
@@ -5269,6 +5433,183 @@
         "title": "CashWeekOut",
         "type": "object"
       },
+      "CatalogApp": {
+        "properties": {
+          "auth_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Auth Modes",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "docs_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs Url"
+          },
+          "egress_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Egress Hosts",
+            "type": "array"
+          },
+          "env": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogEnv"
+            },
+            "title": "Env",
+            "type": "array"
+          },
+          "header_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "installable": {
+            "title": "Installable",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "mcp",
+              "hosted",
+              "skills"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "hosted: registry type, name and version",
+            "title": "Package"
+          },
+          "repo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Url"
+          },
+          "source": {
+            "enum": [
+              "kritvia",
+              "registry",
+              "github"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "listed",
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "kind",
+          "title",
+          "description",
+          "url",
+          "auth_modes",
+          "header_name",
+          "docs_url",
+          "repo_url",
+          "egress_hosts",
+          "status",
+          "installable"
+        ],
+        "title": "CatalogApp",
+        "type": "object"
+      },
+      "CatalogEnv": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "secret": {
+            "default": false,
+            "title": "Secret",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CatalogEnv",
+        "type": "object"
+      },
       "ChatDetailOut": {
         "properties": {
           "chat": {
@@ -9489,6 +9830,234 @@
         "title": "FromRequestIn",
         "type": "object"
       },
+      "GithubIn": {
+        "properties": {
+          "url": {
+            "maxLength": 500,
+            "minLength": 19,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "GithubIn",
+        "type": "object"
+      },
+      "GithubOut": {
+        "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "catalog": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CatalogApp"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "hosted: its entry in the store, if sent in"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "skills",
+              "remote",
+              "hosted",
+              "none"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "remote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          },
+          "repo_url": {
+            "title": "Repo Url",
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/GithubSkill"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "stars": {
+            "title": "Stars",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unpublished": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "an MCP server that isn't published (npm/PyPI)",
+            "title": "Unpublished"
+          }
+        },
+        "required": [
+          "repo",
+          "repo_url",
+          "title",
+          "description",
+          "stars",
+          "archived",
+          "license",
+          "kind",
+          "skills",
+          "remote",
+          "package"
+        ],
+        "title": "GithubOut",
+        "type": "object"
+      },
+      "GithubSkill": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "instructions": {
+            "title": "Instructions",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "name",
+          "description",
+          "instructions"
+        ],
+        "title": "GithubSkill",
+        "type": "object"
+      },
+      "GithubSkillsIn": {
+        "properties": {
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Paths",
+            "type": "array"
+          },
+          "url": {
+            "maxLength": 500,
+            "minLength": 19,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "paths"
+        ],
+        "title": "GithubSkillsIn",
+        "type": "object"
+      },
+      "GithubSkillsOut": {
+        "properties": {
+          "skill_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Skill Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "skill_ids"
+        ],
+        "title": "GithubSkillsOut",
+        "type": "object"
+      },
+      "GithubSubmitIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "url": {
+            "maxLength": 500,
+            "minLength": 19,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "GithubSubmitIn",
+        "type": "object"
+      },
       "GoogleCompleteIn": {
         "properties": {
           "code": {
@@ -10167,6 +10736,34 @@
           "handled_by"
         ],
         "title": "HandlerIn",
+        "type": "object"
+      },
+      "HostedIn": {
+        "properties": {
+          "catalog_id": {
+            "maxLength": 200,
+            "title": "Catalog Id",
+            "type": "string"
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "the app's settings (API keys\u2026), stored encrypted",
+            "title": "Env",
+            "type": "object"
+          },
+          "name": {
+            "pattern": "^[a-z][a-z0-9_]{1,23}$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "catalog_id"
+        ],
+        "title": "HostedIn",
         "type": "object"
       },
       "IdOut": {
@@ -13447,6 +14044,119 @@
         "title": "NoticeOut",
         "type": "object"
       },
+      "OAuthCompleteIn": {
+        "properties": {
+          "code": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "iss": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iss"
+          },
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 32,
+            "title": "Nonce",
+            "type": "string"
+          },
+          "state": {
+            "maxLength": 100,
+            "minLength": 32,
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "code",
+          "nonce"
+        ],
+        "title": "OAuthCompleteIn",
+        "type": "object"
+      },
+      "OAuthCompleteOut": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppOut"
+          },
+          "venture_id": {
+            "format": "uuid",
+            "title": "Venture Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "venture_id",
+          "app"
+        ],
+        "title": "OAuthCompleteOut",
+        "type": "object"
+      },
+      "OAuthStartIn": {
+        "properties": {
+          "catalog_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Id"
+          },
+          "name": {
+            "pattern": "^[a-z][a-z0-9_]{1,23}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "nonce": {
+            "description": "set by the web app; binds the sign-in to this browser",
+            "maxLength": 128,
+            "minLength": 32,
+            "title": "Nonce",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "nonce"
+        ],
+        "title": "OAuthStartIn",
+        "type": "object"
+      },
+      "OAuthStartOut": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "OAuthStartOut",
+        "type": "object"
+      },
       "OfferOut": {
         "properties": {
           "expires_at": {
@@ -16165,6 +16875,51 @@
           "retain_days"
         ],
         "title": "RetentionIn",
+        "type": "object"
+      },
+      "ReviewIn": {
+        "properties": {
+          "egress_hosts": {
+            "description": "the internet sites it may reach, e.g. api.example.com",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Egress Hosts",
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 200,
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "enum": [
+              "approved",
+              "rejected",
+              "pending"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "ReviewIn",
         "type": "object"
       },
       "ReviewOut": {
@@ -20018,6 +20773,198 @@
           "nonce"
         ],
         "title": "SsoStartIn",
+        "type": "object"
+      },
+      "StaffApp": {
+        "properties": {
+          "auth_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Auth Modes",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "docs_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs Url"
+          },
+          "egress_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Egress Hosts",
+            "type": "array"
+          },
+          "env": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogEnv"
+            },
+            "title": "Env",
+            "type": "array"
+          },
+          "header_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "installable": {
+            "title": "Installable",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "mcp",
+              "hosted",
+              "skills"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "hosted: registry type, name and version",
+            "title": "Package"
+          },
+          "repo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Url"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "source": {
+            "enum": [
+              "kritvia",
+              "registry",
+              "github"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "listed",
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted By"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "kind",
+          "title",
+          "description",
+          "url",
+          "auth_modes",
+          "header_name",
+          "docs_url",
+          "repo_url",
+          "egress_hosts",
+          "status",
+          "installable",
+          "review_note",
+          "submitted_by",
+          "reviewed_at",
+          "updated_at"
+        ],
+        "title": "StaffApp",
         "type": "object"
       },
       "StaffCoupon": {
@@ -26873,6 +27820,141 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/app-store": {
+      "get": {
+        "operationId": "store_app_store_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "kritvia",
+                    "registry",
+                    "github"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogApp"
+                  },
+                  "title": "Response Store App Store Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Store",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
+    "/app-store/request": {
+      "post": {
+        "operationId": "request_review_app_store_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppReviewAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppReviewAskOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Review",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
     "/approvals/inbox": {
       "get": {
         "description": "Pending drafts across every venture the caller can read, oldest first.",
@@ -26923,6 +28005,52 @@
         "summary": "Inbox",
         "tags": [
           "approvals"
+        ]
+      }
+    },
+    "/apps/oauth/complete": {
+      "post": {
+        "operationId": "oauth_complete_apps_oauth_complete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthCompleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthCompleteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Oauth Complete",
+        "tags": [
+          "app-store"
         ]
       }
     },
@@ -28136,6 +29264,50 @@
         "summary": "Healthz",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/hooks/apps/{app_id}": {
+      "post": {
+        "description": "An installed app tells the business something happened. The app sends its secret as a bearer token;\nonly a short summary is kept, as an 'app.event' on the business's event stream.",
+        "operationId": "app_hook_hooks_apps__app_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppHookIn"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "App Hook",
+        "tags": [
+          "app-store"
         ]
       }
     },
@@ -31882,6 +33054,30 @@
         ]
       }
     },
+    "/public/mcp-client.json": {
+      "get": {
+        "description": "Kritvia's OAuth Client ID Metadata Document (its address is the client_id).",
+        "operationId": "mcp_client_document_public_mcp_client_json_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Mcp Client Document Public Mcp Client Json Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mcp Client Document",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
     "/public/notice/{venture_id}": {
       "get": {
         "operationId": "public_notice_public_notice__venture_id__get",
@@ -32345,6 +33541,86 @@
         "summary": "Readyz",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/staff/apps": {
+      "get": {
+        "operationId": "staff_apps_staff_apps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffApp"
+                  },
+                  "title": "Response Staff Apps Staff Apps Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Apps",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
+    "/staff/apps/review": {
+      "post": {
+        "operationId": "staff_review_staff_apps_review_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffApp"
+                  },
+                  "title": "Response Staff Review Staff Apps Review Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Review",
+        "tags": [
+          "app-store"
         ]
       }
     },
@@ -33750,7 +35026,7 @@
         ],
         "summary": "List Apps",
         "tags": [
-          "assistant"
+          "app-store"
         ]
       },
       "post": {
@@ -33806,7 +35082,297 @@
         ],
         "summary": "Add App",
         "tags": [
-          "assistant"
+          "app-store"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/apps/github": {
+      "post": {
+        "operationId": "github_analyse_ventures__venture_id__apps_github_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Github Analyse",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/apps/github/skills": {
+      "post": {
+        "operationId": "github_skills_ventures__venture_id__apps_github_skills_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubSkillsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubSkillsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Github Skills",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/apps/github/submit": {
+      "post": {
+        "operationId": "github_submit_ventures__venture_id__apps_github_submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubSubmitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogApp"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Github Submit",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/apps/hosted": {
+      "post": {
+        "operationId": "add_hosted_ventures__venture_id__apps_hosted_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HostedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Hosted",
+        "tags": [
+          "app-store"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/apps/oauth/start": {
+      "post": {
+        "operationId": "oauth_start_ventures__venture_id__apps_oauth_start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthStartOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Oauth Start",
+        "tags": [
+          "app-store"
         ]
       }
     },
@@ -33857,7 +35423,114 @@
         ],
         "summary": "Remove App",
         "tags": [
-          "assistant"
+          "app-store"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/apps/{app_id}/hook": {
+      "delete": {
+        "operationId": "remove_hook_ventures__venture_id__apps__app_id__hook_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Hook",
+        "tags": [
+          "app-store"
+        ]
+      },
+      "post": {
+        "operationId": "make_hook_ventures__venture_id__apps__app_id__hook_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "app_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "App Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppHookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Make Hook",
+        "tags": [
+          "app-store"
         ]
       }
     },
@@ -33915,7 +35588,7 @@
         ],
         "summary": "Refresh App",
         "tags": [
-          "assistant"
+          "app-store"
         ]
       }
     },

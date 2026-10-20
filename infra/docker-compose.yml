@@ -16,6 +16,8 @@ x-app-env: &app-env
   TIERS_CONFIG_PATH: /app/tiers.yaml
   SANDBOX_URL: http://sandbox:8100
   BROWSER_URL: http://browser:8200
+  MCP_RUNNER_URL: ${MCP_RUNNER_URL:-}
+  MCP_RUNNER_TOKEN: ${MCP_RUNNER_TOKEN:-}
 
 # Container logs rotate on disk; scripts/archive-logs.sh keeps a daily copy for one year (CERT-In: 180 days in India;
 # DPDP Rules 2025 r.6: one year). Rotation only bounds disk use between archives.
@@ -226,6 +228,25 @@ services:
     pids_limit: 256
     networks: [browsing]
 
+  # App store: hosts MCP servers from npm / PyPI / container images that Kritvia's team approved, one gVisor
+  # container per installed app (services/mcp-runner). The app containers sit on the internal mcp-sandbox
+  # network and reach the internet only through this runner's egress proxy, with only their approved sites.
+  # Off until set in .env: MCP_RUNNER_URL=http://mcp-runner:8300 and MCP_RUNNER_TOKEN (and gVisor installed).
+  mcp-runner:
+    logging: *logging
+    profiles: ["apps"]
+    build: { context: ../services/mcp-runner }
+    restart: unless-stopped
+    environment:
+      MCP_RUNNER_TOKEN: ${MCP_RUNNER_TOKEN:-}
+      MCP_RUNTIME: ${MCP_RUNTIME:-runsc}
+      MCP_NETWORK: kritvia_mcp-sandbox
+      MCP_PROXY_HOST: mcp-runner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    mem_limit: 512m
+    networks: [default, mcp-sandbox]
+
   cloudflared:
     logging: *logging
     profiles: ["tunnel"]
@@ -237,6 +258,10 @@ services:
 networks:
   default: {}
   browsing: {}
+  # No route out: hosted apps reach the internet only through the MCP runner's egress proxy.
+  mcp-sandbox:
+    name: kritvia_mcp-sandbox
+    internal: true
 
 volumes:
   pgdata:

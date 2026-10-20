@@ -33,6 +33,7 @@ import {
   MessageSquareText,
   Mic,
   Network,
+  PackageCheck,
   PhoneCall,
   Receipt,
   Repeat,
@@ -42,6 +43,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  Store,
   TrendingUp,
   Users,
   UsersRound,
@@ -104,6 +106,7 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
     { label: "Marketing", href: `${v}/marketing`, icon: Megaphone },
     { label: "People", href: `${v}/people`, icon: UsersRound },
     { label: "Automations", href: `${v}/automations`, icon: Repeat },
+    { label: "App store", href: `${v}/apps`, icon: Store },
     { label: "Browser", href: `${v}/browser`, icon: Globe },
     { label: "Calls", href: `${v}/calls`, icon: PhoneCall },
     { label: "Analytics", href: `${v}/analytics`, icon: ChartColumn },
@@ -142,6 +145,7 @@ export const staffNav: NavItem[] = [
   { label: "Pilot health", href: "/staff", icon: HeartPulse },
   { label: "Partners", href: "/staff/partners", icon: Handshake },
   { label: "Coupons", href: "/staff/coupons", icon: Gift },
+  { label: "Apps to review", href: "/staff/apps", icon: PackageCheck },
 ];
 
 export const accountNav: NavItem[] = [
