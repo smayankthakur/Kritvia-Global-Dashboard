@@ -297,7 +297,7 @@ export default function AssistantPage() {
   });
   return (
     <div className="space-y-6">
-      <PageHeader title="Assistant" description="Ask Kritvia to do anything in plain words. It looks things up, drafts the messages and keeps you in control." />
+      <PageHeader title="Assistant" description="Ask Kritvia to do anything in plain words, several tasks at once: it can use every page and agent in Kritvia, looks things up, drafts and changes things, and asks for your yes before anything changes." />
       <Card className="p-4">
         <Composer ventureId={v.id} />
       </Card>

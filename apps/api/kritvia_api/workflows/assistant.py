@@ -30,7 +30,7 @@ from kritvia_api.engine.context import RunContext
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Workflow, registry
 from kritvia_api.engine.tools import Capability, PolicyError
 
-MAX_TOOL_STEPS = 8
+MAX_TOOL_STEPS = 20
 MAX_REJECTIONS = 2
 RESULT_CHARS = 3000
 
@@ -53,6 +53,15 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
     "bills.search": {"show": "unpaid (default), overdue or paid", "vendor": "optional: part of a supplier's name"},
     "bank.unmatched": {},
     "ads.summary": {"days": "optional: how many days back (default 30)"},
+    "kritvia.find": {"query": "a few words for what you want to do or see, e.g. 'new invoice', 'run social posts "
+                              "agent', 'mark attendance', 'cash forecast'"},
+    "kritvia.read": {"action": "the exact action from kritvia.find, e.g. 'GET /ventures/{venture_id}/cash/forecast'",
+                     "path": "optional: ids for the action's other {placeholders}, e.g. {\"invoice_id\": \"…\"}",
+                     "query": "optional: the action's query fields"},
+    "kritvia.do": {"action": "the exact action from kritvia.find, e.g. 'POST /ventures/{venture_id}/invoices'",
+                   "path": "optional: ids for the action's other {placeholders}",
+                   "query": "optional: the action's query fields",
+                   "body": "the action's body fields as an object, with every required one"},
     "events.recent": {"hours": "optional: how far back, in hours (default 24)", "kind": "optional: e.g. invoice.paid"},
     "routines.create": {"name": "a short name", "instructions": "the job as numbered steps",
                         "trigger": "schedule, on_event or manual", "freq": "for schedule: daily, weekly or monthly",
@@ -82,6 +91,7 @@ TOOL_FIELDS: dict[str, dict[str, str]] = {
 }
 REQUIRED: dict[str, tuple[str, ...]] = {
     "knowledge.search": ("query",), "leads.search": (), "invoices.search": (), "bills.search": (), "bank.unmatched": (), "ads.summary": (), "events.recent": (),
+    "kritvia.find": ("query",), "kritvia.read": ("action",), "kritvia.do": ("action",),
     "routines.create": ("name", "instructions", "trigger"), "shipments.search": (), "crm.update_lead": ("lead_id",),
     "business.numbers": (), "tasks.search": (), "approvals.waiting": (), "indiamart.enquiries": (),
     "team.handoff": ("to", "note"),
@@ -97,6 +107,8 @@ REQUIRED: dict[str, tuple[str, ...]] = {
 class Step(BaseModel):
     """One decision: answer now, or use one tool."""
     thought: str = Field(default="", max_length=600, description="one line: what you are doing and why")
+    plan: list[str] = Field(default_factory=list, max_length=12,
+                            description="when the request has several parts: the steps still to do, shortest words")
     answer: str | None = Field(default=None, max_length=4000,
                                description="the reply to the person, when the request is done or cannot be done")
     tool: str | None = Field(default=None, description="the tool to use next, from the list; null when answering")
@@ -114,7 +126,7 @@ async def _authorize(conn, venture_id, inp: dict) -> None:
 
 
 wf = registry.register(Workflow(
-    "assistant", title="Kritvia assistant", start="think", authorize_input=_authorize, max_steps=40,
+    "assistant", title="Kritvia assistant", start="think", authorize_input=_authorize, max_steps=90,
     trigger="You ask it something on the Assistant page or by voice",
     description="Ask for anything in plain words, in English, Hindi or Hinglish. The assistant works out the "
                 "steps, looks things up in your business memory, numbers, tasks, leads and connected apps, and "
@@ -195,15 +207,26 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
         "ready to send, in the language the person used (Hinglish if they wrote Hinglish).\n"
         "- Answer in the person's language, short and clear. Say what you did and what is waiting for "
         "their approval.\n"
+        "- You can do anything Kritvia's app can do for this business. The tools above cover the common things; "
+        "for everything else (agents and their settings, invoices, bills, bank, cash, campaigns, social posts, "
+        "jobs and CVs, staff and attendance, bookings, shipments, tasks, skills, settings…) use kritvia.find with "
+        "a few words, then kritvia.read (GET) or kritvia.do (anything that changes something) with the exact "
+        "action and its fields. Never guess an action or an id: find it first.\n"
+        "- A request with several parts: keep `plan` (the parts still to do) and work through them one tool at a "
+        "time; answer when all are done or waiting for approval.\n"
         "- When the person wants something done regularly ('every Monday…', 'whenever a payment comes in…'), "
         "or you suggest a routine and they agree, set it up with routines.create (they approve it once) instead "
         "of only describing it. Never set one up they didn't ask for or agree to.\n"
         + ("- You have used all your tool steps: answer now with what you have.\n" if out_of_steps else "")
         + f"\nTools:\n{_tool_list(tools)}")
-    prompt = (f"The person asked:\n{request}\n\nWhat has happened so far:\n{_log_text(log)}\n\n"
+    plan = state.get("plan") or []
+    prompt = (f"The person asked:\n{request}\n\n"
+              + (("Your plan (still to do):\n" + "\n".join(f"- {p}" for p in plan) + "\n\n") if plan else "")
+              + f"What has happened so far:\n{_log_text(log)}\n\n"
               "Decide the next step: give `answer` (and no tool) if you are done or cannot go on, otherwise "
               "give `tool` and `args`.")
     s = await ctx.llm_json(tier="plan", schema=Step, system=system, prompt=prompt)
+    state["plan"] = [str(p)[:120] for p in (s.plan or [])][:12]
     if s.answer and (not s.tool or out_of_steps):
         await _reply_back(ctx, state, s.answer)
         return Finish("answered", update={"answer": s.answer, "summary": _summary(log, answered=True)},
@@ -218,12 +241,12 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
     if s.tool not in tools:
         log.append({"n": n, "tool": s.tool[:80], "ok": False,
                     "result": f"there is no tool called {s.tool!r}; use one from the list"})
-        return Goto("think", update={"log": log}, note="asked for an unknown tool")
+        return Goto("think", update={"log": log, "plan": state["plan"]}, note="asked for an unknown tool")
     cap = tools[s.tool][0]
     missing = _missing(tools[s.tool][3], s.args)
     if missing:
         log.append({"n": n, "tool": s.tool, "ok": False, "result": f"missing field(s): {', '.join(missing)}"})
-        return Goto("think", update={"log": log}, note=f"{s.tool}: fields missing")
+        return Goto("think", update={"log": log, "plan": state["plan"]}, note=f"{s.tool}: fields missing")
 
     if cap == Capability.READ:
         try:
@@ -234,10 +257,10 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
             log.append({"n": n, "tool": s.tool, "ok": True, "result": _short(result)})
         except Exception as exc:   # a failed lookup goes back to the model, it doesn't end the run
             log.append({"n": n, "tool": s.tool, "ok": False, "result": f"{type(exc).__name__}: {str(exc)[:300]}"})
-        return Goto("think", update={"log": log}, note=f"used {s.tool}")
+        return Goto("think", update={"log": log, "plan": state["plan"]}, note=f"used {s.tool}")
     if cap == Capability.EXECUTE:
         log.append({"n": n, "tool": s.tool, "ok": False, "result": "that tool can't be used here"})
-        return Goto("think", update={"log": log})
+        return Goto("think", update={"log": log, "plan": state["plan"]})
 
     args = s.args
     if s.tool == "whatsapp.template":
@@ -251,17 +274,35 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
                 body, clean = wa_templates.render(t, params if isinstance(params, list) else [params])
         except wa_templates.TemplateProblem as exc:
             log.append({"n": n, "tool": s.tool, "ok": False, "result": str(exc)})
-            return Goto("think", update={"log": log}, note="whatsapp.template: can't be sent")
+            return Goto("think", update={"log": log, "plan": state["plan"]}, note="whatsapp.template: can't be sent")
         assert t is not None
         args = {"to": to, "template": t.title, "template_id": str(t.id), "language": t.language, "params": clean,
                 "body": body}
+
+    if s.tool == "kritvia.do":
+        from kritvia_api.services import actions
+        try:
+            a = actions.resolve(str(args.get("action") or ""))
+            if a.method == "GET":
+                raise actions.ActionError("that action only reads: use kritvia.read")
+            actions.build_path(a, ctx.venture_id, args.get("path") if isinstance(args.get("path"), dict) else {})
+            body = args.get("body") if isinstance(args.get("body"), dict) else {}
+            need = [k for k, v in a.body.items() if "(required)" in v and k not in body]
+            if need:
+                raise actions.ActionError(f"body is missing: {', '.join(need)}")
+        except actions.ActionError as exc:
+            log.append({"n": n, "tool": s.tool, "ok": False, "result": str(exc)})
+            return Goto("think", update={"log": log, "plan": state["plan"]}, note="kritvia.do: not ready")
+        args = {"action": a.id, "path": args.get("path") if isinstance(args.get("path"), dict) else {},
+                "query": args.get("query") if isinstance(args.get("query"), dict) else {}, "body": body}
+        s.thought = (f"{a.summary or a.id}. " + (s.thought or ""))[:300]
 
     if s.tool == "routines.create":
         # The card shows the routine exactly as it will be saved, and when it runs, in words.
         from kritvia_api.services import skills as sk
         if state["input"].get("skill_id"):
             log.append({"n": n, "tool": s.tool, "ok": False, "result": "a routine can't set up other routines"})
-            return Goto("think", update={"log": log})
+            return Goto("think", update={"log": log, "plan": state["plan"]})
         try:
             raw = dict(args)
             if isinstance(raw.get("weekdays"), str):
@@ -269,7 +310,7 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
             d = sk.clean(sk.Draft(**{k: v for k, v in raw.items() if k in sk.Draft.model_fields}))
         except (ValueError, TypeError) as exc:
             log.append({"n": n, "tool": s.tool, "ok": False, "result": f"that routine isn't complete: {str(exc)[:200]}"})
-            return Goto("think", update={"log": log}, note="routines.create: incomplete")
+            return Goto("think", update={"log": log, "plan": state["plan"]}, note="routines.create: incomplete")
         args = {**d.model_dump(), "when": sk.describe(d.model_dump())}
         s.title = f"Set up a routine: {d.name} ({args['when']})"
 
@@ -280,10 +321,10 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
                         key="decision", title=title, summary=(s.thought or "")[:300],
                         payload={**args, **({"mcp_tool": s.tool} if s.tool.startswith(mcp.PREFIX) else {})},
                         required_roles=("approver", "venture_admin"),
-                        always_review=s.tool.startswith(mcp.PREFIX)),
+                        always_review=s.tool.startswith(mcp.PREFIX) or s.tool == "kritvia.do"),
         resume="act", on_reject="rejected",
         update={"pending": {"n": n, "tool": s.tool, **({"draft": args} if state["input"].get("skill_id") else {})},
-                "log": log},
+                "log": log, "plan": state["plan"]},
         note=f"{s.tool} waits for approval")
 
 

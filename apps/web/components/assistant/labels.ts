@@ -20,6 +20,14 @@ const TOOL_LABELS: Record<string, string> = {
   "web.browse": "Looked it up on the web",
   "team.handoff": "Handed to a team lead",
   "voice.call": "Phone call",
+  "kritvia.find": "Found how to do it in Kritvia",
+  "kritvia.read": "Looked it up in Kritvia",
+  "kritvia.do": "Change in Kritvia",
+  "routines.create": "New routine",
+  "events.recent": "Checked what happened",
+  "ads.summary": "Checked the ads",
+  "bills.search": "Looked up bills",
+  "bank.unmatched": "Checked the bank statement",
 };
 
 export function toolLabel(tool: string): string {
@@ -36,6 +44,8 @@ export const EXAMPLES = [
   "Kal 4 baje Ravi ke saath 30 minute ki meeting set karo",
   "Add a task for Neha to send the Acme quote by Friday",
   "What did we quote the last bakery we worked with?",
+  "Pune Bakes ko ₹11,800 ka invoice banao, payment reminders on karo, aur har Monday mujhe cash ka hisaab bhejo",
+  "Open a Sales Executive role, mark Ramesh present today, and post our Diwali offer on Google",
 ];
 
 /** A request is still being worked on while its run is queued or running. */

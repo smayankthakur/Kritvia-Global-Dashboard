@@ -162,7 +162,40 @@ function PayloadView({ action, payload }: { action: string; payload: Payload }) 
   );
 }
 
+const VERB: Record<string, string> = { POST: "Add or start", PUT: "Set", PATCH: "Change", DELETE: "Remove" };
+
+/** The assistant's change in Kritvia (kritvia.do): what it does, and every field it sends. */
+function ActionPreview({ payload }: { payload: Payload }) {
+  const [method = "", path = ""] = displayValue(payload.action).split(" ");
+  const where = path
+    .replace(/^\/ventures\/\{venture_id\}\/?/, "")
+    .split("/")
+    .filter((x) => x && !x.startsWith("{"))
+    .join(" › ")
+    .replace(/-/g, " ");
+  const body = payload.body && typeof payload.body === "object" ? (payload.body as Record<string, unknown>) : {};
+  const ids = payload.path && typeof payload.path === "object" ? (payload.path as Record<string, unknown>) : {};
+  return (
+    <div className="space-y-2">
+      <p className="text-sm">
+        <span className="font-medium">{VERB[method] ?? method}</span> <span className="text-muted">in</span> <span className="font-medium">{where || "this business"}</span>
+        <span className="ml-2 font-mono text-xs text-subtle">{method}</span>
+      </p>
+      <KeyValue
+        items={[...Object.entries(ids), ...Object.entries(body)].map(([k, v]) => [
+          label(k),
+          <span key={k} className="whitespace-pre-wrap">
+            {displayValue(v) || "—"}
+          </span>,
+        ])}
+      />
+      <p className="text-xs text-subtle">It runs as you, exactly as shown, the same as doing it on the page yourself.</p>
+    </div>
+  );
+}
+
 function PayloadBody({ action, payload }: { action: string; payload: Payload }) {
+  if (action === "kritvia.do") return <ActionPreview payload={payload} />;
   if (action === "gmail.send") {
     return (
       <div className="overflow-hidden rounded-lg border border-border">

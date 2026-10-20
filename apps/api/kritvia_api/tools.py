@@ -442,6 +442,42 @@ def build_tools() -> ToolRegistry:
                                {"d": comment[:2000], "r": uuid.UUID(str(p["reply_id"])), "v": ctx.venture_id})
         return {"posted": True, "channel": "google"}
 
+    @reg.tool("kritvia.find", Capability.READ,
+              "Find any action Kritvia's own app can do for this business (invoices, bills, bank, cash, agents, "
+              "campaigns, social posts, jobs and CVs, staff and attendance, bookings, shipments, tasks, skills, "
+              "settings…), with the fields each one needs")
+    async def kritvia_find(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import actions
+        found = actions.find(str(p.get("query") or ""), limit=8)
+        return {"actions": found, "hint": "use kritvia.read for a GET action, kritvia.do for any other"
+                if found else "nothing matched: try other words (e.g. 'invoice', 'agent', 'staff')"}
+
+    @reg.tool("kritvia.read", Capability.READ,
+              "Run one of Kritvia's GET actions (from kritvia.find) straight away and see the answer")
+    async def kritvia_read(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import actions
+        a = actions.resolve(str(p.get("action") or ""))
+        if a.method != "GET":
+            raise actions.ActionError(f"{a.id} changes something: use kritvia.do (a person approves it first)")
+        return await actions.call(ctx.run_as, a, ctx.venture_id, path=p.get("path"), query=p.get("query"))
+
+    @reg.tool("kritvia.do", Capability.WRITE,
+              "Do one of Kritvia's own actions (from kritvia.find) that adds or changes something, after a "
+              "person approves the exact call; it runs as that person")
+    async def kritvia_do(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        from kritvia_api.services import actions
+        assert ok is not None
+        a = actions.resolve(str(p.get("action") or ""))
+        if a.method == "GET":
+            raise actions.ActionError("a GET action only reads: use kritvia.read")
+        async with ctx.tx() as conn:
+            who = (await conn.execute(text("SELECT decided_by FROM approvals WHERE id = :a"), {"a": ok.id})).scalar()
+        res = await actions.call(who or ctx.run_as, a, ctx.venture_id, path=p.get("path"), query=p.get("query"),
+                                 body=p.get("body"))
+        if not res["ok"]:
+            raise actions.ActionError(f"HTTP {res['status']}: {res['result'][:400]}")
+        return {"done": True, "status": res["status"], "result": res["result"]}
+
     @reg.tool("ads.summary", Capability.READ,
               "What the business spent on Meta and Google ads (from uploaded reports) and the leads and sales each "
               "campaign brought, with cost per lead; Kritvia never spends or changes ads")

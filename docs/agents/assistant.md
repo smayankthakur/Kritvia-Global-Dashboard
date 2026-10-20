@@ -57,3 +57,36 @@ with Growth and above (integration `mcp`).
 - **Tools:** up to 40 tools are kept per app, with names, descriptions and field names only. The assistant
   sees them as `app.<name>.<tool>`.
 - **Tokens:** stored encrypted with the business's key (purpose `mcp.token`) and never returned.
+
+## One assistant for everything (patch 0093)
+
+One prompt can now reach every page and agent of the business. It works from the Assistant page, from
+**Do it** in the Ask dialog (⌘K), from WhatsApp, from Telegram and by voice. The assistant uses three more
+tools (`services/actions.py`).
+
+### The three tools
+
+- **`kritvia.find`** (read) searches a catalogue of the app's own actions. The catalogue is built from the
+  API's OpenAPI description, so new pages appear in it by themselves. Each result gives the action's exact
+  name and its fields, for example `POST /ventures/{venture_id}/invoices`. Agents are found by their names,
+  for example "switch on the payment reminders agent".
+- **`kritvia.read`** runs a GET action straight away.
+- **`kritvia.do`** is for any action that changes something. It becomes an approval card showing the exact
+  call, and a person always reviews it: earned trust never sends it by itself. Only the body can be edited
+  on the card. After the yes, it runs **as the person who approved it**, through the app itself (in-process,
+  with a one-minute token). The same role checks and row-level security apply, so nobody can do through the
+  assistant what they couldn't do on the page.
+
+### What is never reachable
+
+- Other businesses: only `/ventures/{this business}/…` is in the catalogue.
+- Approvals, trust and autonomy: the assistant can't approve its own drafts or give itself more freedom.
+- Members and invites, privacy requests, connected apps, API keys, billing, SSO, and the assistant itself.
+- Changes to connectors and their secrets.
+- File uploads, and deleting the business.
+
+### Requests with several parts
+
+The planner keeps a short `plan`, the parts still to do, and works through them one tool at a time. It has
+up to 20 tool steps per request (it was 8). For example: "make the invoice, switch on payment reminders and
+send me the cash every Monday". Things the person wants done regularly become routines (`routines.create`).

@@ -120,7 +120,8 @@ async def test_tool_steps_are_capped(desk, fake_llm):
                                 else {"tool": "leads.search", "args": {"query": "a"}}))
     item = await ask(mayank, v, "keep searching")
     assert item["status"] == "completed" and item["answer"] == "Here is what I found."
-    assert len(item["steps"]) == 8
+    from kritvia_api.workflows.assistant import MAX_TOOL_STEPS
+    assert len(item["steps"]) == MAX_TOOL_STEPS == 20      # enough for a request with several parts
 
 
 async def test_people_see_only_their_own_requests(desk, fake_llm, client):

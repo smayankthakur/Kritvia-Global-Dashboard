@@ -293,11 +293,14 @@ JOBS: tuple[Job, ...] = (
         "Ask in the app, by voice, on Telegram or WhatsApp; answers cite the business's own records.",
         ("wf:assistant", "tool:knowledge.search", "route:POST /ventures/{venture_id}/ask"), ceiling=2, target=2,
         impact=3),
-    Job("assistant_actions", "knowledge", "Do anything asked in plain words", 2,
-        "One assistant uses every tool (leads, tasks, invoices, WhatsApp, calendar, calls, web, connected apps); "
-        "writes and sends wait for a yes.",
-        ("wf:assistant", "tool:mcp.call", "tool:approvals.waiting", "tool:leads.create"), target=3, impact=3,
-        next="Let the assistant start skills and automations it suggests ('do this every Monday'), with a yes."),
+    Job("assistant_actions", "knowledge", "Do anything asked in plain words", 3,
+        "One prompt, from the app, WhatsApp, Telegram or voice, reaches every page and agent: the assistant finds "
+        "any of the app's own actions, plans several tasks, reads at once, sets up routines, and changes things "
+        "after a yes (run as the person who approves).",
+        ("wf:assistant", "tool:kritvia.find", "tool:kritvia.read", "tool:kritvia.do", "tool:routines.create",
+         "tool:mcp.call", "tool:approvals.waiting", "tool:leads.create",
+         "route:POST /hooks/telegram/{connector_id}"), target=3, impact=3,
+        next="Earned trust for routine app changes (e.g. marking attendance) once they're always approved unchanged."),
     Job("learned_skills", "knowledge", "Learn a routine and repeat it", 3,
         "A routine done once becomes a skill that runs on a schedule, or right after something happens, and learns "
         "from edits. The assistant sets up the routines it suggests, after one yes.",

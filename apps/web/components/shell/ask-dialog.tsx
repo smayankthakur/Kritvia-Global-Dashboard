@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { CornerDownLeft } from "lucide-react";
+import { CornerDownLeft, Sparkles } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnswerView } from "@/components/knowledge/answer";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,16 @@ export function AskDialog({ open, onClose, initialQuestion }: { open: boolean; o
   const { org } = useAccess();
   const [q, setQ] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
+  const ventureId = usePathname().match(/^\/v\/([0-9a-f-]{36})/)?.[1] ?? null;
+  // "Do it": the assistant does the work in this business (any page, any agent), asking before it changes anything
+  const doIt = useMutation({
+    mutationFn: (request: string) => unwrap(api.POST("/ventures/{venture_id}/assistant", { params: { path: { venture_id: ventureId! } }, body: { request } })),
+    onSuccess: () => {
+      onClose();
+      router.push(`/v/${ventureId}/assistant`);
+    },
+  });
   const ask = useMutation({
     mutationFn: (question: string) =>
       unwrap(api.POST("/orgs/{org_id}/ask", { params: { path: { org_id: org!.id } }, body: { question } })),
@@ -46,8 +57,12 @@ export function AskDialog({ open, onClose, initialQuestion }: { open: boolean; o
       open={open}
       onClose={onClose}
       size="lg"
-      title="Ask across your ventures"
-      description={`Answers come only from ${org?.name ?? "your organisation"}'s knowledge base you can access, with sources.`}
+      title={ventureId ? "Ask or tell Kritvia" : "Ask across your ventures"}
+      description={
+        ventureId
+          ? "Ask a question (answers come from your knowledge base, with sources), or press Do it and the assistant does the work: any page, any agent, several tasks at once. Anything that changes something waits for your yes."
+          : `Answers come only from ${org?.name ?? "your organisation"}'s knowledge base you can access, with sources.`
+      }
     >
       <form
         onSubmit={(e) => {
@@ -79,13 +94,27 @@ export function AskDialog({ open, onClose, initialQuestion }: { open: boolean; o
             <VoiceButton />
             <span className="hidden sm:inline">Enter to ask · Shift+Enter for a new line</span>
           </div>
-          <Button type="submit" variant="primary" loading={ask.isPending} disabled={q.trim().length < 3} icon={<CornerDownLeft className="h-3.5 w-3.5" />}>
-            Ask
-          </Button>
+          <div className="flex items-center gap-2">
+            {ventureId ? (
+              <Button
+                type="button"
+                loading={doIt.isPending}
+                disabled={q.trim().length < 3}
+                icon={<Sparkles className="h-3.5 w-3.5" />}
+                onClick={() => doIt.mutate(q.trim())}
+              >
+                Do it
+              </Button>
+            ) : null}
+            <Button type="submit" variant="primary" loading={ask.isPending} disabled={q.trim().length < 3} icon={<CornerDownLeft className="h-3.5 w-3.5" />}>
+              Ask
+            </Button>
+          </div>
         </div>
       </form>
       <div className="mt-5" aria-live="polite">
         {ask.isError ? <InlineError error={ask.error} /> : null}
+        {doIt.isError ? <InlineError error={doIt.error} /> : null}
         {ask.data ? <AnswerView answer={ask.data} onNavigate={onClose} /> : null}
       </div>
     </Dialog>
