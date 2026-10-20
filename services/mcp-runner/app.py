@@ -35,6 +35,7 @@ import logging
 import os
 import re
 import secrets
+import socket
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -143,10 +144,31 @@ def image_and_command(p: Package) -> tuple[str, list[str], dict[str, str]]:
     return ref, [], {}
 
 
+_proxy_ip: str | None = None
+
+
+def proxy_address() -> str:
+    """This runner's address on the sandbox network. An IP, not a name: under gVisor the app containers can't use
+    Docker's embedded DNS, and they need nothing else resolved (the proxy connects to sites by name)."""
+    global _proxy_ip
+    if _proxy_ip or LOCAL:
+        return _proxy_ip or PROXY_HOST
+    import subprocess
+    try:
+        out = subprocess.run(["docker", "inspect", "-f",
+                              '{{(index .NetworkSettings.Networks "%s").IPAddress}}' % NETWORK, socket.gethostname()],
+                             capture_output=True, text=True, timeout=10).stdout.strip()
+        if re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", out):
+            _proxy_ip = out
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return _proxy_ip or PROXY_HOST
+
+
 def argv_for(inst_id: str, cfg: StartIn, proxy_secret: str) -> tuple[list[str], dict[str, str]]:
     """The docker command, and the environment it runs with (secrets go in the environment, not argv)."""
     image, cmd, extra = image_and_command(cfg.package)
-    proxy = f"http://{inst_id}:{proxy_secret}@{PROXY_HOST}:{PROXY_PORT}"
+    proxy = f"http://{inst_id}:{proxy_secret}@{proxy_address()}:{PROXY_PORT}"
     env = {**extra, "HTTPS_PROXY": proxy, "HTTP_PROXY": proxy, "https_proxy": proxy,
            "http_proxy": proxy, "NO_PROXY": "", **cfg.env}
     argv = ["docker", "run", "--rm", "-i", "--name", f"kv-mcp-{inst_id}", f"--runtime={RUNTIME}",
