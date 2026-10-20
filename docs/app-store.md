@@ -38,7 +38,7 @@ trust the assistant has earned). Included in Growth and above (integration `mcp`
   public addresses only, checked once per connection. Settings (API keys) pass through the docker command's
   environment, never its arguments. Idle instances stop after 15 minutes and start again on the next call.
 - Switch on: install gVisor (`services/sandbox/README.md`), set `MCP_RUNNER_URL=http://mcp-runner:8300` and
-  `MCP_RUNNER_TOKEN` (`openssl rand -hex 32`) in `.env`, then `docker compose --profile apps up -d --build mcp-runner api worker`.
+  `MCP_RUNNER_TOKEN` (`openssl rand -hex 32`) in `.env`, then deploy (`deploy.sh` builds and starts the runner whenever `MCP_RUNNER_TOKEN` is set).
   Without them, hosted apps say they're off; everything else works.
 
 ## Events in

@@ -231,7 +231,8 @@ services:
   # App store: hosts MCP servers from npm / PyPI / container images that Kritvia's team approved, one gVisor
   # container per installed app (services/mcp-runner). The app containers sit on the internal mcp-sandbox
   # network and reach the internet only through this runner's egress proxy, with only their approved sites.
-  # Off until set in .env: MCP_RUNNER_URL=http://mcp-runner:8300 and MCP_RUNNER_TOKEN (and gVisor installed).
+  # Off until set in .env: MCP_RUNNER_URL=http://mcp-runner:8300 and MCP_RUNNER_TOKEN (and gVisor installed);
+  # deploy.sh then builds and starts it.
   mcp-runner:
     logging: *logging
     profiles: ["apps"]
@@ -242,6 +243,7 @@ services:
       MCP_RUNTIME: ${MCP_RUNTIME:-runsc}
       MCP_NETWORK: kritvia_mcp-sandbox
       MCP_PROXY_HOST: mcp-runner
+      MCP_MAX_INSTANCES: ${MCP_MAX_INSTANCES:-4}     # each app may use up to 768 MB
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     mem_limit: 512m

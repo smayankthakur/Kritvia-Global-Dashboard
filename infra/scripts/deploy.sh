@@ -39,16 +39,19 @@ cd infra
 . scripts/load-env.sh; load_env ../.env
 COMPOSE=(docker compose -f docker-compose.yml)
 [ -n "${MANAGED_DATABASE_URL:-}" ] && COMPOSE+=(-f docker-compose.managed.yml)
+# App store hosted apps: the MCP runner (compose profile "apps") runs once .env has MCP_RUNNER_TOKEN.
+PROFILES=(--profile tunnel); EXTRA=()
+if [ -n "${MCP_RUNNER_TOKEN:-}" ]; then PROFILES+=(--profile apps); EXTRA+=(mcp-runner); fi
 
 step "building images (old containers keep serving)"
-if ! "${COMPOSE[@]}" build --pull --quiet migrate sandbox-jobs api worker worker-priority web sandbox browser >"$BUILD_LOG" 2>&1; then
+if ! "${COMPOSE[@]}" build --pull --quiet migrate sandbox-jobs api worker worker-priority web sandbox browser "${EXTRA[@]}" >"$BUILD_LOG" 2>&1; then
   step "BUILD FAILED; nothing was restarted. Last lines of $BUILD_LOG:"
   tail -25 "$BUILD_LOG"
   exit 1
 fi
 
 step "starting changed services"
-"${COMPOSE[@]}" --profile tunnel up -d --remove-orphans --quiet-pull >>"$BUILD_LOG" 2>&1
+"${COMPOSE[@]}" "${PROFILES[@]}" up -d --remove-orphans --quiet-pull >>"$BUILD_LOG" 2>&1
 
 ready=no
 for _ in $(seq 1 45); do
