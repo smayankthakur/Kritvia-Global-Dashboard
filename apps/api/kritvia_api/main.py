@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DBAPIError
@@ -112,6 +112,18 @@ def create_app() -> FastAPI:
         async with tenant_tx(None, "system") as conn:
             migrations = (await conn.execute(text("SELECT count(*) FROM schema_migrations"))).scalar()
         return {"status": "ok", "migrations": migrations}
+
+    @app.get("/livez", tags=["ops"])
+    async def livez(response: Response) -> dict:
+        """Workers' heartbeats and the run queue, in counts (the watchdogs and the outside monitor read it).
+        503 when a worker has gone quiet or runs are piling up, so a plain HTTP check notices."""
+        from kritvia_api.db.session import tenant_tx
+        from kritvia_api.services import watchdog
+        async with tenant_tx(None, "system") as conn:
+            st = await watchdog.status(conn)
+        if not st["ok"]:
+            response.status_code = 503
+        return st
 
     return app
 

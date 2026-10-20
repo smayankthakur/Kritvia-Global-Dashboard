@@ -877,6 +877,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/livez": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Livez
+         * @description Workers' heartbeats and the run queue, in counts (the watchdogs and the outside monitor read it).
+         *     503 when a worker has gone quiet or runs are piling up, so a plain HTTP check notices.
+         */
+        get: operations["livez_livez_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/access": {
         parameters: {
             query?: never;
@@ -17494,6 +17515,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    livez_livez_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# Health watchdog, run by cron every 5 minutes as root (see install-ops.sh).
+# Health watchdog, run by cron every minute as root (see install-ops.sh).
 #
-# Checks: API ready, web up, every service running, sandbox isolated, public URL through
-# the Cloudflare tunnel, disk space, (once backups are configured) backup freshness, and a
-# spike of application errors in the API and worker logs.
+# Every minute: API ready, web up, every service running, the workers' heartbeats (/livez).
+# Every 5 minutes also: sandbox isolated, public URL through the Cloudflare tunnel, disk space,
+# backup freshness (once backups are configured), and a spike of application errors or security events.
+# Self-healing: a stopped service is started; a worker whose heartbeat is older than 3 minutes is
+# restarted; the API or web app failing 3 minutes in a row is restarted.
 # Outages users can see (API, web, public URL, a stopped service) are also recorded as public
 # incidents in $STATE_DIR/status/incidents.json, which the web app's /status page shows.
 # A stopped service is restarted. Email alerts go out through AWS SNS when
 # ALERT_SNS_TOPIC_ARN is set in .env (independent of Kritvia itself, so they still
-# arrive when Kritvia is down): on the first failure, every 6 hours while it lasts,
-# and once on recovery. Everything is also written to syslog (tag: kritvia-health).
+# arrive when Kritvia is down), and to Telegram when ALERT_TELEGRAM_BOT_TOKEN and ALERT_TELEGRAM_CHAT_ID are
+# set: on the first failure, every 6 hours while it lasts, and once on recovery. Everything is also written
+# to syslog (tag: kritvia-health).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 . scripts/load-env.sh; load_env ../.env || true
@@ -27,10 +30,39 @@ DC="docker compose -f docker-compose.yml"
 fails=()
 
 ok_http() { curl -fsS -m 10 -o /dev/null "$1"; }
+FULL=0; [ $(( 10#$(date +%M) % 5 )) -eq 0 ] && FULL=1          # the heavier checks every 5 minutes
+streak() {  # streak NAME ok|fail -> prints how many minutes in a row NAME has failed
+  local f="$STATE_DIR/streak.$1" n=0
+  if [ "$2" = fail ]; then n=$(( $(cat "$f" 2>/dev/null || echo 0) + 1 )); fi
+  echo "$n" > "$f"; echo "$n"
+}
+heal=()
 
-ok_http http://127.0.0.1:8000/readyz || fails+=("API not ready (127.0.0.1:8000/readyz)")
+if ok_http http://127.0.0.1:8000/readyz; then streak api ok >/dev/null; else
+  fails+=("API not ready (127.0.0.1:8000/readyz)")
+  if [ "$(streak api fail)" -ge 3 ]; then $DC restart api >/dev/null 2>&1; heal+=("api"); streak api ok >/dev/null; fi
+fi
 code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || echo 000)
-[[ "$code" =~ ^[23] ]] || fails+=("web app answered HTTP $code")
+if [[ "$code" =~ ^[23] ]]; then streak web ok >/dev/null; else
+  fails+=("web app answered HTTP $code")
+  if [ "$(streak web fail)" -ge 3 ]; then $DC restart web >/dev/null 2>&1; heal+=("web"); streak web ok >/dev/null; fi
+fi
+
+# Workers: their heartbeats (every 30 s) must be under 3 minutes old, else the worker is restarted.
+live=$(curl -s -m 10 http://127.0.0.1:8000/livez || true)
+if [ -n "$live" ]; then
+  for w in worker:worker_age_s worker-priority:priority_age_s; do
+    svc=${w%%:*}; key=${w#*:}
+    age=$(python3 -c "import json,sys; v=json.loads(sys.argv[1]).get(sys.argv[2]); print('' if v is None else v)" "$live" "$key" 2>/dev/null)
+    if [ -n "$age" ] && [ "$age" -ge 180 ]; then
+      cid=$($DC ps -q "$svc" 2>/dev/null | head -1)
+      up=$(( $(date +%s) - $(date -d "$(docker inspect -f '{{.State.StartedAt}}' "$cid" 2>/dev/null || echo now)" +%s 2>/dev/null || date +%s) ))
+      if [ -n "$cid" ] && [ "$up" -ge 180 ]; then      # a worker that just started hasn't had time to beat
+        $DC restart "$svc" >/dev/null 2>&1; heal+=("$svc (heartbeat ${age}s old)")
+      fi
+    fi
+  done
+fi
 
 expected=$($DC config --services 2>/dev/null | grep -vE '^(migrate|sandbox-jobs|whisper|diarization)$')
 [ -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ] && expected=$(echo "$expected" | grep -v '^cloudflared$')
@@ -43,7 +75,10 @@ for s in $expected; do
   fi
 done
 [ ${#restarted[@]} -gt 0 ] && fails+=("service(s) were down and restarted: ${restarted[*]}")
+[ ${#heal[@]} -gt 0 ] && fails+=("service(s) were not working and restarted: ${heal[*]}")
 
+nquick=${#fails[@]}
+if [ "$FULL" = 1 ]; then
 sb=$($DC exec -T sandbox python -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8100/healthz',timeout=20).read().decode())" 2>/dev/null)
 grep -q '"network_isolated":true' <<<"$sb" || fails+=("sandbox health check failed or not isolated")
 
@@ -75,6 +110,14 @@ if [ -z "${MANAGED_DATABASE_URL:-}" ]; then
   fi
 fi
 
+fi   # FULL
+# Between the 5-minute checks, their last findings still count (so the state doesn't flap ok/fail).
+if [ "$FULL" = 1 ]; then
+  printf '%s\n' "${fails[@]:$nquick}" > "$STATE_DIR/full.fails"
+elif [ -s "$STATE_DIR/full.fails" ]; then
+  while IFS= read -r line; do [ -n "$line" ] && fails+=("$line"); done < "$STATE_DIR/full.fails"
+fi
+
 # Public incidents for the status page (no internal detail: what users would have noticed, and when).
 public=()
 for f in "${fails[@]}"; do
@@ -82,7 +125,7 @@ for f in "${fails[@]}"; do
     "API not ready"*) public+=("The API and agents were not responding") ;;
     "web app"*) public+=("The web app was not responding") ;;
     "public URL"*) public+=("Kritvia could not be reached from the internet") ;;
-    "service(s) were down"*) public+=("A service stopped and was restarted automatically") ;;
+    "service(s) were down"*|"service(s) were not working"*) public+=("A service stopped and was restarted automatically") ;;
   esac
 done
 mkdir -p "$STATE_DIR/status"; chmod 755 "$STATE_DIR/status"
@@ -122,6 +165,11 @@ alert() {  # alert SUBJECT MESSAGE
     region=$(cut -d: -f4 <<<"$ALERT_SNS_TOPIC_ARN")
     aws sns publish --region "$region" --topic-arn "$ALERT_SNS_TOPIC_ARN" \
       --subject "$1" --message "$2" >/dev/null 2>&1 || logger -t kritvia-health "SNS publish failed"
+  fi
+  if [ -n "${ALERT_TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${ALERT_TELEGRAM_CHAT_ID:-}" ]; then
+    curl -s -m 15 "https://api.telegram.org/bot${ALERT_TELEGRAM_BOT_TOKEN}/sendMessage" \
+      --data-urlencode "chat_id=${ALERT_TELEGRAM_CHAT_ID}" --data-urlencode "text=$1
+$2" >/dev/null 2>&1 || logger -t kritvia-health "Telegram alert failed"
   fi
   date +%s > "$LAST_ALERT"
 }

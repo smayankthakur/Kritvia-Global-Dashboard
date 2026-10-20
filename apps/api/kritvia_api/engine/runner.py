@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import timedelta
@@ -234,7 +235,51 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
     except Exception as exc:
         log.exception("run %s failed at %s", run_id, step_name)
         await _fail(ctx, state, step_name, step_count, _err(exc))
+        if passing(exc) and await _retry_later(ctx, _err(exc)):
+            return "retrying"
         return "failed"
+
+
+_PASSING_TEXT = re.compile(r"HTTP (429|5\d\d)\b|timed? ?out|temporarily|connection (reset|refused|closed)|"
+                           r"rate.?limit|too many requests|service unavailable|bad gateway", re.I)
+
+
+def passing(exc: BaseException) -> bool:
+    """A failure that is likely to go away by itself (worth trying the run again later): a timeout or a dropped
+    connection, an AI provider or Google answering 5xx/429, every AI provider failing at once, a database
+    deadlock or restart. Not: bad input, a policy refusal, a missing setting."""
+    import httpx
+    from sqlalchemy.exc import DBAPIError, OperationalError
+
+    from kritvia_api.engine.tools import PolicyError
+    from kritvia_api.services.model_router import AllProvidersFailed, QuotaExceeded
+    if isinstance(exc, PolicyError | QuotaExceeded | ValueError | KeyError | TypeError | AssertionError):
+        return False
+    if isinstance(exc, httpx.TransportError | asyncio.TimeoutError | TimeoutError | ConnectionError
+                  | AllProvidersFailed | OperationalError):
+        return True
+    if isinstance(exc, DBAPIError):
+        code = getattr(getattr(exc, "orig", None), "sqlstate", None) or ""
+        return code in ("40001", "40P01", "57P01", "57P03") or code.startswith("08")
+    return bool(_PASSING_TEXT.search(str(exc)[:500]))
+
+
+async def _retry_later(ctx: RunContext, error: str) -> int:
+    """Puts the failed run back on the queue after a pause; 0 when it has had its three retries."""
+    try:
+        async with tenant_tx(None, "system") as conn:
+            n = int((await conn.execute(text("SELECT private.retry_later(:r, :e)"),
+                                        {"r": ctx.run_id, "e": error[:1000]})).scalar() or 0)
+            if n:
+                wait = {1: 2, 2: 10}.get(n, 60)
+                await conn.execute(text("SELECT ticket_for_run(:r, 'open', :n)"),
+                                   {"r": ctx.run_id, "n": f"Hit a passing problem; trying again by itself in {wait} min"})
+        if n:
+            log.info("run %s will be retried (attempt %d)", ctx.run_id, n + 1)
+        return n
+    except Exception:  # noqa: BLE001 - a retry that can't be booked leaves the run failed, as before
+        log.exception("could not book a retry for %s", ctx.run_id)
+        return 0
 
 
 def _err(exc: BaseException) -> str:

@@ -264,6 +264,21 @@ async def priority_startup(ctx: dict) -> None:
 
 async def priority_heartbeat(ctx: dict) -> None:
     await ctx["redis"].set(PRIORITY_HEARTBEAT, ctx["services"].worker_id, ex=90)
+    from kritvia_api.services import watchdog
+    await watchdog.heartbeat("worker-priority", ctx["services"].worker_id)
+
+
+async def heartbeat(ctx: dict) -> None:
+    """Every 30 s: this worker is alive (the server's watchdog restarts it if this stops)."""
+    from kritvia_api.services import watchdog
+    await watchdog.heartbeat("worker", ctx["services"].worker_id)
+
+
+async def watchdog_check(ctx: dict) -> int:
+    """Every minute: put runs that should be running back on the queue, and tell Kritvia's team when
+    something keeps failing (services/watchdog.py)."""
+    from kritvia_api.services import watchdog
+    return len(await watchdog.check(ctx["services"]))
 
 
 async def priority_shutdown(ctx: dict) -> None:
@@ -291,6 +306,8 @@ class WorkerSettings:
         cron(bills_due, hour={9}, minute={15}, run_at_startup=False),
         cron(gstr1_ready, hour={9}, minute={25}, run_at_startup=False),
         cron(cash_week, hour={9}, minute={5}, run_at_startup=False),
+        cron(heartbeat, second={0, 30}),
+        cron(watchdog_check, second=50, run_at_startup=False),
         cron(dispatch_events, second=20, run_at_startup=False),
         cron(attendance_check, hour={12}, minute={5}, run_at_startup=False),
         cron(purge_candidates, hour={3}, minute={35}, run_at_startup=False),

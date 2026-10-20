@@ -4,6 +4,7 @@ from __future__ import annotations
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Workflow, registry
 
 EXECUTIONS: list[str] = []
+FLAKY = {"left": 0}       # how many more times the "flaky" step times out
 
 if "test_flow" not in registry:
     wf = registry.register(Workflow("test_flow", title="Test flow", start="prepare"))
@@ -30,5 +31,13 @@ if "test_flow" not in registry:
     @wf.step("explode", agent="tester")
     async def explode(ctx, state):
         raise RuntimeError("boom")
+
+    @wf.step("flaky", agent="tester")
+    async def flaky(ctx, state):
+        import httpx
+        if FLAKY["left"] > 0:
+            FLAKY["left"] -= 1
+            raise httpx.ConnectTimeout("provider timed out")
+        return Goto("ask", note="worked this time")
 
 

@@ -28751,6 +28751,30 @@
         ]
       }
     },
+    "/livez": {
+      "get": {
+        "description": "Workers' heartbeats and the run queue, in counts (the watchdogs and the outside monitor read it).\n503 when a worker has gone quiet or runs are piling up, so a plain HTTP check notices.",
+        "operationId": "livez_livez_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Livez Livez Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Livez",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/me/access": {
       "get": {
         "operationId": "my_access_me_access_get",

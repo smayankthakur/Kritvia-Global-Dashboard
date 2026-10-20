@@ -35,7 +35,13 @@ async def test_every_write_is_audited(world):
 
 
 async def test_tenancy_changes_are_audited(world):
-    actions = {e["action"] for e in await _audit(world["mayank"], world["org"])}
+    # straight from the log: the shared test organisation gathers more than a page of entries over a full run
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        rows = await conn.fetch("SELECT DISTINCT action FROM audit_log WHERE org_id = $1", __import__("uuid").UUID(world["org"]))
+    finally:
+        await conn.close()
+    actions = {r["action"] for r in rows}
     assert {"organisations.insert", "ventures.insert", "memberships.insert", "grants.insert"} <= actions
 
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Install the operations jobs on the server (idempotent; run as root via sudo):
-#   - health watchdog every 5 minutes (healthcheck.sh; email alerts via AWS SNS when configured)
+#   - health watchdog every minute (healthcheck.sh: restarts what stopped or hangs; alerts by AWS SNS email
+#     and/or Telegram when configured)
 #   - nightly encrypted backup at 02:15 IST, once BACKUP_AGE_RECIPIENT and BACKUP_RCLONE_REMOTE are set
 #   - daily log archive kept one year on this server (archive-logs.sh)
 #   - the AWS CLI (used for SNS alerts; S3 backups go through rclone with the instance role)
@@ -22,7 +23,7 @@ mkdir -p /var/lib/kritvia
   echo "# Managed by $DIR/infra/scripts/install-ops.sh — re-run it instead of editing"
   echo "SHELL=/bin/bash"
   echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  echo "*/5 * * * * root $DIR/infra/scripts/healthcheck.sh >/dev/null 2>&1"
+  echo "* * * * * root $DIR/infra/scripts/healthcheck.sh >/dev/null 2>&1"
   echo "10 0 * * * root $DIR/infra/scripts/archive-logs.sh >> /var/log/kritvia-logs.log 2>&1   # 05:40 IST"
   if [ -n "${BACKUP_AGE_RECIPIENT:-}" ] && [ -n "${BACKUP_RCLONE_REMOTE:-}" ]; then
     echo "45 20 * * * root $DIR/infra/scripts/backup.sh >> /var/log/kritvia-backup.log 2>&1   # 02:15 IST"
@@ -30,4 +31,5 @@ mkdir -p /var/lib/kritvia
 } > /etc/cron.d/kritvia
 chmod 644 /etc/cron.d/kritvia
 echo "installed /etc/cron.d/kritvia:"; grep -v '^#' /etc/cron.d/kritvia
-[ -n "${ALERT_SNS_TOPIC_ARN:-}" ] && echo "alerts: SNS $ALERT_SNS_TOPIC_ARN" || echo "alerts: syslog only (set ALERT_SNS_TOPIC_ARN in .env for email)"
+[ -n "${ALERT_SNS_TOPIC_ARN:-}" ] && echo "alerts: SNS $ALERT_SNS_TOPIC_ARN" || echo "alerts: no SNS (set ALERT_SNS_TOPIC_ARN in .env for email)"
+[ -n "${ALERT_TELEGRAM_CHAT_ID:-}" ] && echo "alerts: Telegram on" || echo "alerts: no Telegram (set ALERT_TELEGRAM_BOT_TOKEN and ALERT_TELEGRAM_CHAT_ID in .env)"
