@@ -1928,6 +1928,24 @@ export interface paths {
         /** Staff Coupons */
         get: operations["staff_coupons_staff_coupons_get"];
         put?: never;
+        /** Staff Create */
+        post: operations["staff_create_staff_coupons_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/coupons/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff Options */
+        get: operations["staff_options_staff_coupons_options_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1943,13 +1961,32 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Staff Update */
+        put: operations["staff_update_staff_coupons__code__put"];
+        post?: never;
+        /** Staff Delete */
+        delete: operations["staff_delete_staff_coupons__code__delete"];
+        options?: never;
+        head?: never;
+        /** Staff Set */
+        patch: operations["staff_set_staff_coupons__code__patch"];
+        trace?: never;
+    };
+    "/staff/coupons/{code}/uses.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff Uses Csv */
+        get: operations["staff_uses_csv_staff_coupons__code__uses_csv_get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Staff Set */
-        patch: operations["staff_set_staff_coupons__code__patch"];
+        patch?: never;
         trace?: never;
     };
     "/staff/partners": {
@@ -8710,12 +8747,178 @@ export interface components {
             /** Withdrawn At */
             withdrawn_at: string | null;
         };
+        /** CouponFields */
+        CouponFields: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Days
+             * @description free_plan (instead of months) or trial_days
+             */
+            days?: number | null;
+            /** Domains */
+            domains?: string[];
+            /** Emails */
+            emails?: string[];
+            /** Expires At */
+            expires_at?: string | null;
+            /**
+             * Industries
+             * @description none = every industry
+             */
+            industries?: ("agency" | "loans" | "kitchen" | "trade" | "retail" | "clinic" | "coaching" | "freelancer" | "other")[];
+            /**
+             * Kind
+             * @default free_plan
+             * @enum {string}
+             */
+            kind: "free_plan" | "percent_off" | "trial_days" | "ai_tokens";
+            /**
+             * Max Uses
+             * @default 100
+             */
+            max_uses: number;
+            /**
+             * Months
+             * @description free_plan or ai_tokens: how long; percent_off: billing cycles (as in the Razorpay offer)
+             */
+            months?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Percent */
+            percent?: number | null;
+            /**
+             * Periods
+             * @description percent_off: only these billing periods
+             */
+            periods?: ("monthly" | "annual")[];
+            /**
+             * Plan
+             * @description free_plan: the plan given
+             */
+            plan?: ("starter" | "growth" | "scale") | null;
+            /**
+             * Plans
+             * @description percent_off: only these plans (none = any)
+             */
+            plans?: ("starter" | "growth" | "scale")[];
+            /** Razorpay Offer Id */
+            razorpay_offer_id?: string | null;
+            /**
+             * Signup Days
+             * @description who=new: used within this many days
+             */
+            signup_days?: number | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Tokens */
+            tokens?: number | null;
+            /**
+             * Who
+             * @default unpaid
+             * @enum {string}
+             */
+            who: "new" | "unpaid" | "anyone";
+        };
+        /** CouponIn */
+        CouponIn: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /** Code */
+            code: string;
+            /**
+             * Days
+             * @description free_plan (instead of months) or trial_days
+             */
+            days?: number | null;
+            /** Domains */
+            domains?: string[];
+            /** Emails */
+            emails?: string[];
+            /** Expires At */
+            expires_at?: string | null;
+            /**
+             * Industries
+             * @description none = every industry
+             */
+            industries?: ("agency" | "loans" | "kitchen" | "trade" | "retail" | "clinic" | "coaching" | "freelancer" | "other")[];
+            /**
+             * Kind
+             * @default free_plan
+             * @enum {string}
+             */
+            kind: "free_plan" | "percent_off" | "trial_days" | "ai_tokens";
+            /**
+             * Max Uses
+             * @default 100
+             */
+            max_uses: number;
+            /**
+             * Months
+             * @description free_plan or ai_tokens: how long; percent_off: billing cycles (as in the Razorpay offer)
+             */
+            months?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Percent */
+            percent?: number | null;
+            /**
+             * Periods
+             * @description percent_off: only these billing periods
+             */
+            periods?: ("monthly" | "annual")[];
+            /**
+             * Plan
+             * @description free_plan: the plan given
+             */
+            plan?: ("starter" | "growth" | "scale") | null;
+            /**
+             * Plans
+             * @description percent_off: only these plans (none = any)
+             */
+            plans?: ("starter" | "growth" | "scale")[];
+            /** Razorpay Offer Id */
+            razorpay_offer_id?: string | null;
+            /**
+             * Signup Days
+             * @description who=new: used within this many days
+             */
+            signup_days?: number | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Tokens */
+            tokens?: number | null;
+            /**
+             * Who
+             * @default unpaid
+             * @enum {string}
+             */
+            who: "new" | "unpaid" | "anyone";
+        };
         /** CouponInfo */
         CouponInfo: {
             /** Code */
             code: string;
+            /**
+             * Conditions
+             * @description who can use it, in words
+             */
+            conditions?: string[];
+            /** Expires At */
+            expires_at?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "free_plan" | "percent_off" | "trial_days" | "ai_tokens";
             /** Months */
-            months: number;
+            months: number | null;
             /**
              * Offer
              * @description e.g. 'Scale plan free for 3 months'
@@ -8726,9 +8929,30 @@ export interface components {
             /** Places Left */
             places_left: number;
             /** Plan */
-            plan: string;
+            plan: string | null;
             /** Plan Name */
-            plan_name: string;
+            plan_name: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+        };
+        /** CouponOptions */
+        CouponOptions: {
+            /** Industries */
+            industries: {
+                [key: string]: string;
+            };
+            /** Kinds */
+            kinds: {
+                [key: string]: string;
+            };
+            /** Plans */
+            plans: {
+                [key: string]: string;
+            };
+            /** Who */
+            who: {
+                [key: string]: string;
+            };
         };
         /** CouponUse */
         CouponUse: {
@@ -8753,6 +8977,8 @@ export interface components {
              * Format: date-time
              */
             redeemed_at: string;
+            /** Used At */
+            used_at?: string | null;
         };
         /** CustomIn */
         CustomIn: {
@@ -11111,10 +11337,43 @@ export interface components {
              */
             type: "boolean" | "number" | "text";
         };
+        /** OrgCouponItem */
+        OrgCouponItem: {
+            /** Code */
+            code: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "free_plan" | "percent_off" | "trial_days" | "ai_tokens";
+            /** Offer */
+            offer: string;
+            /** Running */
+            running: boolean;
+            /**
+             * Used
+             * @description a percent-off coupon already paid a subscription
+             * @default false
+             */
+            used: boolean;
+        };
         /** OrgCouponOut */
         OrgCouponOut: {
-            /** Code */
+            /**
+             * Code
+             * @description the free-plan coupon, if any (as before)
+             */
             code: string | null;
+            /**
+             * Coupons
+             * @description every coupon this organisation used
+             */
+            coupons?: components["schemas"]["OrgCouponItem"][];
             /** Ends At */
             ends_at: string | null;
             /** Plan */
@@ -13175,22 +13434,99 @@ export interface components {
         };
         /** StaffCoupon */
         StaffCoupon: {
-            /** Active */
+            /**
+             * Active
+             * @default true
+             */
             active: boolean;
             /** Code */
             code: string;
+            /** Conditions */
+            conditions: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Days
+             * @description free_plan (instead of months) or trial_days
+             */
+            days?: number | null;
+            /** Domains */
+            domains?: string[];
+            /** Emails */
+            emails?: string[];
             /** Expires At */
-            expires_at: string | null;
-            /** Max Uses */
+            expires_at?: string | null;
+            /**
+             * Industries
+             * @description none = every industry
+             */
+            industries?: ("agency" | "loans" | "kitchen" | "trade" | "retail" | "clinic" | "coaching" | "freelancer" | "other")[];
+            /**
+             * Kind
+             * @default free_plan
+             * @enum {string}
+             */
+            kind: "free_plan" | "percent_off" | "trial_days" | "ai_tokens";
+            /**
+             * Max Uses
+             * @default 100
+             */
             max_uses: number;
+            /**
+             * Months
+             * @description free_plan or ai_tokens: how long; percent_off: billing cycles (as in the Razorpay offer)
+             */
+            months?: number | null;
             /** Note */
-            note: string | null;
+            note?: string | null;
             /** Offer */
             offer: string;
+            /** Percent */
+            percent?: number | null;
+            /**
+             * Periods
+             * @description percent_off: only these billing periods
+             */
+            periods?: ("monthly" | "annual")[];
+            /**
+             * Plan
+             * @description free_plan: the plan given
+             */
+            plan?: ("starter" | "growth" | "scale") | null;
+            /**
+             * Plans
+             * @description percent_off: only these plans (none = any)
+             */
+            plans?: ("starter" | "growth" | "scale")[];
+            /** Razorpay Offer Id */
+            razorpay_offer_id?: string | null;
+            /**
+             * Signup Days
+             * @description who=new: used within this many days
+             */
+            signup_days?: number | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "open" | "full" | "ended" | "off";
+            /** Tokens */
+            tokens?: number | null;
             /** Used By */
             used_by: components["schemas"]["CouponUse"][];
             /** Uses */
             uses: number;
+            /**
+             * Who
+             * @default unpaid
+             * @enum {string}
+             */
+            who: "new" | "unpaid" | "anyone";
         };
         /** StaffCouponIn */
         StaffCouponIn: {
@@ -14934,6 +15270,11 @@ export interface components {
             business_name?: string | null;
             /** City */
             city?: string | null;
+            /**
+             * Industry
+             * @description the onboarding template (coupons can target it)
+             */
+            industry?: ("agency" | "loans" | "kitchen" | "trade" | "retail" | "clinic" | "coaching" | "freelancer" | "other") | null;
             /** Kind */
             kind?: ("general" | "software" | "finance" | "kitchen" | "trade") | null;
             /** Notice In Replies */
@@ -14968,6 +15309,8 @@ export interface components {
              * @default
              */
             city: string;
+            /** Industry */
+            industry?: string | null;
             /** Kind */
             kind: string;
             /**
@@ -19474,6 +19817,123 @@ export interface operations {
             };
         };
     };
+    staff_create_staff_coupons_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CouponIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffCoupon"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_options_staff_coupons_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CouponOptions"];
+                };
+            };
+        };
+    };
+    staff_update_staff_coupons__code__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CouponFields"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffCoupon"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_delete_staff_coupons__code__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     staff_set_staff_coupons__code__patch: {
         parameters: {
             query?: never;
@@ -19497,6 +19957,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["StaffCoupon"][];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staff_uses_csv_staff_coupons__code__uses_csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

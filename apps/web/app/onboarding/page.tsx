@@ -14,7 +14,7 @@ import { Checkbox, Field, FormError, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { ErrorState } from "@/components/ui/states";
 import { TimeField } from "@/components/ui/time-field";
-import { ApiError, api, errorMessage, unwrap } from "@/lib/api";
+import { ApiError, api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { accessKey, meKey, useAccessQuery, type VentureKind } from "@/lib/access";
 import { agentAllowed } from "@/lib/pricing";
 import { takeCoupon } from "@/lib/coupon";
@@ -295,9 +295,6 @@ function BusinessStep({
         // Came through a partner's link: link the organisation to them (best effort; Plan & billing can add it later).
         const ref = takeReferral();
         if (ref) await api.POST("/orgs/{org_id}/partner-code", { params: { path: { org_id: org } }, body: { code: ref } }).catch(() => undefined);
-        // Came with a coupon (e.g. /register?coupon=FIRST50): apply it now (best effort; Plan & billing can add it later).
-        const coupon = takeCoupon();
-        if (coupon) await api.POST("/orgs/{org_id}/coupon", { params: { path: { org_id: org } }, body: { code: coupon } }).catch(() => undefined);
       }
       const ids = { ...done };
       const out: CreatedVenture[] = [];
@@ -317,9 +314,18 @@ function BusinessStep({
           ids[r.key] = id;
           setDone({ ...ids });
         }
-        await unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: id } }, body: { kind, business_name: r.name.trim() } }));
+        await unwrap(
+          api.PUT("/ventures/{venture_id}/settings", {
+            params: { path: { venture_id: id } },
+            body: { kind, industry: template.id as Schemas["VentureSettingsIn"]["industry"], business_name: r.name.trim() },
+          }),
+        );
         out.push({ id, name: r.name.trim(), kind, template });
       }
+      // Came with a coupon (e.g. /register?coupon=FIRST50): apply it once the businesses exist, so a coupon for
+      // one industry can check it (best effort; Plan & billing can add it later).
+      const coupon = takeCoupon();
+      if (coupon) await api.POST("/orgs/{org_id}/coupon", { params: { path: { org_id: org } }, body: { code: coupon } }).catch(() => undefined);
       onDone(out);
     } catch (err) {
       setBusy(false);

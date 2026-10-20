@@ -64,14 +64,16 @@ class Usage:
     members: int
     storage: int = 0
     trial: Trial | None = None
+    bonus_tokens: int = 0        # extra tokens this month from an AI-usage coupon
 
     @property
     def tokens_left(self) -> int | None:
         lim = self.plan.monthly_tokens
-        return None if lim is None else max(lim - self.tokens, 0)
+        return None if lim is None else max(lim + self.bonus_tokens - self.tokens, 0)
 
     def as_dict(self) -> dict:
         return {"plan": self.plan.as_dict(), "tokens": self.tokens, "tokens_left": self.tokens_left,
+                "bonus_tokens": self.bonus_tokens,
                 "ventures": self.ventures, "members": self.members, "storage_bytes": self.storage,
                 "trial": self.trial.as_dict() if self.trial else None, "read_only": self.plan.code == "expired"}
 
@@ -82,8 +84,9 @@ async def org_usage(conn, org_id: uuid.UUID, local: list[str]) -> Usage | None:
     if row is None:
         return None
     ends = (await conn.execute(text("SELECT trial_ends_at FROM org_plan_state(:o)"), {"o": org_id})).scalar()
+    bonus = (await conn.execute(text("SELECT coupon_bonus_tokens(:o)"), {"o": org_id})).scalar()
     return Usage(effective_plan(row.plan, ends), int(row.tokens), int(row.ventures),
-                 int(row.members), int(row.storage), trial_for(row.plan, ends))
+                 int(row.members), int(row.storage), trial_for(row.plan, ends), int(bonus or 0))
 
 
 class TokenGate:

@@ -33,8 +33,9 @@ async def test_first50_gives_scale_for_three_months(client, monkeypatch, world):
     await _admin_sql("DELETE FROM coupon_redemptions WHERE code = 'FIRST50'")
 
     info = (await client.get("/public/coupons/first50")).json()
-    assert info == {"code": "FIRST50", "plan": "scale", "plan_name": "Scale", "months": 3, "places_left": 50,
-                    "open": True, "offer": "Scale plan free for 3 months"}
+    assert info == {"code": "FIRST50", "kind": "free_plan", "plan": "scale", "plan_name": "Scale", "months": 3,
+                    "places_left": 50, "open": True, "offer": "Scale plan free for 3 months",
+                    "conditions": ["for businesses not yet on a paid plan"], "starts_at": None, "expires_at": None}
     assert (await client.get("/public/coupons/NOPE1")).status_code == 404
 
     owner = await make_actor(client, "cp-owner")

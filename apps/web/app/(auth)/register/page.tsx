@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const [terms, setTerms] = useState(false);
   const [adult, setAdult] = useState(false);
   const agreed = terms && adult;
-  const [offer, setOffer] = useState<{ code: string; offer: string; places_left: number; open: boolean } | null>(null);
+  const [offer, setOffer] = useState<{ code: string; offer: string; places_left: number; open: boolean; conditions?: string[] } | null>(null);
   useEffect(() => rememberReferral(window.location.search), []);
   useEffect(() => {
     const code = rememberCoupon(window.location.search);
@@ -47,10 +47,12 @@ export default function RegisterPage() {
         <p className={`mb-4 rounded-lg border px-3 py-2 text-sm ${offer.open ? "border-success/40 bg-success-soft" : "border-border bg-surface-2"}`}>
           {offer.open ? (
             <>
-              <strong>{offer.code}</strong>: {offer.offer}. {offer.places_left} {offer.places_left === 1 ? "place" : "places"} left; it&apos;s applied when you create your organisation (Terms, clause 10.10).
+              <strong>{offer.code}</strong>: {offer.offer}
+              {offer.conditions?.length ? ` (${offer.conditions.join("; ")})` : ""}. {offer.places_left} {offer.places_left === 1 ? "place" : "places"} left;
+              it&apos;s applied when you create your organisation (Terms, clause 10.10).
             </>
           ) : (
-            <>All the places for {offer.code} have been taken. You still get 15 days free.</>
+            <>{offer.code} can&apos;t be used right now. You still get 15 days free.</>
           )}
         </p>
       ) : null}

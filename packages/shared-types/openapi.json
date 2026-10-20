@@ -6485,15 +6485,524 @@
         "title": "ConsentOut",
         "type": "object"
       },
+      "CouponFields": {
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan (instead of months) or trial_days",
+            "title": "Days"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Domains",
+            "type": "array"
+          },
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Emails",
+            "type": "array"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "industries": {
+            "description": "none = every industry",
+            "items": {
+              "enum": [
+                "agency",
+                "loans",
+                "kitchen",
+                "trade",
+                "retail",
+                "clinic",
+                "coaching",
+                "freelancer",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Industries",
+            "type": "array"
+          },
+          "kind": {
+            "default": "free_plan",
+            "enum": [
+              "free_plan",
+              "percent_off",
+              "trial_days",
+              "ai_tokens"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "max_uses": {
+            "default": 100,
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Max Uses",
+            "type": "integer"
+          },
+          "months": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan or ai_tokens: how long; percent_off: billing cycles (as in the Razorpay offer)",
+            "title": "Months"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "periods": {
+            "description": "percent_off: only these billing periods",
+            "items": {
+              "enum": [
+                "monthly",
+                "annual"
+              ],
+              "type": "string"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "enum": [
+                  "starter",
+                  "growth",
+                  "scale"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan: the plan given",
+            "title": "Plan"
+          },
+          "plans": {
+            "description": "percent_off: only these plans (none = any)",
+            "items": {
+              "enum": [
+                "starter",
+                "growth",
+                "scale"
+              ],
+              "type": "string"
+            },
+            "title": "Plans",
+            "type": "array"
+          },
+          "razorpay_offer_id": {
+            "anyOf": [
+              {
+                "pattern": "^offer_[A-Za-z0-9]{6,40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Razorpay Offer Id"
+          },
+          "signup_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "who=new: used within this many days",
+            "title": "Signup Days"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens"
+          },
+          "who": {
+            "default": "unpaid",
+            "enum": [
+              "new",
+              "unpaid",
+              "anyone"
+            ],
+            "title": "Who",
+            "type": "string"
+          }
+        },
+        "title": "CouponFields",
+        "type": "object"
+      },
+      "CouponIn": {
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "code": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{2,23}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan (instead of months) or trial_days",
+            "title": "Days"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Domains",
+            "type": "array"
+          },
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Emails",
+            "type": "array"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "industries": {
+            "description": "none = every industry",
+            "items": {
+              "enum": [
+                "agency",
+                "loans",
+                "kitchen",
+                "trade",
+                "retail",
+                "clinic",
+                "coaching",
+                "freelancer",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Industries",
+            "type": "array"
+          },
+          "kind": {
+            "default": "free_plan",
+            "enum": [
+              "free_plan",
+              "percent_off",
+              "trial_days",
+              "ai_tokens"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "max_uses": {
+            "default": 100,
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Max Uses",
+            "type": "integer"
+          },
+          "months": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan or ai_tokens: how long; percent_off: billing cycles (as in the Razorpay offer)",
+            "title": "Months"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "periods": {
+            "description": "percent_off: only these billing periods",
+            "items": {
+              "enum": [
+                "monthly",
+                "annual"
+              ],
+              "type": "string"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "enum": [
+                  "starter",
+                  "growth",
+                  "scale"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan: the plan given",
+            "title": "Plan"
+          },
+          "plans": {
+            "description": "percent_off: only these plans (none = any)",
+            "items": {
+              "enum": [
+                "starter",
+                "growth",
+                "scale"
+              ],
+              "type": "string"
+            },
+            "title": "Plans",
+            "type": "array"
+          },
+          "razorpay_offer_id": {
+            "anyOf": [
+              {
+                "pattern": "^offer_[A-Za-z0-9]{6,40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Razorpay Offer Id"
+          },
+          "signup_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "who=new: used within this many days",
+            "title": "Signup Days"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens"
+          },
+          "who": {
+            "default": "unpaid",
+            "enum": [
+              "new",
+              "unpaid",
+              "anyone"
+            ],
+            "title": "Who",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CouponIn",
+        "type": "object"
+      },
       "CouponInfo": {
         "properties": {
           "code": {
             "title": "Code",
             "type": "string"
           },
+          "conditions": {
+            "description": "who can use it, in words",
+            "items": {
+              "type": "string"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "kind": {
+            "enum": [
+              "free_plan",
+              "percent_off",
+              "trial_days",
+              "ai_tokens"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "months": {
-            "title": "Months",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Months"
           },
           "offer": {
             "description": "e.g. 'Scale plan free for 3 months'",
@@ -6509,16 +7018,43 @@
             "type": "integer"
           },
           "plan": {
-            "title": "Plan",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
           },
           "plan_name": {
-            "title": "Plan Name",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Name"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
           }
         },
         "required": [
           "code",
+          "kind",
           "plan",
           "plan_name",
           "months",
@@ -6527,6 +7063,46 @@
           "offer"
         ],
         "title": "CouponInfo",
+        "type": "object"
+      },
+      "CouponOptions": {
+        "properties": {
+          "industries": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Industries",
+            "type": "object"
+          },
+          "kinds": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "object"
+          },
+          "plans": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Plans",
+            "type": "object"
+          },
+          "who": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Who",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kinds",
+          "plans",
+          "industries",
+          "who"
+        ],
+        "title": "CouponOptions",
         "type": "object"
       },
       "CouponUse": {
@@ -6578,6 +7154,18 @@
             "format": "date-time",
             "title": "Redeemed At",
             "type": "string"
+          },
+          "used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used At"
           }
         },
         "required": [
@@ -12962,6 +13550,52 @@
         "title": "OptionOut",
         "type": "object"
       },
+      "OrgCouponItem": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "free_plan",
+              "percent_off",
+              "trial_days",
+              "ai_tokens"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "offer": {
+            "title": "Offer",
+            "type": "string"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "used": {
+            "default": false,
+            "description": "a percent-off coupon already paid a subscription",
+            "title": "Used",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "kind",
+          "offer",
+          "ends_at",
+          "running"
+        ],
+        "title": "OrgCouponItem",
+        "type": "object"
+      },
       "OrgCouponOut": {
         "properties": {
           "code": {
@@ -12973,7 +13607,16 @@
                 "type": "null"
               }
             ],
+            "description": "the free-plan coupon, if any (as before)",
             "title": "Code"
+          },
+          "coupons": {
+            "description": "every coupon this organisation used",
+            "items": {
+              "$ref": "#/components/schemas/OrgCouponItem"
+            },
+            "title": "Coupons",
+            "type": "array"
           },
           "ends_at": {
             "anyOf": [
@@ -19380,12 +20023,55 @@
       "StaffCoupon": {
         "properties": {
           "active": {
+            "default": true,
             "title": "Active",
             "type": "boolean"
           },
           "code": {
             "title": "Code",
             "type": "string"
+          },
+          "conditions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan (instead of months) or trial_days",
+            "title": "Days"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Domains",
+            "type": "array"
+          },
+          "emails": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Emails",
+            "type": "array"
           },
           "expires_at": {
             "anyOf": [
@@ -19399,13 +20085,61 @@
             ],
             "title": "Expires At"
           },
+          "industries": {
+            "description": "none = every industry",
+            "items": {
+              "enum": [
+                "agency",
+                "loans",
+                "kitchen",
+                "trade",
+                "retail",
+                "clinic",
+                "coaching",
+                "freelancer",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Industries",
+            "type": "array"
+          },
+          "kind": {
+            "default": "free_plan",
+            "enum": [
+              "free_plan",
+              "percent_off",
+              "trial_days",
+              "ai_tokens"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "max_uses": {
+            "default": 100,
+            "maximum": 100000.0,
+            "minimum": 1.0,
             "title": "Max Uses",
             "type": "integer"
+          },
+          "months": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan or ai_tokens: how long; percent_off: billing cycles (as in the Razorpay offer)",
+            "title": "Months"
           },
           "note": {
             "anyOf": [
               {
+                "maxLength": 200,
                 "type": "string"
               },
               {
@@ -19418,6 +20152,123 @@
             "title": "Offer",
             "type": "string"
           },
+          "percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "periods": {
+            "description": "percent_off: only these billing periods",
+            "items": {
+              "enum": [
+                "monthly",
+                "annual"
+              ],
+              "type": "string"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "enum": [
+                  "starter",
+                  "growth",
+                  "scale"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "free_plan: the plan given",
+            "title": "Plan"
+          },
+          "plans": {
+            "description": "percent_off: only these plans (none = any)",
+            "items": {
+              "enum": [
+                "starter",
+                "growth",
+                "scale"
+              ],
+              "type": "string"
+            },
+            "title": "Plans",
+            "type": "array"
+          },
+          "razorpay_offer_id": {
+            "anyOf": [
+              {
+                "pattern": "^offer_[A-Za-z0-9]{6,40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Razorpay Offer Id"
+          },
+          "signup_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "who=new: used within this many days",
+            "title": "Signup Days"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "open",
+              "full",
+              "ended",
+              "off"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens"
+          },
           "used_by": {
             "items": {
               "$ref": "#/components/schemas/CouponUse"
@@ -19428,16 +20279,25 @@
           "uses": {
             "title": "Uses",
             "type": "integer"
+          },
+          "who": {
+            "default": "unpaid",
+            "enum": [
+              "new",
+              "unpaid",
+              "anyone"
+            ],
+            "title": "Who",
+            "type": "string"
           }
         },
         "required": [
           "code",
           "offer",
-          "max_uses",
           "uses",
-          "active",
-          "expires_at",
-          "note",
+          "status",
+          "conditions",
+          "created_at",
           "used_by"
         ],
         "title": "StaffCoupon",
@@ -23996,6 +24856,29 @@
             ],
             "title": "City"
           },
+          "industry": {
+            "anyOf": [
+              {
+                "enum": [
+                  "agency",
+                  "loans",
+                  "kitchen",
+                  "trade",
+                  "retail",
+                  "clinic",
+                  "coaching",
+                  "freelancer",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the onboarding template (coupons can target it)",
+            "title": "Industry"
+          },
           "kind": {
             "anyOf": [
               {
@@ -24118,6 +25001,17 @@
             "default": "",
             "title": "City",
             "type": "string"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
           },
           "kind": {
             "title": "Kind",
@@ -25436,7 +26330,7 @@
       "kritvia_api__routers__coupons__ApplyIn": {
         "properties": {
           "code": {
-            "pattern": "^[A-Za-z0-9]{4,20}$",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{2,23}$",
             "title": "Code",
             "type": "string"
           }
@@ -31458,9 +32352,121 @@
         "tags": [
           "coupons"
         ]
+      },
+      "post": {
+        "operationId": "staff_create_staff_coupons_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CouponIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffCoupon"
+                  },
+                  "title": "Response Staff Create Staff Coupons Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Create",
+        "tags": [
+          "coupons"
+        ]
+      }
+    },
+    "/staff/coupons/options": {
+      "get": {
+        "operationId": "staff_options_staff_coupons_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CouponOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Options",
+        "tags": [
+          "coupons"
+        ]
       }
     },
     "/staff/coupons/{code}": {
+      "delete": {
+        "operationId": "staff_delete_staff_coupons__code__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Delete",
+        "tags": [
+          "coupons"
+        ]
+      },
       "patch": {
         "operationId": "staff_set_staff_coupons__code__patch",
         "parameters": [
@@ -31516,6 +32522,105 @@
           }
         ],
         "summary": "Staff Set",
+        "tags": [
+          "coupons"
+        ]
+      },
+      "put": {
+        "operationId": "staff_update_staff_coupons__code__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CouponFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffCoupon"
+                  },
+                  "title": "Response Staff Update Staff Coupons  Code  Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Update",
+        "tags": [
+          "coupons"
+        ]
+      }
+    },
+    "/staff/coupons/{code}/uses.csv": {
+      "get": {
+        "operationId": "staff_uses_csv_staff_coupons__code__uses_csv_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Staff Uses Csv",
         "tags": [
           "coupons"
         ]

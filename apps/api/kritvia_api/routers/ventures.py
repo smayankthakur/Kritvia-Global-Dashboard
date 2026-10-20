@@ -62,8 +62,12 @@ async def my_access(db: TenantDB) -> MeAccessOut:
                        ventures=[AccessOut(**r._mapping) for r in rows], is_staff=is_staff(email))
 
 
+Industry = Literal["agency", "loans", "kitchen", "trade", "retail", "clinic", "coaching", "freelancer", "other"]
+
+
 class VentureSettingsIn(BaseModel):
     kind: VentureKind | None = None
+    industry: Industry | None = Field(default=None, description="the onboarding template (coupons can target it)")
     trust_threshold: int | None = Field(default=None, ge=5, le=1000)
     timezone: str | None = Field(default=None, max_length=60)
     speech_people_hints: bool | None = None
@@ -82,6 +86,7 @@ class VentureSettingsIn(BaseModel):
 class VentureSettingsOut(BaseModel):
     venture_id: uuid.UUID
     kind: str
+    industry: str | None = None
     trust_threshold: int
     timezone: str
     speech_people_hints: bool = Field(
@@ -114,7 +119,7 @@ async def get_settings_(venture_id: uuid.UUID, db: TenantDB) -> VentureSettingsO
         " coalesce(about, '') AS about, coalesce(sign_off, '') AS sign_off,"
         " coalesce(privacy_contact_name, '') AS privacy_contact_name,"
         " coalesce(privacy_contact_email, '') AS privacy_contact_email,"
-        " coalesce(notice_in_replies, false) AS notice_in_replies FROM (SELECT 1) x"
+        " coalesce(notice_in_replies, false) AS notice_in_replies, s.industry FROM (SELECT 1) x"
         " LEFT JOIN venture_settings s ON s.venture_id = :v"), {"v": venture_id})).first()
     url = notice_url(venture_id) if row.privacy_contact_email else None
     return VentureSettingsOut(venture_id=venture_id, notice_url=url, **row._mapping)
@@ -140,6 +145,9 @@ async def put_settings(venture_id: uuid.UUID, body: VentureSettingsIn, db: Tenan
                 " speech_people_hints = coalesce(:ph, venture_settings.speech_people_hints), updated_at = now()"),
                 {"o": org, "v": venture_id, "k": body.kind, "t": body.trust_threshold, "tz": body.timezone,
                  "ph": body.speech_people_hints})
+            if body.industry is not None:
+                await db.execute(text("UPDATE venture_settings SET industry = :i, updated_at = now()"
+                                      " WHERE venture_id = :v"), {"i": body.industry, "v": venture_id})
             if body.notice_in_replies is not None:
                 await db.execute(text("UPDATE venture_settings SET notice_in_replies = :n, updated_at = now()"
                                       " WHERE venture_id = :v"), {"n": body.notice_in_replies, "v": venture_id})
