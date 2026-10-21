@@ -7,6 +7,7 @@ const GROUPS = [
   {
     title: "Product",
     links: [
+      ["/features", "What Kritvia does"],
       ["/welcome#pricing", "Pricing"],
       ["/security", "Security"],
       ["/status", "Status"],

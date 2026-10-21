@@ -5,6 +5,7 @@ import { PICKER_PAGE, WHATSAPP_CONNECT_PAGE, buildCsp, makeNonce } from "@/lib/c
 
 const PUBLIC_PAGES = [
   "/welcome",
+  "/features",
   "/login",
   "/register",
   "/forgot",

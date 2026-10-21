@@ -4,6 +4,7 @@
  * so prices and company details can't drift from what the site shows.
  */
 import { BUSINESS, PRICE_TAX_NOTE } from "@/lib/business";
+import { FEATURES, UNDERNEATH } from "@/lib/features";
 import { ENTERPRISE, PLAN_CARDS, TOKEN_PACKS } from "@/lib/pricing";
 import { SITE_URL } from "@/lib/site";
 
@@ -27,13 +28,8 @@ export function llmsTxt(): string {
 > approval. Made by ${BUSINESS.legalName}, New Delhi, India.
 
 ## What it does
-- Inbox assistant (every business): sorts every email and WhatsApp message, files it, pulls out tasks and drafts a reply in the business's voice.
-- Lead triage and proposals (studios and agencies): scores each enquiry, prices it from the business's own rate card and drafts a proposal and a call invite.
-- Loan document checks (finance): reads KYC, bank statements and salary slips on a private model, checks them against a checklist and drafts the follow-up for what is missing.
-- Nightly kitchen plan (cloud kitchens): forecasts tomorrow's demand per dish from Swiggy and Zomato reports and drafts vendor purchase orders.
-- Business memory with citations: answers say which document, email or message they came from.
-- One assistant: a request in plain words can use every page and agent; anything that changes something waits for approval.
-- Earned autonomy: an agent may act alone on one kind of action only after a long run of approvals without edits, and the owner can take it back.
+${FEATURES.map((f) => `- ${f.title}: ${f.answer} Plans: ${f.plans}`).join("\n")}
+${UNDERNEATH.map((u) => `- ${u}`).join("\n")}
 
 ## Works with
 Gmail, Google Calendar, Google Drive, WhatsApp Business, Telegram, Slack, website lead forms, Tally exports, Razorpay and UPI, Google reviews, uploaded documents, and any MCP server or web app with an API (App store).
@@ -56,6 +52,7 @@ Grievance officer: ${BUSINESS.grievanceOfficer}
 
 ## Key pages
 - Product and pricing: ${SITE_URL}/
+- Every feature, job by job: ${SITE_URL}/features
 - Create an account (15-day free trial): ${SITE_URL}/register
 - Help: ${SITE_URL}/help
 - Security: ${SITE_URL}/security

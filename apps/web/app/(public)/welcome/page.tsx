@@ -196,6 +196,11 @@ export default function WelcomePage() {
         <Reveal className="mt-10" delay={0.1}>
           <AgentsShowcase />
         </Reveal>
+        <p className="mt-6 text-center text-sm">
+          <Link href="/features" className="font-medium text-accent hover:underline">
+            See everything Kritvia does, job by job
+          </Link>
+        </p>
       </section>
 
       <section aria-labelledby="platform" className="scroll-mt-20 py-14">

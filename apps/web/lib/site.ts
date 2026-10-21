@@ -5,6 +5,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.sitely
 export const INDEXABLE = [
   { path: "/", priority: 1, changeFrequency: "weekly" },
   { path: "/register", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/features", priority: 0.8, changeFrequency: "monthly" },
   { path: "/security", priority: 0.6, changeFrequency: "monthly" },
   { path: "/help", priority: 0.6, changeFrequency: "monthly" },
   { path: "/privacy", priority: 0.4, changeFrequency: "yearly" },

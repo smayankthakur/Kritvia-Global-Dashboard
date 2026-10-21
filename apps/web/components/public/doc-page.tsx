@@ -13,6 +13,7 @@ export const CIN = BUSINESS.cin;
 export const SUPPORT_EMAIL = BUSINESS.email;
 
 const LINKS = [
+  ["/features", "Features"],
   ["/security", "Security"],
   ["/privacy", "Privacy"],
   ["/terms", "Terms"],
