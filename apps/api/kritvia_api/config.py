@@ -119,6 +119,11 @@ class Settings(BaseSettings):
     ai_user_calls_per_minute: int = 30
     ai_max_prompt_chars: int = 600_000
     ai_max_output_tokens: int = 4096
+    # Kill switch: AI_PAUSED=true in .env stops every AI call at once (runs try again by themselves after
+    # 2, 10 and 60 minutes). Spend alert: the watchdog tells Kritvia's team when the last 24 hours of AI cost
+    # pass this many US dollars (0 = no alert).
+    ai_paused: bool = False
+    ai_daily_spend_alert_usd: float = 10.0
 
     # Billing (Razorpay subscriptions). Plans are created once in the Razorpay dashboard;
     # their ids go here. Test-mode keys (rzp_test_...) work end to end without real money.

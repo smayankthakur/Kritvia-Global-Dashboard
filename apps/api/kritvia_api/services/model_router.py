@@ -58,6 +58,10 @@ class AgentBudgetExceeded(QuotaExceeded):
     """This agent (workflow) used the monthly token budget its owner set on the board."""
 
 
+class AiPaused(RouterError):
+    """Kritvia's team switched AI off for a while (AI_PAUSED). Runs try again by themselves (2, 10, 60 min)."""
+
+
 class AllProvidersFailed(RouterError):
     def __init__(self, tier: str, attempts: list[str]) -> None:
         super().__init__(f"all deployments failed for tier '{tier}': {'; '.join(attempts)}")
@@ -280,6 +284,10 @@ class ModelRouter:
     async def _guard(self, ctx: CallContext, messages: list[dict[str, Any]], params: dict[str, Any]) -> None:
         """Per-request limits: prompt size, output size, and how fast one person can call the AI."""
         s = get_settings()
+        if s.ai_paused:
+            await self._meter(ctx, tier="-", status="blocked", error="AI paused by Kritvia")
+            raise AiPaused("Kritvia's AI is paused for a short while by the Kritvia team; runs try again by "
+                           "themselves")
         size = sum(len(m["content"]) for m in messages if isinstance(m.get("content"), str))
         if size > s.ai_max_prompt_chars:
             await self._meter(ctx, tier="-", status="blocked", error="prompt too large")

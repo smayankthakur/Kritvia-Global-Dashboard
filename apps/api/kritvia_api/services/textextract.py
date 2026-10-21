@@ -46,7 +46,7 @@ def ocr_image(data: bytes) -> str:
         from PIL import Image  # type: ignore
 
         engine = _paddle_engine(PaddleOCR)
-        img = np.array(Image.open(io.BytesIO(data)).convert("RGB"))
+        img = np.array(_open_image(Image, data).convert("RGB"))
         result = engine.ocr(img)
         lines = [line[1][0] for block in result or [] for line in block or []]
         return "\n".join(lines)
@@ -57,7 +57,18 @@ def ocr_image(data: bytes) -> str:
         from PIL import Image  # type: ignore
     except ImportError as exc:
         raise ExtractionError("no OCR engine installed (PaddleOCR or Tesseract)") from exc
-    return pytesseract.image_to_string(Image.open(io.BytesIO(data)), lang="eng+hin")
+    return pytesseract.image_to_string(_open_image(Image, data), lang="eng+hin")
+
+
+IMAGE_FORMATS = ("PNG", "JPEG", "WEBP", "TIFF")     # what uploads accept; Pillow tries no other decoder
+
+
+def _open_image(image_mod, data: bytes):
+    """Opens an uploaded image with only the formats uploads allow (a smaller attack surface for Pillow)."""
+    try:
+        return image_mod.open(io.BytesIO(data), formats=IMAGE_FORMATS)
+    except Exception as exc:  # noqa: BLE001 - UnidentifiedImageError, DecompressionBombError, truncated files
+        raise ExtractionError(f"the image couldn't be read ({type(exc).__name__})") from None
 
 
 _paddle = None

@@ -45,7 +45,21 @@ async def test_delete_account_closes_solo_org_and_anonymises(client, monkeypatch
     monkeypatch.setattr(get_settings(), "vapid_private_key", "private")
     solo = await make_actor(client, "solo")
     org = (await solo.post("/orgs", json={"name": "Solo Co", "slug": "solo-" + uuid.uuid4().hex[:8]})).json()["id"]
-    await solo.post(f"/orgs/{org}/ventures", json={"name": "Shop", "slug": "shop"})
+    v = (await solo.post(f"/orgs/{org}/ventures", json={"name": "Shop", "slug": "shop"})).json()["id"]
+    # things tied to the person: a Telegram approval link, a phone sign-in link, a team place, an API key
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        o, vv = uuid.UUID(org), uuid.UUID(v)
+        await conn.execute("INSERT INTO approver_links (org_id, venture_id, user_id, channel, external_id)"
+                           " VALUES ($1, $2, $3, 'telegram', $4)", o, vv, solo.id, uuid.uuid4().hex[:12])
+        await conn.execute("INSERT INTO device_links (kind, token_hash, user_id, expires_at)"
+                           " VALUES ('offer', $1, $2, now() + interval '5 minutes')", uuid.uuid4().hex * 2, solo.id)
+        team = await conn.fetchval("INSERT INTO teams (org_id, name) VALUES ($1, 'Sales') RETURNING id", o)
+        await conn.execute("INSERT INTO team_members (org_id, team_id, user_id) VALUES ($1, $2, $3)", o, team, solo.id)
+        await conn.execute("INSERT INTO api_keys (org_id, created_by, name, prefix, key_hash, scope)"
+                           " VALUES ($1, $2, 'zap', 'kv_live_abcd', $3, 'read')", o, solo.id, uuid.uuid4().hex * 2)
+    finally:
+        await conn.close()
     sub = {"endpoint": f"https://fcm.googleapis.com/fcm/send/{uuid.uuid4().hex}", "keys": {"p256dh": "k", "auth": "a"}}
     assert (await solo.post("/me/push", json=sub)).status_code == 201
     assert (await solo.post("/auth/me/delete", json={"confirm": "yes"})).status_code == 422
@@ -60,10 +74,16 @@ async def test_delete_account_closes_solo_org_and_anonymises(client, monkeypatch
         closed = await conn.fetchval("SELECT closed_at FROM organisations WHERE id = $1", uuid.UUID(org))
         members = await conn.fetchval("SELECT count(*) FROM memberships WHERE user_id = $1", solo.id)
         pushes = await conn.fetchval("SELECT count(*) FROM push_subscriptions WHERE user_id = $1", solo.id)
+        tied = await conn.fetchval(
+            "SELECT (SELECT count(*) FROM approver_links WHERE user_id = $1) + (SELECT count(*) FROM device_links"
+            " WHERE user_id = $1) + (SELECT count(*) FROM team_members WHERE user_id = $1)", solo.id)
+        live_keys = await conn.fetchval("SELECT count(*) FROM api_keys WHERE created_by = $1 AND revoked_at IS NULL",
+                                        solo.id)
     finally:
         await conn.close()
     assert u["email"].endswith("@deleted.invalid") and u["full_name"] == "Deleted user" and not u["is_active"]
     assert closed is not None and members == 0 and pushes == 0
+    assert tied == 0 and live_keys == 0
     again = await client.post("/auth/register", json={"email": solo.email, "full_name": "New", "password": "a long password 9"})
     assert again.status_code == 201
 

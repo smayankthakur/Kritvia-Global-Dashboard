@@ -12526,6 +12526,11 @@ export interface components {
         /** PublicUploadInfo */
         PublicUploadInfo: {
             /**
+             * Business
+             * @description the business collecting the documents (responsible for them under the DPDP Act)
+             */
+            business: string;
+            /**
              * Expires At
              * Format: date-time
              */
@@ -12534,6 +12539,12 @@ export interface components {
             needed: string[];
             /** Reference */
             reference: string;
+            /**
+             * Venture Id
+             * Format: uuid
+             * @description for the business's privacy notice, /n/{venture_id}
+             */
+            venture_id: string;
         };
         /** PushConfigOut */
         PushConfigOut: {

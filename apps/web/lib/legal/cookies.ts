@@ -3,7 +3,7 @@
  * one, add it here and, if it is not strictly necessary, register it in lib/consent.ts so the
  * consent banner asks first (tests/consent.test.ts checks the two lists agree).
  */
-export const COOKIES_UPDATED = "17 October 2026";
+export const COOKIES_UPDATED = "21 October 2026";
 
 export const COOKIES_MD = `## 1. What this policy covers
 
@@ -14,7 +14,7 @@ A cookie is a small text file a website stores in your browser. Similar technolo
 ## 2. The short version
 
 - **We only use what Kritvia needs to work**: keeping you signed in, protecting sign-in, and remembering your theme, your language and the business you last used.
-- **We use no advertising cookies, no analytics or tracking cookies, and no third-party trackers.** No other company sets cookies through Kritvia.
+- **We use no advertising cookies, no analytics or tracking cookies, and no third-party trackers.** No other company sets cookies through Kritvia. The one exception you start yourself: when you choose to connect WhatsApp, Meta's own sign-in window opens (from facebook.com), with Meta's cookies under Meta's privacy policy; Kritvia turns off Meta's automatic event logging there.
 - Because every cookie we use is strictly necessary, the law does not require your consent for them, so we do not show a consent banner. If we ever add a cookie that is not strictly necessary, we will ask you first and you will be able to change your mind at any time.
 - We honour the **Global Privacy Control** signal: if your browser sends it, we treat it as a refusal of any optional cookie we might add.
 
@@ -24,7 +24,7 @@ A cookie is a small text file a website stores in your browser. Similar technolo
 | --- | --- | --- | --- |
 | kv_at | Keeps you signed in (a short-lived access token). Page scripts cannot read it. | Strictly necessary, first party | 60 minutes |
 | kv_rt | Renews your sign-in without asking again. Page scripts cannot read it. | Strictly necessary, first party | 30 days |
-| kv_oauth, kv_signin | Protect the Google sign-in and connection steps against forgery. | Strictly necessary, first party | 10 minutes |
+| kv_oauth, kv_signin, kv_sso | Protect the sign-in steps (Google, your organisation's single sign-on) and app connections against forgery. | Strictly necessary, first party | 10 to 15 minutes |
 | kv_link | Holds a QR-code sign-in while it is in progress (a random secret), so only this browser can finish it. Page scripts cannot read it. | Strictly necessary, first party | 5 minutes |
 | \\_\\_Host-kv_csrf | A random security token that proves a change really came from a Kritvia page (protection against cross-site request forgery). | Strictly necessary, first party | 1 year |
 | kv_org, kv_venture | Remember the organisation and business you last opened. | Strictly necessary (functional), first party | 1 year |
@@ -43,6 +43,7 @@ All our cookies are first-party, sent only to app.sitelytc.com over an encrypted
 | kv-ref (local storage) | A partner's referral code from the sign-up link you used, so that your discount applies to the organisation you create. Removed as soon as it is used. | Until you create your organisation |
 | kv-link-token (session storage) | Remembers a QR code you scanned while you sign in on this phone, so the sign-in can carry on. | Until the tab closes |
 | kv_terms_intent (session storage) | Carries your acceptance of the Terms from the sign-up page to your new account. | Until the tab closes |
+| kv-first-win-hidden:&lt;business&gt; (local storage) | Remembers that you hid the "first steps" checklist for a business. | Until you clear it |
 | kv_consent (local storage) | Your choice about optional cookies. Only written if we ever ask. | 12 months, then we ask again |
 | App cache (installable app) | The app's layout and code, so it opens quickly. Never your business data. | Until the app updates |
 

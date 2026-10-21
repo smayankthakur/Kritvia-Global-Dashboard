@@ -55,6 +55,14 @@ def unsubscribe_url(venture_id: uuid.UUID, address: str) -> str:
             f"{unsubscribe_token(venture_id, address)}")
 
 
+def unsubscribe_headers(venture_id: uuid.UUID, address: str) -> dict[str, str]:
+    """List-Unsubscribe (RFC 2369) with one-click (RFC 8058): mail apps show an Unsubscribe button and POST
+    "List-Unsubscribe=One-Click" to the web app's /api/unsubscribe/campaign, which opts the address out."""
+    one_click = (f"{get_settings().public_web_url.rstrip('/')}/api/unsubscribe/campaign?t="
+                 f"{unsubscribe_token(venture_id, address)}")
+    return {"List-Unsubscribe": f"<{one_click}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
+
+
 WA_AUDIENCE = {
     "opted_in": "true",
     "customers": ("(EXISTS (SELECT 1 FROM invoices i WHERE i.venture_id = c.venture_id AND i.customer_phone = c.phone"

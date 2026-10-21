@@ -16,23 +16,34 @@ const ALLOWED = /\.(pdf|jpe?g|png|webp)$/i;
 const MAX_FILES = 10;
 const MAX_MB = 25;
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, business, ventureId }: { children: React.ReactNode; business?: string; ventureId?: string }) {
+  const who = business || "the business";
   return (
     <main id="main" className="flex min-h-dvh flex-col items-center px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-6 text-center">
-          <p className="text-lg font-semibold tracking-tight">Truhome Finance</p>
+          <p className="text-lg font-semibold tracking-tight">{business || "Secure upload"}</p>
           <p className="text-sm text-muted">Secure document upload</p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-6 shadow-card">{children}</div>
         <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-subtle">
-          <Lock className="h-3.5 w-3.5" aria-hidden /> Files are encrypted and seen only by your loan officer.
+          <Lock className="h-3.5 w-3.5" aria-hidden /> Files are encrypted and seen only by the team handling your application.
         </p>
         <p className="mt-3 text-center text-xs leading-relaxed text-subtle">
-          Privacy notice: Truhome Finance collects these documents only to verify your loan application, and is responsible for
-          them under India&apos;s Digital Personal Data Protection Act, 2023. They are stored and processed in India by its software
-          provider, Kritvia, and are not used for any other purpose. To see, correct or delete your data, or withdraw consent, contact
-          your loan officer.
+          Privacy notice: {business || "The business"} collects these documents only to verify your application, and is responsible for them under
+          India&apos;s Digital Personal Data Protection Act, 2023. They are stored and processed in India by its software provider,
+          Kritvia, and are not used for any other purpose. To see, correct or delete your data, or withdraw consent, contact {who}
+          {ventureId ? (
+            <>
+              {" "}
+              (
+              <a href={`/n/${ventureId}`} className="underline underline-offset-2">
+                its privacy notice
+              </a>
+              )
+            </>
+          ) : null}
+          .
         </p>
       </div>
     </main>
@@ -83,7 +94,7 @@ export default function PublicUploadPage() {
   if (info.isError) {
     const expired = info.error instanceof ApiError && info.error.status === 404;
     return (
-      <Shell>
+      <Shell business={info.data?.business} ventureId={info.data?.venture_id}>
         <div className="flex flex-col items-center text-center">
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-subtle">
             <Clock className="h-5 w-5" aria-hidden />
@@ -91,7 +102,7 @@ export default function PublicUploadPage() {
           <h1 className="text-base font-semibold">{expired ? "This link has expired" : "We couldn't open this link"}</h1>
           <p className="mt-1 text-sm text-muted">
             {expired
-              ? "Upload links are valid for a limited time. Please ask your Truhome loan officer to send you a new one."
+              ? "Upload links are valid for a limited time. Please ask the person handling your application to send you a new one."
               : errorMessage(info.error)}
           </p>
         </div>
@@ -101,7 +112,7 @@ export default function PublicUploadPage() {
 
   if (up.data) {
     return (
-      <Shell>
+      <Shell business={info.data?.business} ventureId={info.data?.venture_id}>
         <div className="flex flex-col items-center text-center" role="status">
           <CheckCircle2 className="mb-3 h-10 w-10 text-success" aria-hidden />
           <h1 className="text-base font-semibold">Thank you — {up.data.uploaded} file(s) received</h1>
@@ -125,7 +136,7 @@ export default function PublicUploadPage() {
 
   const d = info.data;
   return (
-    <Shell>
+    <Shell business={info.data?.business} ventureId={info.data?.venture_id}>
       <h1 className="text-base font-semibold">Upload documents</h1>
       <p className="mt-1 text-sm text-muted">
         Application <span className="font-mono font-medium text-fg">{d.reference}</span>

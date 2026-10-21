@@ -16152,6 +16152,11 @@
       },
       "PublicUploadInfo": {
         "properties": {
+          "business": {
+            "description": "the business collecting the documents (responsible for them under the DPDP Act)",
+            "title": "Business",
+            "type": "string"
+          },
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",
@@ -16167,12 +16172,20 @@
           "reference": {
             "title": "Reference",
             "type": "string"
+          },
+          "venture_id": {
+            "description": "for the business's privacy notice, /n/{venture_id}",
+            "format": "uuid",
+            "title": "Venture Id",
+            "type": "string"
           }
         },
         "required": [
           "reference",
           "needed",
-          "expires_at"
+          "expires_at",
+          "business",
+          "venture_id"
         ],
         "title": "PublicUploadInfo",
         "type": "object"

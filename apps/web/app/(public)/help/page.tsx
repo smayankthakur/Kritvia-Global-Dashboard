@@ -118,6 +118,13 @@ function Contact() {
         <Textarea rows={5} value={form.message} maxLength={5000} onChange={(e) => setForm({ ...form, message: e.target.value })} />
       </Field>
       <input tabIndex={-1} autoComplete="off" aria-hidden className="hidden" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} name="website" />
+      <p className="text-xs text-subtle">
+        We use your name, email and message to answer you and improve our help pages, and keep them for two years. See our{" "}
+        <a href="/privacy" className="underline underline-offset-2">
+          privacy policy
+        </a>
+        .
+      </p>
       <Button type="submit" variant="primary" loading={state === "busy"} disabled={!form.name.trim() || !form.email.trim() || form.message.trim().length < 5}>
         Send
       </Button>

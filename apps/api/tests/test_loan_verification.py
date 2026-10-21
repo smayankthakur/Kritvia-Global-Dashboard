@@ -142,6 +142,8 @@ async def test_client_upload_link(world, application, fake_llm, client):
     token = link["token"]
     info = await client.get(f"/public/upload/{token}")
     assert info.status_code == 200 and info.json()["reference"] == application["reference"]
+    # the page names the business collecting the documents (not a fixed name) and links its privacy notice
+    assert info.json()["business"] == "Truhome" and info.json()["venture_id"] == tru
     assert (await client.get("/public/upload/" + "x" * 43)).status_code == 404
     bad = await client.post(f"/public/upload/{token}", files=[("files", ("evil.html", io.BytesIO(b"<script>"),
                                                                          "text/html"))])

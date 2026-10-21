@@ -114,7 +114,8 @@ async def batch(ctx: RunContext, state: dict) -> Goto | Finish:
                 first = (r.name or "").split(" ")[0]
                 body = (f"Hi {first},\n\n" if first else "") + f"{c.body}\n\n—\nDon't want these emails? {link}"
                 await ctx.services.messaging.send_email(ctx, approval_id, to=r.address, subject=c.subject, body=body,
-                                                        campaign_recipient=r.id)
+                                                        campaign_recipient=r.id,
+                                                        headers=cs.unsubscribe_headers(ctx.venture_id, r.address))
         except MessagingError as exc:
             msg = str(exc)
             status = "skipped" if ("STOP" in msg or "unsubscribed" in msg or "agreed to hear" in msg) else "failed"

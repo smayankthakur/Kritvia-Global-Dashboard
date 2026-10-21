@@ -335,6 +335,8 @@ class PublicUploadInfo(BaseModel):
     reference: str
     needed: list[str]
     expires_at: datetime
+    business: str = Field(description="the business collecting the documents (responsible for them under the DPDP Act)")
+    venture_id: uuid.UUID = Field(description="for the business's privacy notice, /n/{venture_id}")
 
 
 async def _resolve_token(token: str):
@@ -354,8 +356,12 @@ async def public_upload_info(token: str, request: Request) -> PublicUploadInfo:
     async with tenant_tx(p.run_as, "agent", "client_upload") as conn:
         a = (await conn.execute(text("SELECT reference, checklist_result, upload_token_expires FROM loan_applications"
                                      " WHERE id = :id"), {"id": p.application_id})).first()
+        business = (await conn.execute(text(
+            "SELECT coalesce(nullif(btrim(s.business_name), ''), v.name) FROM ventures v"
+            " LEFT JOIN venture_settings s ON s.venture_id = v.id WHERE v.id = :v"), {"v": p.venture_id})).scalar()
     missing = [m["label"] for m in (a.checklist_result or {}).get("missing", [])]
-    return PublicUploadInfo(reference=a.reference, needed=missing, expires_at=a.upload_token_expires)
+    return PublicUploadInfo(reference=a.reference, needed=missing, expires_at=a.upload_token_expires,
+                            business=business or "The business", venture_id=p.venture_id)
 
 
 @router.post("/public/upload/{token}", response_model=UploadResultOut, status_code=201)

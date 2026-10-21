@@ -11,6 +11,7 @@ import base64
 import time
 import uuid
 from dataclasses import dataclass
+from email import policy as _email_policy
 from email.message import EmailMessage
 from email.utils import parseaddr
 from typing import Any
@@ -45,6 +46,8 @@ STARS = {"ONE": 1, "TWO": 2, "THREE": 3, "FOUR": 4, "FIVE": 5}
 SEND_ONLY_SCOPES = ["openid", "email", SCOPES["gmail.send"], SCOPES["calendar.events"], SCOPES["drive.file"]]
 DEFAULT_SCOPES = ["openid", "email", SCOPES["gmail.readonly"], SCOPES["gmail.send"], SCOPES["calendar.events"],
                   SCOPES["drive.readonly"], SCOPES["drive.file"]]
+
+LONG_HEADERS = _email_policy.default.clone(max_line_length=998)
 
 
 class GoogleError(Exception):
@@ -223,15 +226,19 @@ class GoogleClient:
 
     async def send_email(self, token: str, *, to: str, subject: str, body: str, sender: str | None = None,
                          cc: list[str] | None = None, thread_id: str | None = None,
-                         attachments: list[tuple[str, str, bytes]] | None = None) -> dict[str, str]:
-        """Returns {"id", "thread_id"}: the thread lets a reply be matched to what was sent."""
-        msg = EmailMessage()
+                         attachments: list[tuple[str, str, bytes]] | None = None,
+                         headers: dict[str, str] | None = None) -> dict[str, str]:
+        """Returns {"id", "thread_id"}: the thread lets a reply be matched to what was sent. `headers`: extra
+        headers such as List-Unsubscribe for campaign emails."""
+        msg = EmailMessage(policy=LONG_HEADERS)   # long URLs in List-Unsubscribe stay plain (no RFC 2047 encoding)
         msg["To"] = to
         msg["Subject"] = subject
         if sender:
             msg["From"] = sender
         if cc:
             msg["Cc"] = ", ".join(cc)
+        for k, v in (headers or {}).items():
+            msg[k] = v
         msg.set_content(body)
         for filename, mime, data in attachments or []:
             maintype, _, subtype = mime.partition("/")

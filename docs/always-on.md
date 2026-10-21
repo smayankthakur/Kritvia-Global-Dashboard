@@ -71,3 +71,10 @@ inside Cloudflare's free tier.
 One server is still one server. If the EC2 instance itself fails, the monitors tell you within about two
 minutes and the server's own restart policy brings it back after a reboot, but there is no standby. A
 standby server with a database replica is the next step (about ₹5,000–7,000 a month).
+
+## AI kill switch and spend alert
+
+- `AI_PAUSED=true` in `.env`, then `docker compose up -d api worker worker-priority`: every AI call stops at once with
+  "Kritvia's AI is paused"; runs try again by themselves after 2, 10 and 60 minutes. Set it back to `false` the same way.
+- Every 15 minutes the watchdog adds up the last 24 hours of AI cost (`model_calls.cost_usd`); over
+  `AI_DAILY_SPEND_ALERT_USD` (default 10) it emails Kritvia's team once an hour while it lasts, and once when it drops back.

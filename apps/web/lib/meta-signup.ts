@@ -66,11 +66,11 @@ export function loadFacebookSdk(cfg: SignupConfig): Promise<void> {
   if (sdk) return sdk;
   sdk = new Promise<void>((resolve, reject) => {
     if (window.FB) {
-      window.FB.init({ appId: cfg.app_id, autoLogAppEvents: true, xfbml: false, version: cfg.graph_version });
+      window.FB.init({ appId: cfg.app_id, autoLogAppEvents: false, xfbml: false, version: cfg.graph_version });
       return resolve();
     }
     window.fbAsyncInit = () => {
-      window.FB!.init({ appId: cfg.app_id, autoLogAppEvents: true, xfbml: false, version: cfg.graph_version });
+      window.FB!.init({ appId: cfg.app_id, autoLogAppEvents: false, xfbml: false, version: cfg.graph_version });
       resolve();
     };
     const s = document.createElement("script");

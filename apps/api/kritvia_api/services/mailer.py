@@ -21,11 +21,14 @@ import logging
 import smtplib
 import ssl
 from dataclasses import dataclass, field
+from email import policy as _email_policy
 from email.message import EmailMessage
 
 from kritvia_api.config import Settings
 
 log = logging.getLogger("kritvia.mailer")
+
+LONG_HEADERS = _email_policy.default.clone(max_line_length=998)
 
 
 class MailError(Exception):
@@ -56,7 +59,7 @@ class Mailer:
                    one_click_url: str | None = None) -> None:
         """unsubscribe_url: the page linked in the email; one_click_url: where mail apps POST
         "List-Unsubscribe=One-Click" (defaults to unsubscribe_url)."""
-        msg = EmailMessage()
+        msg = EmailMessage(policy=LONG_HEADERS)   # long URLs in List-Unsubscribe stay plain (no RFC 2047 encoding)
         msg["From"], msg["To"], msg["Subject"] = self.sender, to, subject
         if unsubscribe_url:
             msg["List-Unsubscribe"] = f"<{one_click_url or unsubscribe_url}>"

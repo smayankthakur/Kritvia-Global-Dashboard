@@ -103,7 +103,8 @@ class Messaging:
     async def send_email(self, ctx: RunContext, approval_id: uuid.UUID, *, to: str, subject: str, body: str,
                          cc: list[str] | None = None, thread_id: str | None = None,
                          attachments: list[tuple[str, str, bytes]] | None = None,
-                         campaign_recipient: uuid.UUID | None = None) -> dict[str, Any]:
+                         campaign_recipient: uuid.UUID | None = None,
+                         headers: dict[str, str] | None = None) -> dict[str, Any]:
         if not to or "@" not in to:
             raise MessagingError("recipient email is missing or invalid")
         google = await self._google_token(ctx, "gmail.send")
@@ -111,7 +112,8 @@ class Messaging:
             token, g = google
             try:
                 sent = await self.google.send_email(token, to=to, subject=subject, body=body, cc=cc,
-                                                    thread_id=thread_id, sender=g.email, attachments=attachments)
+                                                    thread_id=thread_id, sender=g.email, attachments=attachments,
+                                                    **({"headers": headers} if headers else {}))
             except Exception as exc:
                 await self._record(ctx, approval_id, channel="email", recipient=to, subject=subject, body=body,
                                    transport="gmail", status="failed", error=str(exc)[:300], campaign_recipient=campaign_recipient)

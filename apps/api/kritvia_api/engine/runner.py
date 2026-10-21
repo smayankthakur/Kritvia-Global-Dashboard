@@ -252,7 +252,9 @@ def passing(exc: BaseException) -> bool:
     from sqlalchemy.exc import DBAPIError, OperationalError
 
     from kritvia_api.engine.tools import PolicyError
-    from kritvia_api.services.model_router import AllProvidersFailed, QuotaExceeded
+    from kritvia_api.services.model_router import AiPaused, AllProvidersFailed, QuotaExceeded
+    if isinstance(exc, AiPaused):          # the kill switch: try again later, by itself
+        return True
     if isinstance(exc, PolicyError | QuotaExceeded | ValueError | KeyError | TypeError | AssertionError):
         return False
     if isinstance(exc, httpx.TransportError | asyncio.TimeoutError | TimeoutError | ConnectionError
