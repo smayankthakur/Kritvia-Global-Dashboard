@@ -1,4 +1,4 @@
-import { PRICE_TAX_NOTE } from "@/lib/business";
+import { BUSINESS, PRICE_TAX_NOTE } from "@/lib/business";
 import { ArrowRight, Lock, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -10,12 +10,12 @@ import { PlatformShowcase } from "@/components/public/platform-showcase";
 import { PublicPricing } from "@/components/public/pricing-table";
 import { PublicShell } from "@/components/public/doc-page";
 import { buttonClass } from "@/components/ui/button";
-import { PLAN_CARDS, TOKEN_PACKS, rupees } from "@/lib/pricing";
+import { ENTERPRISE, PLAN_CARDS, TOKEN_PACKS, rupees } from "@/lib/pricing";
 import { INDEX, SITE_URL, share } from "@/lib/site";
 
 const TITLE = "Kritvia — AI agents for Indian businesses that draft; you approve";
 const DESCRIPTION =
-  "An inbox assistant, lead triage with priced proposals, loan document checks and a nightly kitchen plan — in Hindi, Hinglish or English. Nothing is sent without your approval.";
+  "AI agents for Indian businesses: inbox replies, priced proposals, loan document checks and kitchen plans in Hindi, Hinglish or English. You approve first.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -34,24 +34,48 @@ const TRUST = [
   "Download your data or delete your account any time.",
 ];
 
-/** Structured data so search engines can show the product, its maker and its prices. */
+/** Structured data so search engines can show the product, its maker and its prices (only what the page shows). */
 function JsonLd() {
-  const data = {
-    "@context": "https://schema.org",
+  const org = {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+    name: BUSINESS.legalName,
+    alternateName: "Sitelytc",
+    url: "https://sitelytc.com",
+    email: BUSINESS.email,
+    identifier: { "@type": "PropertyValue", propertyID: "CIN", value: BUSINESS.cin },
+    ...(BUSINESS.address
+      ? { address: { "@type": "PostalAddress", streetAddress: BUSINESS.address, addressRegion: "Delhi", addressCountry: "IN" } }
+      : { address: { "@type": "PostalAddress", addressLocality: "New Delhi", addressCountry: "IN" } }),
+  };
+  const app = {
     "@type": "SoftwareApplication",
+    "@id": `${SITE_URL}/#software`,
     name: "Kritvia",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, Windows, Android, iOS",
     description: DESCRIPTION,
     url: SITE_URL,
-    publisher: { "@type": "Organization", name: "Sitelytc Digital Media Private Limited", url: "https://sitelytc.com" },
-    offers: PLAN_CARDS.map((p) => ({
-      "@type": "Offer",
-      name: p.name,
-      price: String(p.price_inr),
-      priceCurrency: "INR",
-    })),
+    inLanguage: ["en-IN", "hi-IN"],
+    featureList: [
+      "Inbox assistant for email and WhatsApp",
+      "Lead triage and proposals priced from your rate card",
+      "Loan document checks",
+      "Nightly kitchen plan from Swiggy and Zomato reports",
+      "Business memory with citations",
+      "Nothing is sent without your approval",
+    ],
+    publisher: { "@id": `${SITE_URL}/#organization` },
+    offers: [
+      ...PLAN_CARDS.map((p) => ({ "@type": "Offer", name: p.name, price: String(p.price_inr), priceCurrency: "INR" })),
+      {
+        "@type": "Offer",
+        name: ENTERPRISE.name,
+        priceSpecification: { "@type": "PriceSpecification", minPrice: String(ENTERPRISE.from_inr), priceCurrency: "INR" },
+      },
+    ],
   };
+  const data = { "@context": "https://schema.org", "@graph": [org, app] };
   // A data block, not a script: JSON.stringify output with "<" escaped cannot close the tag.
   return (
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }} />

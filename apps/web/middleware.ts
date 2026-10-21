@@ -20,6 +20,7 @@ const PUBLIC_PAGES = [
   "/help",
   "/status",
   "/link",
+  "/llms.txt",
 ];
 
 export function isPublicPath(pathname: string): boolean {

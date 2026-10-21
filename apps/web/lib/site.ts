@@ -12,7 +12,6 @@ export const INDEXABLE = [
   { path: "/cookies", priority: 0.3, changeFrequency: "yearly" },
   { path: "/refunds", priority: 0.4, changeFrequency: "yearly" },
   { path: "/accessibility", priority: 0.3, changeFrequency: "yearly" },
-  { path: "/privacy-request", priority: 0.3, changeFrequency: "yearly" },
   { path: "/status", priority: 0.3, changeFrequency: "daily" },
 ] as const;
 
