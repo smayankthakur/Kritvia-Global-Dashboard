@@ -25,6 +25,11 @@ if [ -f "$STATE_DIR/deploying" ] && [ $(( $(date +%s) - $(cat "$STATE_DIR/deploy
   logger -t kritvia-health "deploy in progress; checks skipped"
   exit 0
 fi
+# A deploy holds its lock until it exits, even if another one's exit removed the mark above.
+if [ -f "$STATE_DIR/deploy.lock" ] && ! flock -n "$STATE_DIR/deploy.lock" true 2>/dev/null; then
+  logger -t kritvia-health "deploy in progress (lock held); checks skipped"
+  exit 0
+fi
 DC="docker compose -f docker-compose.yml"
 [ -n "${MANAGED_DATABASE_URL:-}" ] && DC="$DC -f docker-compose.managed.yml"   # postgres lives elsewhere
 fails=()

@@ -7,6 +7,7 @@
 # What makes it quiet:
 #   - Images are built while the old containers keep serving; only services whose image or
 #     settings changed are recreated, so most deploys restart api, worker and web only, for seconds.
+#   - Only one deploy runs at a time ($STATE_DIR/deploy.lock); a second one exits at once.
 #   - While a deploy runs, $STATE_DIR/deploying tells the health watchdog (healthcheck.sh) to stand
 #     down: no restarts behind compose's back, no public incident on the status page, no alert email.
 #     A deploy that hangs longer than 30 minutes stops counting, so a real outage is still reported.
@@ -22,6 +23,16 @@ fi
 cd "$(dirname "$0")/../.."
 ROOT=$(pwd)
 STATE_DIR=/var/lib/kritvia; mkdir -p "$STATE_DIR"
+# One deploy at a time. Two at once (a hand-run deploy while another was going) raced each other's
+# "compose up", the loser rolled the code back to its own starting commit, and its exit removed the
+# "deploying" mark while the other was still restarting services. The lock is held until this script
+# exits, whatever way it exits; the health watchdog also stands down while it is held.
+LOCK="$STATE_DIR/deploy.lock"
+exec 9>"$LOCK"
+if ! flock -n 9; then
+  printf '%s  another deploy is already running; not starting a second one (it holds %s)\n' "$(date -u +%H:%M:%S)" "$LOCK"
+  exit 1
+fi
 MARK="$STATE_DIR/deploying"
 BUILD_LOG="$STATE_DIR/deploy-build.log"
 date +%s > "$MARK"
