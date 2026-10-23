@@ -102,10 +102,12 @@ same.
 
 ## Connecting a number (Settings → Connectors → Connect WhatsApp)
 
-The owner presses **Connect WhatsApp** on `/v/<business>/whatsapp-connect`, logs in with Facebook in
-Meta's window (Embedded Signup) and picks or adds their number; a new number is verified by SMS or call.
-A number already on the **WhatsApp Business app** can be connected and stays usable on the phone
-(coexistence). Kritvia then, on the server (`POST /ventures/{v}/connectors/whatsapp/signup`):
+The owner presses **Connect WhatsApp** on `/v/<business>/whatsapp-connect`, chooses **the number on my
+WhatsApp Business app** (the default) or **a new number**, logs in with Facebook in Meta's window
+(Embedded Signup) and picks their business. An app number is finished by scanning a QR code in the
+WhatsApp Business app and stays usable on the phone (coexistence: `extras.featureType =
+whatsapp_business_app_onboarding`, `lib/meta-signup.ts`); a new number is verified by SMS or call. The
+Facebook script loads when the page opens, so the tap opens Meta's window at once (phones block late pop-ups). Kritvia then, on the server (`POST /ventures/{v}/connectors/whatsapp/signup`):
 
 1. exchanges Meta's 30-second code for the business's token (app id + app secret);
 2. finds the number when Meta's window didn't name it, and checks the token reaches it (ids from the
@@ -121,7 +123,7 @@ The manual way (phone number id + permanent token) stays on that page under "Adv
 
 - `.env`: `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `META_APP_ID` and `WHATSAPP_SIGNUP_CONFIG_ID`.
 - Meta app (Kritvia's): WhatsApp product with the webhook `https://api.<domain>/hooks/whatsapp`
-  (fields `messages`, `message_template_status_update`, and `smb_message_echoes` for app numbers); Facebook Login for Business → Configurations →
+  (fields `messages`, `message_template_status_update`, and for app numbers `smb_message_echoes`, `smb_app_state_sync` and `history`); Facebook Login for Business → Configurations →
   a "WhatsApp Embedded Signup" configuration (its id is `WHATSAPP_SIGNUP_CONFIG_ID`); allowed domain
   `app.<domain>`.
 - Meta requires Kritvia to be a **Tech Provider** (business verification and app review for

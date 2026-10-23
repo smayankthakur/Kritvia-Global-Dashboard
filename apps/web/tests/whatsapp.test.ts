@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cannotSend, chatAddress, chatName, messageText, formatPhone, needsTemplate, normalisePhone, senderLabel } from "@/components/whatsapp/chat";
 import { blanks, fillTemplate, paramProblem, sendableTemplates, templateProblem, templateStatus, templateTitle } from "@/components/whatsapp/templates";
-import { parseSignupMessage } from "@/lib/meta-signup";
+import { parseSignupMessage, signupExtras } from "@/lib/meta-signup";
 import { ventureNav } from "@/lib/nav";
 
 describe("WhatsApp chats", () => {
@@ -125,5 +125,17 @@ describe("WhatsApp templates", () => {
       { id: "c", status: "APPROVED", sendable: false },
     ];
     expect(sendableTemplates(all).map((t) => t.id)).toEqual(["a"]);
+  });
+});
+
+
+describe("Meta signup modes", () => {
+  it("asks Meta for the WhatsApp Business app path (coexistence) when that number is chosen", () => {
+    expect(signupExtras("business_app")).toEqual({ setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" });
+  });
+  it("a new number gets the plain signup, with session info v3", () => {
+    const x = signupExtras("new_number");
+    expect(x).not.toHaveProperty("featureType");
+    expect(x.sessionInfoVersion).toBe("3");
   });
 });

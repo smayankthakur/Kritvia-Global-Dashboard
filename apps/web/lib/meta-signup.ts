@@ -88,7 +88,18 @@ export function loadFacebookSdk(cfg: SignupConfig): Promise<void> {
 }
 
 /** Opens Meta's window and resolves when both the code and the chosen number are known. */
-export function runSignup(cfg: SignupConfig, waitMs = 15000): Promise<SignupResult> {
+/** What Meta's window offers: the number already on the WhatsApp Business app (coexistence: it keeps
+ * working on the phone) or a new number for the Cloud API. Without `featureType` Meta has no path for an
+ * app number, and asks for it to be deleted from the app first. */
+export type SignupMode = "business_app" | "new_number";
+
+export function signupExtras(mode: SignupMode): Record<string, unknown> {
+  return mode === "business_app"
+    ? { setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" }
+    : { setup: {}, sessionInfoVersion: "3" };
+}
+
+export function runSignup(cfg: SignupConfig, mode: SignupMode = "business_app", waitMs = 15000): Promise<SignupResult> {
   return new Promise<SignupResult>((resolve, reject) => {
     let code: string | null = null;
     let session: Extract<SessionEvent, { kind: "finish" }> | null = null;
@@ -101,7 +112,7 @@ export function runSignup(cfg: SignupConfig, waitMs = 15000): Promise<SignupResu
     const settle = () => {
       if (code && session) {
         const s = session;
-        done(() => resolve({ code: code!, wabaId: s.wabaId, phoneNumberId: s.phoneNumberId, businessApp: s.businessApp }));
+        done(() => resolve({ code: code!, wabaId: s.wabaId, phoneNumberId: s.phoneNumberId, businessApp: s.businessApp || mode === "business_app" }));
       } else if (code && !timer) {
         timer = setTimeout(
           () => done(() => reject(new Error("Facebook didn't tell us which number you chose. Please try again."))),
@@ -129,7 +140,7 @@ export function runSignup(cfg: SignupConfig, waitMs = 15000): Promise<SignupResu
           done(() => reject(new Error("The WhatsApp window was closed before finishing.")));
         }
       },
-      { config_id: cfg.config_id, response_type: "code", override_default_response_type: true, extras: {} },
+      { config_id: cfg.config_id, response_type: "code", override_default_response_type: true, extras: signupExtras(mode) },
     );
   });
 }

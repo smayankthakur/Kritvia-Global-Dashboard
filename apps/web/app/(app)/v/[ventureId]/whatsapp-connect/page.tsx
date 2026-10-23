@@ -2,17 +2,31 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
+import { ChoiceCards } from "@/components/ui/choice-cards";
 import { Notice, PageHeader } from "@/components/ui/page";
 import { SkeletonRows } from "@/components/ui/states";
 import { WhatsAppTokenForm } from "@/components/whatsapp/token-form";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
-import { loadFacebookSdk, runSignup } from "@/lib/meta-signup";
+import { loadFacebookSdk, runSignup, type SignupMode } from "@/lib/meta-signup";
 import { useVenture } from "@/lib/venture";
 
 type Connected = Schemas["WhatsAppConnectOut"];
+
+const MODES: { id: SignupMode; title: string; text: string }[] = [
+  {
+    id: "business_app",
+    title: "The number on my WhatsApp Business app",
+    text: "Keeps working in the app on your phone. You scan a QR code in the app to finish.",
+  },
+  {
+    id: "new_number",
+    title: "A new number",
+    text: "A number not on any WhatsApp app yet. Meta checks it with a code by SMS or call.",
+  },
+];
 
 /** "Connect WhatsApp": the owner logs in with Facebook in Meta's own window and picks their number.
  * The one page allowed to run Meta's signup (its CSP and COOP admit Meta; see lib/csp.ts). Opened
@@ -23,6 +37,7 @@ export default function WhatsAppConnectPage() {
   const canAdmin = Boolean(v.can_admin || v.is_owner);
   const [stage, setStage] = useState<"idle" | "window" | "saving">("idle");
   const [done, setDone] = useState<Connected | null>(null);
+  const [mode, setMode] = useState<SignupMode>("business_app");
   const cfg = useQuery({
     queryKey: ["whatsapp-signup", v.id],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors/whatsapp/signup", { params: { path: { venture_id: v.id } } })),
@@ -32,13 +47,18 @@ export default function WhatsAppConnectPage() {
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/connectors", { params: { path: { venture_id: v.id } } })),
   });
   const wa = current.data?.find((c) => c.provider === "whatsapp" && c.status === "active");
+  // Load Facebook's script as soon as the page knows it can, so the tap opens Meta's window at once;
+  // a window opened after a wait is blocked as a pop-up on phones.
+  useEffect(() => {
+    if (cfg.data?.ready) void loadFacebookSdk(cfg.data).catch(() => undefined);
+  }, [cfg.data]);
 
   const connect = useMutation({
     mutationFn: async () => {
       const c = cfg.data!;
       setStage("window");
       await loadFacebookSdk(c);
-      const r = await runSignup(c);
+      const r = await runSignup(c, mode);
       setStage("saving");
       return unwrap(
         api.POST("/ventures/{venture_id}/connectors/whatsapp/signup", {
@@ -103,13 +123,34 @@ export default function WhatsAppConnectPage() {
             ) : null}
             {cfg.data?.ready ? (
               <>
+                <ChoiceCards
+                  label="Which number?"
+                  options={MODES}
+                  value={mode}
+                  onChange={(o) => setMode(o.id)}
+                  className="grid gap-2 sm:grid-cols-2"
+                  cardClassName={(checked) =>
+                    `rounded-lg border p-3 text-left transition-[border-color,background-color] duration-150 ${
+                      checked ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:border-border-strong hover:bg-surface-2"
+                    }`
+                  }
+                  render={(o, checked) => (
+                    <span className="block text-left">
+                      <span className={`block text-sm font-medium ${checked ? "text-fg" : "text-muted"}`}>{o.title}</span>
+                      <span className="mt-0.5 block text-xs text-subtle">{o.text}</span>
+                    </span>
+                  )}
+                />
                 <ol className="list-decimal space-y-1.5 pl-5 text-sm">
                   <li>Click the button and log in with Facebook in the window that opens.</li>
-                  <li>Choose your business and your WhatsApp number. A new number is checked with a code sent by SMS or call.</li>
-                  <li>
-                    Already chatting with customers in the <strong>WhatsApp Business app</strong> on your phone? Choose to connect that app; you keep using
-                    it on your phone as before.
-                  </li>
+                  {mode === "business_app" ? (
+                    <li>
+                      Choose your business, then open the <strong>WhatsApp Business app</strong> on your phone and scan the QR code Meta shows. Your chats
+                      stay on the phone; new ones also arrive here.
+                    </li>
+                  ) : (
+                    <li>Choose your business and add the new number. Meta sends a code by SMS or call to check it.</li>
+                  )}
                 </ol>
                 {connect.isError ? <Notice tone="danger">{errorMessage(connect.error)}</Notice> : null}
                 <div className="flex flex-wrap items-center gap-3">
