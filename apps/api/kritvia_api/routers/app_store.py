@@ -66,7 +66,7 @@ OAUTH_MINUTES = 15
 class AppTool(BaseModel):
     name: str
     description: str
-    read_only: bool
+    read_only: bool = Field(description="runs without an approval (only for apps Kritvia has checked)")
 
 
 class AppOut(BaseModel):
@@ -233,7 +233,8 @@ def _app(r) -> AppOut:
     return AppOut(id=r.id, name=r.name, kind=r.kind, url=r.url, auth=r.auth, status=r.status, has_token=r.has_token,
                   has_hook=r.has_hook, catalog_id=r.catalog_id, last_error=r.last_error, updated_at=r.updated_at,
                   tools=[AppTool(name=t.get("name", ""), description=t.get("description", ""),
-                                 read_only=bool(t.get("read_only"))) for t in (r.tools or [])])
+                                 read_only=bool(t.get("read_only")) and mcp.trusts_read_only(r.kind, r.url))
+                         for t in (r.tools or [])])
 
 
 async def _require_admin(db, venture_id: uuid.UUID) -> uuid.UUID:

@@ -28,7 +28,7 @@ from urllib.parse import urlencode, urlparse, urlunparse
 import httpx
 
 from kritvia_api.config import get_settings
-from kritvia_api.services.mcp import McpError, check_url
+from kritvia_api.services.mcp import McpError, check_url, http_client
 
 PURPOSE = "mcp.oauth"
 transport: httpx.AsyncBaseTransport | None = None        # tests inject
@@ -56,7 +56,7 @@ def canonical(url: str) -> str:
 
 
 def _http() -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=transport, timeout=15, follow_redirects=False)
+    return http_client(15, transport)
 
 
 async def _get_json(client: httpx.AsyncClient, url: str) -> dict | None:

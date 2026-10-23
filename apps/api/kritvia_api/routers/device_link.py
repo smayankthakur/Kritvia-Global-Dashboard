@@ -20,7 +20,7 @@ never reaches page JavaScript: the web app keeps it in an httpOnly cookie. Links
 nobody gets in without a yes on a device that is already signed in, and each link works once.
 
   GET    /auth/sessions              signed-in devices (one per sign-in)
-  DELETE /auth/sessions/{family_id}  sign that device out (at its next renewal, within the hour)
+  DELETE /auth/sessions/{family_id}  sign that device out (at once: its access token stops working too)
 """
 from __future__ import annotations
 

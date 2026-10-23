@@ -14,7 +14,7 @@ After a phone signs in, the page offers:
 - **Notifications**: so drafts that need a yes reach the phone.
 
 **Your account → Your phone and other devices** lists every device that is signed in. You can sign
-out any device except the one you are using. It is signed out at its next renewal, within the hour.
+out any device except the one you are using. It is signed out at once: its access token stops working on its next request (migration 0071).
 
 ## How it is kept safe
 

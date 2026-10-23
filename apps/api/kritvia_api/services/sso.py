@@ -82,10 +82,15 @@ async def _checked(url: str) -> str:
         raise SsoError(str(exc)) from None
 
 
+def _client() -> httpx.AsyncClient:
+    from kritvia_api.services.mcp import http_client     # connects only to checked public addresses
+    return http_client(10)
+
+
 async def get_json(url: str) -> dict[str, Any]:
     url = await _checked(url)
     try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=False) as c:
+        async with _client() as c:
             r = await c.get(url, headers={"Accept": "application/json"})
     except httpx.HTTPError as exc:
         raise SsoError(f"could not reach the identity provider ({type(exc).__name__})") from None
@@ -100,7 +105,7 @@ async def get_json(url: str) -> dict[str, Any]:
 async def post_form(url: str, data: dict[str, str]) -> tuple[int, dict[str, Any]]:
     url = await _checked(url)
     try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=False) as c:
+        async with _client() as c:
             r = await c.post(url, data=data, headers={"Accept": "application/json"})
     except httpx.HTTPError as exc:
         raise SsoError(f"could not reach the identity provider ({type(exc).__name__})") from None

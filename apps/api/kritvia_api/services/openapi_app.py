@@ -20,7 +20,7 @@ from urllib.parse import quote, urljoin, urlparse
 import httpx
 import yaml
 
-from kritvia_api.services.mcp import MAX_TOOLS, AppTool, McpError, check_url
+from kritvia_api.services.mcp import MAX_TOOLS, AppTool, McpError, check_url, http_client
 
 MAX_SPEC = 2_000_000
 MAX_BYTES = 1_000_000
@@ -29,7 +29,7 @@ transport: httpx.AsyncBaseTransport | None = None        # tests inject
 
 
 def _http(timeout: float = 20) -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=transport, timeout=timeout, follow_redirects=False)
+    return http_client(timeout, transport)
 
 
 async def fetch(url: str) -> dict[str, Any]:

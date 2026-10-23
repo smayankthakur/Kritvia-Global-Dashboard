@@ -10,12 +10,13 @@ server-sent-event stream). Only what the assistant needs: initialize, tools/list
 
 Safety:
   - Addresses must be https and resolve only to public internet addresses (no localhost, private ranges,
-    link-local or cloud metadata). Checked when the app is added and again before every call; redirects
-    are not followed. (A DNS answer that changes between the check and the connection is a residual risk;
-    the server's egress rules are the second line.)
-  - A tool the server marks read-only (annotations.readOnlyHint) runs straight away; every other tool is a
-    "send" action: an approval card that a person always has to look at, whatever trust the assistant has
-    earned.
+    link-local or cloud metadata, including IPv4-mapped and NAT64 forms of those). Checked when the app is
+    added, and again by the connection itself, which connects only to the address it has just checked
+    (services/netguard.py), so a DNS answer that changes in between can't redirect it. Redirects are not
+    followed.
+  - A read-only tool runs straight away; every other tool is a "send" action: an approval card that a person
+    always has to look at, whatever trust the assistant has earned. A server's own readOnlyHint counts only
+    for apps Kritvia has checked (trusts_read_only); on a custom server every tool asks first.
   - The app's token is encrypted with the business's key and never shown again; tool results are
     outside text for the model (the router's injection guard screens them).
   - Responses are capped in size and time.
@@ -24,7 +25,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import ipaddress
 import json
 import re
 import socket
@@ -37,6 +37,7 @@ import httpx
 from sqlalchemy import text
 
 from kritvia_api.engine.tools import Capability
+from kritvia_api.services import netguard
 
 if TYPE_CHECKING:
     from kritvia_api.engine.context import RunContext
@@ -97,11 +98,20 @@ async def check_url(url: str) -> str:
         raise McpError(f"{u.hostname} could not be found") from None
     if not addrs:
         raise McpError(f"{u.hostname} could not be found")
-    for a in addrs:
-        ip = ipaddress.ip_address(a)
-        if not ip.is_global or ip.is_multicast:
-            raise McpError("that address points inside a private network, which isn't allowed")
+    if not netguard.all_public(addrs):
+        raise McpError("that address points inside a private network, which isn't allowed")
     return url.strip()
+
+
+async def _resolve_now(host: str) -> list[str]:
+    return await resolve(host)      # looked up when called, so a test's resolve() applies
+
+
+def http_client(timeout: float, mock: httpx.AsyncBaseTransport | None = None) -> httpx.AsyncClient:
+    """A client for addresses a customer typed: no redirects, and every connection goes only to a public
+    address checked at the moment it opens (services/netguard.py). Tests pass a mock transport."""
+    return httpx.AsyncClient(transport=mock or netguard.guarded_transport(_resolve_now), timeout=timeout,
+                             follow_redirects=False)
 
 
 # --------------------------------------------------------------------------------- protocol --
@@ -207,7 +217,9 @@ class Client:
         await self._post(client, {"jsonrpc": "2.0", "method": "notifications/initialized"})
 
     def _http(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(transport=transport, timeout=TIMEOUT_S, follow_redirects=False)
+        if self.hosted:     # Kritvia's own runner on the internal network, not a customer's address
+            return httpx.AsyncClient(transport=transport, timeout=TIMEOUT_S, follow_redirects=False)
+        return http_client(TIMEOUT_S, transport)
 
     async def list_tools(self, server: str) -> list[AppTool]:
         out: list[AppTool] = []
@@ -385,10 +397,27 @@ ROW_COLS = "id, name, kind, url, auth, header_name, token_enc, oauth_enc, spec, 
 
 
 # --------------------------------------------------------------------- what the assistant sees --
+def _norm(url: str | None) -> str:
+    u = urlparse((url or "").strip())
+    return f"{u.scheme.lower()}://{(u.hostname or '').lower()}{u.path.rstrip('/')}"
+
+
+def trusts_read_only(kind: str | None, url: str | None) -> bool:
+    """Whether a tool's 'read-only' mark may let it run without an approval. Only for apps whose tools Kritvia
+    has checked: OpenAPI apps (Kritvia itself marks GET operations read-only), hosted apps (reviewed packages
+    run in the sandbox) and the remote servers on Kritvia's own list (services/app_catalog.KRITVIA_APPS,
+    matched by address, never by a catalog id the caller sent). A custom server's own readOnlyHint is not
+    trusted, so a server that mislabels a tool can't skip the approval card: every one of its tools asks."""
+    if kind in ("openapi", "hosted"):
+        return True
+    from kritvia_api.services.app_catalog import KRITVIA_APPS
+    return _norm(url) in {_norm(a["url"]) for a in KRITVIA_APPS}
+
+
 async def _servers(ctx: RunContext) -> list[Any]:
     async with ctx.tx() as conn:
         return (await conn.execute(text(
-            "SELECT id, name, tools FROM mcp_servers WHERE venture_id = :v AND status = 'active'"
+            "SELECT id, name, kind, url, tools FROM mcp_servers WHERE venture_id = :v AND status = 'active'"
             " ORDER BY name"), {"v": ctx.venture_id})).all()
 
 
@@ -396,9 +425,10 @@ async def tools_for(ctx: RunContext) -> dict[str, tuple[Capability, str, dict[st
     """name -> (capability, description, fields, required) for every tool of the business's connected apps."""
     out = {}
     for s in await _servers(ctx):
+        trusted = trusts_read_only(s.kind, s.url)
         for d in (s.tools or [])[:MAX_TOOLS]:
             t = tool_from_json(s.name, d)
-            out[t.full_name] = (Capability.READ if t.read_only else Capability.SEND,
+            out[t.full_name] = (Capability.READ if t.read_only and trusted else Capability.SEND,
                                 f"[connected app {s.name}] {t.description}", t.fields, t.required)
     return out
 
@@ -440,4 +470,5 @@ def new_id() -> uuid.UUID:
 
 __all__ = ["PREFIX", "McpError", "NeedsAuth", "NotStarted", "AppTool", "Client", "Link", "check_url", "tools_for", "call",
            "split_name", "tool_to_json", "tool_from_json", "NAME_RE", "TOKEN_PURPOSE", "auth_headers", "load_link",
-           "link_tools", "link_call", "hosted_config", "configure_runner", "stop_runner", "ROW_COLS"]
+           "link_tools", "link_call", "hosted_config", "configure_runner", "stop_runner", "ROW_COLS",
+           "trusts_read_only", "http_client"]

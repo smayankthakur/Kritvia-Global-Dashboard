@@ -198,7 +198,8 @@ def fake_mcp(monkeypatch):
 
 async def test_connected_app_tools_are_used_read_now_change_after_approval(desk, fake_llm, fake_mcp):
     mayank, v = desk["mayank"], desk["v"]
-    r = await mayank.post(f"/ventures/{v}/apps", json={"name": "crm", "url": "https://mcp.example-crm.com/mcp",
+    # an app on Kritvia's own checked list, so its read-only marks are trusted (see the custom-server test)
+    r = await mayank.post(f"/ventures/{v}/apps", json={"name": "crm", "url": "https://mcp.hubspot.com",
                                                        "token": "secret-token"})
     assert r.status_code == 201, r.text
     app = r.json()

@@ -288,6 +288,8 @@ export function ApprovalDetail({
   onConflict?: () => void;
 }) {
   const original = useMemo<Payload>(() => (approval.payload ?? {}) as Payload, [approval.payload]);
+  // The API hides a draft's contents from people who can't decide it (a viewer, or a role the card doesn't ask for).
+  const redacted = Boolean((approval as Approval & { redacted?: boolean }).redacted);
   const editable = useMemo(() => editableFields(approval.action, original), [approval.action, original]);
   const [mode, setMode] = useState<"view" | "edit" | "review">("view");
   const [form, setForm] = useState<Record<string, string | boolean>>({});
@@ -426,7 +428,13 @@ export function ApprovalDetail({
           <PayloadView action={approval.action} payload={(result.final_payload ?? result.payload ?? original) as Payload} />
         </section>
       ) : mode === "view" ? (
-        <PayloadView action={approval.action} payload={original} />
+        redacted ? (
+          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted">
+            Only people who can approve this can see what it says.
+          </p>
+        ) : (
+          <PayloadView action={approval.action} payload={original} />
+        )
       ) : mode === "edit" ? (
         <form
           noValidate

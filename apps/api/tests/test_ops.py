@@ -139,7 +139,7 @@ async def test_google_oauth_gmail_poll_and_real_send(world, client, services, fa
     assert again["started"] == {}                                 # same message is never processed twice
 
     pending = [a for a in (await mayank.get("/approvals/inbox")).json()
-               if a["payload"].get("to") == "neha@retail.example"]
+               if (a["payload"] or {}).get("to") == "neha@retail.example"]
     assert pending and pending[0]["payload"]["thread_id"] == "t-m1"
     assert (await mayank.post(f"/ventures/{v}/approvals/{pending[0]['id']}/decision",
                               json={"decision": "approve"})).status_code == 200

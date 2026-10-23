@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.engine.context import Services, get_services
-from kritvia_api.security import decode_access_token, token_issued_at
+from kritvia_api.security import decode_access_token, token_family, token_issued_at
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -30,15 +30,17 @@ async def current_user_id(
     try:
         user_id = decode_access_token(creds.credentials)
         iat = token_issued_at(creds.credentials)
+        fam = token_family(creds.credentials)
     except (jwt.PyJWTError, ValueError):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token") from None
     from sqlalchemy import text
     async with tenant_tx(user_id) as conn:
-        # Deactivated users and tokens issued before a password change stop working at
-        # once, not when the access token expires.
+        # Deactivated users, tokens issued before a password change and tokens of a signed-out device
+        # (a revoked sign-in) stop working at once, not when the access token expires.
         ok = (await conn.execute(
             text("SELECT is_active AND NOT is_service AND extract(epoch FROM password_changed_at) <= :iat + 1"
-                 " FROM users WHERE id = :u"), {"u": user_id, "iat": iat})).scalar()
+                 " AND (CAST(:fam AS uuid) IS NULL OR NOT private.auth_family_revoked(CAST(:fam AS uuid), id))"
+                 " FROM users WHERE id = :u"), {"u": user_id, "iat": iat, "fam": fam})).scalar()
     if not ok:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "session no longer valid")
     return user_id

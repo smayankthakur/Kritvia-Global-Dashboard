@@ -7054,7 +7054,10 @@ export interface components {
             description: string;
             /** Name */
             name: string;
-            /** Read Only */
+            /**
+             * Read Only
+             * @description runs without an approval (only for apps Kritvia has checked)
+             */
             read_only: boolean;
         };
         /** Applicant */
@@ -7187,6 +7190,12 @@ export interface components {
             payload?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Redacted
+             * @description the draft's contents are hidden: only people who can approve it see what it says
+             * @default false
+             */
+            redacted: boolean;
             /** Required Roles */
             required_roles: string[];
             /**

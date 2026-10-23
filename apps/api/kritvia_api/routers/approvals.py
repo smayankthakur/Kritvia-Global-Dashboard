@@ -55,6 +55,8 @@ class ApprovalOut(BaseModel):
     payload: dict[str, Any] | None = None
     final_payload: dict[str, Any] | None = None
     diff: list[FieldDiff] = Field(default_factory=list)
+    redacted: bool = Field(default=False, description="the draft's contents are hidden: only people who can approve"
+                                                      " it see what it says")
     comment: str | None
     decided_by_email: str | None
     decided_at: datetime | None
@@ -91,13 +93,17 @@ def diff_payloads(before: dict[str, Any], after: dict[str, Any] | None) -> list[
 
 
 async def _out(crypto: EnvelopeCrypto, r, with_payload: bool = True) -> ApprovalOut:
+    """One approval. Its contents (the draft, the approved version, the diff) are decrypted only for someone who
+    can decide it (can_decide: one of the roles the card asks for, or for a card that isn't sensitive, the
+    owner or an admin). Anyone else who can see the business, such as a viewer, sees the title and summary only."""
     data = {k: v for k, v in r._mapping.items() if k not in ("payload_enc", "final_payload_enc")}
     payload = final = None
-    if with_payload:
+    redacted = with_payload and not r.can_decide
+    if with_payload and r.can_decide:
         payload = json.loads(await crypto.decrypt(r.venture_id, PAYLOAD_PURPOSE, r.payload_enc))
         if r.final_payload_enc is not None:
             final = json.loads(await crypto.decrypt(r.venture_id, PAYLOAD_PURPOSE, r.final_payload_enc))
-    return ApprovalOut(**data, payload=payload, final_payload=final,
+    return ApprovalOut(**data, payload=payload, final_payload=final, redacted=redacted,
                        diff=diff_payloads(payload, final) if payload is not None else [])
 
 

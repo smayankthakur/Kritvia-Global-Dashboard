@@ -13,6 +13,7 @@ const base: Omit<Approval, "action" | "payload" | "title" | "summary" | "agent" 
   sensitive: false,
   required_roles: ["approver", "venture_admin"],
   can_decide: true,
+  redacted: false,
   final_payload: null,
   diff: [],
   comment: null,

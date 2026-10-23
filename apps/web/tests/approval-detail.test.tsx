@@ -31,6 +31,14 @@ function decided(a: Approval, body: Decision): Approval {
 }
 
 describe("ApprovalDetail", () => {
+  it("shows only the title to someone who can't decide it when the API hides the draft", () => {
+    const hidden = { ...emailApproval, can_decide: false, payload: null, final_payload: null, diff: [], redacted: true } as Approval;
+    render(<ApprovalDetail approval={hidden} onDecide={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "Send proposal to Rao Foods" })).toBeInTheDocument();
+    expect(screen.getByText("Only people who can approve this can see what it says.")).toBeInTheDocument();
+    expect(screen.queryByText("asha@raofoods.example")).not.toBeInTheDocument();
+  });
+
   it("renders an email draft: recipient, subject and a readable body with the pricing table", () => {
     render(<ApprovalDetail approval={emailApproval} onDecide={vi.fn()} />);
     expect(screen.getByRole("heading", { name: "Send proposal to Rao Foods" })).toBeInTheDocument();

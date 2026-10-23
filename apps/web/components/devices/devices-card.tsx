@@ -23,7 +23,7 @@ export function DevicesCard() {
   const end = useMutation({
     mutationFn: (id: string) => unwrap(api.DELETE("/auth/sessions/{family_id}", { params: { path: { family_id: id } } })),
     onSuccess: () => {
-      toast.success("Signed out", "That device is signed out within the hour, at its next renewal.");
+      toast.success("Signed out", "That device is signed out now.");
       void qc.invalidateQueries({ queryKey: key });
     },
     onError: (e) => toast.error("Couldn't sign it out", errorMessage(e)),

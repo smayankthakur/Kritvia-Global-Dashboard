@@ -25,7 +25,9 @@ def verify_password(password: str, password_hash: str | None) -> bool:
         return False
 
 
-def issue_access_token(user_id: uuid.UUID) -> str:
+def issue_access_token(user_id: uuid.UUID, family: uuid.UUID | None = None) -> str:
+    """An access token. `family` is the sign-in (refresh-token family) it belongs to: when that sign-in is
+    ended ("sign this device out", log out, a reused refresh token) the token stops working at once."""
     s = get_settings()
     now = datetime.now(UTC)
     payload = {
@@ -34,6 +36,8 @@ def issue_access_token(user_id: uuid.UUID) -> str:
         "exp": now + timedelta(minutes=s.access_token_minutes),
         "typ": "access",
     }
+    if family is not None:
+        payload["fam"] = str(family)
     return jwt.encode(payload, s.jwt_secret, algorithm=s.jwt_algorithm)
 
 
@@ -45,6 +49,13 @@ def decode_access_token(token: str) -> uuid.UUID:
     if payload.get("typ") != "access":
         raise jwt.InvalidTokenError("wrong token type")
     return uuid.UUID(payload["sub"])
+
+
+def token_family(token: str) -> uuid.UUID | None:
+    """fam of an already-validated access token (None for tokens without one)."""
+    s = get_settings()
+    fam = jwt.decode(token, s.jwt_secret, algorithms=[s.jwt_algorithm]).get("fam")
+    return uuid.UUID(fam) if fam else None
 
 
 def token_issued_at(token: str) -> float:

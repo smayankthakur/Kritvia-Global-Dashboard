@@ -1125,6 +1125,7 @@
             "type": "string"
           },
           "read_only": {
+            "description": "runs without an approval (only for apps Kritvia has checked)",
             "title": "Read Only",
             "type": "boolean"
           }
@@ -1532,6 +1533,12 @@
               }
             ],
             "title": "Payload"
+          },
+          "redacted": {
+            "default": false,
+            "description": "the draft's contents are hidden: only people who can approve it see what it says",
+            "title": "Redacted",
+            "type": "boolean"
           },
           "required_roles": {
             "items": {

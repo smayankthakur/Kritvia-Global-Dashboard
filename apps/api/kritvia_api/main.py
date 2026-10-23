@@ -34,6 +34,9 @@ def check_production_config() -> None:
         problems.append("EMAIL_CODE_MINUTES must be 15 or less (sign-in and reset codes expire quickly)")
     if s.mail_transport == "log" and s.signup_open:
         problems.append("MAIL_TRANSPORT=log would write sign-in codes to the logs; use smtp, or set SIGNUP_OPEN=false")
+    if not s.client_ip_header.strip():
+        problems.append("CLIENT_IP_HEADER is not set, so every visitor would share one rate-limit bucket"
+                        " (behind Cloudflare Tunnel set CLIENT_IP_HEADER=cf-connecting-ip)")
     if problems:
         raise RuntimeError("refusing to start in production: " + "; ".join(problems))
 

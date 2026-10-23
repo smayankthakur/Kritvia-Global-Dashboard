@@ -61,8 +61,11 @@ async def test_restricted_knowledge_never_reaches_drafts_or_hosted_models(poc, f
         "body": "Need a nextjs website with automation for catering orders"})
     assert r.status_code == 202, r.text
     assert not [c for c in fake_llm.chat_calls("TOPSECRET-MARGIN-42") if c["model"] not in LOCAL]
-    inbox = [a for a in (await viewer.get("/approvals/inbox")).json() if a["run_id"] == r.json()["run_id"]]
+    inbox = [a for a in (await approver.get("/approvals/inbox")).json() if a["run_id"] == r.json()["run_id"]]
     assert inbox and "TOPSECRET" not in inbox[0]["payload"]["body"]
+    # a viewer sees the card but not what it says (only people who can decide it do)
+    seen = [a for a in (await viewer.get("/approvals/inbox")).json() if a["run_id"] == r.json()["run_id"]]
+    assert seen and seen[0]["redacted"] and seen[0]["payload"] is None
 
     # the at-most-once execution stamp can't be cleared, even with raw SQL as the app role
     d = await approver.post(f"/ventures/{v}/approvals/{inbox[0]['id']}/decision", json={"decision": "approve"})

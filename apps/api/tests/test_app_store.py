@@ -57,6 +57,18 @@ def net(monkeypatch):
     return n
 
 
+async def ask_approved(actor, v, question: str) -> dict:
+    """Ask, then approve the card a custom app's tool raises (its own read-only mark isn't trusted), and
+    return the finished item."""
+    item = await ask(actor, v, question)
+    if item.get("pending_approval_id"):
+        a = (await actor.get(f"/ventures/{v}/approvals/{item['pending_approval_id']}")).json()
+        assert a["action"] == "mcp.call"
+        await actor.post(f"/ventures/{v}/approvals/{a['id']}/decision", json={"decision": "approve"})
+        item = (await actor.get(f"/ventures/{v}/assistant/{item['run_id']}")).json()
+    return item
+
+
 class HeaderMcp(FakeMcp):
     """FakeMcp that checks any header instead of only Bearer."""
 
@@ -94,8 +106,8 @@ async def test_tokens_go_where_the_app_wants_them(desk, net):
 
 async def test_the_header_app_is_called_with_its_header(desk, net, fake_llm):
     mayank, v = desk["mayank"], desk["v"]
-    net.hosts["mcp.exa.example"] = HeaderMcp(lambda h: h.get("x-api-key") == "exa-key")
-    await mayank.post(f"/ventures/{v}/apps", json={"name": "exa", "url": "https://mcp.exa.example/mcp",
+    net.hosts["mcp.exa.ai"] = HeaderMcp(lambda h: h.get("x-api-key") == "exa-key")
+    await mayank.post(f"/ventures/{v}/apps", json={"name": "exa", "url": "https://mcp.exa.ai/mcp",
                                                    "auth": "header", "header_name": "x-api-key", "token": "exa-key"})
     script(fake_llm, {"tool": "app.exa.find_contact", "args": {"name": "Ravi"}},
            lambda m: {"answer": "none found" if "No contact named Ravi" in m[-1]["content"] else "?"})
@@ -220,17 +232,17 @@ async def test_sign_in_with_oauth_then_refresh(desk, net, notes, fake_llm):
             script(fake_llm, {"tool": "app.notes.find_contact", "args": {"name": "Ravi"}},
                    lambda m: {"answer": "checked" if "No contact named Ravi" in m[-1]["content"] else "?"})
         lookup()
-        assert (await ask(mayank, v, "look up Ravi in notes"))["answer"] == "checked"
+        assert (await ask_approved(mayank, v, "look up Ravi in notes"))["answer"] == "checked"
         assert notes.token_calls[-1]["grant_type"] == "refresh_token" and notes.mcp.token == "at-2"
         refreshes = len([c for c in notes.token_calls if c["grant_type"] == "refresh_token"])
         lookup()
-        assert (await ask(mayank, v, "look up Ravi again"))["answer"] == "checked"
+        assert (await ask_approved(mayank, v, "look up Ravi again"))["answer"] == "checked"
         assert len([c for c in notes.token_calls if c["grant_type"] == "refresh_token"]) == refreshes   # kept at-2
         # a refresh that fails: the app waits for someone to sign in again
         mcp_oauth.needs_refresh = lambda tok: True
         notes.refresh_ok = False
         lookup()
-        await ask(mayank, v, "look up Ravi once more")
+        await ask_approved(mayank, v, "look up Ravi once more")
         st = (await sql("SELECT status FROM mcp_servers WHERE id = $1", uuid.UUID(app["id"])))[0]["status"]
         assert st == "needs_auth"
     finally:

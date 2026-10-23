@@ -56,10 +56,10 @@ def _hash(token: str) -> str:
 async def _pair(db, user_id, request: Request) -> TokenOut:
     s = get_settings()
     refresh = secrets.token_urlsafe(48)
-    await db.execute(text("SELECT auth_issue_refresh(:u, :h, :d, :a)"),
-                     {"u": user_id, "h": _hash(refresh), "d": s.refresh_token_days,
-                      "a": request.headers.get("user-agent", "")[:200]})
-    return TokenOut(access_token=issue_access_token(user_id), expires_in=s.access_token_minutes * 60,
+    family = (await db.execute(text("SELECT auth_issue_refresh(:u, :h, :d, :a)"),
+                               {"u": user_id, "h": _hash(refresh), "d": s.refresh_token_days,
+                                "a": request.headers.get("user-agent", "")[:200]})).scalar()
+    return TokenOut(access_token=issue_access_token(user_id, family), expires_in=s.access_token_minutes * 60,
                     refresh_token=refresh)
 
 
@@ -150,10 +150,12 @@ async def refresh(body: RefreshIn, request: Request) -> TokenOut:
     async with tenant_tx(None) as db:
         uid = (await db.execute(text("SELECT auth_rotate_refresh(:h, :n, :d)"),
                                 {"h": _hash(body.refresh_token), "n": _hash(new), "d": s.refresh_token_days})).scalar()
+        family = (await db.execute(text("SELECT auth_refresh_family(:h)"), {"h": _hash(new)})).scalar() if uid else None
     if uid is None:
         await security_event("auth.refresh_rejected", "warning", request=request)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "refresh token invalid, expired or reused")
-    return TokenOut(access_token=issue_access_token(uid), expires_in=s.access_token_minutes * 60, refresh_token=new)
+    return TokenOut(access_token=issue_access_token(uid, family), expires_in=s.access_token_minutes * 60,
+                    refresh_token=new)
 
 
 @router.post("/logout", status_code=204)
