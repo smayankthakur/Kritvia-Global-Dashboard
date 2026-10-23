@@ -39,10 +39,11 @@ export default function BusinessesPage() {
     queryFn: () => unwrap(api.GET("/orgs/{org_id}/ventures/removed", { params: { path: { org_id: org!.id } } })),
     enabled: Boolean(org && isOwner),
   });
-  const refresh = () => {
+  /** Resolves once the access list has been fetched again, so a new business can be opened straight away. */
+  const refresh = async () => {
     void qc.invalidateQueries({ queryKey: listKey });
     void qc.invalidateQueries({ queryKey: removedKey });
-    void qc.invalidateQueries({ queryKey: accessKey });
+    await qc.invalidateQueries({ queryKey: accessKey });
   };
 
   const [toRemove, setToRemove] = useState<Venture | null>(null);
@@ -51,7 +52,7 @@ export default function BusinessesPage() {
       unwrap(api.POST("/orgs/{org_id}/ventures/{venture_id}/remove", { params: { path: { org_id: org!.id, venture_id: v.id } }, body: { confirm: v.name } })),
     onSuccess: (_d, v) => {
       setToRemove(null);
-      refresh();
+      void refresh();
       toast.success(`${v.name} removed`, "You can restore it for 30 days.");
     },
     onError: (e) => toast.error("Could not remove", errorMessage(e)),
@@ -59,7 +60,7 @@ export default function BusinessesPage() {
   const restore = useMutation({
     mutationFn: (id: string) => unwrap(api.POST("/orgs/{org_id}/ventures/{venture_id}/restore", { params: { path: { org_id: org!.id, venture_id: id } } })),
     onSuccess: () => {
-      refresh();
+      void refresh();
       toast.success("Business restored", "Its agents are off and connectors need reconnecting: turn them on in its Settings.");
     },
     onError: (e) => toast.error("Could not restore", errorMessage(e)),
@@ -216,7 +217,7 @@ function BusinessRow({
   );
 }
 
-function AddBusiness({ orgId, onAdded }: { orgId: string; onAdded: () => void }) {
+function AddBusiness({ orgId, onAdded }: { orgId: string; onAdded: () => Promise<void> }) {
   const toast = useToast();
   const router = useRouter();
   const [name, setName] = useState("");
@@ -237,11 +238,13 @@ function AddBusiness({ orgId, onAdded }: { orgId: string; onAdded: () => void })
       }
       throw new Error("Could not find a free short name for this business; try a different name.");
     },
-    onSuccess: (d) => {
+    // Waits for the access list to include the new business before opening it; otherwise its page would
+    // briefly say "not found, or you don't have access". The button keeps spinning until then.
+    onSuccess: async (d) => {
       setErr(null);
       setUpgrade(false);
       setName("");
-      onAdded();
+      await onAdded().catch(() => undefined);
       toast.success("Business added", "Next: switch on its agents.");
       router.push(`/v/${d.id}/settings?tab=workflows`);
     },

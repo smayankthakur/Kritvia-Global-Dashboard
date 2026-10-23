@@ -4,14 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, Sheet } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select, Textarea } from "@/components/ui/field";
 import { KeyValue, Notice, PageHeader } from "@/components/ui/page";
-import { EmptyState, ErrorState, QueryState, SkeletonRows } from "@/components/ui/states";
+import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { TBody, THead, Table, Td, Th, Tr } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { ApiError, api, enumValues, errorMessage, unwrap, type Schemas } from "@/lib/api";
@@ -291,7 +291,23 @@ function LeadsView() {
     refetchOnWindowFocus: false,
   });
   const selectedId = params.get("lead");
-  const selected = leads.data?.find((l) => l.id === selectedId) ?? null;
+  const inList = leads.data?.find((l) => l.id === selectedId) ?? null;
+  // A link to a lead older than the newest 200 (or from a notification) opens it on its own.
+  const single = useQuery({
+    queryKey: ["leads", v.id, "one", selectedId],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/leads/{lead_id}", { params: { path: { venture_id: v.id, lead_id: selectedId! } } })),
+    enabled: Boolean(selectedId) && leads.isSuccess && !inList,
+    retry: false,
+  });
+  const selected = inList ?? (single.data && single.data.id === selectedId ? single.data : null);
+  const toast = useToast();
+  // A lead that was removed (or a stale bookmark): say so once and drop it from the address, rather than
+  // showing an error under a list that loaded fine.
+  useEffect(() => {
+    if (!selectedId || !single.isError) return;
+    toast.info("That lead is no longer available", "It may have been removed. Showing all leads.");
+    router.replace(`/v/${v.id}/leads`, { scroll: false });
+  }, [selectedId, single.isError, toast, router, v.id]);
   const [readyOnly, setReadyOnly] = useState(false);
   const ready = (leads.data ?? []).filter((l) => l.outreach_draft && !l.opted_out_at);
   const select = (id: string | null) => router.replace(id ? `/v/${v.id}/leads?lead=${id}` : `/v/${v.id}/leads`, { scroll: false });
@@ -383,7 +399,6 @@ function LeadsView() {
           )}
         </QueryState>
       </Card>
-      {selectedId && leads.isSuccess && !selected ? <ErrorState error={new ApiError(404, "lead not found")} /> : null}
       <LeadDrawer lead={selected} ventureId={v.id} onClose={() => select(null)} />
       <NewInquiryDialog open={open} onClose={() => setOpen(false)} ventureId={v.id} />
     </>

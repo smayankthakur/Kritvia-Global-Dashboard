@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
+import { ChoiceCards } from "@/components/ui/choice-cards";
 import { Checkbox, Field, FormError, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { ErrorState } from "@/components/ui/states";
@@ -173,6 +174,32 @@ function Steps({ step }: { step: number }) {
   );
 }
 
+/** The template a business was set up with: its saved industry, else the first one of its kind. */
+function templateFor(industry: string | null | undefined, kind: string | null | undefined): Template {
+  return (
+    TEMPLATES.find((t) => t.id === industry) ??
+    TEMPLATES.find((t) => t.kind === kind) ??
+    (TEMPLATES.find((t) => t.id === "other") as Template)
+  );
+}
+
+/**
+ * Businesses whose setup never finished. "Finish setup" saves a config for every agent a business can use,
+ * so a business with no agent configs at all was created and then left (a reload, a closed tab, another
+ * device) before step 2 ran. Those resume at step 2 instead of being called "already set up".
+ */
+async function unfinishedVentures(ventures: { venture_id: string; venture_name: string; kind?: string | null }[]): Promise<CreatedVenture[]> {
+  const out: CreatedVenture[] = [];
+  for (const v of ventures.slice(0, 10)) {
+    const configs = await unwrap(api.GET("/ventures/{venture_id}/workflow-configs", { params: { path: { venture_id: v.venture_id } } }));
+    if (configs.length) continue;
+    const settings = await unwrap(api.GET("/ventures/{venture_id}/settings", { params: { path: { venture_id: v.venture_id } } })).catch(() => null);
+    const template = templateFor(settings?.industry, settings?.kind ?? v.kind);
+    out.push({ id: v.venture_id, name: v.venture_name, kind: template.kind, template });
+  }
+  return out;
+}
+
 export default function OnboardingPage() {
   const access = useAccessQuery();
   const qc = useQueryClient();
@@ -181,17 +208,37 @@ export default function OnboardingPage() {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedVenture[]>([]);
 
-  // Resume: an org created earlier without businesses is reused.
+  const owned = access.data?.orgs.find((o) => o.is_owner);
+  const ownedVentures = owned ? (access.data?.ventures ?? []).filter((v) => v.org_id === owned.id && v.is_owner) : [];
+  // Only checked on arrival (step 0, nothing chosen yet), for the organisation this person owns.
+  const unfinished = useQuery({
+    queryKey: ["onboarding", "unfinished", owned?.id, ownedVentures.map((v) => v.venture_id).join(",")],
+    queryFn: () => unfinishedVentures(ownedVentures),
+    enabled: Boolean(owned) && ownedVentures.length > 0 && step === 0 && !orgId,
+    staleTime: Infinity,
+    retry: 1,
+  });
+
+  // Resume: an org created earlier without businesses is reused; businesses left before step 2 go to step 2.
   useEffect(() => {
-    if (!access.data || orgId) return;
-    const owned = access.data.orgs.find((o) => o.is_owner);
-    if (owned && !access.data.ventures.some((v) => v.org_id === owned.id)) setOrgId(owned.id);
-  }, [access.data, orgId]);
+    if (!access.data || orgId || !owned) return;
+    if (!ownedVentures.length) {
+      setOrgId(owned.id);
+      return;
+    }
+    if (unfinished.data?.length) {
+      setOrgId(owned.id);
+      setCreated(unfinished.data);
+      setStep(1);
+    }
+  }, [access.data, orgId, owned, ownedVentures.length, unfinished.data]);
 
   if (access.isPending) return <FullPageLoader label="Preparing setup" />;
   if (access.isError) return <ErrorState error={access.error} onRetry={() => void access.refetch()} />;
+  if (!orgId && step === 0 && unfinished.fetchStatus === "fetching") return <FullPageLoader label="Preparing setup" />;
 
-  const alreadySetUp = !orgId && access.data.ventures.length > 0 && step === 0;
+  // A failed check falls back to the old answer: the businesses exist, so send them to the dashboard.
+  const alreadySetUp = !orgId && access.data.ventures.length > 0 && step === 0 && !unfinished.data?.length;
 
   return (
     <main id="main" className="relative isolate min-h-dvh px-4 py-10">
@@ -226,6 +273,7 @@ export default function OnboardingPage() {
               <SetupStep
                 orgId={orgId}
                 email={me.data?.email ?? ""}
+                emailState={{ pending: me.isPending, error: me.isError ? me.error : null, retry: () => void me.refetch() }}
                 ventures={created}
                 onDone={async (firstVentureId) => {
                   await qc.invalidateQueries({ queryKey: accessKey });
@@ -370,28 +418,29 @@ function BusinessStep({
                 onChange={(e) => update(r.key, { name: e.target.value })}
               />
             </Field>
-            <div role="radiogroup" aria-label="Kind of business" className="grid gap-2 sm:grid-cols-2">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={r.template?.id === t.id}
-                  onClick={() => update(r.key, { template: t })}
-                  className={cn(
-                    "rounded-lg border p-3 text-left transition-[border-color,background-color,box-shadow] duration-150",
-                    r.template?.id === t.id ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:border-border-strong hover:bg-surface-2 hover:shadow-card",
-                  )}
-                >
+            <ChoiceCards
+              label={many ? `Kind of business ${i + 1}` : "Kind of business"}
+              options={TEMPLATES}
+              value={r.template?.id}
+              onChange={(t) => update(r.key, { template: t })}
+              className="grid gap-2 sm:grid-cols-2"
+              cardClassName={(checked) =>
+                cn(
+                  "rounded-lg border p-3 text-left transition-[border-color,background-color,box-shadow] duration-150",
+                  checked ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:border-border-strong hover:bg-surface-2 hover:shadow-card",
+                )
+              }
+              render={(t, checked) => (
+                <>
                   <span className="flex items-center justify-between text-sm font-medium">
                     {t.title}
-                    {r.template?.id === t.id ? <Check className="h-4 w-4 text-accent" /> : null}
+                    {checked ? <Check className="h-4 w-4 text-accent" aria-hidden /> : null}
                   </span>
                   <span className="mt-0.5 block text-xs text-subtle">{t.example}</span>
                   <span className="mt-2 block text-xs text-muted">{t.gets}</span>
-                </button>
-              ))}
-            </div>
+                </>
+              )}
+            />
             {errors[`${r.key}.kind`] ? <p className="text-xs text-danger">{errors[`${r.key}.kind`]}</p> : null}
           </fieldset>
         ))}
@@ -430,11 +479,14 @@ async function createOrg(name: string): Promise<string> {
 function SetupStep({
   orgId,
   email,
+  emailState,
   ventures,
   onDone,
 }: {
   orgId: string;
   email: string;
+  /** Your sign-in email (from /auth/me) adds you to each business's roles; finishing waits for it. */
+  emailState: { pending: boolean; error: unknown; retry: () => void };
   ventures: CreatedVenture[];
   onDone: (firstVentureId?: string) => void | Promise<void>;
 }) {
@@ -568,8 +620,21 @@ function SetupStep({
             </div>
           </fieldset>
         ))}
-        <div className="flex justify-end">
-          <Button variant="primary" loading={busy} onClick={finish} disabled={!email}>
+        {!email && emailState.error ? (
+          <Notice tone="danger" title="We couldn't load your account">
+            <p>{errorMessage(emailState.error)} Your choices above are kept.</p>
+            <Button size="sm" className="mt-2" onClick={emailState.retry}>
+              Try again
+            </Button>
+          </Notice>
+        ) : null}
+        <div className="flex items-center justify-end gap-3">
+          {!email && emailState.pending ? (
+            <span role="status" className="text-xs text-subtle">
+              Loading your account…
+            </span>
+          ) : null}
+          <Button variant="primary" loading={busy || (!email && emailState.pending)} onClick={finish} disabled={!email}>
             Finish setup
           </Button>
         </div>

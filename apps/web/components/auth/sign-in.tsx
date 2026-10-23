@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/field";
 import { ApiError, errorMessage } from "@/lib/api";
+import { digitsOnly, useCooldown } from "@/lib/cooldown";
 import { EMAIL_RE, postAuth, startGoogleSignin, startSsoSignin } from "@/lib/auth-client";
 
 function GoogleMark() {
@@ -95,7 +96,8 @@ export function EmailCodeForm({ askName, onSignedIn }: { askName?: boolean; onSi
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [resentNote, setResentNote] = useState(false);
+  const resend = useCooldown(30);
 
   const send = async () => {
     await postAuth("email/start", { email: email.trim() });
@@ -113,6 +115,7 @@ export function EmailCodeForm({ askName, onSignedIn }: { askName?: boolean; onSi
     try {
       await send();
       setStep("code");
+      resend.start();
     } catch (err) {
       setFormError(
         err instanceof ApiError && err.status === 503
@@ -155,9 +158,9 @@ export function EmailCodeForm({ askName, onSignedIn }: { askName?: boolean; onSi
           <Input
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
+            maxLength={12}
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            onChange={(e) => setCode(digitsOnly(e.target.value))}
             autoFocus
             className="text-center font-mono text-lg tracking-[0.4em]"
           />
@@ -166,25 +169,30 @@ export function EmailCodeForm({ askName, onSignedIn }: { askName?: boolean; onSi
           {askName ? "Create account" : "Sign in"}
         </Button>
         <div className="flex justify-between text-sm">
-          <button type="button" className="text-muted hover:text-fg" onClick={() => { setStep("email"); setCode(""); }}>
+          <button type="button" className="text-muted hover:text-fg" onClick={() => { setStep("email"); setCode(""); setResentNote(false); }}>
             Use another email
           </button>
           <button
             type="button"
             className="font-medium text-accent hover:underline disabled:opacity-50"
-            disabled={resent}
+            disabled={!resend.ready}
             onClick={async () => {
+              setFormError(null);
+              resend.start();
               try {
                 await send();
-                setResent(true);
+                setResentNote(true);
               } catch (err) {
                 setFormError(errorMessage(err));
               }
             }}
           >
-            {resent ? "Code sent again" : "Send a new code"}
+            {resend.ready ? "Send a new code" : `Send again in ${resend.left}s`}
           </button>
         </div>
+        <p role="status" aria-live="polite" className="text-xs text-subtle">
+          {resentNote ? "A new code is on its way. Check spam too; only the newest code works." : ""}
+        </p>
       </form>
     );
   }

@@ -868,9 +868,11 @@ function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: 
     refetchInterval: (query) =>
       query.state.data && !query.state.data.gmail_code && !query.state.data.gmail_link && !query.state.data.last_mail_at ? 15_000 : false,
   });
+  const [confirmNew, setConfirmNew] = useState(false);
   const create = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/connectors/email-forwarding", { params: { path: { venture_id: ventureId } } })),
     onSuccess: (d) => {
+      setConfirmNew(false);
       qc.setQueryData(key, d);
       void qc.invalidateQueries({ queryKey: ["connectors", ventureId] });
       toast.success("Forwarding address ready", "Now add it in your mailbox's forwarding settings.");
@@ -936,10 +938,24 @@ function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: 
         ) : (
           <p className="text-sm text-muted">Get an address for this business, then set your mailbox to forward to it.</p>
         )}
-        <Button variant={f ? "ghost" : "primary"} disabled={!canAdmin} loading={create.isPending} onClick={() => create.mutate()}>
+        <Button
+          variant={f ? "ghost" : "primary"}
+          disabled={!canAdmin}
+          loading={create.isPending && !confirmNew}
+          onClick={() => (f ? setConfirmNew(true) : create.mutate())}
+        >
           {f ? "Get a new address" : "Set up forwarding"}
         </Button>
         {f ? <p className="text-xs text-subtle">A new address stops the old one working.</p> : null}
+        <ConfirmDialog
+          open={confirmNew}
+          onClose={() => setConfirmNew(false)}
+          onConfirm={() => create.mutate()}
+          loading={create.isPending}
+          title="Get a new forwarding address?"
+          description="The current address stops working straight away. Mail your mailbox forwards to it will no longer reach Kritvia until you put the new address in your mailbox's forwarding settings."
+          confirmLabel="Get a new address"
+        />
       </div>
     </Card>
   );

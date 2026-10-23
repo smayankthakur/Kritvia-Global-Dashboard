@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/field";
 import { ApiError, errorMessage } from "@/lib/api";
 import { EMAIL_RE, postAuth } from "@/lib/auth-client";
+import { digitsOnly } from "@/lib/cooldown";
 
 /** Forgot password: email → 6-digit code + new password. Proving the address resets it;
  * every other session is signed out. */
@@ -83,7 +84,7 @@ export function ForgotForm() {
         <form onSubmit={reset} noValidate className="space-y-4">
           <FormError message={formError} />
           <Field label="6-digit code" error={errors.code} required>
-            <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} autoFocus />
+            <Input inputMode="numeric" autoComplete="one-time-code" maxLength={12} value={code} onChange={(e) => setCode(digitsOnly(e.target.value))} autoFocus />
           </Field>
           <Field label="New password" error={errors.password} hint="At least 12 characters." required>
             <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />

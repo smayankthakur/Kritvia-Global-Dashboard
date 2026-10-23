@@ -30,12 +30,16 @@ export function FileDrop({
   const id = useId().replace(/:/g, "");
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+  const [dropped, setDropped] = useState(0);
 
   const add = (list: FileList | null) => {
     if (!list) return;
     const incoming = Array.from(list);
     const next = multiple ? [...files, ...incoming] : incoming.slice(0, 1);
-    onChange(maxFiles ? next.slice(0, maxFiles) : next);
+    const kept = maxFiles ? next.slice(0, maxFiles) : next;
+    // Say when files didn't fit, rather than leaving the person to think everything was attached.
+    setDropped(multiple ? next.length - kept.length : 0);
+    onChange(kept);
   };
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -78,6 +82,11 @@ export function FileDrop({
           }}
         />
       </label>
+      <p role="status" aria-live="polite" className={cn("text-xs text-warning-fg", dropped ? "mt-2" : "sr-only")}>
+        {dropped && maxFiles
+          ? `Only ${maxFiles} files fit at a time, so ${dropped} ${dropped === 1 ? "file was" : "files were"} left out. Send these first, then upload the rest.`
+          : ""}
+      </p>
       {files.length ? (
         <ul className="mt-2 space-y-1" aria-label="Selected files">
           {files.map((f, i) => (
@@ -88,7 +97,10 @@ export function FileDrop({
                 type="button"
                 className="rounded p-0.5 text-subtle hover:text-fg"
                 aria-label={`Remove ${f.name}`}
-                onClick={() => onChange(files.filter((_, j) => j !== i))}
+                onClick={() => {
+                  setDropped(0);
+                  onChange(files.filter((_, j) => j !== i));
+                }}
               >
                 <X className="h-3.5 w-3.5" />
               </button>

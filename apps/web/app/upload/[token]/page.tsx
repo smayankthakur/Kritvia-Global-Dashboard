@@ -74,7 +74,7 @@ export default function PublicUploadPage() {
     const bad = files.filter((f) => !ALLOWED.test(f.name));
     if (!files.length) return setError("Choose at least one file");
     if (files.length > MAX_FILES) return setError(`You can upload up to ${MAX_FILES} files at a time`);
-    if (bad.length) return setError(`Only PDF, JPG and PNG files are accepted: ${bad.map((f) => f.name).join(", ")}`);
+    if (bad.length) return setError(`Only PDF, JPG, PNG and WebP files are accepted: ${bad.map((f) => f.name).join(", ")}`);
     const big = files.filter((f) => f.size > MAX_MB * 1024 * 1024);
     if (big.length) return setError(`Files must be under ${MAX_MB} MB: ${big.map((f) => f.name).join(", ")}`);
     setError(null);
@@ -163,8 +163,8 @@ export default function PublicUploadPage() {
           onChange={setFiles}
           multiple
           maxFiles={MAX_FILES}
-          accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png"
-          label="Choose PDF, JPG or PNG files"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+          label="Choose PDF, JPG, PNG or WebP files"
           hint={`Drag and drop, or tap to browse · up to ${MAX_FILES} files`}
         />
         <Button variant="primary" className="w-full" loading={up.isPending} disabled={!files.length} onClick={submit} icon={<ShieldCheck className="h-4 w-4" />}>
