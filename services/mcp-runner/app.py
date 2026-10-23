@@ -20,6 +20,16 @@ HTTP (internal network only, bearer MCP_RUNNER_TOKEN):
   POST   /mcp/{id}         one JSON-RPC message (MCP Streamable HTTP, JSON answers); 409 when not running
   GET    /healthz
 
+Pinned packages (test report S6): an approval carries the registry's own fingerprint of the release (npm's sha512
+integrity, the sha256 of one PyPI file, a container image digest). The instance downloads exactly that file and
+checks the fingerprint before running anything, and an image runs by digest, so a moved tag or a swapped file
+can't run under an approval. (The package's dependencies are still resolved when it starts, inside the sandbox.)
+
+Separation (S7): each instance gets its own internal Docker network shared only with this runner's egress proxy,
+so apps of different businesses can't reach one another; this control API refuses any request that arrives
+over a sandbox network (only the stack's own network may use it); and in production the runner reaches Docker
+through a socket proxy limited to containers, networks and images (infra/docker-compose.yml).
+
 The bridge answers `initialize` itself from the instance's first handshake, so every Kritvia request can open a
 "session" without restarting the app. Instances idle for 15 minutes are stopped (and started again on the next
 call); at most MAX_INSTANCES run at once (the least recently used is stopped first).
@@ -72,11 +82,19 @@ RESERVED_ENV = {"HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "https_proxy", "http_pr
 
 
 
+PER_APP_NETWORK = os.environ.get("MCP_PER_APP_NETWORK", "1") == "1"
+INTEGRITY_RE = {"npm": re.compile(r"^sha512-[A-Za-z0-9+/]{80,100}={0,2}$"),
+                "pypi": re.compile(r"^sha256:[0-9a-f]{64}$"), "oci": re.compile(r"^sha256:[0-9a-f]{64}$")}
+FILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._\-+]{0,199}$")
+
+
 class Package(BaseModel):
     registryType: str = Field(pattern=r"^(npm|pypi|oci)$")
     identifier: str = Field(max_length=200)
-    version: str = Field(max_length=60)
+    version: str = Field(max_length=80)
     env: list[dict[str, Any]] = Field(default_factory=list)
+    integrity: str | None = Field(default=None, max_length=120, description="the approved release's fingerprint")
+    file: str | None = Field(default=None, max_length=200, description="PyPI: the file the fingerprint is for")
 
 
 class StartIn(BaseModel):
@@ -124,6 +142,10 @@ def validate(cfg: StartIn) -> None:
         raise HTTPException(422, "that package name isn't allowed")
     if p.registryType != "oci" and not VERSION_RE.match(p.version):
         raise HTTPException(422, "that package version isn't allowed")
+    if p.integrity is not None and not INTEGRITY_RE[p.registryType].match(p.integrity):
+        raise HTTPException(422, "that package fingerprint isn't allowed")
+    if p.file is not None and (p.registryType != "pypi" or not FILE_RE.match(p.file)):
+        raise HTTPException(422, "that package file name isn't allowed")
     for k, v in cfg.env.items():
         if not ENV_RE.match(k) or k in RESERVED_ENV or len(v) > 4000 or "\n" in v or "\0" in v:
             raise HTTPException(422, f"setting {k[:40]!r} isn't allowed")
@@ -132,13 +154,41 @@ def validate(cfg: StartIn) -> None:
             raise HTTPException(422, f"{h[:60]!r} isn't a site name")
 
 
+# npm: fetch exactly the approved release, check npm's sha512 against the approval, then run that file.
+NPM_PINNED = (
+    'set -e; cd /home/app; T=$(npm pack --silent "$KV_PKG" | tail -n 1); '
+    'node -e \'const c=require("crypto"),f=require("fs");const h="sha512-"+c.createHash("sha512")'
+    '.update(f.readFileSync(process.argv[1])).digest("base64");if(h!==process.env.KV_INTEGRITY)'
+    '{console.error("Kritvia: the package is not the approved release");process.exit(3)}\' "$T"; '
+    'exec npx --yes "./$T"')
+# PyPI: download the approved file, check its sha256 against the approval, then run it.
+PYPI_PINNED = (
+    "import hashlib,json,os,sys,urllib.request\n"
+    "n,v,f,want=os.environ['KV_NAME'],os.environ['KV_VERSION'],os.environ['KV_FILE'],os.environ['KV_INTEGRITY']\n"
+    "d=json.load(urllib.request.urlopen(f'https://pypi.org/pypi/{n}/{v}/json',timeout=60))\n"
+    "u=next(x for x in d['urls'] if x['filename']==f)\n"
+    "b=urllib.request.urlopen(u['url'],timeout=120).read()\n"
+    "if 'sha256:'+hashlib.sha256(b).hexdigest()!=want: sys.exit('Kritvia: the package is not the approved release')\n"
+    "p=os.path.join('/home/app',f); open(p,'wb').write(b)\n"
+    "os.execvp('uvx',['uvx','--from',p,n])\n")
+
+
 def image_and_command(p: Package) -> tuple[str, list[str], dict[str, str]]:
     if p.registryType == "npm":
-        return NODE_IMAGE, ["npx", "--yes", f"{p.identifier}@{p.version}"], {
-            "NODE_USE_ENV_PROXY": "1", "npm_config_cache": "/home/app/.npm", "npm_config_update_notifier": "false"}
+        env = {"NODE_USE_ENV_PROXY": "1", "npm_config_cache": "/home/app/.npm", "npm_config_update_notifier": "false"}
+        if p.integrity:
+            return NODE_IMAGE, ["sh", "-c", NPM_PINNED], {
+                **env, "KV_PKG": f"{p.identifier}@{p.version}", "KV_INTEGRITY": p.integrity}
+        return NODE_IMAGE, ["npx", "--yes", f"{p.identifier}@{p.version}"], env
     if p.registryType == "pypi":
-        return UV_IMAGE, ["uvx", f"{p.identifier}=={p.version}"], {
-            "UV_CACHE_DIR": "/home/app/.cache/uv", "UV_TOOL_DIR": "/home/app/.local/uv"}
+        env = {"UV_CACHE_DIR": "/home/app/.cache/uv", "UV_TOOL_DIR": "/home/app/.local/uv"}
+        if p.integrity and p.file:
+            return UV_IMAGE, ["python", "-c", PYPI_PINNED], {
+                **env, "KV_NAME": p.identifier, "KV_VERSION": p.version, "KV_FILE": p.file, "KV_INTEGRITY": p.integrity}
+        return UV_IMAGE, ["uvx", f"{p.identifier}=={p.version}"], env
+    base = p.identifier.split("@", 1)[0]
+    if p.integrity:                              # by digest: the exact image that was reviewed
+        return f"{base.rsplit(':', 1)[0] if ':' in base.rsplit('/', 1)[-1] else base}@{p.integrity}", [], {}
     ref = p.identifier if ":" in p.identifier.rsplit("/", 1)[-1] or p.version in ("", "latest") \
         else f"{p.identifier}:{p.version}"
     return ref, [], {}
@@ -165,14 +215,57 @@ def proxy_address() -> str:
     return _proxy_ip or PROXY_HOST
 
 
-def argv_for(inst_id: str, cfg: StartIn, proxy_secret: str) -> tuple[list[str], dict[str, str]]:
+_sandbox_ips: set[str] = set()          # this runner's addresses on sandbox networks: the control API refuses them
+
+
+async def _docker(*args: str) -> tuple[int, str]:
+    p = await asyncio.create_subprocess_exec("docker", *args, stdout=asyncio.subprocess.PIPE,
+                                             stderr=asyncio.subprocess.DEVNULL)
+    out, _ = await p.communicate()
+    return p.returncode or 0, out.decode().strip()
+
+
+def app_network(inst_id: str) -> str:
+    return f"kv-mcp-{inst_id.replace('-', '')[:16]}"
+
+
+async def network_for(inst_id: str) -> tuple[str, str]:
+    """(network, the runner's address on it) for a new instance: its own internal network that only it and this
+    runner's egress proxy are on, so apps can't reach one another. Falls back to the shared sandbox network."""
+    if LOCAL or not PER_APP_NETWORK:
+        return NETWORK, proxy_address()
+    net = app_network(inst_id)
+    code, _ = await _docker("network", "create", "--internal", "--label", "kritvia.mcp=1", net)
+    if code == 0:
+        me = socket.gethostname()
+        code, _ = await _docker("network", "connect", net, me)
+        if code == 0:
+            code, ip = await _docker("inspect", "-f", '{{(index .NetworkSettings.Networks "%s").IPAddress}}' % net, me)
+            if code == 0 and re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", ip):
+                _sandbox_ips.add(ip)
+                return net, ip
+        await _drop_network(net)
+    log.warning("couldn't make a network of its own for %s; using the shared sandbox network", inst_id)
+    return NETWORK, proxy_address()
+
+
+async def _drop_network(net: str) -> None:
+    if LOCAL or net == NETWORK:
+        return
+    with contextlib.suppress(Exception):
+        await _docker("network", "disconnect", "-f", net, socket.gethostname())
+        await _docker("network", "rm", net)
+
+
+def argv_for(inst_id: str, cfg: StartIn, proxy_secret: str, network: str | None = None,
+             proxy_ip: str | None = None) -> tuple[list[str], dict[str, str]]:
     """The docker command, and the environment it runs with (secrets go in the environment, not argv)."""
     image, cmd, extra = image_and_command(cfg.package)
-    proxy = f"http://{inst_id}:{proxy_secret}@{proxy_address()}:{PROXY_PORT}"
+    proxy = f"http://{inst_id}:{proxy_secret}@{proxy_ip or proxy_address()}:{PROXY_PORT}"
     env = {**extra, "HTTPS_PROXY": proxy, "HTTP_PROXY": proxy, "https_proxy": proxy,
            "http_proxy": proxy, "NO_PROXY": "", **cfg.env}
     argv = ["docker", "run", "--rm", "-i", "--name", f"kv-mcp-{inst_id}", f"--runtime={RUNTIME}",
-            f"--network={NETWORK}", "--read-only",
+            f"--network={network or NETWORK}", "--read-only",
             "--tmpfs", "/tmp:rw,nosuid,nodev,size=128m",
             "--tmpfs", "/home/app:rw,nosuid,nodev,exec,size=512m,uid=65534,gid=65534",
             "--cap-drop=ALL", "--security-opt=no-new-privileges", "--user", "65534:65534",
@@ -275,10 +368,11 @@ async def stop(inst_id: str) -> None:
         except (TimeoutError, asyncio.TimeoutError):
             with contextlib.suppress(ProcessLookupError):
                 inst.proc.kill()
-    if not LOCAL:                                         # make sure the container is gone
+    if not LOCAL:                                         # make sure the container (and its network) is gone
         rm = await asyncio.create_subprocess_exec("docker", "rm", "-f", f"kv-mcp-{inst_id}",
                                                   stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
         await rm.wait()
+        await _drop_network(app_network(inst_id))
     if inst.reader:
         inst.reader.cancel()
 
@@ -289,7 +383,8 @@ async def start(inst_id: str, cfg: StartIn) -> Instance:
         await stop(oldest.id)
     secret = secrets.token_urlsafe(24)
     hosts = sorted(set(cfg.egress_hosts) | set(REGISTRY_HOSTS[cfg.package.registryType]))
-    argv, env = argv_for(inst_id, cfg, secret)
+    net, ip = await network_for(inst_id)
+    argv, env = argv_for(inst_id, cfg, secret, net, ip)
     proc = await spawn(argv, env)
     inst = Instance(id=inst_id, config_hash=config_hash(cfg), proc=proc, grant=guard.Grant(secret=secret, hosts=hosts))
     INSTANCES[inst_id] = inst
@@ -308,6 +403,16 @@ async def start(inst_id: str, cfg: StartIn) -> Instance:
         await stop(inst_id)
         raise HTTPException(502, f"the app didn't start: {tail[:300]}{blocked[:300]}") from None
     return inst
+
+
+@app.middleware("http")
+async def control_only_from_the_stack(request: Request, call_next):
+    """The control API never answers over a sandbox network: an app (in its own container on one) that found the
+    runner's address there gets nothing, so a token isn't the only thing between it and Docker."""
+    server = (request.scope.get("server") or ("", 0))[0]
+    if not LOCAL and (server in _sandbox_ips or (server and server == _proxy_ip)):
+        return JSONResponse({"detail": "not found"}, status_code=404)
+    return await call_next(request)
 
 
 @app.put("/instances/{inst_id}")
@@ -391,7 +496,7 @@ async def _reaper() -> None:
 
 
 async def _clean_old_containers() -> None:
-    """Containers left from a previous run of the runner (it restarted): remove them."""
+    """Containers and per-app networks left from a previous run of the runner (it restarted): remove them."""
     with contextlib.suppress(Exception):
         p = await asyncio.create_subprocess_exec("docker", "ps", "-aq", "--filter", "label=kritvia.mcp=1",
                                                  stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
@@ -401,6 +506,14 @@ async def _clean_old_containers() -> None:
             rm = await asyncio.create_subprocess_exec("docker", "rm", "-f", *ids, stdout=asyncio.subprocess.DEVNULL,
                                                       stderr=asyncio.subprocess.DEVNULL)
             await rm.wait()
+    with contextlib.suppress(Exception):
+        _, nets = await _docker("network", "ls", "-q", "--filter", "label=kritvia.mcp=1", "--format", "{{.Name}}")
+        for net in nets.split():
+            if net.startswith("kv-mcp-"):
+                await _drop_network(net)
+    with contextlib.suppress(Exception):
+        if proxy_address() != PROXY_HOST:          # the shared sandbox network's address: no control API there
+            _sandbox_ips.add(proxy_address())
 
 
 @contextlib.asynccontextmanager

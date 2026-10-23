@@ -119,12 +119,23 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
                 {"o": org, "v": venture_id, "w": workflow, "e": body.enabled, "s": schedule,
                  "st": json.dumps(body.settings), "i": body.instructions.strip(), "u": user_id})).first()
         if workflow == "prospector":
-            # "Send without asking" grants the Prospector's trust, on plans where agents may act alone.
-            want = bool(body.enabled and body.settings.get("send_without_asking", True))
+            # "Send without asking" is the owner's choice (off unless ticked) and goes by the same rules as any
+            # other grant of autonomy: the plan must allow agents to act alone, within its per-agent limit, and
+            # the audit log records who switched it on and why (test report round 2, S12/S16).
+            want = bool(body.enabled and body.settings.get("send_without_asking") is True)
             if want:
-                want = (await plan_for_venture(db, venture_id)).autonomy
+                plan = await plan_for_venture(db, venture_id)
+                if not plan.autonomy:
+                    want = False
+                elif plan.autonomy_per_agent and plan.autonomy_per_agent < 2:
+                    raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                                        f"on {plan.label} each agent can act alone on {plan.autonomy_per_agent} kind "
+                                        "of action; the Prospector's \"send without asking\" needs email and WhatsApp")
             async with db.begin_nested():
-                await db.execute(text("SELECT set_prospector_autonomy(:v, :a)"), {"v": venture_id, "a": want})
+                await db.execute(text("SELECT set_prospector_autonomy(:v, :a, :r)"), {
+                    "v": venture_id, "a": want,
+                    "r": "Prospector settings: send without asking switched on" if want
+                    else "Prospector settings: send without asking off"})
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return WorkflowConfigOut(**row._mapping)

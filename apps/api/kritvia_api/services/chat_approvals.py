@@ -6,6 +6,11 @@ arrives there as a card with Approve, Reject and Ask for changes. A press decide
 the same role checks as the app (decide_approval), so a link never gives anyone more rights.
 
 * Sensitive drafts arrive without buttons: they are reviewed in the app.
+* So do drafts a card can't show honestly (test report round 2, S2): the assistant's changes to Kritvia itself,
+  connected-app tools, routines and outside look-ups. Their card describes the exact call, built here from the
+  draft's fields (never the model's own title alone), and says to decide it in Kritvia; a button press for one
+  is refused (`app_only`). Approve buttons stay for drafts a person can judge from the card: messages, tasks,
+  leads, meetings.
 * "Ask for changes" rejects with the person's words, which makes the agent redraft.
 * Once a draft is decided anywhere (app, Telegram or Slack) its cards are updated to say so.
 
@@ -73,8 +78,62 @@ def preview(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def card_text(title: str, summary: str, payload: dict[str, Any], business: str | None, sensitive: bool) -> str:
+# The assistant's drafts that may be approved from a chat: what they do is all on the card.
+CHAT_APPROVE = frozenset({"gmail.send", "whatsapp.send", "whatsapp.template", "telegram.send", "tasks.create",
+                          "leads.create", "crm.update_lead", "calendar.create_event"})
+# Decided in Kritvia whoever drafted them: they change Kritvia itself, act in another app, or reach outside.
+IN_APP = frozenset({"mcp.call", "kritvia.do", "routines.create", "web.browse_approved", "voice.call",
+                    "browser.submit"})
+
+
+def app_only(agent: str | None, action: str | None) -> bool:
+    """Whether a draft must be decided in Kritvia rather than with a chat button."""
+    if (action or "") in IN_APP:
+        return True
+    return agent == "assistant" and (action or "") not in CHAT_APPROVE
+
+
+def _val(v: Any, n: int = 80) -> str:
+    import json as _json
+    t = v if isinstance(v, str) else _json.dumps(v, ensure_ascii=False, default=str)
+    t = " ".join(t.split())
+    return t[:n] + ("…" if len(t) > n else "")
+
+
+def describe(action: str | None, payload: dict[str, Any]) -> str:
+    """What the draft will actually do, from its fields."""
+    action = action or ""
+    if action == "kritvia.do":
+        lines = [f"Change in Kritvia: {_val(payload.get('action'), 120)}"]
+        for part in ("path", "query", "body"):
+            d = payload.get(part)
+            if isinstance(d, dict):
+                lines += [f"  {k}: {_val(v)}" for k, v in list(d.items())[:8]]
+        return "\n".join(lines)
+    if action == "mcp.call":
+        fields = {k: v for k, v in payload.items() if k != "mcp_tool"}
+        return "\n".join([f"Connected app tool: {_val(payload.get('mcp_tool'), 120)}"]
+                         + [f"  {k}: {_val(v)}" for k, v in list(fields.items())[:8]])
+    if action == "routines.create":
+        return (f"Set up a routine: {_val(payload.get('name'))}\nWhen: {_val(payload.get('when'))}\n"
+                f"Steps: {_val(payload.get('instructions'), 300)}")
+    if action == "web.browse_approved":
+        return f"Look up on the web\nWhere: {payload.get('url') or 'a web search'}\nWhat: {_val(payload.get('task'), 300)}"
+    if action == "voice.call":
+        return f"Phone call to {_val(payload.get('phone'))}\nAbout: {_val(payload.get('purpose'), 200)}"
+    return "\n".join(f"{k}: {_val(v)}" for k, v in list(payload.items())[:8])
+
+
+def card_text(title: str, summary: str, payload: dict[str, Any], business: str | None, sensitive: bool,
+              *, in_app: bool = False, action: str | None = None) -> str:
     head = "A draft needs your yes" + (f" · {business}" if business else "")
+    if in_app and not sensitive:
+        parts = [head, "", describe(action, payload)]
+        if title.strip():
+            parts += ["", "Assistant's note: " + title.strip()[:200]]
+        parts += ["", "Decide this one in Kritvia: it changes Kritvia itself, works in another app or reaches "
+                      "outside, so it isn't approved from chat."]
+        return "\n".join(parts)[:4000]
     parts = [head, "", title.strip()[:300]]
     if summary.strip():
         parts.append(summary.strip()[:400])
@@ -90,17 +149,28 @@ def card_text(title: str, summary: str, payload: dict[str, Any], business: str |
     return "\n".join(parts)[:4000]
 
 
+def _body(card: dict[str, Any], business: str | None) -> str:
+    return card_text(card["title"], card["summary"], card["payload"], business, card["sensitive"],
+                     in_app=bool(card.get("in_app")), action=card.get("action"))
+
+
+def _no_buttons(card: dict[str, Any]) -> bool:
+    return bool(card["sensitive"] or card.get("in_app"))
+
+
 # ------------------------------------------------------------------- sending --
 def announce(venture_id: uuid.UUID, approval_id: uuid.UUID, *, title: str, summary: str,
-             payload: dict[str, Any], sensitive: bool) -> None:
+             payload: dict[str, Any], sensitive: bool, agent: str | None = None, action: str | None = None) -> None:
     """Called by the runner when a draft starts waiting; sends the cards in the background."""
-    _later(_announce(venture_id, approval_id, title, summary, payload, sensitive))
+    card = {"title": title, "summary": summary, "payload": payload, "sensitive": sensitive,
+            "in_app": app_only(agent, action), "action": action}
+    _later(_announce(venture_id, approval_id, card))
 
 
-async def _announce(venture_id, approval_id, title, summary, payload, sensitive) -> None:
+async def _announce(venture_id, approval_id, card: dict[str, Any]) -> None:
     for send in (_telegram_cards, _slack_cards, _whatsapp_cards):
         try:
-            await send(venture_id, approval_id, title, summary, payload, sensitive)
+            await send(venture_id, approval_id, card)
         except Exception:  # noqa: BLE001 - a card is a courtesy
             log.exception("%s failed for approval %s", send.__name__, approval_id)
 
@@ -189,7 +259,7 @@ def telegram_keyboard(approval_id: uuid.UUID, venture_id: uuid.UUID, sensitive: 
     return {"inline_keyboard": rows}
 
 
-async def _telegram_cards(venture_id, approval_id, title, summary, payload, sensitive) -> None:
+async def _telegram_cards(venture_id, approval_id, card: dict[str, Any]) -> None:
     from kritvia_api.engine.context import get_services
     from kritvia_api.services.telegram import TelegramError
     targets = await _targets(approval_id, "telegram")
@@ -199,13 +269,13 @@ async def _telegram_cards(venture_id, approval_id, title, summary, payload, sens
     if bot is None:
         return
     tg = get_services().telegram
-    body = card_text(title, summary, payload, bot.business, sensitive)
+    body = _body(card, bot.business)
     notes = []
     for t in targets:
         try:
             res = await tg.call(bot.token, "sendMessage", {
                 "chat_id": int(t.external_id), "text": body, "link_preview_options": {"is_disabled": True},
-                "reply_markup": telegram_keyboard(approval_id, venture_id, sensitive)})
+                "reply_markup": telegram_keyboard(approval_id, venture_id, _no_buttons(card))})
         except (TelegramError, ValueError):
             continue
         if isinstance(res, dict) and res.get("message_id") is not None:
@@ -221,7 +291,7 @@ async def card_for(run_as: uuid.UUID, venture_id: uuid.UUID, approval_id: uuid.U
     from kritvia_api.engine.runner import PAYLOAD_PURPOSE
     from kritvia_api.services.crypto import EnvelopeCrypto
     async with tenant_tx(run_as, "agent", "chat") as conn:
-        a = (await conn.execute(text("SELECT title, summary, payload_enc, sensitive, status FROM approvals"
+        a = (await conn.execute(text("SELECT title, summary, payload_enc, sensitive, status, agent, action FROM approvals"
                                      " WHERE id = :a AND venture_id = :v"), {"a": approval_id, "v": venture_id})).first()
         if a is None or a.status != "pending":
             return None
@@ -231,7 +301,7 @@ async def card_for(run_as: uuid.UUID, venture_id: uuid.UUID, approval_id: uuid.U
     except ValueError:
         payload = {}
     return {"title": a.title, "summary": a.summary, "payload": payload if isinstance(payload, dict) else {},
-            "sensitive": a.sensitive}
+            "sensitive": a.sensitive, "in_app": app_only(a.agent, a.action), "action": a.action}
 
 
 async def telegram_card_to(venture_id: uuid.UUID, approval_id: uuid.UUID, chat: str) -> None:
@@ -244,10 +314,9 @@ async def telegram_card_to(venture_id: uuid.UUID, approval_id: uuid.UUID, chat: 
         return
     try:
         res = await get_services().telegram.call(bot.token, "sendMessage", {
-            "chat_id": int(chat), "text": card_text(card["title"], card["summary"], card["payload"], bot.business,
-                                                    card["sensitive"]),
+            "chat_id": int(chat), "text": _body(card, bot.business),
             "link_preview_options": {"is_disabled": True},
-            "reply_markup": telegram_keyboard(approval_id, venture_id, card["sensitive"])})
+            "reply_markup": telegram_keyboard(approval_id, venture_id, _no_buttons(card))})
     except (TelegramError, ValueError):
         return
     if isinstance(res, dict) and res.get("message_id") is not None:
@@ -263,8 +332,8 @@ def whatsapp_buttons(approval_id: uuid.UUID, sensitive: bool) -> list[tuple[str,
 
 
 def _whatsapp_card(card: dict[str, Any], business: str | None, approval_id: uuid.UUID) -> str:
-    body = card_text(card["title"], card["summary"], card["payload"], business, card["sensitive"])
-    if card["sensitive"]:
+    body = _body(card, business)
+    if _no_buttons(card):
         body += "\n\nOpen it in Kritvia: " + _link(f"/inbox?id={approval_id}")
     return body[:1000]           # WhatsApp's limit for a message with buttons
 
@@ -279,16 +348,15 @@ async def whatsapp_card_to(venture_id: uuid.UUID, approval_id: uuid.UUID, user_i
     if card is None:
         return
     mid = await front_door.whatsapp_say(venture_id, user_id, chat, _whatsapp_card(card, n.business, approval_id),
-                                        whatsapp_buttons(approval_id, card["sensitive"]))
+                                        whatsapp_buttons(approval_id, _no_buttons(card)))
     if mid:
         await _keep_notes(n.run_as, "whatsapp", n.org_id, venture_id, approval_id, [(chat, mid[:64])])
 
 
-async def _whatsapp_cards(venture_id, approval_id, title, summary, payload, sensitive) -> None:
+async def _whatsapp_cards(venture_id, approval_id, card: dict[str, Any]) -> None:
     targets = await _targets(approval_id, "whatsapp")
     if not targets:
         return
-    card = {"title": title, "summary": summary, "payload": payload, "sensitive": sensitive}
     for t in targets:
         await whatsapp_card_to(venture_id, approval_id, t.user_id, t.external_id, card)
 
@@ -310,7 +378,7 @@ def slack_blocks(text_: str, approval_id: uuid.UUID, venture_id: uuid.UUID, sens
             {"type": "actions", "elements": buttons}]
 
 
-async def _slack_cards(venture_id, approval_id, title, summary, payload, sensitive) -> None:
+async def _slack_cards(venture_id, approval_id, card: dict[str, Any]) -> None:
     from kritvia_api.engine.context import get_services
     from kritvia_api.services import slack
     if not slack.app_configured():
@@ -325,15 +393,15 @@ async def _slack_cards(venture_id, approval_id, title, summary, payload, sensiti
     async with tenant_tx(p.run_as, "agent", "slack") as conn:
         business = (await conn.execute(text("SELECT name FROM ventures WHERE id = :v"), {"v": venture_id})).scalar()
     client = get_services().slack
-    body = card_text(title, summary, payload, business, sensitive)
+    body = _body(card, business)
     notes = []
     for t in targets:
         if t.external_team and t.external_team != team:
             continue
         try:
             res = await client.api(bot, "chat.postMessage", {
-                "channel": t.external_id, "text": f"A draft needs your yes: {title[:120]}",
-                "blocks": slack_blocks(body, approval_id, venture_id, sensitive),
+                "channel": t.external_id, "text": f"A draft needs your yes: {card['title'][:120]}",
+                "blocks": slack_blocks(body, approval_id, venture_id, _no_buttons(card)),
                 "unfurl_links": False, "unfurl_media": False})
         except slack.SlackError:
             continue
@@ -355,6 +423,12 @@ async def decide_as(user_id: uuid.UUID, venture_id: uuid.UUID, approval_id: uuid
     from fastapi import HTTPException
 
     from kritvia_api.routers.approvals import DecisionIn, decide
+    if decision == "approve":
+        async with tenant_tx(user_id) as conn:
+            a = (await conn.execute(text("SELECT agent, action, sensitive FROM approvals WHERE id = :a AND venture_id = :v"),
+                                    {"a": approval_id, "v": venture_id})).first()
+        if a is not None and (a.sensitive or app_only(a.agent, a.action)):
+            return False, "Open this one in Kritvia to decide it; it can't be approved from chat."
     try:
         await decide(venture_id, approval_id, DecisionIn(decision=decision, comment=comment), user_id, svc)
     except HTTPException as exc:

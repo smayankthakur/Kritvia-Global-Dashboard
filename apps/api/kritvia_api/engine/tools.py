@@ -40,9 +40,16 @@ class PolicyError(Exception):
 
 
 class AlreadyExecuted(Exception):
+    """The approved action already ran (a step re-run after a restart). `result` is what it recorded:
+    {} when the worker stopped before recording it (it may or may not have gone out: never sent twice)."""
+
     def __init__(self, result: dict[str, Any] | None) -> None:
         super().__init__("approval already executed")
         self.result = result or {}
+
+
+# A send that failed (recorded ok: false) may be tried again, up to this many times in all.
+MAX_ATTEMPTS = 3
 
 
 Handler = Callable[["RunContext", dict[str, Any], "ApprovedAction | None"], Awaitable[dict[str, Any]]]
@@ -55,6 +62,7 @@ class ApprovedAction:
     action: str
     status: str
     payload: dict[str, Any]
+    attempt: int = 1
 
 
 @dataclass
@@ -113,7 +121,10 @@ class ToolRegistry:
         try:
             result = await tool.handler(ctx, approved.payload, approved)
         except Exception as exc:
-            await self._record(ctx, approved.id, {"ok": False, "error": f"{type(exc).__name__}: {exc}"[:500]})
+            # Only what kind of failure it was, never the provider's reply (it can quote the draft or the
+            # customer's details, and execution_result isn't encrypted).
+            await self._record(ctx, approved.id, {"ok": False, "error": type(exc).__name__, "why": _reason(exc),
+                                                  "attempt": approved.attempt})
             raise
         await self._record(ctx, approved.id, {"ok": True, **_safe(result)})
         if approved.status == "auto_approved":
@@ -132,15 +143,26 @@ class ToolRegistry:
                 raise PolicyError("approval does not belong to this run")
             if row.action != name:
                 raise PolicyError(f"approval is for {row.action!r}, not {name!r}")
-            if row.executed_at is not None:
-                raise AlreadyExecuted(row.execution_result)
             if row.status not in ("approved", "edited", "auto_approved"):
                 raise PolicyError(f"approval is {row.status}; nothing may execute")
-            await conn.execute(text("UPDATE approvals SET executed_at = now() WHERE id = :id"),
-                               {"id": approval_id})
+            attempt = 1
+            if row.executed_at is not None:
+                done = row.execution_result if isinstance(row.execution_result, dict) else {}
+                # It went out, or the worker stopped before recording what happened (maybe sent): never twice.
+                # A send that is known to have failed may be tried again (a passing problem, a manual retry).
+                attempt = int(done.get("attempt") or 1) + 1
+                if done.get("ok") is not False or attempt > MAX_ATTEMPTS:
+                    raise AlreadyExecuted(done)
+                again = (await conn.execute(text("SELECT private.retry_failed_execution(:id)"),
+                                            {"id": approval_id})).scalar()
+                if not again:
+                    raise AlreadyExecuted(done)
+            else:
+                await conn.execute(text("UPDATE approvals SET executed_at = now() WHERE id = :id"),
+                                   {"id": approval_id})
             payload = json.loads(await ctx.crypto(conn).decrypt(ctx.venture_id, "approvals.payload",
                                                                 row.final_payload_enc))
-        return ApprovedAction(approval_id, row.agent, row.action, row.status, payload)
+        return ApprovedAction(approval_id, row.agent, row.action, row.status, payload, attempt)
 
     async def _record(self, ctx: RunContext, approval_id: uuid.UUID, result: dict[str, Any]) -> None:
         async with ctx.tx() as conn:
@@ -149,7 +171,32 @@ class ToolRegistry:
                 {"id": approval_id, "r": json.dumps(result, default=str)})
 
 
+# Keys that can carry what was said or what a provider answered: never kept in execution_result.
+_UNSAFE_EXACT = {"message", "text", "reply", "why", "title", "url", "summary", "note", "subject", "to", "name"}
+_UNSAFE_PARTS = ("body", "response", "error", "detail", "content", "html", "snippet", "preview", "email", "phone")
+
+
 def _safe(result: dict[str, Any]) -> dict[str, Any]:
-    """Only small scalar metadata goes into execution_result (it is not encrypted)."""
+    """Only small scalar metadata goes into execution_result (it is not encrypted, and people who can't
+    approve may see a card's status): ids, statuses and counts, not text."""
     return {k: v for k, v in result.items()
-            if isinstance(v, str | int | float | bool) and (not isinstance(v, str) or len(v) <= 200)}
+            if isinstance(v, str | int | float | bool) and k.lower() not in _UNSAFE_EXACT
+            and not any(u in k.lower() for u in _UNSAFE_PARTS)
+            and (not isinstance(v, str) or len(v) <= 120)}
+
+
+def _reason(exc: BaseException) -> str:
+    """A short, generic reason for a failed action, for the card and the retry decision."""
+    import asyncio
+
+    import httpx
+    if isinstance(exc, asyncio.TimeoutError | TimeoutError | httpx.TimeoutException):
+        return "timed out"
+    if isinstance(exc, httpx.TransportError | ConnectionError):
+        return "couldn't reach the service"
+    if isinstance(exc, PolicyError):
+        return "not allowed"
+    name = type(exc).__name__.lower()
+    if "quota" in name or "ratelimit" in name:
+        return "rate limited"
+    return "the service refused it"

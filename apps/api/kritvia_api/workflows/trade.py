@@ -169,13 +169,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
 
 @update_wf.step("sent", agent="trade_update")
 async def sent(ctx: RunContext, state: dict) -> Finish:
-    from kritvia_api.engine.tools import AlreadyExecuted
     s = await _shipment(ctx, state["shipment_id"])
-    try:
-        res = await ctx.invoke(state["action"], approval_id=state["send_decision"]["approval_id"])
-    except AlreadyExecuted as done:
-        res = (done.args[0] if done.args else None) or {}
-    if s is not None:
+    res = await ctx.invoke(state["action"], approval_id=state["send_decision"]["approval_id"])
+    if s is not None and not res.get("already_done"):
         async with ctx.tx() as conn:
             await conn.execute(text("UPDATE shipments SET last_update_at = now() WHERE id = :s"), {"s": s.id})
             await conn.execute(text(

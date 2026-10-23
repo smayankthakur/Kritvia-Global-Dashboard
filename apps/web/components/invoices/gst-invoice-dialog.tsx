@@ -11,7 +11,7 @@ import { Notice } from "@/components/ui/page";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap } from "@/lib/api";
 import { GST_RATES, lineTax } from "./gst-math";
-import { rupees, toPaise } from "./money";
+import { amountProblem, rupees, toPaise, toPaiseOrZero } from "./money";
 
 interface Row {
   description: string;
@@ -23,6 +23,22 @@ interface Row {
   gst_rate: string;
 }
 const NEW_ROW: Row = { description: "", hsn_sac: "", qty: "1", unit: "", rate: "", discount: "", gst_rate: "18" };
+
+/** A line's discount in paise: rupees ("500", "₹500/-") or a percentage of quantity × rate ("10%").
+ * null when it is neither, so it is never silently dropped. */
+export function discountPaise(r: Pick<Row, "qty" | "rate" | "discount">): number | null {
+  const d = r.discount.trim();
+  if (!d) return 0;
+  const pct = /^(\d+(?:\.\d+)?)\s*%$/.exec(d);
+  if (pct) {
+    const n = Number(pct[1]);
+    const qty = Number(r.qty.trim() || "0");
+    const rate = toPaiseOrZero(r.rate) ?? 0;
+    if (n > 100 || !Number.isFinite(qty)) return null;
+    return Math.round((qty * rate * n) / 100);
+  }
+  return toPaiseOrZero(d);
+}
 
 /** Issue a GST tax invoice: numbered by Kritvia, taxed line by line. */
 export function GstInvoiceDialog({ ventureId, open, onClose }: { ventureId: string; open: boolean; onClose: () => void }) {
@@ -42,7 +58,7 @@ export function GstInvoiceDialog({ ventureId, open, onClose }: { ventureId: stri
   const gstinState = /^[0-9]{2}/.test(c.gstin.trim()) ? c.gstin.trim().slice(0, 2) : "";
   const pos = c.pos || gstinState || ownState;
   const same = pos === ownState;
-  const lines = rows.map((r) => lineTax(r.qty || "0", toPaise(r.rate) ?? 0, toPaise(r.discount) ?? 0, r.gst_rate, same));
+  const lines = rows.map((r) => lineTax(r.qty || "0", toPaiseOrZero(r.rate) ?? 0, discountPaise(r) ?? 0, r.gst_rate, same));
   const totals = lines.reduce(
     (a, l) => (l ? { taxable: a.taxable + l.taxable, tax: a.tax + l.cgst + l.sgst + l.igst } : a),
     { taxable: 0, tax: 0 },
@@ -68,18 +84,21 @@ export function GstInvoiceDialog({ ventureId, open, onClose }: { ventureId: stri
               hsn_sac: r.hsn_sac.trim() || null,
               qty: r.qty.trim(),
               unit: r.unit.trim() || null,
-              rate_paise: toPaise(r.rate) ?? 0,
-              discount_paise: toPaise(r.discount) ?? 0,
+              rate_paise: toPaiseOrZero(r.rate) ?? 0,
+              discount_paise: discountPaise(r) ?? 0,
               gst_rate: r.gst_rate,
             })),
           },
         }),
       ),
     onSuccess: (inv) => {
-      toast.success(`Tax invoice ${inv.number} issued`, `${rupees(inv.amount_paise)} for ${inv.customer_name}.`);
       void qc.invalidateQueries({ queryKey: ["invoices", ventureId] });
       void qc.invalidateQueries({ queryKey: ["gst-profile", ventureId] });
-      window.open(`/print/invoice/${ventureId}/${inv.id}`, "_blank", "noopener");
+      // A window opened after the save is blocked as a pop-up on phones, so printing is a tap away instead.
+      toast.success(`Tax invoice ${inv.number} issued`, `${rupees(inv.amount_paise)} for ${inv.customer_name}.`, {
+        label: "Print the invoice",
+        onClick: () => window.open(`/print/invoice/${ventureId}/${inv.id}`, "_blank", "noopener"),
+      });
       onClose();
     },
     onError: (e) => setError(errorMessage(e)),
@@ -90,7 +109,9 @@ export function GstInvoiceDialog({ ventureId, open, onClose }: { ventureId: stri
     for (const [i, r] of rows.entries()) {
       if (!r.description.trim()) return setError(`Line ${i + 1}: write what it's for.`);
       if (!lines[i]) return setError(`Line ${i + 1}: the quantity should be a number, e.g. 1 or 2.5.`);
-      if (toPaise(r.rate) === null && r.rate.trim() !== "0") return setError(`Line ${i + 1}: write the rate in rupees.`);
+      if (toPaise(r.rate) === null && r.rate.trim() !== "0") return setError(`Line ${i + 1}: ${amountProblem(r.rate) ?? "write the rate in rupees."}`);
+      if (discountPaise(r) === null)
+        return setError(`Line ${i + 1}: write the discount in rupees (e.g. 500) or as a percentage of the line (e.g. 10%).`);
     }
     setError(null);
     issue.mutate();
@@ -174,7 +195,7 @@ export function GstInvoiceDialog({ ventureId, open, onClose }: { ventureId: stri
               <Field label="Rate (₹)">
                 <Input value={r.rate} onChange={(e) => setRow(i, "rate", e.target.value)} inputMode="decimal" />
               </Field>
-              <Field label="Discount (₹)">
+              <Field label="Discount (₹ or %)">
                 <Input value={r.discount} onChange={(e) => setRow(i, "discount", e.target.value)} inputMode="decimal" />
               </Field>
               <Field label="GST %">

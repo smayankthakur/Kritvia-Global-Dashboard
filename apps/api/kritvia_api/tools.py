@@ -380,6 +380,17 @@ def build_tools() -> ToolRegistry:
               "Look something up on websites (a price, a rate, opening hours, a rule on an official site). "
               "Only reads pages; it can't sign in or send forms")
     async def web_browse(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        return await _web_browse(ctx, p)
+
+    @reg.tool("web.browse_approved", Capability.SEND,
+              "Look something up on websites, after a person checked where it goes (used when the request "
+              "has read outside text, so the look-up can't carry the business's data out unseen)")
+    async def web_browse_approved(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
+        assert ok is not None
+        from kritvia_api.services.run_trust import clean_url
+        return await _web_browse(ctx, {**p, "url": clean_url(p.get("url"))})
+
+    async def _web_browse(ctx: RunContext, p: dict[str, Any]) -> dict[str, Any]:
         from kritvia_api.services import browser_agent as ba
         from kritvia_api.services.quota import PlanRestricted, require_agent
         task = str(p.get("task") or "").strip()[:1500]
@@ -407,7 +418,8 @@ def build_tools() -> ToolRegistry:
     async def browser_submit(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
         page = await ctx.services.browser.submit(
             str(p["url"]), [{"selector": f["selector"], "value": f["value"], "kind": f.get("kind", "fill")}
-                            for f in p.get("fields") or []], str(p["button"]["selector"]))
+                            for f in p.get("fields") or []], str(p["button"]["selector"]),
+            form=p["button"].get("form"))          # where the approved form sends; checked again by the browser
         return {"sent": True, "url": page.get("url"), "title": page.get("title"),
                 "text": (page.get("text") or "")[:1500]}
 

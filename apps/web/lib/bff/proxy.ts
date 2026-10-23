@@ -83,7 +83,18 @@ export function refreshOnce(
   inflight.set(refreshToken, p);
   const t = setTimeout(() => inflight.delete(refreshToken), 30_000);
   (t as unknown as { unref?: () => void }).unref?.();
+  // A failed renewal is shared only by the requests already waiting on it, never cached: the next
+  // request after a hiccup (rate limit, API restart) tries again.
+  void p.then((r) => {
+    if (!r.ok && inflight.get(refreshToken) === p) inflight.delete(refreshToken);
+  });
   return p;
+}
+
+/** Only the API saying the refresh token is no good ends the session; a rate limit, a 5xx or an
+ * unreachable API is a passing problem and keeps the person signed in. */
+export function sessionGone(status: number): boolean {
+  return status === 401 || status === 400 || status === 403;
 }
 
 /** For tests. */
@@ -208,20 +219,24 @@ export async function proxyRequest(req: Request, segments: string[], deps: Proxy
   const url = `${deps.apiUrl}/${path}${new URL(req.url).search}`;
 
   let refreshed = false;
-  const doRefresh = async (): Promise<boolean> => {
+  /** "ok", "gone" (sign in again: cookies cleared) or "later" (a passing problem: cookies kept). */
+  const doRefresh = async (): Promise<"ok" | "gone" | "later"> => {
     refreshed = true;
-    if (!refresh) return false;
+    if (!refresh) return "gone";
     const r = await refreshOnce(deps.apiUrl, refresh, doFetch, refreshHeaders);
-    if (!r.ok) return false;
+    if (!r.ok) return sessionGone(r.status) ? "gone" : "later";
     access = r.tokens.access_token;
     setCookies.push(...sessionCookies(r.tokens, deps.secureCookies));
-    return true;
+    return "ok";
   };
+  const notRenewed = (why: "gone" | "later") =>
+    why === "gone"
+      ? json(401, "session expired, please sign in again", clearSessionCookies(deps.secureCookies))
+      : json(503, "couldn't renew your session just now; please try again in a moment");
 
   if (!isPublic && !access && refresh) {
-    if (!(await doRefresh())) {
-      return json(401, "session expired, please sign in again", clearSessionCookies(deps.secureCookies));
-    }
+    const r = await doRefresh();
+    if (r !== "ok") return notRenewed(r);
   }
 
   const send = () => {
@@ -239,9 +254,8 @@ export async function proxyRequest(req: Request, segments: string[], deps: Proxy
 
   if (upstream.status === 401 && !isPublic && !refreshed && refresh) {
     await upstream.arrayBuffer().catch(() => undefined); // drain the small 401 body
-    if (!(await doRefresh())) {
-      return json(401, "session expired, please sign in again", clearSessionCookies(deps.secureCookies));
-    }
+    const r = await doRefresh();
+    if (r !== "ok") return notRenewed(r);
     try {
       upstream = await send();
     } catch {

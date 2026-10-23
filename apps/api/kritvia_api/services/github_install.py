@@ -179,3 +179,60 @@ async def analyse(url: str) -> dict[str, Any]:
 
 def catalog_id(repo: str) -> str:
     return f"github:{repo.lower()}"
+
+
+# --------------------------------------------------------------------------- pin at review (S6) --
+SRI_NPM = re.compile(r"^sha512-[A-Za-z0-9+/]{80,100}={0,2}$")
+SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def package_hash(p: dict[str, Any] | None) -> str | None:
+    """The fingerprint of a package entry exactly as a reviewer sees it, so an approval can only apply to that."""
+    import hashlib
+    if not p:
+        return None
+    return hashlib.sha256(json.dumps(p, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+async def _registry_json(client: httpx.AsyncClient, url: str, who: str) -> Any:
+    try:
+        r = await client.get(url, headers={"Accept": "application/json"})
+    except httpx.TransportError:
+        raise McpError(f"{who} couldn't be reached; try again in a minute") from None
+    if r.status_code == 404:
+        raise McpError(f"{who} has no such package version")
+    if r.status_code != 200 or len(r.content) > 20_000_000:
+        raise McpError(f"{who} answered HTTP {r.status_code}")
+    return r.json()
+
+
+async def pin(p: dict[str, Any]) -> dict[str, Any]:
+    """The package as approved: an exact version plus the registry's own fingerprint of that release (npm's
+    sha512 integrity, the sha256 of one PyPI file, or a container image's digest). The MCP runner checks it
+    before running anything, so a moved tag, a republished file or a swapped image can't run under an approval.
+    (The package's own dependencies are still resolved by npm/uv when it starts; they run in the same sandbox.)"""
+    kind, ident, ver = p.get("registryType"), str(p.get("identifier") or ""), str(p.get("version") or "")
+    if kind == "oci":
+        digest = ver if SHA256.match(ver) else (ident.split("@", 1)[1] if "@sha256:" in ident else "")
+        if not SHA256.match(digest):
+            raise McpError("pin the container image by its digest (sha256:…) before approving it")
+        return {**p, "identifier": ident.split("@", 1)[0], "version": digest, "integrity": digest}
+    if not ver or ver.lower() == "latest" or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._\-+]{0,59}", ver):
+        raise McpError("approve an exact version, not 'latest'")
+    async with _http() as client:
+        if kind == "npm":
+            d = await _registry_json(client, f"https://registry.npmjs.org/{ident.replace('/', '%2F')}", "npm")
+            integ = (((d or {}).get("versions") or {}).get(ver) or {}).get("dist", {}).get("integrity", "")
+            if not SRI_NPM.match(str(integ)):
+                raise McpError(f"npm has no sha512 fingerprint for {ident}@{ver}")
+            return {**p, "integrity": integ}
+        if kind == "pypi":
+            d = await _registry_json(client, f"https://pypi.org/pypi/{ident}/{ver}/json", "PyPI")
+            files = [u for u in (d or {}).get("urls") or [] if not u.get("yanked")]
+            pick = (next((u for u in files if str(u.get("filename", "")).endswith("-none-any.whl")), None)
+                    or next((u for u in files if u.get("packagetype") == "sdist"), None))
+            sha = ((pick or {}).get("digests") or {}).get("sha256", "")
+            if not pick or not re.fullmatch(r"[0-9a-f]{64}", sha):
+                raise McpError(f"PyPI has no pure-Python file for {ident}=={ver} to pin")
+            return {**p, "integrity": f"sha256:{sha}", "file": str(pick["filename"])[:200]}
+    raise McpError("only npm, PyPI and container-image packages can be approved")

@@ -170,8 +170,12 @@ async def test_send_tool_refuses_without_approval_and_executes_once(world, servi
         await other.invoke("gmail.send", approval_id=approval)
     first = await ctx.invoke("gmail.send", approval_id=approval)
     assert first["status"] == "logged"
+    # at most once: the registry refuses a second run, and a step re-running after a restart gets the
+    # recorded result back instead of sending again
     with pytest.raises(AlreadyExecuted):
-        await ctx.invoke("gmail.send", approval_id=approval)
+        await services.tools.invoke(ctx, "gmail.send", {}, approval_id=approval)
+    again = await ctx.invoke("gmail.send", approval_id=approval)
+    assert again["already_done"] is True and again["status"] == "logged"
 
 
 async def test_database_refuses_forged_decisions(world, services):

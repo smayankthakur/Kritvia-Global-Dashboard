@@ -28,3 +28,23 @@ What keeps it safe (see app.py and guard.py):
 
 Tests: `PLAYWRIGHT_BROWSERS_PATH=... python -m pytest services/browser/tests` (pip install -r
 requirements.txt pytest pytest-asyncio httpx; `playwright install chromium`).
+
+## Production layout (test report round 2: S5, S10)
+
+Three containers from this image (infra/docker-compose.yml, profile `browser`, started by deploy.sh only when
+`.env` has `BROWSER_TOKEN` and `BROWSER_RUNTIME=runsc`):
+
+- `browser-chromium`: Chromium under gVisor on the internal `browser-internal` network, with no route anywhere.
+  Each session's proxy checks names by their text and tunnels every connection to `browser-egress`
+  (`BROWSER_EGRESS`, token `BROWSER_EGRESS_TOKEN` = `BROWSER_TOKEN`). Chromium's own sandbox is on; under gVisor
+  it falls back to gVisor's isolation only if the sandbox can't start there.
+- `browser-egress` (`python guard.py egress 8401`): the only way out. CONNECT only, with the token, to public
+  addresses it resolves and checks itself, connecting to the checked address.
+- `browser` (`python guard.py relay 8200 browser-chromium 8200`): the door from the stack's network, so
+  `BROWSER_URL=http://browser:8200` is unchanged and the API, workers, database and cache are never on
+  Chromium's network.
+
+An approved submit carries the form's fingerprint (action, method, hidden-field names, recorded when the card
+was made); if the page's form differs, nothing is sent. While the approved values are typed in, the page may
+reach only its own site and the form's target, script requests and WebSockets elsewhere are refused, and one
+form navigation may send data.

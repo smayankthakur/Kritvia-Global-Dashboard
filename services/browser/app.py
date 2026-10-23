@@ -8,6 +8,13 @@ submit: Chromium's own requests other than GET/HEAD/OPTIONS are refused, so a cl
 place an order or post anything. Password, card, OTP and similar fields are never filled. Sessions end
 after IDLE_S without use or MAX_LIFE_S in all, and after MAX_ACTIONS actions.
 
+An approved submit (test report S10) is tied to the form the person approved: its action address, method and
+hidden-field names are recorded on the approval and must be the same when the page is opened again, or nothing
+is sent. Once the approved values are being typed in, the page may only reach its own site and the form's
+target, script requests (fetch, XHR, beacons, WebSockets) to anywhere else are refused, and exactly one
+form navigation may send data. Chromium's own sandbox is on; it is switched off only under gVisor if it can't
+start there (gVisor's user-space kernel then isolates the browser from the host instead).
+
 Endpoints (bearer BROWSER_TOKEN; internal network only):
   POST   /sessions                    {}                         -> {id}
   POST   /sessions/{id}/goto          {url}                      -> page
@@ -71,6 +78,9 @@ class Session:
     notes: list[str] = field(default_factory=list)
     last: dict[int, dict[str, Any]] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    allowed: set[str] | None = None        # an approved submit, once values are typed in: the sites it may reach
+    action_origin: str | None = None
+    posts_left: int = 0
 
 
 _pw: Any = None
@@ -98,9 +108,18 @@ async def _chromium():
                     "--disable-component-update", "--disable-domain-reliability", "--metrics-recording-only",
                     "--disable-features=Translate,MediaRouter,OptimizationHints,InterestFeedContentSuggestions",
                     "--deny-permission-prompts"]
-            _browser = await _pw.chromium.launch(
-                headless=True, args=args,
-                chromium_sandbox=os.environ.get("BROWSER_CHROMIUM_SANDBOX", "0") == "1")
+            want = os.environ.get("BROWSER_CHROMIUM_SANDBOX", "1") == "1"
+            try:
+                _browser = await _pw.chromium.launch(headless=True, args=args, chromium_sandbox=want)
+            except Exception:
+                # Chromium's sandbox needs kernel features gVisor may not offer; under gVisor the browser is
+                # still kept off the host's kernel, so it starts without it there and nowhere else.
+                if not want or os.environ.get("BROWSER_RUNTIME", "") != "runsc":
+                    raise
+                import logging
+                logging.getLogger("kritvia.browser").warning(
+                    "Chromium's sandbox couldn't start under gVisor; running with gVisor's isolation only")
+                _browser = await _pw.chromium.launch(headless=True, args=args, chromium_sandbox=False)
     return _browser
 
 
@@ -137,11 +156,30 @@ async def _open(writes: bool) -> Session:
     page = await context.new_page()
     s = Session(id=uuid.uuid4().hex, writes=writes, proxy=proxy, context=context, page=page)
 
+    def refuse(why: str) -> None:
+        if why not in s.refused:
+            s.refused.append(why)
+            del s.refused[:-10]
+
     async def route(r) -> None:
         req = r.request
         if req.resource_type in SKIP_TYPES:
             await r.abort("blockedbyclient")
             return
+        if s.allowed is not None:      # an approved form is being filled in and sent
+            origin = _origin(req.url)
+            if origin not in s.allowed:
+                refuse(f"while sending the form the page tried to reach {origin[:80]}; refused")
+                await r.abort("blockedbyclient")
+                return
+            if req.method.upper() not in READ_METHODS:
+                if s.posts_left <= 0 or req.resource_type != "document" or origin != s.action_origin:
+                    refuse(f"the page tried to send data another way ({req.method} {req.resource_type}); refused")
+                    await r.abort("blockedbyclient")
+                    return
+                s.posts_left -= 1
+                await r.continue_()
+                return
         try:      # Chromium never sends loopback through a proxy, so addresses are checked here too
             check_url(req.url)
         except Blocked as exc:
@@ -150,16 +188,24 @@ async def _open(writes: bool) -> Session:
                 del s.refused[:-10]
             await r.abort("blockedbyclient")
             return
-        if req.method.upper() not in READ_METHODS and not s.writes:
-            why = f"the page tried to send data ({req.method} to {req.url.split('?')[0][:120]}); sending needs a yes"
-            if why not in s.refused:
-                s.refused.append(why)
-                del s.refused[:-10]
+        if req.method.upper() not in READ_METHODS:
+            # Read-only sessions never send; an approved submit sends only after its form was checked (above).
+            refuse(f"the page tried to send data ({req.method} to {req.url.split('?')[0][:120]}); sending needs a yes")
             await r.abort("blockedbyclient")
             return
         await r.continue_()
 
     await context.route("**/*", route)
+
+    async def websocket(ws) -> None:
+        if s.allowed is not None and _origin(ws.url.replace("ws", "http", 1)) not in s.allowed:
+            refuse("while sending the form the page tried to open a live connection; refused")
+            await ws.close()
+            return
+        ws.connect_to_server()
+
+    with contextlib.suppress(AttributeError):          # Playwright 1.48+: WebSockets pass the same checks
+        await context.route_web_socket("**/*", websocket)
 
     def on_page(p) -> None:     # a link that opens a new tab: carry on in the new tab
         s.page = p
@@ -239,10 +285,39 @@ class FieldIn(BaseModel):
     kind: Literal["fill", "select", "check"] = "fill"
 
 
+class FormPin(BaseModel):
+    """What the approved form sends to: recorded when the card was made, checked again before sending."""
+    action: str | None = Field(default=None, max_length=2000)
+    method: str | None = Field(default=None, max_length=10)
+    hidden: list[str] = Field(default_factory=list, max_length=60)
+
+
 class SubmitIn(BaseModel):
     url: str = Field(min_length=4, max_length=2000)
     fields: list[FieldIn] = Field(default_factory=list, max_length=30)
     button: str = Field(min_length=1, max_length=600)
+    form: FormPin | None = None
+
+
+FORM_PIN_JS = """(el) => {
+  const f = el.form || el.closest('form');
+  if (!f) return {action: null, method: null, hidden: []};
+  const action = el.getAttribute('formaction') ? el.formAction : (f.action || location.href);
+  const method = ((el.getAttribute('formmethod') ? el.formMethod : f.method) || 'get').toLowerCase();
+  const hidden = Array.from(f.querySelectorAll('input[type=hidden]')).map((i) => i.name).filter(Boolean).sort();
+  return {action, method, hidden};
+}"""
+
+
+def _origin(url: str) -> str:
+    from urllib.parse import urlsplit
+    try:
+        u = urlsplit(url)
+        port = u.port
+    except ValueError:
+        return ""
+    default = {"http": 80, "https": 443}.get(u.scheme)
+    return f"{u.scheme}://{(u.hostname or '').lower()}" + (f":{port}" if port and port != default else "")
 
 
 SENSITIVE_CHECK = """(el) => {
@@ -349,11 +424,24 @@ async def submit(body: SubmitIn, authorization: str | None = Header(default=None
         url = check_url(body.url)
     except Blocked as exc:
         raise HTTPException(422, str(exc)) from None
+    if body.form is None:
+        raise HTTPException(409, "this form was approved before forms were checked; approve it again")
     s = await _open(writes=True)
     try:
         page = s.page
         await page.goto(url, wait_until="domcontentloaded")
         await _settle(page)
+        button = page.locator(body.button).first
+        if await button.count() == 0:
+            raise HTTPException(409, "the form's button isn't there any more; nothing was sent")
+        now = FormPin(**(await button.evaluate(FORM_PIN_JS)))
+        if (now.action, (now.method or ""), sorted(now.hidden)) != (body.form.action, (body.form.method or ""),
+                                                                   sorted(body.form.hidden)):
+            raise HTTPException(409, "the form has changed since it was approved (where it sends, or its hidden"
+                                     " fields); nothing was sent")
+        s.action_origin = _origin(now.action or page.url)
+        s.allowed = {_origin(page.url), s.action_origin}
+        s.posts_left = 1 if (now.method or "get") != "get" else 0
         for f in body.fields:
             loc = page.locator(f.selector).first
             if await loc.count() == 0:
@@ -365,9 +453,6 @@ async def submit(body: SubmitIn, authorization: str | None = Header(default=None
                 await loc.set_checked(bool(f.value))
             else:
                 await loc.fill(str(f.value))
-        button = page.locator(body.button).first
-        if await button.count() == 0:
-            raise HTTPException(409, "the form's button isn't there any more; nothing was sent")
         await button.click()
         await _settle(s.page)
         out = await _snapshot(s)

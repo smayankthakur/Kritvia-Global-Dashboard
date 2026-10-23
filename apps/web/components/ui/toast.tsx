@@ -5,17 +5,24 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { cn } from "./cn";
 
 type ToastTone = "success" | "error" | "info";
+/** A button on the toast, e.g. "Undo" right after a one-tap action. */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface ToastItem {
   id: number;
   tone: ToastTone;
   title: string;
   description?: string;
+  action?: ToastAction;
 }
 
 interface ToastApi {
-  success: (title: string, description?: string) => void;
+  success: (title: string, description?: string, action?: ToastAction) => void;
   error: (title: string, description?: string) => void;
-  info: (title: string, description?: string) => void;
+  info: (title: string, description?: string, action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<ToastApi | null>(null);
@@ -25,18 +32,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const next = useRef(1);
   const dismiss = useCallback((id: number) => setItems((xs) => xs.filter((x) => x.id !== id)), []);
   const push = useCallback(
-    (tone: ToastTone, title: string, description?: string) => {
+    (tone: ToastTone, title: string, description?: string, action?: ToastAction) => {
       const id = next.current++;
-      setItems((xs) => [...xs.slice(-3), { id, tone, title, description }]);
-      setTimeout(() => dismiss(id), tone === "error" ? 8000 : 4500);
+      setItems((xs) => [...xs.slice(-3), { id, tone, title, description, action }]);
+      // A toast with an Undo stays long enough to reach it on a phone.
+      setTimeout(() => dismiss(id), tone === "error" || action ? 8000 : 4500);
     },
     [dismiss],
   );
   const api = useMemo<ToastApi>(
     () => ({
-      success: (t, d) => push("success", t, d),
+      success: (t, d, a) => push("success", t, d, a),
       error: (t, d) => push("error", t, d),
-      info: (t, d) => push("info", t, d),
+      info: (t, d, a) => push("info", t, d, a),
     }),
     [push],
   );
@@ -67,6 +75,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <p className="text-sm font-medium">{t.title}</p>
                 {t.description ? <p className="mt-0.5 text-xs break-words text-muted">{t.description}</p> : null}
               </div>
+              {t.action ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    t.action!.onClick();
+                    dismiss(t.id);
+                  }}
+                  className="shrink-0 rounded-md px-2 py-0.5 text-sm font-medium text-accent transition-colors hover:bg-surface-2"
+                >
+                  {t.action.label}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => dismiss(t.id)}

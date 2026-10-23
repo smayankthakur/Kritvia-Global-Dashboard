@@ -6,6 +6,7 @@ paid when a bank debit matches; it never pays anything by itself.
   POST   /ventures/{v}/bills/read            read a bill's photo or PDF: the fields come back for a person to check
   PATCH  /ventures/{v}/bills/{id}            change it, or cancel it
   POST   /ventures/{v}/bills/{id}/paid       record that it was paid (date, amount, reference)
+  POST   /ventures/{v}/bills/{id}/reopen     undo paid or cancelled (a mis-tap); its bank line can be matched again
   DELETE /ventures/{v}/bills/{id}            admins
 
 The same supplier's bill number twice is refused: that is a double bill.
@@ -241,6 +242,31 @@ async def bill_paid(venture_id: uuid.UUID, bill_id: uuid.UUID, body: PaidIn, db:
         f" RETURNING {COLS}"),
         {"a": amount, "d": body.paid_on or today_ist(), "r": (body.reference or "").strip() or None,
          "id": bill_id})).first()
+    return _out(r)
+
+
+@router.post("/ventures/{venture_id}/bills/{bill_id}/reopen", response_model=SupplierBillOut)
+async def reopen_bill(venture_id: uuid.UUID, bill_id: uuid.UUID, db: TenantDB) -> SupplierBillOut:
+    """Undoes "paid" or "cancelled": the bill is open again, with nothing paid on it. A bank line that
+    recorded the payment goes back to the bank tab to be matched again. For a mis-tap, or a payment
+    that bounced."""
+    cur = await _one(db, venture_id, bill_id)
+    await can_write(db, venture_id)
+    if cur.status == "open":
+        return _out(cur)
+    await db.execute(text(
+        "UPDATE bank_lines SET state = 'unmatched', match_kind = NULL, match_id = NULL, confidence = NULL,"
+        " decided_by = NULL, decided_at = NULL"
+        " WHERE venture_id = :v AND state = 'confirmed' AND match_kind = 'bill' AND match_id = :id"),
+        {"v": venture_id, "id": bill_id})
+    try:
+        async with db.begin_nested():
+            r = (await db.execute(text(
+                "UPDATE bills SET status = 'open', paid_paise = 0, paid_on = NULL, paid_ref = NULL, bank_line_id = NULL,"
+                f" updated_at = now() WHERE id = :id AND venture_id = :v RETURNING {COLS}"),
+                {"id": bill_id, "v": venture_id})).first()
+    except DBAPIError as exc:
+        _db_error(exc)
     return _out(r)
 
 

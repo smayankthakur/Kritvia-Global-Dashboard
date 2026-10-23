@@ -3,11 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Plus } from "lucide-react";
 import { useState } from "react";
-import { paiseToInput, rupees, toPaise } from "@/components/invoices/money";
+import { amountProblem, paiseToInput, rupees, toPaiseOrZero } from "@/components/invoices/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
@@ -22,6 +22,8 @@ const STATUS_LABEL: Record<Status, string> = { present: "Present", half_day: "Ha
 
 function StaffDialog({ ventureId, staff, onClose }: { ventureId: string; staff: Staff | null; onClose: () => void }) {
   const qc = useQueryClient();
+  const toast = useToast();
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [f, setF] = useState({
     name: staff?.name ?? "",
     phone: staff?.phone ? `+${staff.phone}` : "",
@@ -36,7 +38,7 @@ function StaffDialog({ ventureId, staff, onClose }: { ventureId: string; staff: 
     phone: f.phone.trim() || null,
     role: f.role.trim() || null,
     pay_kind: f.pay_kind,
-    pay_paise: f.pay.trim() ? (toPaise(f.pay) ?? 0) : 0,
+    pay_paise: f.pay.trim() ? (toPaiseOrZero(f.pay) ?? 0) : 0,
     starts_at: `${f.starts_at}:00`,
   });
   const save = useMutation({
@@ -54,10 +56,16 @@ function StaffDialog({ ventureId, staff, onClose }: { ventureId: string; staff: 
   const leave = useMutation({
     mutationFn: () => unwrap(api.PATCH("/ventures/{venture_id}/staff/{staff_id}", { params: { path: { venture_id: ventureId, staff_id: staff!.id } }, body: { active: !staff!.active } })),
     onSuccess: () => {
+      toast.success(staff!.active ? `${staff!.name} is marked as left` : `${staff!.name} is back on the team`);
       void qc.invalidateQueries({ queryKey: ["staff", ventureId] });
       onClose();
     },
+    onError: (e) => {
+      setConfirmLeave(false);
+      setErr(errorMessage(e));
+    },
   });
+  const payError = amountProblem(f.pay, { zero: true });
   return (
     <Dialog
       open
@@ -67,11 +75,11 @@ function StaffDialog({ ventureId, staff, onClose }: { ventureId: string; staff: 
       footer={
         <>
           {staff ? (
-            <Button variant="ghost" loading={leave.isPending} onClick={() => leave.mutate()}>
+            <Button variant="ghost" loading={leave.isPending} onClick={() => (staff.active ? setConfirmLeave(true) : leave.mutate())}>
               {staff.active ? "Has left" : "Back on the team"}
             </Button>
           ) : null}
-          <Button variant="primary" loading={save.isPending} disabled={!f.name.trim()} onClick={() => save.mutate()}>
+          <Button variant="primary" loading={save.isPending} disabled={!f.name.trim() || Boolean(payError)} onClick={() => save.mutate()}>
             Save
           </Button>
         </>
@@ -96,11 +104,23 @@ function StaffDialog({ ventureId, staff, onClose }: { ventureId: string; staff: 
             <option value="daily">Per day</option>
           </Select>
         </Field>
-        <Field label="Pay (₹)">
+        <Field label="Pay (₹)" error={payError}>
           <Input value={f.pay} onChange={(e) => setF({ ...f, pay: e.target.value })} inputMode="decimal" />
         </Field>
       </div>
       <FormError message={err} />
+      {staff ? (
+        <ConfirmDialog
+          open={confirmLeave}
+          onClose={() => setConfirmLeave(false)}
+          onConfirm={() => leave.mutate()}
+          loading={leave.isPending}
+          danger={false}
+          title={`Has ${staff.name} left?`}
+          description="Their IN/OUT messages stop counting and they drop out of salaries from now on. Past attendance stays. You can bring them back."
+          confirmLabel="Yes, has left"
+        />
+      ) : null}
     </Dialog>
   );
 }

@@ -13,7 +13,8 @@ const MAX_AGE = 5 * 60;
 
 function headersFor(req: Request): Record<string, string> {
   const h: Record<string, string> = { "content-type": "application/json" };
-  for (const k of ["user-agent", "cf-connecting-ip", "x-forwarded-for"]) {
+  // cf-ipcountry / cf-ipcity: Cloudflare's guess of where the device is, shown to the person approving (S13).
+  for (const k of ["user-agent", "cf-connecting-ip", "x-forwarded-for", "cf-ipcountry", "cf-ipcity"]) {
     const v = req.headers.get(k);
     if (v) h[k] = v;
   }
@@ -63,10 +64,10 @@ export async function startRequest(req: Request, doFetch: typeof fetch = fetch):
   if (!res) return unreachable();
   const text = await res.text();
   if (!res.ok) return passThrough(res, text);
-  const r = JSON.parse(text) as { token: string; secret: string; url: string; expires_at: string };
+  const r = JSON.parse(text) as { token: string; secret: string; url: string; expires_at: string; match: string };
   const headers = new Headers({ "content-type": "application/json", "cache-control": "no-store" });
   headers.append("set-cookie", linkCookie(r.secret));
-  return new Response(JSON.stringify({ token: r.token, url: r.url, expires_at: r.expires_at }), { status: 201, headers });
+  return new Response(JSON.stringify({ token: r.token, url: r.url, expires_at: r.expires_at, match: r.match }), { status: 201, headers });
 }
 
 /** A new device scanned a computer's QR code. */
@@ -78,10 +79,10 @@ export async function claimOffer(req: Request, doFetch: typeof fetch = fetch): P
   if (!res) return unreachable();
   const text = await res.text();
   if (!res.ok) return passThrough(res, text);
-  const r = JSON.parse(text) as { secret: string; device: string };
+  const r = JSON.parse(text) as { secret: string; device: string; match: string };
   const headers = new Headers({ "content-type": "application/json", "cache-control": "no-store" });
   headers.append("set-cookie", linkCookie(r.secret));
-  return new Response(JSON.stringify({ device: r.device }), { status: 200, headers });
+  return new Response(JSON.stringify({ device: r.device, match: r.match }), { status: 200, headers });
 }
 
 /** What a scanned code is (an offer to sign this device in, or a login page asking). */

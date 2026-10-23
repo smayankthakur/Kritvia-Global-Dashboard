@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { CheckCircle2, CreditCard, Lock, Smartphone } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { LanguageSwitch } from "@/components/i18n/language";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
@@ -16,13 +17,19 @@ function Shell({ business, children }: { business?: string; children: React.Reac
   return (
     <main id="main" className="flex min-h-dvh flex-col items-center bg-bg px-4 py-10">
       <div className="w-full max-w-md">
+        <div className="mb-2 flex justify-end">
+          <LanguageSwitch />
+        </div>
         <div className="mb-6 text-center">
-          <p className="text-lg font-semibold tracking-tight">{business ?? "Payment"}</p>
+          <p className="text-lg font-semibold tracking-tight" translate={business ? "no" : undefined}>
+            {business ?? "Payment"}
+          </p>
           <p className="text-sm text-muted">Invoice payment</p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-6 shadow-card">{children}</div>
         <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-subtle">
-          <Lock className="h-3.5 w-3.5" aria-hidden /> You pay {business ?? "the business"} directly. This page is provided by Kritvia.
+          <Lock className="h-3.5 w-3.5" aria-hidden />
+          {business ? `You pay ${business} directly. This page is provided by Kritvia.` : "You pay the business directly. This page is provided by Kritvia."}
         </p>
       </div>
     </main>
@@ -70,7 +77,7 @@ export default function PayPage() {
           <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
           <p className="text-lg font-semibold">Paid. Thank you!</p>
           <p className="text-sm text-muted">
-            {d.number ? `Invoice ${d.number}` : "This invoice"} for {d.amount_text} is settled.
+            {d.number ? `Invoice ${d.number} for ${d.amount_text} is settled.` : `This invoice for ${d.amount_text} is settled.`}
           </p>
         </div>
       </Shell>
@@ -82,10 +89,10 @@ export default function PayPage() {
       <div className="space-y-5">
         <div className="text-center">
           <p className="text-sm text-muted">
-            {d.number ? `Invoice ${d.number} · ` : ""}for {d.customer_name}
+            {d.number ? `Invoice ${d.number} for ${d.customer_name}` : `Invoice for ${d.customer_name}`}
           </p>
           <p className="mt-1 text-3xl font-semibold tabular-nums">{d.amount_text}</p>
-          <p className="text-sm text-muted">Due {formatDate(d.due_on)}</p>
+          <p className="text-sm text-muted">{`Due ${formatDate(d.due_on)}`}</p>
           <a className="mt-1 inline-block text-sm font-medium text-accent underline underline-offset-2" href={`/pay/${token}/invoice`}>
             View the invoice
           </a>

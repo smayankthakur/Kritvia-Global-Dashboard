@@ -17,6 +17,7 @@ MAIL_TRANSPORT:
 from __future__ import annotations
 
 import asyncio
+import re
 import logging
 import smtplib
 import ssl
@@ -30,6 +31,14 @@ log = logging.getLogger("kritvia.mailer")
 
 LONG_HEADERS = _email_policy.default.clone(max_line_length=998)
 
+
+
+_SECRETISH = re.compile(r"\b\d{6}\b|https?://\S*(?:token|code|link|invite|reset|unsubscribe)\S*", re.I)
+
+
+def _mask(body: str) -> str:
+    """A body for the log: sign-in codes and links that carry a token are replaced."""
+    return _SECRETISH.sub("[hidden]", body)
 
 class MailError(Exception):
     pass
@@ -58,9 +67,17 @@ class Mailer:
     async def send(self, to: str, subject: str, body: str, *, unsubscribe_url: str | None = None,
                    one_click_url: str | None = None) -> None:
         """unsubscribe_url: the page linked in the email; one_click_url: where mail apps POST
-        "List-Unsubscribe=One-Click" (defaults to unsubscribe_url)."""
+        "List-Unsubscribe=One-Click" (defaults to unsubscribe_url). Addresses that hard-bounced or
+        complained (SES feedback, routers/ses_feedback.py) are skipped: sending to them gets Kritvia's
+        whole SES account suspended, sign-in codes included."""
+        if await _suppressed(to):
+            log.info("not sending to a suppressed address (bounced or complained)")
+            return
         msg = EmailMessage(policy=LONG_HEADERS)   # long URLs in List-Unsubscribe stay plain (no RFC 2047 encoding)
         msg["From"], msg["To"], msg["Subject"] = self.sender, to, subject
+        from kritvia_api.config import get_settings
+        if get_settings().support_email:
+            msg["Reply-To"] = get_settings().support_email      # replies reach a person, not no-reply@
         if unsubscribe_url:
             msg["List-Unsubscribe"] = f"<{one_click_url or unsubscribe_url}>"
             msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
@@ -68,9 +85,19 @@ class Mailer:
         if self.transport == "memory":
             self.outbox.append(msg)
         elif self.transport == "log":
-            log.warning("MAIL_TRANSPORT=log, not sent. To %s — %s\n%s", to, subject, body)
+            # Development only (production refuses MAIL_TRANSPORT=log): codes and links are masked anyway.
+            log.warning("MAIL_TRANSPORT=log, not sent. To %s — %s\n%s", to, subject, _mask(body))
         else:
-            await asyncio.to_thread(self._smtp, msg)
+            # A passing SMTP problem (a dropped connection, a 4xx "try later") is tried twice more; a
+            # permanent refusal (5xx) isn't.
+            for attempt in range(3):
+                try:
+                    await asyncio.to_thread(self._smtp, msg)
+                    return
+                except _Transient:
+                    if attempt == 2:
+                        raise MailError("could not send email: the mail server is not answering; try again") from None
+                    await asyncio.sleep(2 if attempt == 0 else 6)
 
     def _smtp(self, msg: EmailMessage) -> None:
         if not self.host:
@@ -86,8 +113,29 @@ class Mailer:
                 if self.username:
                     conn.login(self.username, self.password)
                 conn.send_message(msg)
+        except smtplib.SMTPResponseException as exc:
+            if 400 <= exc.smtp_code < 500:
+                raise _Transient() from None
+            raise MailError(f"could not send email: {exc.__class__.__name__}") from None
+        except (smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError, TimeoutError, ConnectionError):
+            raise _Transient() from None
         except (OSError, smtplib.SMTPException) as exc:
             raise MailError(f"could not send email: {exc.__class__.__name__}") from None
+
+
+class _Transient(Exception):
+    """A passing SMTP problem: worth another try."""
+
+
+async def _suppressed(address: str) -> bool:
+    try:
+        from sqlalchemy import text
+
+        from kritvia_api.db.session import tenant_tx
+        async with tenant_tx(None, "system") as conn:
+            return bool((await conn.execute(text("SELECT private.email_suppressed(:a)"), {"a": address})).scalar())
+    except Exception:  # noqa: BLE001 - the database being down never stops a sign-in code
+        return False
 
 
 def email_footer(unsubscribe_url: str | None = None) -> str:

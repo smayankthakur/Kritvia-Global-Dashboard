@@ -41,6 +41,7 @@ log = logging.getLogger("kritvia.runner")
 STATE_PURPOSE = "workflow_runs.state"
 PAYLOAD_PURPOSE = "approvals.payload"
 LEASE = timedelta(minutes=10)
+MAX_RECLAIMS = 3          # a step that stops this many times without finishing fails the run
 PENDING = "__pending_approval"
 
 
@@ -127,7 +128,11 @@ async def start_run(
              "by": actor_user_id if actor_type == "user" else None,
              "df": delegated_from})
     if dispatch:
-        await services.dispatcher.enqueue_run(run_id)
+        try:
+            await services.dispatcher.enqueue_run(run_id)
+        except Exception:  # noqa: BLE001 - the run is saved as queued: the sweeper starts it once the queue is back
+            log.warning("run %s saved but not queued (queue unavailable); the sweeper will start it", run_id,
+                        exc_info=True)
     return run_id
 
 
@@ -208,7 +213,10 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
                 return "completed"
 
             if isinstance(result, Interrupt):
-                auto = await _create_approval(ctx, state, step_name, result)
+                # The card and the run's 'waiting' state are written in one transaction (with the card
+                # reused if this step already made one), so a crash can't leave a card whose yes wakes
+                # nothing, or two cards for one draft.
+                auto = await _create_approval(ctx, state, step_name, result, step_count=step_count)
                 if auto:
                     await _log_step(ctx, step_name, "ok", started,
                                     note=(note or "") + " [auto-approved: earned autonomy]")
@@ -216,13 +224,22 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
                     await _checkpoint(ctx, state, step_name, step_count)
                     continue
                 await _log_step(ctx, step_name, "interrupted", started, note=note or "awaiting approval")
-                await _park(ctx, state, result.resume, step_count)
                 return "waiting"
 
             raise TypeError(f"step {step_name} returned {type(result).__name__}, not a StepResult")
     except LeaseLost:
         log.warning("run %s: lease lost, abandoning", run_id)
         return None
+    except asyncio.CancelledError:
+        # The job ran out of time, or the worker is stopping (a deploy). CancelledError isn't an Exception,
+        # so nothing below sees it: give the run back at once (the sweeper re-queues it and counts the
+        # attempt; after MAX_RECLAIMS it fails instead of looping), then let the cancellation through.
+        log.warning("run %s stopped at %s (timed out or worker stopping)", run_id, step_name)
+        try:
+            await asyncio.shield(_release(ctx))
+        except Exception:  # noqa: BLE001 - the lease expires by itself within LEASE
+            log.exception("could not release run %s", run_id)
+        raise
     except AgentBudgetExceeded as exc:
         # Not a failure: the owner capped this agent. Park on the same step so a retry
         # (or next month) picks it up where it stopped, and say so on the board.
@@ -311,10 +328,19 @@ async def _write_state(ctx: RunContext, conn, state: dict[str, Any], sets: str, 
         raise LeaseLost()
 
 
+async def _release(ctx: RunContext) -> None:
+    """Hands a running run back (its lease ends now); the sweeper re-queues it within a minute."""
+    async with ctx.tx("runtime") as conn:
+        await conn.execute(text(
+            "UPDATE workflow_runs SET lease_until = now() - interval '1 second', updated_at = now()"
+            " WHERE id = :id AND lease_owner = :w AND status = 'running'"),
+            {"id": ctx.run_id, "w": ctx.services.worker_id})
+
+
 async def _checkpoint(ctx: RunContext, state, step: str, step_count: int) -> None:
     async with ctx.tx("runtime") as conn:
         await _write_state(ctx, conn, state,
-                           "current_step = :s, step_count = :n, lease_until = now() + :lease,"
+                           "current_step = :s, step_count = :n, lease_until = now() + :lease, reclaims = 0,"
                            " summary = CAST(:sum AS jsonb)",
                            {"s": step, "n": step_count, "lease": LEASE,
                             "sum": json.dumps(state.get("summary", {}), default=str)})
@@ -370,8 +396,9 @@ async def _log_step(ctx: RunContext, step: str, status: str, started: float, *,
              "d": int((time.perf_counter() - started) * 1000)})
 
 
-async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrupt) -> bool:
-    """Insert the approval. Returns True if it was auto-approved (earned autonomy)."""
+async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrupt, *, step_count: int) -> bool:
+    """Insert the approval (or reuse the one this step already made) and, unless it is auto-approved
+    (earned autonomy), park the run as waiting in the same transaction. Returns True if auto-approved."""
     req = it.request
     cap = ctx.services.tools.capability(req.action)
     if cap.value not in ("write", "send"):
@@ -391,32 +418,49 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
                 auto = False
                 await security_event("ai.autonomy_withheld", "warning", org_id=ctx.org_id, workflow=ctx.workflow,
                                      action=req.action, reasons=",".join(reasons) or "run flagged")
-        payload_enc = await ctx.crypto(conn).encrypt(ctx.venture_id, PAYLOAD_PURPOSE,
-                                                     json.dumps(req.payload, default=str))
-        approval_id = (await conn.execute(
-            text("INSERT INTO approvals (org_id, venture_id, run_id, step, agent, action, capability, title,"
-                 " summary, payload_enc, required_roles, sensitive, status, expires_at)"
-                 " VALUES (:o, :v, :r, :s, :a, :t, :c, :ti, :su, :p, :rr, :se, :st,"
-                 " CASE WHEN CAST(:exp AS int) IS NULL THEN NULL"
-                 "      ELSE now() + make_interval(hours => CAST(:exp AS int)) END)"
-                 " RETURNING id"),
-            {"o": ctx.org_id, "v": ctx.venture_id, "r": ctx.run_id, "s": step, "a": req.agent,
-             "t": req.action, "c": cap.value, "ti": req.title[:300], "su": req.summary[:2000],
-             "p": payload_enc, "rr": list(req.required_roles), "se": req.sensitive,
-             "st": "auto_approved" if auto else "pending", "exp": req.expires_in_hours})).scalar_one()
-    if auto:
-        state[req.key] = {"status": "auto_approved", "approval_id": str(approval_id), "payload": req.payload,
-                          "comment": None}
-    else:
-        state[PENDING] = {"approval_id": str(approval_id), "key": req.key, "resume": it.resume,
-                          "on_reject": it.on_reject}
-        # Tell the people who can decide (push, and the business's Slack channel); never let a
-        # notification problem touch the run.
+        existing = None
+        if not auto:
+            # This step already made a card that is still waiting (it ran again after a restart): use it.
+            existing = (await conn.execute(
+                text("SELECT id FROM approvals WHERE run_id = :r AND step = :s AND action = :t AND status = 'pending'"
+                     " ORDER BY created_at DESC LIMIT 1"),
+                {"r": ctx.run_id, "s": step, "t": req.action})).scalar()
+        if existing is not None:
+            approval_id = existing
+        else:
+            payload_enc = await ctx.crypto(conn).encrypt(ctx.venture_id, PAYLOAD_PURPOSE,
+                                                         json.dumps(req.payload, default=str))
+            approval_id = (await conn.execute(
+                text("INSERT INTO approvals (org_id, venture_id, run_id, step, agent, action, capability, title,"
+                     " summary, payload_enc, required_roles, sensitive, status, expires_at)"
+                     " VALUES (:o, :v, :r, :s, :a, :t, :c, :ti, :su, :p, :rr, :se, :st,"
+                     " CASE WHEN CAST(:exp AS int) IS NULL THEN NULL"
+                     "      ELSE now() + make_interval(hours => CAST(:exp AS int)) END)"
+                     " RETURNING id"),
+                {"o": ctx.org_id, "v": ctx.venture_id, "r": ctx.run_id, "s": step, "a": req.agent,
+                 "t": req.action, "c": cap.value, "ti": req.title[:300], "su": req.summary[:2000],
+                 "p": payload_enc, "rr": list(req.required_roles), "se": req.sensitive,
+                 "st": "auto_approved" if auto else "pending", "exp": req.expires_in_hours})).scalar_one()
+        if auto:
+            state[req.key] = {"status": "auto_approved", "approval_id": str(approval_id), "payload": req.payload,
+                              "comment": None}
+        else:
+            state[PENDING] = {"approval_id": str(approval_id), "key": req.key, "resume": it.resume,
+                              "on_reject": it.on_reject}
+            await _write_state(ctx, conn, state,
+                               "status = 'waiting', current_step = :s, step_count = :n, lease_owner = NULL,"
+                               " lease_until = NULL, reclaims = 0, summary = CAST(:sum AS jsonb)",
+                               {"s": it.resume, "n": step_count,
+                                "sum": json.dumps(state.get("summary", {}), default=str)})
+            await _move_ticket(conn, ctx, "waiting_approval", None)
+    if not auto and existing is None:
+        # Tell the people who can decide (push, and the business's Slack channel), once the card is
+        # committed; never let a notification problem touch the run.
         push.also_slack(ctx.venture_id, title="A draft needs your yes", body=req.title, path=f"/inbox?id={approval_id}")
         # ...and, with buttons, in the Telegram chats and Slack DMs of team members who linked them.
         from kritvia_api.services import chat_approvals
         chat_approvals.announce(ctx.venture_id, approval_id, title=req.title, summary=req.summary,
-                                payload=req.payload, sensitive=req.sensitive)
+                                payload=req.payload, sensitive=req.sensitive, agent=req.agent, action=req.action)
         if push.enabled():
             asyncio.get_running_loop().create_task(_notify(approval_id, req.title, ctx.venture_id, req.agent))
     return auto
@@ -473,7 +517,7 @@ async def retry_run(user_id: uuid.UUID, run_id: uuid.UUID, services: Services) -
     parked because its agent's budget was used up."""
     async with tenant_tx(user_id) as conn:
         res = await conn.execute(
-            text("UPDATE workflow_runs SET status = 'queued', error = NULL, finished_at = NULL,"
+            text("UPDATE workflow_runs SET status = 'queued', error = NULL, finished_at = NULL, reclaims = 0,"
                  " summary = summary - 'blocked', updated_at = now()"
                  " WHERE id = :id AND (status = 'failed' OR (status = 'waiting' AND summary ? 'blocked'))"),
             {"id": run_id})
@@ -507,9 +551,12 @@ async def resume_budget_paused(services: Services, conn=None, venture_id: uuid.U
 
 
 async def sweep(services: Services, limit: int = 50) -> int:
-    """Re-dispatch queued runs and runs whose worker lease expired."""
+    """Re-dispatch queued runs and runs whose worker lease expired. An expired run goes back to 'queued'
+    and the attempt is counted; one whose step stopped MAX_RECLAIMS times in a row (it keeps running out
+    of time, or the worker keeps dying on it) is failed with a clear message instead of looping forever."""
     async with tenant_tx(None, "system") as conn:
-        rows = (await conn.execute(text("SELECT run_id FROM private.runnable_runs(:l)"), {"l": limit})).all()
+        rows = (await conn.execute(text("SELECT run_id FROM private.reclaim_runs(:l, :m)"),
+                                   {"l": limit, "m": MAX_RECLAIMS})).all()
     for r in rows:
         await services.dispatcher.enqueue_run(r.run_id)
     return len(rows)

@@ -58,8 +58,7 @@ export function GstTab({ ventureId, initialMonth }: { ventureId: string; initial
                 <Stat label="Due by" value={formatDate(d.due_on)} hint="monthly filers" />
               </StatGrid>
               <p className="mt-3 text-xs text-subtle">
-                {d.totals.b2b ?? 0} to registered buyers (B2B), {d.totals.b2cl ?? 0} large inter-state B2C, {d.totals.b2cs_rows ?? 0} B2C summary
-                row(s), {d.totals.hsn_rows ?? 0} HSN row(s). GSTIN {d.gstin}.
+                {`${d.totals.b2b ?? 0} to registered buyers (B2B), ${d.totals.b2cl ?? 0} large inter-state B2C, ${d.totals.b2cs_rows ?? 0} B2C summary row(s), ${d.totals.hsn_rows ?? 0} HSN row(s). GSTIN ${d.gstin}.`}
               </p>
             </Card>
             {d.problems.map((p) => (

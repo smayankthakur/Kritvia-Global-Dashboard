@@ -108,14 +108,10 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
 
 @wf.step("sent", agent="booking_reminders")
 async def sent(ctx: RunContext, state: dict) -> Finish:
-    from kritvia_api.engine.tools import AlreadyExecuted
     b = await _booking(ctx, state["booking_id"])
     if b is None or b.status != "confirmed":
         return Finish("not_needed", note="the booking was cancelled before the reminder went out")
-    try:
-        res = await ctx.invoke(state["action"], approval_id=state["send_decision"]["approval_id"])
-    except AlreadyExecuted as done:
-        res = (done.args[0] if done.args else None) or {}
+    res = await ctx.invoke(state["action"], approval_id=state["send_decision"]["approval_id"])
     async with ctx.tx() as conn:
         await conn.execute(text("UPDATE bookings SET reminded_at = now(), updated_at = now() WHERE id = :b"), {"b": b.id})
     return Finish("reminded", note=f"reminder {res.get('status')} via {res.get('transport')}")

@@ -160,6 +160,9 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
+    # Amazon SES bounce and complaint notifications (SNS topic -> https://api.<domain>/hooks/ses/feedback): the topic's ARN.
+    # Empty: the endpoint is off. Addresses that hard-bounce or complain stop getting Kritvia's system email.
+    ses_feedback_topic_arn: str = ""
     # Where Help-page messages are emailed (they are always stored too). Empty: stored only.
     support_inbox: str = ""
     # Sender identification in system emails (and shown on the website footer).

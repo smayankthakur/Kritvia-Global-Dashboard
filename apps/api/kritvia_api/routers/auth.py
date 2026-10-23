@@ -372,6 +372,16 @@ async def export_my_data(user_id: UserId, db: TenantDB) -> dict:
                                            " FROM dictation_events WHERE user_id = :u ORDER BY created_at", u),
         "approval_decisions": await _rows(db, "SELECT action, status, decided_at FROM approvals"
                                               " WHERE decided_by = :u ORDER BY decided_at", u),
+        # Where you approve from, where you're signed in, keys you made, devices that get notifications,
+        # and the security record about you (sign-ins, sign-in failures, changes to your account).
+        "linked_chats": await _rows(db, "SELECT channel, label, created_at, last_inbound_at FROM approver_links"
+                                        " WHERE user_id = :u ORDER BY created_at", u),
+        "signed_in_devices": await _rows(db, "SELECT * FROM auth_my_sessions()", {}),
+        "api_keys_you_made": await _rows(db, "SELECT name, prefix, scope, created_at, last_used_at, revoked_at"
+                                             " FROM api_keys WHERE created_by = :u ORDER BY created_at", u),
+        "notification_devices": await _rows(db, "SELECT user_agent, created_at, last_ok_at FROM push_subscriptions"
+                                                " WHERE user_id = :u ORDER BY created_at", u),
+        "security_events": await _rows(db, "SELECT * FROM my_security_events()", {}),
     }
 
 

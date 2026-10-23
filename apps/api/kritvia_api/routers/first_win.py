@@ -63,6 +63,20 @@ def is_staff(email: str | None) -> bool:
     return bool(email) and email.lower() in staff
 
 
+async def require_staff(db, user_id: uuid.UUID) -> None:
+    """Kritvia's team only (404 for anyone else). STAFF_EMAILS decides; the answer is recorded in the database
+    (private.kritvia_staff, migration 0074), whose staff functions check it again themselves, so no other code
+    path can reach them for someone who isn't staff. A staff account must have a verified email."""
+    from kritvia_api.db.session import tenant_tx
+    email = (await db.execute(text("SELECT email FROM users WHERE id = :u"), {"u": user_id})).scalar()
+    staff = is_staff(email)
+    # Recorded in its own transaction, so taking someone off STAFF_EMAILS sticks even though this request fails.
+    async with tenant_tx(user_id) as conn:
+        recorded = (await conn.execute(text("SELECT private.staff_sync(:u, :s)"), {"u": user_id, "s": staff})).scalar()
+    if not (staff and recorded):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+
+
 @router.get("/ventures/{venture_id}/first-win", response_model=FirstWinOut)
 async def first_win(venture_id: uuid.UUID, db: TenantDB) -> FirstWinOut:
     await venture_org(db, venture_id)
@@ -162,9 +176,7 @@ def health(r, now: datetime) -> str:
 
 @router.get("/staff/pilots", response_model=PilotsOut)
 async def pilots(user_id: UserId, db: TenantDB) -> PilotsOut:
-    email = (await db.execute(text("SELECT email FROM users WHERE id = :u"), {"u": user_id})).scalar()
-    if not is_staff(email):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    await require_staff(db, user_id)
     rows = (await db.execute(text("SELECT * FROM private.pilot_health()"))).all()
     now = datetime.now(UTC)
     out = []

@@ -352,10 +352,13 @@ async def link_call(link: Link, tool: str, args: dict[str, Any]) -> str:
 async def hosted_config(conn, catalog_id: str | None, env: dict[str, str]) -> dict[str, Any]:
     """What the runner needs to start a hosted app: the reviewed package, the hosts it may reach, its settings."""
     row = (await conn.execute(text(
-        "SELECT package, egress_hosts FROM app_catalog WHERE id = :c AND kind = 'hosted'"
+        "SELECT package, egress_hosts, source FROM app_catalog WHERE id = :c AND kind = 'hosted'"
         " AND (status = 'approved' OR (source = 'kritvia' AND status = 'listed'))"), {"c": catalog_id})).first()
     if row is None or not row.package:
         raise McpError("this app hasn't been approved by Kritvia's team")
+    if row.source != "kritvia" and not (row.package or {}).get("integrity"):
+        # approved before approvals were pinned to the registry's fingerprint (migration 0074): review again
+        raise McpError("this app needs a fresh review by Kritvia's team before it can run")
     return {"package": row.package, "egress_hosts": list(row.egress_hosts or []), "env": env}
 
 

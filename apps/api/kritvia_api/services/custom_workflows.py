@@ -131,25 +131,29 @@ async def fire_due(services, now: datetime | None = None) -> int:
         due = (await conn.execute(text("SELECT * FROM private.claim_due_custom(:n)"), {"n": now})).all()
     started = 0
     for d in due:
-        error = None
-        async with tenant_tx(d.run_as, "agent", "custom") as conn:
-            c = (await conn.execute(text("SELECT id, name, at_time, enabled FROM custom_workflows WHERE id = :c"),
-                                    {"c": d.custom_id})).first()
-        if c is None:
-            continue
+        # All of it inside the try, and the next time always set (the claim is a 15-minute lease).
+        error, nxt = None, None
         try:
-            await start_run(services, actor_user_id=d.run_as, actor_type="agent", venture_id=d.venture_id,
-                            workflow="custom", input={"custom_id": str(c.id), "mode": "scan"}, trigger_kind="schedule",
-                            dedupe=("custom-scan", f"{c.id}:{now:%Y%m%d%H%M}"), title=f"Custom workflow: {c.name}"[:120])
-            started += 1
-        except DuplicateTrigger:
-            pass
-        except PlanRestricted as exc:
-            error = str(exc)[:300]
+            async with tenant_tx(d.run_as, "agent", "custom") as conn:
+                c = (await conn.execute(text("SELECT id, name, at_time, enabled FROM custom_workflows WHERE id = :c"),
+                                        {"c": d.custom_id})).first()
+            if c is None:
+                continue
+            nxt = next_run(c.at_time, now)
+            try:
+                await start_run(services, actor_user_id=d.run_as, actor_type="agent", venture_id=d.venture_id,
+                                workflow="custom", input={"custom_id": str(c.id), "mode": "scan"}, trigger_kind="schedule",
+                                dedupe=("custom-scan", f"{c.id}:{d.due_at:%Y%m%d%H%M}"), title=f"Custom workflow: {c.name}"[:120])
+                started += 1
+            except DuplicateTrigger:
+                pass
+            except PlanRestricted as exc:
+                error = str(exc)[:300]
         except Exception as exc:  # noqa: BLE001
-            log.exception("custom workflow %s didn't start", c.id)
+            log.exception("custom workflow %s didn't start", d.custom_id)
             error = f"didn't start ({type(exc).__name__})"
-        async with tenant_tx(None, "system") as conn:
-            await conn.execute(text("SELECT private.set_custom_next(:c, :n, :e)"),
-                               {"c": c.id, "n": next_run(c.at_time, now), "e": error})
+        finally:
+            async with tenant_tx(None, "system") as conn:
+                await conn.execute(text("SELECT private.set_custom_next(:c, :n, :e)"),
+                                   {"c": d.custom_id, "n": nxt or now + timedelta(minutes=15), "e": error})
     return started

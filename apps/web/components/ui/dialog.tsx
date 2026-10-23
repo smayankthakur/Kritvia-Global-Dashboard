@@ -128,6 +128,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   typeToConfirm,
   loading,
   danger = true,
@@ -139,6 +140,8 @@ export function ConfirmDialog({
   title: ReactNode;
   description?: ReactNode;
   confirmLabel?: string;
+  /** The button that closes without doing it. Say "Keep it" when the action itself is a cancellation. */
+  cancelLabel?: string;
   typeToConfirm?: string;
   loading?: boolean;
   danger?: boolean;
@@ -148,7 +151,8 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) setTyped("");
   }, [open]);
-  const ok = !typeToConfirm || typed.trim() === typeToConfirm;
+  // Phones capitalise the first letter ("Delete"), so the phrase is matched ignoring case.
+  const ok = !typeToConfirm || typed.trim().toLowerCase() === typeToConfirm.toLowerCase();
   return (
     <Dialog
       open={open}
@@ -158,7 +162,7 @@ export function ConfirmDialog({
       size="sm"
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{cancelLabel}</Button>
           <Button variant={danger ? "danger" : "primary"} disabled={!ok} loading={loading} onClick={onConfirm}>
             {confirmLabel}
           </Button>
@@ -171,7 +175,15 @@ export function ConfirmDialog({
           <label className="text-sm text-muted" htmlFor="confirm-phrase">
             Type <span className="font-mono font-semibold text-fg">{typeToConfirm}</span> to confirm
           </label>
-          <Input id="confirm-phrase" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+          <Input
+            id="confirm-phrase"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoComplete="off"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+          />
         </div>
       ) : null}
     </Dialog>

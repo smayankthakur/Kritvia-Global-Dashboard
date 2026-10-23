@@ -205,7 +205,11 @@ export default function DevelopersPage() {
             <Card>
               <CardHeader title="How to use a key" description="Send it in the Authorization header. Up to 120 requests a minute per key; amounts are in paise." />
               <CardBody className="space-y-4">
-                <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-xs leading-relaxed text-fg">
+                <pre
+                  tabIndex={0}
+                  aria-label="Example requests"
+                  className="overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-xs leading-relaxed text-fg focus-visible:outline-2 focus-visible:outline-ring"
+                >
                   {`curl ${d.base_url}/ventures/{venture_id}/leads \\\n  -H "Authorization: Bearer kvk_…"\n\ncurl -X POST ${d.base_url}/ventures/{venture_id}/leads \\\n  -H "Authorization: Bearer kvk_…" -H "Content-Type: application/json" \\\n  -d '{"name": "Neha Sharma", "email": "neha@example.com", "source": "website"}'`}
                 </pre>
                 <Table label="Endpoints a key can use">

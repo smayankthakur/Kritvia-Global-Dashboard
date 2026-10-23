@@ -339,11 +339,12 @@ async def test_cli_bootstrap_is_idempotent():
 
 def test_sender_authentication_comes_from_gmails_own_check():
     from kritvia_api.services.google import sender_authenticated
-    assert sender_authenticated(["mx.google.com; dkim=pass header.i=@x.in; spf=pass smtp.mailfrom=x.in; dmarc=pass"])
-    assert sender_authenticated(["mx.google.com; dkim=pass header.i=@x.in; spf=pass smtp.mailfrom=x.in"])
-    assert not sender_authenticated(["mx.google.com; dkim=none; spf=softfail; dmarc=fail (p=NONE)"])
-    assert not sender_authenticated(["mx.google.com; spf=pass smtp.mailfrom=x.in"])
-    assert not sender_authenticated([])
+    ok = "mx.google.com; dkim=pass header.i=@x.in; spf=pass smtp.mailfrom=x.in; dmarc=pass (p=NONE) header.from=x.in"
+    assert sender_authenticated([ok], "a@x.in")
+    assert sender_authenticated(["mx.google.com; dkim=pass header.i=@x.in; spf=pass smtp.mailfrom=x.in"], "a@x.in")
+    assert not sender_authenticated(["mx.google.com; dkim=none; spf=softfail; dmarc=fail (p=NONE)"], "a@x.in")
+    assert not sender_authenticated(["mx.google.com; spf=pass smtp.mailfrom=x.in"], "a@x.in")
+    assert not sender_authenticated([], "a@x.in")
 
 
 def test_docx_zip_bomb_is_refused_before_unpacking():

@@ -1,7 +1,7 @@
 import json
 import uuid
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
@@ -91,13 +91,20 @@ async def create_lead(venture_id: uuid.UUID, body: LeadIn, user_id: UserId, db: 
 
 
 @router.get("", response_model=list[LeadOut])
-async def list_leads(venture_id: uuid.UUID, db: TenantDB, limit: int = 50) -> list[LeadOut]:
-    """No Google lookups here: a prospect is named from Google Maps only when its lead is opened."""
+async def list_leads(venture_id: uuid.UUID, db: TenantDB, response: Response, limit: int = 50,
+                     cursor: str | None = Query(default=None, max_length=200,
+                                                description="the X-Next-Cursor of the previous page")) -> list[LeadOut]:
+    """Newest first. No Google lookups here: a prospect is named from Google Maps only when its lead is opened.
+    A full page carries X-Next-Cursor; send it back as `cursor` for the next page."""
+    from kritvia_api import pagination
     crypto = EnvelopeCrypto(db, key_provider())
+    after, params = pagination.where(cursor)
+    limit = min(max(limit, 1), 200)
     rows = (await db.execute(
-        text(f"SELECT {COLS} FROM leads WHERE venture_id = :v ORDER BY created_at DESC LIMIT :l"),
-        {"v": venture_id, "l": min(max(limit, 1), 200)},
+        text(f"SELECT {COLS} FROM leads WHERE venture_id = :v AND {after} ORDER BY {pagination.order()} LIMIT :l"),
+        {"v": venture_id, "l": limit, **params},
     )).all()
+    pagination.set_next(response, rows, limit)
     return [await _out(crypto, r) for r in rows]
 
 

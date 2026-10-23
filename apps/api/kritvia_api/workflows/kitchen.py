@@ -62,12 +62,30 @@ def _target(state: dict) -> date:
 
 
 # --------------------------------------------------------------------- reports --
-def parse_sales_csv(raw: bytes, dishes: dict[str, uuid.UUID], names: dict[str, uuid.UUID]
-                    ) -> tuple[list[dict[str, Any]], list[str]]:
-    """Accepts aggregator exports or our template: date, dish (code or name), qty[, channel, revenue]."""
+CHANNELS = ("swiggy", "zomato", "direct", "other")
+
+
+def report_channel(*hints: str | None) -> str | None:
+    """Which platform a sales report came from, from its file name, sender or column names. Swiggy's and
+    Zomato's exports have no channel column, and a report saved as "all" would replace the other
+    platform's quantities for the same days."""
+    for h in hints:
+        low = (h or "").lower()
+        if "swiggy" in low:
+            return "swiggy"
+        if "zomato" in low:
+            return "zomato"
+    return None
+
+
+def parse_sales_csv(raw: bytes, dishes: dict[str, uuid.UUID], names: dict[str, uuid.UUID],
+                    channel: str | None = None) -> tuple[list[dict[str, Any]], list[str]]:
+    """Accepts aggregator exports or our template: date, dish (code or name), qty[, channel, revenue].
+    `channel` is where the report came from when it has no channel column (report_channel)."""
     text_ = raw.decode("utf-8-sig", "replace")
     reader = csv.DictReader(io.StringIO(text_))
     cols = {c.lower().strip(): c for c in reader.fieldnames or []}
+    channel = channel or report_channel(*(reader.fieldnames or []))
 
     def col(*opts: str) -> str | None:
         for o in opts:
@@ -95,8 +113,8 @@ def parse_sales_csv(raw: bytes, dishes: dict[str, uuid.UUID], names: dict[str, u
         if dish_id is None:
             unknown.add(key)
             continue
-        chan = (rec.get(c_chan) or "all").strip().lower() if c_chan else "all"
-        chan = chan if chan in ("swiggy", "zomato", "direct", "other") else "all"
+        chan = (rec.get(c_chan) or "").strip().lower() if c_chan else ""
+        chan = chan if chan in CHANNELS else (report_channel(chan) or channel or "all")
         try:
             qty = float((rec.get(c_qty) or "0").replace(",", ""))
         except ValueError:
@@ -141,7 +159,7 @@ async def ingest_reports(ctx: RunContext, state: dict) -> Goto:
     parsed, warnings = 0, []
     async with ctx.tx() as conn:
         reports = (await conn.execute(text(
-            "SELECT id, title, mime, raw_enc FROM documents WHERE venture_id = :v AND kind = 'report'"
+            "SELECT id, title, mime, raw_enc, meta->>'from' AS sender FROM documents WHERE venture_id = :v AND kind = 'report'"
             " AND coalesce((meta->>'parsed')::boolean, false) = false ORDER BY created_at LIMIT 20"),
             {"v": ctx.venture_id})).all()
         codes, names = await dish_maps(conn, ctx.venture_id)
@@ -149,8 +167,9 @@ async def ingest_reports(ctx: RunContext, state: dict) -> Goto:
         async with ctx.tx() as conn:
             raw = await ctx.crypto(conn).decrypt(ctx.venture_id, RAW_PURPOSE, rep.raw_enc) if rep.raw_enc else b""
         rows: list[dict[str, Any]] = []
+        source = report_channel(rep.sender, rep.title)
         if (rep.mime or "").endswith("csv") or rep.title.lower().endswith(".csv"):
-            rows, w = parse_sales_csv(raw, codes, names)
+            rows, w = parse_sales_csv(raw, codes, names, source)
             warnings += w
         else:  # unstructured report email -> extract rows, then map deterministically
             ex = await ctx.llm_json(tier="extract", schema=ReportRows,
@@ -161,7 +180,7 @@ async def ingest_reports(ctx: RunContext, state: dict) -> Goto:
             wr.writerow(["date", "dish", "qty", "channel"])
             for r in ex.rows:
                 wr.writerow([r.date, r.dish, r.qty, r.channel])
-            rows, w = parse_sales_csv(buf.getvalue().encode(), codes, names)
+            rows, w = parse_sales_csv(buf.getvalue().encode(), codes, names, source)
             warnings += w
         async with ctx.tx() as conn:
             parsed += await upsert_sales(conn, ctx.org_id, ctx.venture_id, rows, "email")

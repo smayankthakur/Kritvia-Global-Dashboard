@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { paiseToInput, rupees, toPaise } from "@/components/invoices/money";
+import { amountProblem, paiseToInput, rupees, toPaiseOrZero, toPaiseSigned } from "@/components/invoices/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -97,11 +97,11 @@ function SettingsForm({ ventureId, canWrite }: { ventureId: string; canWrite: bo
         api.PUT("/ventures/{venture_id}/cash/settings", {
           params: { path: { venture_id: ventureId } },
           body: {
-            balance_paise: v.balance.trim() ? (toPaise(v.balance) ?? 0) : null,
+            balance_paise: v.balance.trim() ? toPaiseSigned(v.balance) : null,
             balance_on: v.balance.trim() ? v.on || null : null,
             clear_balance: !v.balance.trim(),
-            monthly_fixed_paise: v.fixed.trim() ? (toPaise(v.fixed) ?? 0) : 0,
-            alert_below_paise: v.alert.trim() ? (toPaise(v.alert) ?? 0) : null,
+            monthly_fixed_paise: v.fixed.trim() ? (toPaiseOrZero(v.fixed) ?? 0) : 0,
+            alert_below_paise: v.alert.trim() ? toPaiseOrZero(v.alert) : null,
             clear_alert: !v.alert.trim(),
           },
         }),
@@ -115,6 +115,13 @@ function SettingsForm({ ventureId, canWrite }: { ventureId: string; canWrite: bo
     onError: (e) => toast.error("Couldn't save it", errorMessage(e)),
   });
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setF({ ...v, [k]: e.target.value });
+  // Nothing typed is ever saved as ₹0 behind the owner's back: a field that isn't an amount says why.
+  const errors = {
+    balance: amountProblem(v.balance, { zero: true, negative: true }),
+    fixed: amountProblem(v.fixed, { zero: true }),
+    alert: amountProblem(v.alert, { zero: true }),
+  };
+  const invalid = Boolean(errors.balance || errors.fixed || errors.alert);
   return (
     <Card>
       <CardHeader
@@ -123,21 +130,21 @@ function SettingsForm({ ventureId, canWrite }: { ventureId: string; canWrite: bo
       />
       <CardBody>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Bank balance (₹)">
+          <Field label="Bank balance (₹)" hint="Below zero for an overdraft, e.g. -50000" error={errors.balance ?? undefined}>
             <Input value={v.balance} onChange={set("balance")} inputMode="decimal" disabled={!canWrite} />
           </Field>
           <Field label="On">
             <Input type="date" value={v.on} onChange={set("on")} disabled={!canWrite} />
           </Field>
-          <Field label="Other fixed costs a month (₹)" hint="Rent, EMIs, subscriptions; not salaries">
+          <Field label="Other fixed costs a month (₹)" hint="Rent, EMIs, subscriptions; not salaries" error={errors.fixed ?? undefined}>
             <Input value={v.fixed} onChange={set("fixed")} inputMode="decimal" disabled={!canWrite} />
           </Field>
-          <Field label="Warn me below (₹)">
+          <Field label="Warn me below (₹)" error={errors.alert ?? undefined}>
             <Input value={v.alert} onChange={set("alert")} inputMode="decimal" disabled={!canWrite} />
           </Field>
         </div>
         {canWrite ? (
-          <Button className="mt-3" size="sm" variant="primary" disabled={!f} loading={save.isPending} onClick={() => save.mutate()}>
+          <Button className="mt-3" size="sm" variant="primary" disabled={!f || invalid} loading={save.isPending} onClick={() => save.mutate()}>
             Save
           </Button>
         ) : null}
@@ -162,8 +169,9 @@ export function CashTab({ ventureId, canWrite }: { ventureId: string; canWrite: 
             <>
               {f.below_alert ? (
                 <Notice tone="warning" title={`A tight week: ${formatDate(f.lowest_week)}`}>
-                  The balance is expected to dip to {rupees(f.lowest_paise)}
-                  {f.alert_below_paise != null ? `, below your ${rupees(f.alert_below_paise)}` : ""}. Chasing the biggest dues before then would help.
+                  {f.alert_below_paise != null
+                    ? `The balance is expected to dip to ${rupees(f.lowest_paise)}, below your ${rupees(f.alert_below_paise)}. Chasing the biggest dues before then would help.`
+                    : `The balance is expected to dip to ${rupees(f.lowest_paise)}. Chasing the biggest dues before then would help.`}
                 </Notice>
               ) : null}
               <Card className="p-4">
@@ -224,7 +232,7 @@ export function CashTab({ ventureId, canWrite }: { ventureId: string; canWrite: 
               </Card>
               {f.notes.length || f.salaries_paise ? (
                 <ul className="list-disc space-y-1 pl-5 text-xs text-subtle">
-                  {f.salaries_paise ? <li>Salaries of {rupees(f.salaries_paise)} a month are counted on the 1st.</li> : null}
+                  {f.salaries_paise ? <li>{`Salaries of ${rupees(f.salaries_paise)} a month are counted on the 1st.`}</li> : null}
                   {f.notes.map((n) => (
                     <li key={n}>{n}</li>
                   ))}

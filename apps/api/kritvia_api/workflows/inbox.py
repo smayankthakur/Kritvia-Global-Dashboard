@@ -325,8 +325,11 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         ApprovalRequest(agent="prospector" if prospect else "inbox", action=action, key="reply_decision",
                         title=title, summary=summary, payload=payload,
                         required_roles=("approver", "venture_admin"), sensitive=sensitive,
-                        # quoting a past proposal to an outside sender always needs a person
+                        # quoting a past proposal to an outside sender always needs a person, and so does a
+                        # reply drawing on the business's own documents or notes to a sender nobody could check
+                        # (forwarded or unauthenticated mail): it is never sent by earned trust (round 2, S12)
                         always_review=any(s["kind"] == "proposal" for s in used)
+                        or (bool(used) and not _sender_verified(inp))
                         or bool(prospect and (r.unsure or guessed))),
         resume="send", on_reject="rejected",
         update={"citations": [{"document_id": s["document_id"], "title": s["title"]} for s in used],
@@ -419,12 +422,20 @@ async def send(ctx: RunContext, state: dict) -> Finish | Goto:
                   note=f"reply {res.get('status')} via {res.get('transport')}" + (" with a booking" if made else ""))
 
 
+def _sender_verified(inp: dict[str, Any]) -> bool:
+    """WhatsApp and Telegram vouch for who wrote; an email only when Gmail checked the sender's domain."""
+    return (inp.get("channel") or "email") in CHATS or inp.get("sender_verified") is True
+
+
 def message_input(*, channel: str, from_name: str | None, from_email: str | None = None,
                   from_phone: str | None = None, subject: str | None, body: str, message_id: str | None,
-                  thread_id: str | None = None, chat_id: str | None = None) -> dict[str, Any]:
-    """Normalised input for an inbox_assistant run. `chat_id` is a Telegram chat (no phone number)."""
+                  thread_id: str | None = None, chat_id: str | None = None,
+                  sender_verified: bool = False) -> dict[str, Any]:
+    """Normalised input for an inbox_assistant run. `chat_id` is a Telegram chat (no phone number);
+    `sender_verified` is true for an email whose sender's domain Gmail authenticated."""
     out = {"channel": channel, "from_name": from_name, "from_email": from_email, "from_phone": from_phone,
-           "subject": subject or "", "body": (body or "")[:20000], "message_id": message_id, "thread_id": thread_id}
+           "subject": subject or "", "body": (body or "")[:20000], "message_id": message_id, "thread_id": thread_id,
+           "sender_verified": bool(sender_verified)}
     if chat_id:
         out["chat_id"] = chat_id
     return out

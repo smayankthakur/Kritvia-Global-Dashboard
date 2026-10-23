@@ -590,12 +590,54 @@ class CallRefused(ValueError):
     pass
 
 
-def stream_sig(connector_id: uuid.UUID, call_id: uuid.UUID | str) -> str:
-    """Signs a call's media-stream link (Kritvia's own secret), so only the call it was made for can use it."""
-    import hmac
+def _stream_key() -> bytes:
     from kritvia_api.config import get_settings
-    key = hashlib.sha256(("voice-stream:" + get_settings().jwt_secret).encode()).digest()
-    return hmac.new(key, f"{connector_id}:{call_id}".encode(), hashlib.sha256).hexdigest()[:40]
+    return hashlib.sha256(("voice-stream:" + get_settings().jwt_secret).encode()).digest()
+
+
+def stream_sig(connector_id: uuid.UUID, call_id: uuid.UUID | str) -> str:
+    """Signs a placed call's status callback (Kritvia's own secret), so only the call it was made for can use it.
+    Media-stream links use stream_link_sig instead, which expires."""
+    import hmac
+    return hmac.new(_stream_key(), f"{connector_id}:{call_id}".encode(), hashlib.sha256).hexdigest()[:40]
+
+
+STREAM_LINK_S = 900      # a media-stream link works for 15 minutes: the call is answered well within that
+
+
+def _link_mac(connector_id: uuid.UUID | str, call_id: uuid.UUID | str, exp: int) -> str:
+    import hmac
+    return hmac.new(_stream_key(), f"link:{connector_id}:{call_id}:{exp}".encode(), hashlib.sha256).hexdigest()[:40]
+
+
+def stream_link_sig(connector_id: uuid.UUID, call_id: uuid.UUID | str, *, now: float | None = None) -> str:
+    """A media-stream link's signature, bound to the call and to an expiry time ("<expiry>.<mac>"): a link copied
+    out of a provider's or proxy's logs is useless after 15 minutes, and only for that call."""
+    import time
+    exp = int((now if now is not None else time.time()) + STREAM_LINK_S)
+    return f"{exp}.{_link_mac(connector_id, call_id, exp)}"
+
+
+def stream_link_ok(connector_id: uuid.UUID, call_id: uuid.UUID | str, sig: str | None, *,
+                   now: float | None = None) -> bool:
+    import hmac
+    import time
+    exp_s, _, mac = str(sig or "").partition(".")
+    if not exp_s.isdigit() or not mac:
+        return False
+    t = now if now is not None else time.time()
+    exp = int(exp_s)
+    if exp < t or exp > t + STREAM_LINK_S + 60:
+        return False
+    return hmac.compare_digest(mac, _link_mac(connector_id, call_id, exp))
+
+
+async def call_open(conn, connector_id: uuid.UUID, call_id: uuid.UUID) -> bool:
+    """A media stream may join only a call of this connector that hasn't ended (one call, one live stream)."""
+    from sqlalchemy import text as _t
+    return bool((await conn.execute(_t(
+        "SELECT 1 FROM calls WHERE id = :c AND connector_id = :k AND ended_at IS NULL"),
+        {"c": call_id, "k": connector_id})).first())
 
 
 async def place(svc, p: Principal, *, phone: str, callee: str | None, purpose: str, opening: str | None,
@@ -651,7 +693,7 @@ async def place(svc, p: Principal, *, phone: str, callee: str | None, purpose: s
             wss = base.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
             sid = await svc.exotel.place_call(
                 ex.Account(con.api_key, token, con.account_sid, con.subdomain), to=number, caller_id=con.account_email,
-                stream_url=f"{wss}/hooks/voice/stream/exotel/{con.id}?call={call_id}&sig={sig}",
+                stream_url=f"{wss}/hooks/voice/stream/exotel/{con.id}?call={call_id}&sig={stream_link_sig(con.id, call_id)}",
                 status_url=f"{base}/hooks/voice/exotel/{con.id}/status?call={call_id}&sig={sig}", custom=str(call_id))
         else:
             sid = await svc.twilio.place_call(con.account_sid, token, to=number, from_=con.account_email,

@@ -3,11 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUp, Plus } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
-import { paiseToInput, rupees, toPaise } from "@/components/invoices/money";
+import { amountProblem, paiseToInput, rupees, toPaise, toPaiseOrZero } from "@/components/invoices/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input } from "@/components/ui/field";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
@@ -46,14 +46,24 @@ export function BillsTab({ ventureId, canWrite }: { ventureId: string; canWrite:
   const toast = useToast();
   const [show, setShow] = useState<Show>("open");
   const [open, setOpen] = useState<Bill | "new" | null>(null);
+  const [confirmPaid, setConfirmPaid] = useState<Bill | null>(null);
   const bills = useQuery({
     queryKey: ["bills", ventureId, show],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/bills", { params: { path: { venture_id: ventureId }, query: { show } } })),
   });
+  const reopen = useMutation({
+    mutationFn: (b: Bill) => unwrap(api.POST("/ventures/{venture_id}/bills/{bill_id}/reopen", { params: { path: { venture_id: ventureId, bill_id: b.id } } })),
+    onSuccess: (b) => {
+      toast.success("Back to pay", `${b.vendor}: ${rupees(b.balance_paise)}`);
+      void qc.invalidateQueries({ queryKey: ["bills", ventureId] });
+    },
+    onError: (e) => toast.error("Couldn't undo it", errorMessage(e)),
+  });
   const paid = useMutation({
     mutationFn: (b: Bill) => unwrap(api.POST("/ventures/{venture_id}/bills/{bill_id}/paid", { params: { path: { venture_id: ventureId, bill_id: b.id } }, body: {} })),
-    onSuccess: () => {
-      toast.success("Marked paid");
+    onSuccess: (b) => {
+      setConfirmPaid(null);
+      toast.success("Marked paid", `${b.vendor}: ${rupees(b.amount_paise)}`, { label: "Undo", onClick: () => reopen.mutate(b) });
       void qc.invalidateQueries({ queryKey: ["bills", ventureId] });
     },
     onError: (e) => toast.error("Couldn't mark it paid", errorMessage(e)),
@@ -110,7 +120,7 @@ export function BillsTab({ ventureId, canWrite }: { ventureId: string; canWrite:
                       <span className="flex items-center justify-end gap-2">
                         <Badge tone={due.tone}>{due.text}</Badge>
                         {b.status === "open" && canWrite ? (
-                          <Button size="sm" variant="ghost" loading={paid.isPending && paid.variables?.id === b.id} onClick={() => paid.mutate(b)}>
+                          <Button size="sm" variant="ghost" onClick={() => setConfirmPaid(b)}>
                             Paid
                           </Button>
                         ) : null}
@@ -129,6 +139,16 @@ export function BillsTab({ ventureId, canWrite }: { ventureId: string; canWrite:
         </QueryState>
       </Card>
       {open ? <BillDialog ventureId={ventureId} bill={open === "new" ? null : open} canWrite={canWrite} onClose={() => setOpen(null)} /> : null}
+      <ConfirmDialog
+        open={confirmPaid !== null}
+        onClose={() => setConfirmPaid(null)}
+        onConfirm={() => confirmPaid && paid.mutate(confirmPaid)}
+        loading={paid.isPending}
+        danger={false}
+        confirmLabel="Mark paid"
+        title={confirmPaid ? `Mark ${rupees(confirmPaid.balance_paise)} to ${confirmPaid.vendor} as paid?` : ""}
+        description="It leaves To pay, the reminders and the cash forecast. You can undo it."
+      />
     </div>
   );
 }
@@ -160,7 +180,7 @@ function BillDialog({ ventureId, bill, canWrite, onClose }: { ventureId: string;
     number: form.number.trim(),
     vendor_gstin: form.vendor_gstin.trim() || null,
     amount_paise: toPaise(form.amount)!,
-    gst_paise: form.gst.trim() ? (toPaise(form.gst) ?? 0) : 0,
+    gst_paise: form.gst.trim() ? (toPaiseOrZero(form.gst) ?? 0) : 0,
     bill_date: form.bill_date || null,
     due_on: form.due_on,
     category: form.category.trim() || null,
@@ -181,11 +201,25 @@ function BillDialog({ ventureId, bill, canWrite, onClose }: { ventureId: string;
     },
     onError: (e) => setError(errorMessage(e)),
   });
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const cancel = useMutation({
     mutationFn: () => unwrap(api.PATCH("/ventures/{venture_id}/bills/{bill_id}", { params: { path: { venture_id: ventureId, bill_id: bill!.id } }, body: { status: "cancelled" } })),
-    onSuccess: done,
+    onSuccess: () => {
+      toast.success("Bill cancelled");
+      done();
+    },
     onError: (e) => setError(errorMessage(e)),
   });
+  const reopen = useMutation({
+    mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/bills/{bill_id}/reopen", { params: { path: { venture_id: ventureId, bill_id: bill!.id } } })),
+    onSuccess: () => {
+      toast.success("The bill is open again");
+      done();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const amountError = amountProblem(form.amount);
+  const gstError = amountProblem(form.gst, { zero: true });
   const read = useMutation({
     mutationFn: (file: File) =>
       unwrap(
@@ -214,7 +248,8 @@ function BillDialog({ ventureId, bill, canWrite, onClose }: { ventureId: string;
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
     if (!form.vendor.trim()) return setError("Write the supplier's name.");
-    if (!toPaise(form.amount)) return setError("Write the bill's total in rupees.");
+    if (!toPaise(form.amount)) return setError(amountProblem(form.amount) ?? "Write the bill's total in rupees.");
+    if (gstError) return setError(`GST: ${gstError}`);
     if (!form.due_on) return setError("Choose the due date.");
     setError(null);
     save.mutate();
@@ -267,10 +302,10 @@ function BillDialog({ ventureId, bill, canWrite, onClose }: { ventureId: string;
           <Field label="Bill number">
             <Input value={form.number} onChange={set("number")} maxLength={60} disabled={readOnly} />
           </Field>
-          <Field label="Total (₹)" required>
+          <Field label="Total (₹)" required error={form.amount.trim() ? amountError : null}>
             <Input value={form.amount} onChange={set("amount")} inputMode="decimal" disabled={readOnly} />
           </Field>
-          <Field label="GST in it (₹)" hint="for your input tax credit">
+          <Field label="GST in it (₹)" hint="for your input tax credit" error={gstError}>
             <Input value={form.gst} onChange={set("gst")} inputMode="decimal" disabled={readOnly} />
           </Field>
           <Field label="Bill date">
@@ -292,10 +327,25 @@ function BillDialog({ ventureId, bill, canWrite, onClose }: { ventureId: string;
         </form>
         <FormError message={error} />
         {bill && bill.status === "open" && canWrite ? (
-          <Button size="sm" variant="ghost" loading={cancel.isPending} onClick={() => cancel.mutate()}>
+          <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(true)}>
             Cancel this bill
           </Button>
         ) : null}
+        {bill && bill.status !== "open" && canWrite ? (
+          <Button size="sm" loading={reopen.isPending} onClick={() => reopen.mutate()}>
+            {bill.status === "paid" ? "Not paid after all: reopen it" : "Reopen this bill"}
+          </Button>
+        ) : null}
+        <ConfirmDialog
+          open={confirmCancel}
+          onClose={() => setConfirmCancel(false)}
+          onConfirm={() => cancel.mutate()}
+          loading={cancel.isPending}
+          confirmLabel="Cancel the bill"
+          cancelLabel="Keep it"
+          title="Cancel this bill?"
+          description="It stops counting as money you owe. You can reopen it later."
+        />
       </div>
     </Dialog>
   );

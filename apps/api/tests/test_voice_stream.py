@@ -390,7 +390,7 @@ async def test_twilio_in_stream_mode_uses_kritvias_voice(shop, providers, client
     assert '<Parameter name="call"' in r.text and '<Parameter name="sig"' in r.text and "<Hangup/>" in r.text
     call_id = r.text.split('name="call" value="')[1].split('"')[0]
     sig = r.text.split('name="sig" value="')[1].split('"')[0]
-    assert sig == vc.stream_sig(uuid.UUID(cid), call_id)
+    assert vc.stream_link_ok(uuid.UUID(cid), call_id, sig)
     # without a voice set up it falls back to Twilio's own speech
     await speech(mayank, v, stt_provider="platform", tts_provider="elevenlabs", twilio_mode="stream")
     form = {"CallSid": "CA-stream-2", "From": "+14155550100"}

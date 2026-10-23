@@ -293,20 +293,22 @@ async def _postpone(ctx: RunContext, invoice_id) -> None:
 
 @wf.step("sent", agent="collections")
 async def sent(ctx: RunContext, state: dict) -> Finish:
-    from kritvia_api.engine.tools import AlreadyExecuted
     cfg = await ctx.settings()
     inv = await _invoice(ctx, state["invoice_id"])
     # Paid (or paused) while the reminder waited: it is not sent.
     if not _still_due(inv, cfg) or inv.amount_paise - inv.paid_paise != state["balance"]:
         return Finish("not_needed", note="the invoice was paid, changed or paused before the reminder went out")
-    try:
-        res = await ctx.invoke(state["action"], approval_id=state["send_decision"]["approval_id"])
-    except AlreadyExecuted as done:
-        res = (done.args[0] if done.args else None) or {}
+    approval_id = state["send_decision"]["approval_id"]
+    res = await ctx.invoke(state["action"], approval_id=approval_id)
     async with ctx.tx() as conn:
+        # Counted once per send, even when this step runs again after a restart: the reminder time is the
+        # moment the approval ran, and a second pass finds it already recorded.
         await conn.execute(text(
-            "UPDATE invoices SET reminders_sent = reminders_sent + 1, last_reminder_at = now(), updated_at = now()"
-            " WHERE id = :id AND venture_id = :v AND reminders_sent < 50"), {"id": inv.id, "v": ctx.venture_id})
+            "UPDATE invoices i SET reminders_sent = reminders_sent + 1, last_reminder_at = a.executed_at,"
+            " updated_at = now() FROM approvals a"
+            " WHERE a.id = :a AND i.id = :id AND i.venture_id = :v AND i.reminders_sent < 50"
+            " AND (i.last_reminder_at IS NULL OR i.last_reminder_at < a.executed_at)"),
+            {"id": inv.id, "v": ctx.venture_id, "a": uuid.UUID(str(approval_id))})
     return Finish("reminded", update={"summary": {"sent": res.get("status"), "channel": state["action"]}},
                   note=f"reminder {res.get('status')} via {res.get('transport')}")
 

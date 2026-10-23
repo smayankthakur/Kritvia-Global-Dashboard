@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Send } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Badge, type Tone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -56,22 +56,33 @@ function NewCampaign({ ventureId, onClose }: { ventureId: string; onClose: () =>
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/campaigns/audience", { params: { path: { venture_id: ventureId }, query: { channel, audience } } })),
     enabled: !(channel === "email" && audience === "opted_in"),
   });
+  // The draft made on the first try. If asking for the yes fails (e.g. the plan's limit), the next try sends
+  // that same draft instead of making another one; if the form changed meanwhile, the old draft is removed.
+  const made = useRef<{ id: string; key: string } | null>(null);
   const create = useMutation({
     mutationFn: async () => {
-      const c = await unwrap(
-        api.POST("/ventures/{venture_id}/campaigns", {
-          params: { path: { venture_id: ventureId } },
-          body:
-            channel === "whatsapp"
-              ? { name: name.trim(), channel, audience, template_id: templateId, params }
-              : { name: name.trim(), channel, audience, subject: subject.trim(), body: body.trim() },
-        }),
-      );
-      await unwrap(api.POST("/ventures/{venture_id}/campaigns/{campaign_id}/send", { params: { path: { venture_id: ventureId, campaign_id: c.id } } }));
-      return c;
+      const draft =
+        channel === "whatsapp"
+          ? { name: name.trim(), channel, audience, template_id: templateId, params }
+          : { name: name.trim(), channel, audience, subject: subject.trim(), body: body.trim() };
+      const key = JSON.stringify(draft);
+      if (made.current && made.current.key !== key) {
+        const old = made.current.id;
+        made.current = null;
+        await api.DELETE("/ventures/{venture_id}/campaigns/{campaign_id}", { params: { path: { venture_id: ventureId, campaign_id: old } } }).catch(() => undefined);
+      }
+      if (!made.current) {
+        const c = await unwrap(api.POST("/ventures/{venture_id}/campaigns", { params: { path: { venture_id: ventureId } }, body: draft }));
+        made.current = { id: c.id, key };
+        void qc.invalidateQueries({ queryKey: ["campaigns", ventureId] });
+      }
+      const id = made.current.id;
+      await unwrap(api.POST("/ventures/{venture_id}/campaigns/{campaign_id}/send", { params: { path: { venture_id: ventureId, campaign_id: id } } }));
+      made.current = null;
+      return id;
     },
     onSuccess: () => {
-      toast.success("Campaign ready", "It waits for your yes on the board, with the exact number of people.");
+      toast.success("Campaign ready", "It waits for your yes with your other drafts, showing exactly how many people get it.");
       void qc.invalidateQueries({ queryKey: ["campaigns", ventureId] });
       onClose();
     },
@@ -154,7 +165,7 @@ function NewCampaign({ ventureId, onClose }: { ventureId: string; onClose: () =>
               <>
                 <p className="rounded-lg bg-surface-2 p-3 text-sm whitespace-pre-line">{tpl.body}</p>
                 {params.map((p, i) => (
-                  <Field key={i} label={`Blank {{${i + 1}}} (the same for everyone)`}>
+                  <Field key={i} label={`Fill-in ${i + 1} (the same for everyone)`}>
                     <Input value={p} onChange={(e) => setParams((ps) => ps.map((x, j) => (j === i ? e.target.value : x)))} maxLength={200} />
                   </Field>
                 ))}

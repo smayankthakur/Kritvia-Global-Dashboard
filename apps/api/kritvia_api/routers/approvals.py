@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -99,6 +99,10 @@ async def _out(crypto: EnvelopeCrypto, r, with_payload: bool = True) -> Approval
     data = {k: v for k, v in r._mapping.items() if k not in ("payload_enc", "final_payload_enc")}
     payload = final = None
     redacted = with_payload and not r.can_decide
+    if not r.can_decide:
+        # What it did and the decider's comment often quote the draft (test report round 2, S9): hidden too.
+        data["execution_result"] = None
+        data["comment"] = None
     if with_payload and r.can_decide:
         payload = json.loads(await crypto.decrypt(r.venture_id, PAYLOAD_PURPOSE, r.payload_enc))
         if r.final_payload_enc is not None:
@@ -118,14 +122,20 @@ async def inbox(db: TenantDB, svc: Svc, limit: int = 100) -> list[ApprovalOut]:
 
 
 @router.get("/ventures/{venture_id}/approvals", response_model=list[ApprovalOut])
-async def list_approvals(venture_id: uuid.UUID, db: TenantDB, svc: Svc,
+async def list_approvals(venture_id: uuid.UUID, db: TenantDB, svc: Svc, response: Response,
                          status_: Literal["pending", "decided", "all"] = Query(default="pending", alias="status"),
-                         limit: int = 100
+                         limit: int = 100,
+                         cursor: str | None = Query(default=None, max_length=200,
+                                                    description="the X-Next-Cursor of the previous page")
                          ) -> list[ApprovalOut]:
+    from kritvia_api import pagination
     cond = {"pending": "a.status = 'pending'", "decided": "a.status <> 'pending'", "all": "true"}[status_]
-    rows = (await db.execute(text(f"SELECT {COLS}{FROM} WHERE a.venture_id = :v AND {cond}"
-                                  " ORDER BY a.created_at DESC LIMIT :l"),
-                             {"v": venture_id, "l": min(max(limit, 1), 300)})).all()
+    after, cp = pagination.where(cursor, alias="a")
+    limit = min(max(limit, 1), 300)
+    rows = (await db.execute(text(f"SELECT {COLS}{FROM} WHERE a.venture_id = :v AND {cond} AND {after}"
+                                  f" ORDER BY {pagination.order(alias='a')} LIMIT :l"),
+                             {"v": venture_id, "l": limit, **cp})).all()
+    pagination.set_next(response, rows, limit)
     crypto = EnvelopeCrypto(db, svc.keys)
     return [await _out(crypto, r, with_payload=(status_ == "pending")) for r in rows]
 

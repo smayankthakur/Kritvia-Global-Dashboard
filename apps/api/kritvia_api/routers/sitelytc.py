@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -118,13 +118,19 @@ PCOLS = ("p.id, p.lead_id, l.name AS lead_name, p.run_id, p.title, p.status, p.l
 
 
 @router.get("/ventures/{venture_id}/proposals", response_model=list[ProposalOut])
-async def list_proposals(venture_id: uuid.UUID, db: TenantDB, lead_id: uuid.UUID | None = None) -> list[ProposalOut]:
-    q = f"SELECT {PCOLS} FROM proposals p LEFT JOIN leads l ON l.id = p.lead_id WHERE p.venture_id = :v"
-    params: dict[str, Any] = {"v": venture_id}
+async def list_proposals(venture_id: uuid.UUID, db: TenantDB, response: Response, lead_id: uuid.UUID | None = None,
+                         limit: int = Query(default=200, ge=1, le=500),
+                         cursor: str | None = Query(default=None, max_length=200)) -> list[ProposalOut]:
+    """Newest first; a full page carries X-Next-Cursor for the next one."""
+    from kritvia_api import pagination
+    after, cp = pagination.where(cursor, alias="p")
+    q = f"SELECT {PCOLS} FROM proposals p LEFT JOIN leads l ON l.id = p.lead_id WHERE p.venture_id = :v AND {after}"
+    params: dict[str, Any] = {"v": venture_id, "lim": limit, **cp}
     if lead_id:
         q += " AND p.lead_id = :l"
         params["l"] = lead_id
-    rows = (await db.execute(text(q + " ORDER BY p.created_at DESC LIMIT 200"), params)).all()
+    rows = (await db.execute(text(q + f" ORDER BY {pagination.order(alias='p')} LIMIT :lim"), params)).all()
+    pagination.set_next(response, rows, limit)
     return [ProposalOut(**{k: v for k, v in r._mapping.items() if k not in ("content_enc", "venture_id")})
             for r in rows]
 

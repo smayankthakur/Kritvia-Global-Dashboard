@@ -2,13 +2,14 @@
 
 import { RefreshCw, Smartphone } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ShowNumber } from "@/components/devices/where";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FormError } from "@/components/ui/field";
 import { QrCode } from "@/components/ui/qr";
 import { clock, linkPost } from "@/lib/link-client";
 
-type Req = { token: string; url: string; expires_at: string };
+type Req = { token: string; url: string; expires_at: string; match?: string };
 
 /** Login page: show a QR that a phone already signed in to Kritvia can scan to sign this computer in. */
 function PhoneQr({ onClose, onSignedIn }: { onClose: () => void; onSignedIn: () => void }) {
@@ -87,8 +88,9 @@ function PhoneQr({ onClose, onSignedIn }: { onClose: () => void; onSignedIn: () 
           <ol className="list-decimal space-y-1.5 pl-5">
             <li>On your phone, open the camera (or Google Lens) and point it at the code.</li>
             <li>Tap the link. Kritvia opens on the phone.</li>
-            <li>Tap <strong>Yes, sign it in</strong> on the phone. This page signs in by itself.</li>
+            <li>On the phone, tap the number shown here. This page signs in by itself.</li>
           </ol>
+          {req?.match && !expired && !refused ? <ShowNumber match={req.match} pickOn="your phone" /> : null}
           <p className="text-xs text-subtle">{req && !expired && !refused ? `Works once, for ${clock(left)}.` : null} Not signed in on your phone yet? Sign in there first with your email code.</p>
         </div>
       </div>

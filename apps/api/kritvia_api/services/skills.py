@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -232,39 +232,43 @@ async def fire_due(services, now: datetime | None = None) -> int:
         due = (await conn.execute(text("SELECT * FROM private.claim_due_skills(:n)"), {"n": now})).all()
     started = 0
     for d in due:
-        error = None
-        async with tenant_tx(d.run_as, "agent", "skill") as conn:
-            s = await load(conn, EnvelopeCrypto(conn, services.keys), d.venture_id, d.skill_id)
-            tz = await tz_of(conn, d.venture_id)
-            records: list[uuid.UUID] = []
-            if s is not None and s["trigger"] == "event":
-                records = (await cw.candidates(conn, d.venture_id, s["event"], int(s["wait_days"]), False))[:PER_EVENT_CHECK]
-                facts = [await cw.record_facts(conn, d.venture_id, cw.RECORD[s["event"]], rid) for rid in records]
-        if s is None or not s["enabled"]:
-            continue
+        # All of it inside the try, and the next time always set (the claim is a 15-minute lease).
+        error, nxt = None, None
         try:
-            if s["trigger"] == "schedule":
-                await start(services, s, actor_user_id=d.run_as, actor_type="agent", trigger_kind="schedule",
-                            dedupe=("skill", f"{s['id']}:{now:%Y%m%d%H%M}"))
-                started += 1
-            else:
-                for rid, (f, _, _) in zip(records, facts, strict=True):
-                    try:
-                        await start(services, s, actor_user_id=d.run_as, actor_type="agent", trigger_kind="schedule",
-                                    record=(cw.RECORD[s["event"]], rid, f), dedupe=("skill", f"{s['id']}:{rid}"))
-                        started += 1
-                    except DuplicateTrigger:
-                        continue
-        except DuplicateTrigger:
-            pass
-        except PlanRestricted as exc:
-            error = str(exc)[:300]
+            async with tenant_tx(d.run_as, "agent", "skill") as conn:
+                s = await load(conn, EnvelopeCrypto(conn, services.keys), d.venture_id, d.skill_id)
+                tz = await tz_of(conn, d.venture_id)
+                records: list[uuid.UUID] = []
+                if s is not None and s["trigger"] == "event":
+                    records = (await cw.candidates(conn, d.venture_id, s["event"], int(s["wait_days"]), False))[:PER_EVENT_CHECK]
+                    facts = [await cw.record_facts(conn, d.venture_id, cw.RECORD[s["event"]], rid) for rid in records]
+            if s is None or not s["enabled"]:
+                continue
+            nxt = next_time(s, tz, now)
+            try:
+                if s["trigger"] == "schedule":
+                    await start(services, s, actor_user_id=d.run_as, actor_type="agent", trigger_kind="schedule",
+                                dedupe=("skill", f"{s['id']}:{d.due_at:%Y%m%d%H%M}"))
+                    started += 1
+                else:
+                    for rid, (f, _, _) in zip(records, facts, strict=True):
+                        try:
+                            await start(services, s, actor_user_id=d.run_as, actor_type="agent", trigger_kind="schedule",
+                                        record=(cw.RECORD[s["event"]], rid, f), dedupe=("skill", f"{s['id']}:{rid}"))
+                            started += 1
+                        except DuplicateTrigger:
+                            continue
+            except DuplicateTrigger:
+                pass
+            except PlanRestricted as exc:
+                error = str(exc)[:300]
         except Exception as exc:  # noqa: BLE001
             log.exception("skill %s didn't start", d.skill_id)
             error = f"didn't start ({type(exc).__name__})"
-        async with tenant_tx(None, "system") as conn:
-            await conn.execute(text("SELECT private.set_skill_next(:s, :n, :e)"),
-                               {"s": d.skill_id, "n": next_time(s, tz, now), "e": error})
+        finally:
+            async with tenant_tx(None, "system") as conn:
+                await conn.execute(text("SELECT private.set_skill_next(:s, :n, :e)"),
+                                   {"s": d.skill_id, "n": nxt or now + timedelta(minutes=15), "e": error})
     return started
 
 

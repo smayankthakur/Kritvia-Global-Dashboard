@@ -54,7 +54,7 @@ export function TemplateFields({
       </Field>
       {t
         ? Array.from({ length: t.params }, (_, i) => (
-            <Field key={`${idPrefix}-${t.id}-${i}`} label={`Blank ${i + 1}`} hint={t.examples[i] ? `For example: ${t.examples[i]}` : undefined} required>
+            <Field key={`${idPrefix}-${t.id}-${i}`} label={`Fill-in ${i + 1}`} hint={t.examples[i] ? `For example: ${t.examples[i]}` : undefined} required>
               <Input
                 value={value.params[i] ?? ""}
                 maxLength={300}

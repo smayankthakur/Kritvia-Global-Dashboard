@@ -20,7 +20,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -231,12 +231,16 @@ async def delete_skill(venture_id: uuid.UUID, skill_id: uuid.UUID, user_id: User
 
 @router.delete("/ventures/{venture_id}/skills/{skill_id}/lessons/{index}", response_model=SkillOut)
 async def forget_lesson(venture_id: uuid.UUID, skill_id: uuid.UUID, index: int, user_id: UserId, db: TenantDB,
-                        svc: Svc) -> SkillOut:
+                        svc: Svc, lesson: str | None = Query(default=None, max_length=2000,
+                                                             description="the lesson's text: refused if the one at "
+                                                                         "this position is another")) -> SkillOut:
     await venture_org(db, venture_id)
     s = await _editable(db, svc, venture_id, skill_id, user_id)
     items = s["lesson_list"]
     if not 0 <= index < len(items):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "lesson not found")
+    if lesson is not None and items[index] != lesson:
+        raise HTTPException(status.HTTP_409_CONFLICT, "the lessons changed meanwhile; look again and choose the one to forget")
     items = items[:index] + items[index + 1:]
     enc = await EnvelopeCrypto(db, svc.keys).encrypt(venture_id, sk.LESSONS, json.dumps(items, ensure_ascii=False))
     await db.execute(text("UPDATE skills SET lessons_enc = :l, updated_at = now() WHERE id = :s"), {"l": enc, "s": skill_id})

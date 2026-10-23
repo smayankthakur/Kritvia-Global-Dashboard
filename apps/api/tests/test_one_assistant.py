@@ -16,7 +16,9 @@ pytestmark = pytest.mark.asyncio
 def test_the_catalogue_reaches_the_business_but_never_the_dangerous_parts():
     ids = {a.id for a in actions.catalogue()}
     assert "POST /ventures/{venture_id}/invoices" in ids and "PUT /ventures/{venture_id}/attendance" in ids
-    assert "PUT /ventures/{venture_id}/workflow-configs/{workflow}" in ids
+    # agent settings and autonomy are changed on their page, not by the assistant (round 2, S3); reading them is fine
+    assert "PUT /ventures/{venture_id}/workflow-configs/{workflow}" not in ids
+    assert "GET /ventures/{venture_id}/workflow-configs" in ids
     for a in ids:
         assert a.split(" ", 1)[1].startswith("/ventures/{venture_id}")
         for bad in ("/approvals", "/trust", "/members", "/apps", "/assistant", "/privacy"):
@@ -27,9 +29,8 @@ def test_the_catalogue_reaches_the_business_but_never_the_dangerous_parts():
     assert "POST /ventures/{venture_id}/bank/statements" not in ids
     got = [a["action"] for a in actions.find("new invoice", 3)]
     assert got[0] == "POST /ventures/{venture_id}/invoices"
-    agent = actions.find("switch on the payment reminders agent", 4)
-    assert any(a["action"] == "PUT /ventures/{venture_id}/workflow-configs/{workflow}" and "collections" in a["path"]["workflow"]
-               for a in agent)
+    agent = actions.find("run the payment reminders agent", 4)
+    assert any(a["action"] == "POST /ventures/{venture_id}/runs" and "collections" in a["body"]["workflow"] for a in agent)
     with pytest.raises(actions.ActionError):
         actions.resolve("POST /ventures/{venture_id}/approvals/{approval_id}/decision")
 

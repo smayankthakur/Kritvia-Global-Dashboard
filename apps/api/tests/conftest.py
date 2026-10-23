@@ -129,7 +129,16 @@ async def make_actor(client, name: str) -> Actor:
     assert r.status_code == 201, r.text
     token = r.json()["access_token"]
     me = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
-    return Actor(client, email, token, uuid.UUID(me.json()["id"]))
+    uid = uuid.UUID(me.json()["id"])
+    # People sign in with an emailed code or Google, which verifies the address; the password register used
+    # here doesn't, so mark it as a real sign-up would (Kritvia staff must have a verified email).
+    import asyncpg
+    conn = await asyncpg.connect(ADMIN_DSN)
+    try:
+        await conn.execute("UPDATE users SET email_verified_at = coalesce(email_verified_at, now()) WHERE id = $1", uid)
+    finally:
+        await conn.close()
+    return Actor(client, email, token, uid)
 
 
 @pytest.fixture(scope="session")

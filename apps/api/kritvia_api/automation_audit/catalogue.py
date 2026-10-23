@@ -228,8 +228,10 @@ JOBS: tuple[Job, ...] = (
         "officer (private model only).",
         ("wf:loan_verification", "cron:poll_gmail"), ceiling=3, target=3, impact=2),
     Job("web_tasks", "ops", "Do work on websites and portals", 2,
-        "The browser agent reads sites and fills forms when asked; every submit needs a yes.",
-        ("wf:browser", "tool:web.browse", "tool:browser.submit"), ceiling=3, target=3, impact=1,
+        "The browser agent reads sites and fills forms when asked; every submit needs a yes, and so does a look-up "
+        "once the request has read outside text (web.browse_approved).",
+        ("wf:browser", "tool:web.browse", "tool:web.browse_approved", "tool:browser.submit"), ceiling=3, target=3,
+        impact=1,
         next="Let skills and team leads start browser jobs on a schedule (still a yes per submit)."),
     Job("owner_briefing", "ops", "Owner's daily briefing", 4,
         "Automations and the chat front door (/today, /week, /waiting) tell the owner what happened and what waits.",

@@ -11,11 +11,14 @@ function req(path: string, body: unknown, extra: Record<string, string> = {}) {
 
 describe("QR sign-in BFF", () => {
   it("keeps the new device's secret in an httpOnly cookie, never in the page", async () => {
-    const fake = vi.fn(async () => Response.json({ token: TOKEN, secret: "s".repeat(43), url: `https://app/link#${TOKEN}`, expires_at: "2026-10-16T10:00:00Z" }, { status: 201 }));
+    const fake = vi.fn(async () =>
+      Response.json({ token: TOKEN, secret: "s".repeat(43), url: `https://app/link#${TOKEN}`, expires_at: "2026-10-16T10:00:00Z", match: "47" }, { status: 201 }),
+    );
     const res = await startRequest(req("/api/auth/link/request", {}), fake as unknown as typeof fetch);
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body).toEqual({ token: TOKEN, url: `https://app/link#${TOKEN}`, expires_at: "2026-10-16T10:00:00Z" });
+    // the number this page shows (the phone picks it to say yes), never the secret
+    expect(body).toEqual({ token: TOKEN, url: `https://app/link#${TOKEN}`, expires_at: "2026-10-16T10:00:00Z", match: "47" });
     const cookie = res.headers.get("set-cookie") ?? "";
     expect(cookie).toMatch(/^kv_link=s+;/);
     expect(cookie).toContain("HttpOnly");
@@ -23,10 +26,10 @@ describe("QR sign-in BFF", () => {
   });
 
   it("claims with a valid token only", async () => {
-    const fake = vi.fn(async () => Response.json({ secret: "t".repeat(43), device: "Chrome on Android" }));
+    const fake = vi.fn(async () => Response.json({ secret: "t".repeat(43), device: "Chrome on Android", match: "62" }));
     expect((await claimOffer(req("/api/auth/link/claim", { token: "nope" }), fake as unknown as typeof fetch)).status).toBe(422);
     const res = await claimOffer(req("/api/auth/link/claim", { token: TOKEN }), fake as unknown as typeof fetch);
-    expect(await res.json()).toEqual({ device: "Chrome on Android" });
+    expect(await res.json()).toEqual({ device: "Chrome on Android", match: "62" });
     expect(res.headers.get("set-cookie")).toMatch(/^kv_link=t+;/);
   });
 
@@ -48,6 +51,17 @@ describe("QR sign-in BFF", () => {
     // without the cookie, nothing is asked of the API
     const none = await redeem(req("/api/auth/link/redeem", { token: TOKEN }), fake as unknown as typeof fetch);
     expect(none.status).toBe(410);
+  });
+
+  it("passes Cloudflare's location headers on, so the person approving sees where the device is", async () => {
+    const seen: Record<string, string>[] = [];
+    const fake = vi.fn(async (_u: string, init: RequestInit) => {
+      seen.push(init.headers as Record<string, string>);
+      return Response.json({ token: TOKEN, secret: "s".repeat(43), url: "u", expires_at: "e", match: "11" }, { status: 201 });
+    });
+    await startRequest(req("/api/auth/link/request", {}, { "cf-ipcountry": "IN", "cf-ipcity": "Delhi" }), fake as unknown as typeof fetch);
+    expect(seen[0]?.["cf-ipcountry"]).toBe("IN");
+    expect(seen[0]?.["cf-ipcity"]).toBe("Delhi");
   });
 
   it("refuses other sites", async () => {

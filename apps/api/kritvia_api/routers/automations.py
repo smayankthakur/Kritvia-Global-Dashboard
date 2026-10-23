@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 
@@ -163,9 +163,17 @@ async def create(venture_id: uuid.UUID, body: AutomationIn, user_id: UserId, db:
 
 
 @router.get("/ventures/{venture_id}/automations", response_model=list[AutomationOut])
-async def list_(venture_id: uuid.UUID, user_id: UserId, db: TenantDB) -> list[AutomationOut]:
+async def list_(venture_id: uuid.UUID, user_id: UserId, db: TenantDB, response: Response,
+                limit: int = Query(default=200, ge=1, le=500),
+                cursor: str | None = Query(default=None, max_length=200)) -> list[AutomationOut]:
+    """Oldest first; a full page carries X-Next-Cursor for the next one."""
+    from kritvia_api import pagination
     await venture_org(db, venture_id)
-    rows = (await db.execute(text(SELECT + " WHERE a.venture_id = :v ORDER BY a.created_at"), {"v": venture_id})).all()
+    after, cp = pagination.where(cursor, descending=False, alias="a")
+    rows = (await db.execute(text(SELECT + f" WHERE a.venture_id = :v AND {after}"
+                                           f" ORDER BY {pagination.order(descending=False, alias='a')} LIMIT :lim"),
+                             {"v": venture_id, "lim": limit, **cp})).all()
+    pagination.set_next(response, rows, limit)
     return [_out(r, user_id) for r in rows]
 
 

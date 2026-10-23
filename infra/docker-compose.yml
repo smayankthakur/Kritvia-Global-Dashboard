@@ -19,11 +19,12 @@ x-app-env: &app-env
   MCP_RUNNER_URL: ${MCP_RUNNER_URL:-}
   MCP_RUNNER_TOKEN: ${MCP_RUNNER_TOKEN:-}
 
-# Container logs rotate on disk; scripts/archive-logs.sh keeps a daily copy for one year (CERT-In: 180 days in India;
-# DPDP Rules 2025 r.6: one year). Rotation only bounds disk use between archives.
+# Container logs rotate on disk; scripts/archive-logs.sh copies them every hour (and before each deploy) and
+# keeps the copies for one year (CERT-In: 180 days in India; DPDP Rules 2025 r.6: one year). Rotation only
+# bounds disk use between archives, with room for a busy hour.
 x-logging: &logging
   driver: json-file
-  options: { max-size: "50m", max-file: "4" }
+  options: { max-size: "100m", max-file: "5" }
 
 services:
   postgres:
@@ -39,7 +40,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
-    command: ["postgres", "-c", "shared_buffers=512MB", "-c", "max_connections=100", "-c", "log_min_duration_statement=2000"]
+    # Slow statements are logged without their values (names, phone numbers, encrypted blobs stay out of the logs).
+    command: ["postgres", "-c", "shared_buffers=512MB", "-c", "max_connections=100", "-c", "log_min_duration_statement=2000",
+              "-c", "log_parameter_max_length=0", "-c", "log_parameter_max_length_on_error=0"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d kritvia"]
       interval: 5s
@@ -100,7 +103,7 @@ services:
     restart: unless-stopped
     env_file: ../.env
     environment: *app-env
-    networks: [default, browsing]
+    networks: [default]
     volumes:
       - ./litellm/tiers.yaml:/app/tiers.yaml:ro
     ports: ["127.0.0.1:8000:8000"]
@@ -120,7 +123,7 @@ services:
     restart: unless-stopped
     env_file: ../.env
     environment: *app-env
-    networks: [default, browsing]
+    networks: [default]
     volumes:
       - ./litellm/tiers.yaml:/app/tiers.yaml:ro
     depends_on:
@@ -135,7 +138,7 @@ services:
     restart: unless-stopped
     env_file: ../.env
     environment: *app-env
-    networks: [default, browsing]
+    networks: [default]
     volumes:
       - ./litellm/tiers.yaml:/app/tiers.yaml:ro
     depends_on:
@@ -205,16 +208,24 @@ services:
       - hfcache:/home/diar/.cache
 
   # Headless Chromium for the browser agent (services/browser; one job at a time, read-only unless a person
-  # approved a form). Its own network: the internet through its egress guard, and nothing internal except
-  # the API and workers that call it (no database, cache or model gateway). BROWSER_TOKEN empty = off.
-  # Once gVisor is installed (see services/sandbox/README.md), set BROWSER_RUNTIME=runsc in .env.
-  browser:
+  # approved a form). Three small containers (test report S5), all from the same image, all off unless .env has
+  # BROWSER_TOKEN and BROWSER_RUNTIME=runsc (deploy.sh adds the "browser" profile only then):
+  #   browser-chromium  Chromium itself, under gVisor, on an internal network with no route anywhere
+  #   browser-egress    the only way out: CONNECT with the shared token to public addresses it checks itself
+  #   browser           a plain door from the stack's network to browser-chromium:8200 (BROWSER_URL stays the
+  #                     same); the API, workers, database and cache are never on Chromium's network
+  browser-chromium:
     logging: *logging
+    profiles: ["browser"]
     build: { context: ../services/browser }
     restart: unless-stopped
-    runtime: ${BROWSER_RUNTIME:-runc}
+    runtime: ${BROWSER_RUNTIME:-runsc}
     environment:
       BROWSER_TOKEN: ${BROWSER_TOKEN:-}
+      BROWSER_RUNTIME: ${BROWSER_RUNTIME:-runsc}
+      BROWSER_CHROMIUM_SANDBOX: "1"
+      BROWSER_EGRESS: browser-egress:8401
+      BROWSER_EGRESS_TOKEN: ${BROWSER_TOKEN:-}
       HOME: /home/browser
     read_only: true
     tmpfs:
@@ -226,7 +237,45 @@ services:
     memswap_limit: 1536m
     cpus: 1.5
     pids_limit: 256
-    networks: [browsing]
+    networks: [browser-internal]
+
+  browser-egress:
+    logging: *logging
+    profiles: ["browser"]
+    build: { context: ../services/browser }
+    command: ["python", "guard.py", "egress", "8401"]
+    restart: unless-stopped
+    environment:
+      BROWSER_EGRESS_TOKEN: ${BROWSER_TOKEN:-}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8401), 3).close()"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    networks: [browser-internal, browser-out]
+
+  browser:
+    logging: *logging
+    profiles: ["browser"]
+    build: { context: ../services/browser }
+    command: ["python", "guard.py", "relay", "8200", "browser-chromium", "8200"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8200/healthz')"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    networks: [default, browser-internal]
 
   # App store: hosts MCP servers from npm / PyPI / container images that Kritvia's team approved, one gVisor
   # container per installed app (services/mcp-runner). The app containers sit on the internal mcp-sandbox
@@ -244,10 +293,40 @@ services:
       MCP_NETWORK: kritvia_mcp-sandbox
       MCP_PROXY_HOST: mcp-runner
       MCP_MAX_INSTANCES: ${MCP_MAX_INSTANCES:-4}     # each app may use up to 768 MB
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      DOCKER_HOST: tcp://mcp-docker:2375             # Docker only through the limited socket proxy (S7)
     mem_limit: 512m
-    networks: [default, mcp-sandbox]
+    depends_on: [mcp-docker]
+    # Each app also gets a network of its own, shared only with this runner (services/mcp-runner/app.py); the
+    # control API on 8300 refuses requests that arrive over any of those networks.
+    networks: [default, mcp-sandbox, mcp-control]
+
+  # The Docker API for the MCP runner, limited to containers, networks and images (no exec, volumes, builds,
+  # swarm or system calls); the runner itself no longer holds the Docker socket. Pinned by digest.
+  mcp-docker:
+    logging: *logging
+    profiles: ["apps"]
+    image: tecnativa/docker-socket-proxy:v0.5.0@sha256:1f5038b54f06c3e18422902cf00ba21803d1c97805aae032e5e6673d532d3459
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      IMAGES: 1
+      POST: 1
+      EXEC: 0
+      VOLUMES: 0
+      BUILD: 0
+      SWARM: 0
+      SYSTEM: 0
+      SERVICES: 0
+      TASKS: 0
+      SECRETS: 0
+      CONFIGS: 0
+      PLUGINS: 0
+      NODES: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    mem_limit: 128m
+    networks: [mcp-control]
 
   cloudflared:
     logging: *logging
@@ -259,7 +338,13 @@ services:
 
 networks:
   default: {}
-  browsing: {}
+  # Chromium's network: no route out, nothing internal on it (S5). browser-out is the egress guard's way out.
+  browser-internal:
+    internal: true
+  browser-out: {}
+  # The MCP runner and its Docker socket proxy only.
+  mcp-control:
+    internal: true
   # No route out: hosted apps reach the internet only through the MCP runner's egress proxy.
   mcp-sandbox:
     name: kritvia_mcp-sandbox

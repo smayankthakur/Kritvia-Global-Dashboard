@@ -15,13 +15,47 @@ const KEY = "kv-lang";
 const ATTRS = ["placeholder", "aria-label", "title", "alt"] as const;
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "CODE", "PRE", "TEXTAREA", "NOSCRIPT", "KBD", "SVG"]);
 
-/** A few interface strings built with numbers or dates. */
+/** Amounts as the app writes them: ₹11,800 or ₹11,800.50 (or below zero). */
+const RS = "(-?₹[\\d,]+(?:\\.\\d{1,2})?)";
+const DATE = "(\\d{1,2} [A-Z][a-z]{2} \\d{4})";
+const re = (s: string) => new RegExp(`^${s}$`);
+
+/** A few interface strings built with numbers, amounts, names or dates (always the whole sentence). */
 const PATTERNS: [RegExp, string][] = [
   [/^(\d+) unpaid$/, "$1 बकाया"],
   [/^(\d+) invoices?$/, "$1 इनवॉइस"],
+  [/^(\d+) bills?$/, "$1 बिल"],
   [/^(\d+) days? overdue$/, "$1 दिन बकाया"],
   [/^Due in (\d+) days?$/, "$1 दिन में देय"],
-  [/^Paid (.+)$/, "भुगतान $1"],
+  // Only "Paid <date>": "Paid this month" or "Paid in full" are whole entries in the dictionary.
+  [re(`Paid ${DATE}`), "भुगतान $1"],
+  [re(`${RS} still due of ${RS}`), "$2 में से $1 बाकी"],
+  [re(`${RS} paid of ${RS}`), "$2 में से $1 मिल चुका"],
+  [re(`${RS}, not issued yet`), "$1, अभी जारी नहीं हुआ"],
+  [re(`It arrived: paid in full \\(${RS}\\)`), "पैसा आ गया: पूरा भुगतान ($1)"],
+  [re(`Paid in full \\(${RS}\\)`), "पूरा भुगतान मिला ($1)"],
+  [re(`Payment recorded; ${RS} still due`), "भुगतान दर्ज हुआ; $1 अभी बाकी"],
+  [re(`On ${DATE}, UPI reference (.+)\\. Check your bank or UPI app, then confirm it\\.`), "$1 को, UPI रेफ़रेंस $2। अपना बैंक या UPI ऐप देखें, फिर पक्का करें।"],
+  [re(`On ${DATE}\\. Check your bank or UPI app, then confirm it\\.`), "$1 को। अपना बैंक या UPI ऐप देखें, फिर पक्का करें।"],
+  [re(`Mark ${RS} to (.+) as paid\\?`), "$2 को $1 का भुगतान हो गया?"],
+  [re(`The balance is expected to dip to ${RS}, below your ${RS}\\. Chasing the biggest dues before then would help\\.`), "बैलेंस $1 तक गिर सकता है, आपकी $2 की सीमा से नीचे। उससे पहले सबसे बड़े बकाया वसूलना अच्छा रहेगा।"],
+  [re(`The balance is expected to dip to ${RS}\\. Chasing the biggest dues before then would help\\.`), "बैलेंस $1 तक गिर सकता है। उससे पहले सबसे बड़े बकाया वसूलना अच्छा रहेगा।"],
+  [re(`Salaries of ${RS} a month are counted on the 1st\\.`), "हर महीने $1 की सैलरी 1 तारीख़ को गिनी जाती है।"],
+  [/^You pay (.+) directly\. This page is provided by Kritvia\.$/, "आप सीधे $1 को भुगतान करते हैं। यह पेज Kritvia की ओर से है।"],
+  [re(`Invoice (.+) for ${RS} is settled\\.`), "इनवॉइस $1 ($2) का भुगतान हो चुका है।"],
+  [re(`This invoice for ${RS} is settled\\.`), "इस इनवॉइस ($1) का भुगतान हो चुका है।"],
+  [/^Invoice (\S+) for (.+)$/, "$2 के लिए इनवॉइस $1"],
+  [/^Invoice for (.+)$/, "$1 के लिए इनवॉइस"],
+  [/^Google shows (.+); Kritvia has (.+)\.$/, "Google पर $1 दिखता है; Kritvia में $2 है।"],
+  [/^Your Google listing has no (.+): add it in Google Business Profile so customers can reach you\.$/, "आपकी Google लिस्टिंग में $1 नहीं है: इसे Google Business Profile में जोड़ें ताकि ग्राहक आप तक पहुँच सकें।"],
+  [/^Cancel (.+)'s booking\?$/, "$1 की बुकिंग रद्द करें?"],
+  [/^Has (.+) left\?$/, "क्या $1 काम छोड़ चुके हैं?"],
+  [/^(\d+) min ago$/, "$1 मिनट पहले"],
+  [/^(\d+) h ago$/, "$1 घंटे पहले"],
+  [/^(\d+) d ago$/, "$1 दिन पहले"],
+  [/^in (\d+) min$/, "$1 मिनट में"],
+  [/^in (\d+) h$/, "$1 घंटे में"],
+  [/^in (\d+) d$/, "$1 दिन में"],
   [/^Due (\d.+)$/, "देय $1"],
   [/^(\d+) drafts? waiting$/, "$1 ड्राफ़्ट इंतज़ार में"],
   [/^(\d+) of (\d+) steps done$/, "$2 में से $1 क़दम पूरे"],

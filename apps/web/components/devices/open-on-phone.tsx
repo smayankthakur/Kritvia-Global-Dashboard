@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PickNumber, WhereIsIt } from "@/components/devices/where";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FormError } from "@/components/ui/field";
@@ -46,8 +47,8 @@ function OfferDialog({ onClose }: { onClose: () => void }) {
   const s = state.data;
   const left = useSecondsLeft(s?.expires_at ?? offer?.expires_at);
   const decide = useMutation({
-    mutationFn: (approve: boolean) =>
-      unwrap(api.POST("/auth/link/{link_id}/decide", { params: { path: { link_id: offer!.id } }, body: { approve } })),
+    mutationFn: ({ approve, match }: { approve: boolean; match?: string }) =>
+      unwrap(api.POST("/auth/link/{link_id}/decide", { params: { path: { link_id: offer!.id } }, body: { approve, match: match ?? null } })),
     onSuccess: () => {
       void state.refetch();
       void qc.invalidateQueries({ queryKey: ["me", "sessions"] });
@@ -81,15 +82,15 @@ function OfferDialog({ onClose }: { onClose: () => void }) {
           <p className="text-base">
             Sign in <strong>{s?.device ?? "a device"}</strong> as you?
           </p>
+          <WhereIsIt place={s?.place} ip={s?.ip} sameNetwork={s?.same_network} at={s?.claimed_at} />
           <p className="text-sm text-muted">Only say yes if that is the phone in your hand. ({clock(left)} left)</p>
-          <div className="flex justify-center gap-2">
-            <Button variant="primary" loading={decide.isPending && decide.variables === true} onClick={() => decide.mutate(true)}>
-              Yes, sign it in
-            </Button>
-            <Button variant="ghost" loading={decide.isPending && decide.variables === false} onClick={() => decide.mutate(false)}>
-              Not me
-            </Button>
-          </div>
+          <PickNumber
+            options={s?.options ?? []}
+            busy={decide.isPending}
+            shownOn="the phone"
+            onPick={(n) => decide.mutate({ approve: true, match: n })}
+            onRefuse={() => decide.mutate({ approve: false })}
+          />
         </div>
       ) : status === "rejected" ? (
         <div className="space-y-3 py-4 text-center">

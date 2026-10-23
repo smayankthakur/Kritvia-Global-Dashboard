@@ -52,6 +52,10 @@ test.describe.serial("Kritvia command center", () => {
   test("register and onboard an organisation with three ventures", async () => {
     await page.goto("/register");
     await expect(page.getByRole("button", { name: "Sign up with Google" })).toBeVisible();
+    // Sign-up stays locked until the person confirms they are 18+ and accepts the terms.
+    await expect(page.getByRole("button", { name: "Email me a code" })).toBeDisabled();
+    await page.getByRole("checkbox", { name: /18 or older/ }).check();
+    await page.getByRole("checkbox", { name: /I accept the/ }).check();
     await page.getByRole("button", { name: "Email me a code" }).click();
     await expect(page.getByText("Enter your name")).toBeVisible();
     await shot(page, "01b-register");
@@ -79,12 +83,15 @@ test.describe.serial("Kritvia command center", () => {
     await shot(page, "02a-onboarding-business");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page.getByRole("heading", { name: "Your roles and workflows" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Your roles and agents" })).toBeVisible();
     await expect(page.getByText("Demand forecast & purchase orders")).toBeVisible();
     await shot(page, "02-onboarding-roles");
     await page.getByRole("button", { name: "Finish setup" }).click();
 
-    await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+    // Finishing opens the guided first run of the new business's main agent; the dashboard is one click away.
+    await expect(page).toHaveURL(/\/v\/[0-9a-f-]{36}\/runs\/[0-9a-f-]{36}\?welcome=1$/, { timeout: 30_000 });
+    await shot(page, "02b-first-run");
+    await page.goto("/");
     await expect(page.getByRole("heading", { name: /Good to see you, Mayank/ })).toBeVisible();
 
     const access = await (await page.request.get("/api/k/me/access")).json();
@@ -114,7 +121,7 @@ test.describe.serial("Kritvia command center", () => {
     await shot(page, "04-rate-card");
   });
 
-  test("a new inquiry starts a run that fails without models and can be retried", async () => {
+  test("a new inquiry starts a run that, without models, tries again by itself", async () => {
     await page.goto(`/v/${ids["Sitelytc"]}/leads`);
     await page.getByRole("button", { name: "New inquiry" }).first().click();
     const dialog = page.getByRole("dialog");
@@ -126,18 +133,14 @@ test.describe.serial("Kritvia command center", () => {
     await expect(dialog.getByText("Triage started")).toBeVisible();
     await dialog.getByRole("link", { name: "View run" }).click();
     await expect(page).toHaveURL(/\/runs\/[0-9a-f-]{36}$/);
-    await expect(page.getByText("This run failed")).toBeVisible({ timeout: 90_000 });
-    await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
-    await shot(page, "05-run-failed");
+    // No AI provider locally: a passing failure, so the run is booked to try again by itself (not a red failure).
+    await expect(page.getByText("Hit a passing problem; trying again by itself")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("button", { name: "Cancel run" })).toBeVisible();
+    await shot(page, "05-run-retrying");
 
     await page.goto(`/v/${ids["Sitelytc"]}/runs`);
-    await expect(page.getByRole("button", { name: "Retry" }).first()).toBeVisible();
+    await expect(page.getByText("Asha Rao").or(page.getByText(/Inquiry|inquiry/)).first()).toBeVisible();
     await shot(page, "06-runs");
-
-    await page.goto("/");
-    await expect(page.getByText("Recent failures")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Retry" }).first()).toBeVisible();
-    await shot(page, "07-dashboard-failures");
   });
 
   test("a loan application is created with consent, and a client upload link works", async ({ browser }) => {
@@ -324,7 +327,7 @@ test.describe.serial("Kritvia command center", () => {
     await shot(page, "22-trust", { mobile: false });
 
     await page.goto(`/v/${ids["Sitelytc"]}/settings?tab=workflows`);
-    await expect(page.getByRole("heading", { name: "Inbound lead triage & proposal" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Lead triage/ }).first()).toBeVisible();
     await shot(page, "23-settings-workflows", { mobile: false });
 
     await page.goto(`/v/${ids["Sitelytc"]}/settings?tab=connectors`);
@@ -362,7 +365,7 @@ test.describe.serial("Kritvia command center", () => {
     await expect(page.locator("kbd", { hasText: "F8" })).toBeVisible();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("Voice settings saved")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Dictate \(Type mode\)\. Hold F8/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Dictate \(Type mode\)\..*F8/ })).toBeVisible();
     await shot(page, "25b-voice-settings", { mobile: false });
 
     await page.getByRole("tab", { name: "Insights" }).click();

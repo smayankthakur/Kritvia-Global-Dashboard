@@ -20,6 +20,7 @@ ACTION_WORDS = {
     "gmail.send": "emails", "whatsapp.send": "WhatsApp replies", "whatsapp.template": "WhatsApp messages",
     "telegram.send": "Telegram replies", "calendar.create_event": "meeting invites",
     "crm.update_lead": "lead updates", "tasks.create": "tasks", "leads.create": "new leads",
+    "web.browse_approved": "web look-ups", "mcp.call": "connected-app actions",
 }
 
 

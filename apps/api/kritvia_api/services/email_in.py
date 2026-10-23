@@ -10,6 +10,13 @@ raw message (RFC 822) to POST /public/email-in with
 Forwarded mail is treated as unauthenticated: Kritvia cannot check who really sent it, so it is
 used for replies and enquiries (which a person approves) and never to file identity papers or
 sales reports (those still need Gmail connected with read access).
+
+The one thing Kritvia does check is Cloudflare's own verdict: Email Routing stamps each message with an
+(ARC-)Authentication-Results header from mx.cloudflare.net, above every header the sender wrote, and the
+worker signs the whole raw message. `auth` is "pass" when that topmost Cloudflare header shows the From
+domain passed DMARC or signed the message (services/google.py's rule), "fail" when it shows otherwise, and
+"unknown" when there is no Cloudflare header. Gmail's forwarding confirmation is only trusted on "pass"
+for google.com; on "unknown" it never replaces a confirmation that is already waiting.
 """
 from __future__ import annotations
 
@@ -44,6 +51,7 @@ class InboundMail:
     attachments: list[dict[str, Any]] = field(default_factory=list)
     authenticated: bool = False
     headers: dict[str, str] = field(default_factory=dict)
+    auth: str = "unknown"            # Cloudflare's verdict on the From domain: pass / fail / unknown
 
 
 def sign(secret: str, timestamp: str, raw: bytes) -> str:
@@ -95,10 +103,24 @@ def parse(raw: bytes) -> InboundMail:
     body = (plain or _html_text(html))[:MAX_BODY]
     message_id = str(msg.get("Message-ID", "")).strip() or "sha256:" + hashlib.sha256(raw).hexdigest()
     to = ", ".join(a for _, a in getaddresses([str(msg.get("To", ""))]) if a)
+    auth = cloudflare_auth([str(v) for k, v in msg.items() if k.lower() in AUTH_HEADERS], addr.lower())
     return InboundMail(id=message_id[:300], thread_id="", sender=name or addr, sender_email=addr.lower(), to=to,
                        subject=str(msg.get("Subject", ""))[:500], date=str(msg.get("Date", "")), body=body,
-                       attachments=attachments, authenticated=False,
+                       attachments=attachments, authenticated=auth == "pass", auth=auth,
                        headers={k.lower(): str(v)[:500] for k, v in msg.items()})
+
+
+AUTH_HEADERS = ("arc-authentication-results", "authentication-results")
+CLOUDFLARE_AUTHSERV = "mx.cloudflare.net"
+
+
+def cloudflare_auth(headers_top_down: list[str], from_email: str) -> str:
+    """pass / fail / unknown from the topmost header Cloudflare Email Routing wrote (see the module notes)."""
+    from kritvia_api.services.google import _authserv, sender_authenticated
+    ours = [h for h in headers_top_down if _authserv(h) == CLOUDFLARE_AUTHSERV]
+    if not ours:
+        return "unknown"
+    return "pass" if sender_authenticated(ours[:1], from_email, authserv=CLOUDFLARE_AUTHSERV) else "fail"
 
 
 CONFIRM_CODE = re.compile(r"(?:confirmation code|#)\s*:?\s*(\d{6,12})", re.I)
@@ -111,8 +133,8 @@ REQUESTER = re.compile(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+) has requested", re.I)
 def gmail_confirmation(m: InboundMail) -> dict[str, str] | None:
     """Gmail's 'confirm this forwarding address' message: the code (older messages) or the confirmation link
     (newer ones), and the mailbox asking. The link is only ever one on Google's own mail domain."""
-    if m.sender_email != GMAIL_CONFIRM_SENDER:
-        return None
+    if m.sender_email != GMAIL_CONFIRM_SENDER or m.auth == "fail":
+        return None             # a "Gmail" message Cloudflare says google.com didn't send is ignored
     text = f"{m.subject}\n{m.body}"
     if "forwarding confirmation" not in text.lower():
         return None
@@ -122,4 +144,4 @@ def gmail_confirmation(m: InboundMail) -> dict[str, str] | None:
     if not code and not link:
         return None
     return {"code": code.group(1) if code else "", "link": link.group(0) if link else "",
-            "mailbox": who.group(1).lower() if who else ""}
+            "mailbox": who.group(1).lower() if who else "", "verified": "1" if m.auth == "pass" else ""}

@@ -24,6 +24,31 @@ const PUBLIC_PAGES = [
   "/llms.txt",
 ];
 
+/** Signed-in areas: a visitor without a session is sent to sign in, then back. Any other address that
+ * isn't a public page (a typo such as /feature or /pricing) gets the 404 page, not a sign-in prompt. */
+const PRIVATE_PREFIXES = [
+  "/v",
+  "/inbox",
+  "/account",
+  "/ai",
+  "/audit",
+  "/billing",
+  "/businesses",
+  "/developers",
+  "/partners",
+  "/settings",
+  "/sso",
+  "/staff",
+  "/teams",
+  "/onboarding",
+  "/invite",
+  "/print",
+];
+
+export function isPrivatePath(pathname: string): boolean {
+  return pathname === "/" || PRIVATE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export function isPublicPath(pathname: string): boolean {
   return (
     PUBLIC_PAGES.includes(pathname) ||
@@ -44,7 +69,7 @@ export function middleware(req: NextRequest) {
     url.pathname = "/welcome";
     return withCsp(req, url);
   }
-  if (!isPublicPath(pathname) && !hasSession) {
+  if (!isPublicPath(pathname) && isPrivatePath(pathname) && !hasSession) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + search)}`;

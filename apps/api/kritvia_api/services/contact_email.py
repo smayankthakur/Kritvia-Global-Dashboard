@@ -3,20 +3,24 @@
 Reads the home page and, if needed, a contact or about page linked from it (at most 3 pages, small and
 quick), and picks the address that best looks like the business's own: on the site's own domain first,
 then a common mail provider. Only public pages; never a login, a form or anything behind a cookie wall.
-Private and internal addresses are refused (the URL comes from Google, not from us).
+Private and internal addresses are refused (the URL comes from Google, not from us): each hop is checked
+by its text first, and the connection itself goes only to a public address checked when it opens
+(services/netguard.py), so a DNS answer can't change in between, and NAT64/IPv4-mapped forms of private
+addresses are judged by the IPv4 address inside them.
 
 Only the email address is kept. The website address itself comes from Google Maps and isn't stored.
 """
 from __future__ import annotations
 
 import asyncio
-import ipaddress
 import re
 import socket
 from html import unescape
 from urllib.parse import urljoin, urlparse
 
 import httpx
+
+from kritvia_api.services import netguard
 
 PAGE_BYTES = 400_000
 TIMEOUT = 6.0
@@ -54,7 +58,11 @@ async def public(url: str) -> bool:
         addrs = await resolve(u.hostname)
     except OSError:
         return False
-    return bool(addrs) and all(ipaddress.ip_address(a).is_global for a in addrs)
+    return netguard.all_public(addrs)
+
+
+async def _resolve_now(host: str) -> list[str]:
+    return await resolve(host)      # looked up when called, so a test's resolve() applies
 
 
 def site_domain(url: str) -> str:
@@ -99,7 +107,8 @@ async def find(website: str | None) -> str | None:
     found: list[str] = []
     queue = [url]
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=False, transport=_transport,
+        async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=False,
+                                     transport=_transport or netguard.guarded_transport(_resolve_now),
                                      headers={"User-Agent": UA, "Accept": "text/html"}) as http:
             while queue and len(seen) < MAX_PAGES:
                 page = queue.pop(0)

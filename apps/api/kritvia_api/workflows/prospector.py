@@ -73,9 +73,10 @@ wf = registry.register(Workflow(
         Option("skip_hotels", "Skip hotels and guest houses", "boolean", True),
         Option("followups", "Follow-ups after the first message", "number", 2, min=0, max=3),
         Option("follow_up_days", "Days between messages", "number", 3, min=1, max=14),
-        Option("send_without_asking", "Send emails and answer replies without asking me", "boolean", True,
-               help="Off: every message waits for your approval. Messages that quote a price the offer "
-                    "doesn't contain, or that the agent isn't sure about, always wait for you."),
+        Option("send_without_asking", "Send emails and answer replies without asking me", "boolean", False,
+               help="Off (the default): every message waits for your approval. On: the Prospector sends by itself; "
+                    "messages that quote a price the offer doesn't contain, or that the agent isn't sure about, "
+                    "still wait for you."),
     ), default_schedule="10:30"))
 
 PLACEHOLDER_NAME = "Business on Google Maps"   # leads.name for a prospect until they reply
@@ -528,11 +529,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
 
 @wf.step("sent", agent="prospector")
 async def sent(ctx: RunContext, state: dict) -> Finish:
-    from kritvia_api.engine.tools import AlreadyExecuted
-    try:
-        res = await ctx.invoke("gmail.send", approval_id=state["send_decision"]["approval_id"])
-    except AlreadyExecuted as done:
-        res = (done.args[0] if done.args else None) or {}
+    res = await ctx.invoke("gmail.send", approval_id=state["send_decision"]["approval_id"])
     cfg = await ctx.settings()
     step_done = int(state["step"]) + 1
     async with ctx.tx() as conn:

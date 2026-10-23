@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import text
@@ -135,29 +135,33 @@ async def fire_due(services, now: datetime | None = None) -> int:
     started = 0
     local = services.router.local_deployments()
     for d in due:
-        error = None
-        async with tenant_tx(d.run_as, "agent", "team") as conn:
-            role = (await conn.execute(text("SELECT role FROM team_roles WHERE id = :i"), {"i": d.team_role_id})).scalar()
-            t = await load(conn, EnvelopeCrypto(conn, services.keys), d.venture_id, role) if role else None
-            tz = await tz_of(conn, d.venture_id)
-            over = t is not None and await over_budget(conn, d.venture_id, t, local)
-            rows = (await conn.execute(text("SELECT * FROM board_roles(:v, :l)"), {"v": d.venture_id, "l": local})).all()
-        if t is None or not t["enabled"]:
-            continue
-        if over:
-            error = "this role's monthly budget is used up"
-        else:
-            try:
-                await check_in(services, d.venture_id, d.run_as, t, area(rows, t["role"]))
-                started += 1
-            except PlanRestricted as exc:
-                error = str(exc)[:300]
-            except Exception as exc:  # noqa: BLE001
-                log.exception("team lead %s didn't start", d.team_role_id)
-                error = f"didn't start ({type(exc).__name__})"
-        async with tenant_tx(None, "system") as conn:
-            await conn.execute(text("SELECT private.set_team_next(:i, :n, :e)"),
-                               {"i": d.team_role_id, "n": next_time(t, tz, now), "e": error})
+        # All of it inside the try, and the next time always set (the claim is a 15-minute lease).
+        error, nxt = None, None
+        try:
+            async with tenant_tx(d.run_as, "agent", "team") as conn:
+                role = (await conn.execute(text("SELECT role FROM team_roles WHERE id = :i"), {"i": d.team_role_id})).scalar()
+                t = await load(conn, EnvelopeCrypto(conn, services.keys), d.venture_id, role) if role else None
+                tz = await tz_of(conn, d.venture_id)
+                over = t is not None and await over_budget(conn, d.venture_id, t, local)
+                rows = (await conn.execute(text("SELECT * FROM board_roles(:v, :l)"), {"v": d.venture_id, "l": local})).all()
+            if t is None or not t["enabled"]:
+                continue
+            nxt = next_time(t, tz, now)
+            if over:
+                error = "this role's monthly budget is used up"
+            else:
+                try:
+                    await check_in(services, d.venture_id, d.run_as, t, area(rows, t["role"]))
+                    started += 1
+                except PlanRestricted as exc:
+                    error = str(exc)[:300]
+        except Exception as exc:  # noqa: BLE001
+            log.exception("team lead %s didn't start", d.team_role_id)
+            error = f"didn't start ({type(exc).__name__})"
+        finally:
+            async with tenant_tx(None, "system") as conn:
+                await conn.execute(text("SELECT private.set_team_next(:i, :n, :e)"),
+                                   {"i": d.team_role_id, "n": nxt or now + timedelta(minutes=15), "e": error})
     return started
 
 

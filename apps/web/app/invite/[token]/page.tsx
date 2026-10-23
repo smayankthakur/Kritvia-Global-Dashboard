@@ -18,7 +18,8 @@ export default function AcceptInvitationPage() {
       window.setTimeout(
         () =>
           window.location.assign(
-            out.venture_id ? `/v/${out.venture_id}/runs` : "/",
+            // The business's own home (its first page), not the technical runs list.
+            out.venture_id ? `/v/${out.venture_id}` : "/",
           ),
         900,
       );

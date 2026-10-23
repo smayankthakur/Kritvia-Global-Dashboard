@@ -12,7 +12,7 @@ import { Notice } from "@/components/ui/page";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, multipart, unwrap, type Schemas } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { dueLabel, paiseToInput, rupees, toPaise } from "./money";
+import { amountProblem, dueLabel, paiseToInput, rupees, toPaise } from "./money";
 
 export type Invoice = Schemas["InvoiceOut"];
 type Source = "manual" | "file" | "tally";
@@ -38,15 +38,19 @@ function istToday(offsetDays = 0): string {
   return new Date(Date.now() + 330 * 60_000 + offsetDays * 86_400_000).toISOString().slice(0, 10);
 }
 
-function fromInvoice(i: Invoice | null): FormState {
+export function fromInvoice(i: Invoice | null, today: string = istToday(), weekOn: string = istToday(7)): FormState {
+  // A draft is dated the day it is issued. One Kritvia made a while ago may already be past its due
+  // date, which would block issuing it ("due before the invoice date"): give it a week from today.
+  const draft = i?.status === "draft";
+  const due = i?.due_on ?? istToday(15);
   return {
     number: i?.number ?? "",
     customer_name: i?.customer_name ?? "",
     customer_email: i?.customer_email ?? "",
     customer_phone: i?.customer_phone ? `+${i.customer_phone}` : "",
     amount: paiseToInput(i?.amount_paise),
-    issued_on: i?.issued_on ?? istToday(),
-    due_on: i?.due_on ?? istToday(15),
+    issued_on: draft ? today : (i?.issued_on ?? today),
+    due_on: draft && due < today ? weekOn : due,
     notes: i?.notes ?? "",
   };
 }
@@ -54,7 +58,7 @@ function fromInvoice(i: Invoice | null): FormState {
 /** Problems with the form, or null. */
 export function formProblem(f: FormState): string | null {
   if (!f.customer_name.trim()) return "Who is the invoice for?";
-  if (toPaise(f.amount) === null) return "Write the amount in rupees, e.g. 11800 or 11,800.50.";
+  if (toPaise(f.amount) === null) return amountProblem(f.amount) ?? "Write the amount in rupees, e.g. 11800 or 11,800.50.";
   if (!f.due_on) return "Pick the due date.";
   if (f.issued_on && f.due_on < f.issued_on) return "The due date is before the invoice date.";
   if (f.customer_email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.customer_email.trim())) return "That email address doesn't look right.";
@@ -65,7 +69,7 @@ export function formProblem(f: FormState): string | null {
  * pause reminders, cancel or delete it. */
 export function InvoiceDialog({
   ventureId,
-  invoice,
+  invoice: initial,
   open,
   onClose,
   canWrite,
@@ -80,7 +84,11 @@ export function InvoiceDialog({
 }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [form, setForm] = useState<FormState>(() => fromInvoice(invoice));
+  // The invoice as it is now: every payment, pause or status change updates it from the API's answer,
+  // so the window never shows (or acts on) the balance it had when it was opened.
+  const [invoice, setInvoice] = useState<Invoice | null>(initial);
+  const [confirmEnd, setConfirmEnd] = useState<"discard" | "cancel" | null>(null);
+  const [form, setForm] = useState<FormState>(() => fromInvoice(initial));
   const [source, setSource] = useState<Source>("manual");
   const [unsure, setUnsure] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -156,6 +164,7 @@ export function InvoiceDialog({
     onSuccess: (i) => {
       toast.success(i.status === "paid" ? "Marked as paid. Reminders stop." : `Payment recorded; ${rupees(i.balance_paise)} still due`);
       setPayment("");
+      setInvoice(i);
       done();
       if (i.status === "paid") onClose();
     },
@@ -164,9 +173,23 @@ export function InvoiceDialog({
   const patch = useMutation({
     mutationFn: (b: Schemas["InvoicePatch"]) =>
       unwrap(api.PATCH("/ventures/{venture_id}/invoices/{invoice_id}", { params: { path: { venture_id: ventureId, invoice_id: invoice!.id } }, body: b })),
-    onSuccess: () => done(),
+    onSuccess: (i) => {
+      setInvoice(i);
+      done();
+    },
     onError: (e) => setError(errorMessage(e)),
   });
+  const end = (kind: "discard" | "cancel") =>
+    patch.mutate(
+      { status: "cancelled" },
+      {
+        onSuccess: () => {
+          setConfirmEnd(null);
+          toast.success(kind === "discard" ? "Draft discarded" : "Invoice cancelled", kind === "cancel" ? "Its payment page no longer works." : undefined);
+          onClose();
+        },
+      },
+    );
   const remove = useMutation({
     mutationFn: () => unwrap(api.DELETE("/ventures/{venture_id}/invoices/{invoice_id}", { params: { path: { venture_id: ventureId, invoice_id: invoice!.id } } })),
     onSuccess: () => {
@@ -203,12 +226,12 @@ export function InvoiceDialog({
       description={
         isDraft ? (
           <span className="flex flex-wrap items-center gap-2">
-            {rupees(invoice.amount_paise)}, not issued yet
+            {`${rupees(invoice.amount_paise)}, not issued yet`}
             {due ? <Badge tone={due.tone}>{due.text}</Badge> : null}
           </span>
         ) : editing ? (
           <span className="flex flex-wrap items-center gap-2">
-            {rupees(invoice.balance_paise)} still due of {rupees(invoice.amount_paise)}
+            {`${rupees(invoice.balance_paise)} still due of ${rupees(invoice.amount_paise)}`}
             {due ? <Badge tone={due.tone}>{due.text}</Badge> : null}
           </span>
         ) : (
@@ -219,7 +242,7 @@ export function InvoiceDialog({
         readOnly ? null : (
           <>
             <Button variant="ghost" onClick={onClose}>
-              Cancel
+              Close
             </Button>
             {isDraft ? (
               <>
@@ -247,7 +270,7 @@ export function InvoiceDialog({
             payment reminders can start.
             {canWrite ? (
               <div className="mt-2">
-                <Button size="sm" variant="ghost" loading={patch.isPending} onClick={() => patch.mutate({ status: "cancelled" }, { onSuccess: onClose })}>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmEnd("discard")}>
                   Not needed: discard the draft
                 </Button>
               </div>
@@ -278,7 +301,11 @@ export function InvoiceDialog({
         ) : null}
         {read.isPending ? <p className="text-sm text-muted" role="status">Reading the invoice…</p> : null}
         {source === "file" && !read.isPending ? (
-          <Notice tone="info">Filled from the file. Check every field before adding{unsure.length ? "; the highlighted ones weren't clear" : ""}.</Notice>
+          <Notice tone="info">
+            {unsure.length
+              ? "Filled from the file. Check every field before adding; the highlighted ones weren't clear."
+              : "Filled from the file. Check every field before adding."}
+          </Notice>
         ) : null}
         {showTally ? (
           tally.isPending ? (
@@ -342,9 +369,9 @@ export function InvoiceDialog({
           <div className="space-y-3 rounded-lg border border-border p-3">
             {invoice.customer_says_paid_at ? (
               <Notice tone="warning" title="The customer says they paid">
-                On {formatDate(invoice.customer_says_paid_at)}
-                {invoice.customer_paid_ref ? `, UPI reference ${invoice.customer_paid_ref}` : ""}. Check your bank or UPI app, then
-                confirm it.
+                {invoice.customer_paid_ref
+                  ? `On ${formatDate(invoice.customer_says_paid_at)}, UPI reference ${invoice.customer_paid_ref}. Check your bank or UPI app, then confirm it.`
+                  : `On ${formatDate(invoice.customer_says_paid_at)}. Check your bank or UPI app, then confirm it.`}
                 {canWrite ? (
                   <div className="mt-2">
                     <Button
@@ -353,7 +380,7 @@ export function InvoiceDialog({
                       loading={pay.isPending}
                       onClick={() => pay.mutate({ amount_paise: invoice.balance_paise, method: "upi", reference: invoice.customer_paid_ref ?? null })}
                     >
-                      It arrived: paid in full ({rupees(invoice.balance_paise)})
+                      {`It arrived: paid in full (${rupees(invoice.balance_paise)})`}
                     </Button>
                   </div>
                 ) : null}
@@ -398,7 +425,7 @@ export function InvoiceDialog({
                 loading={pay.isPending}
                 onClick={() => {
                   const p = payment.trim() ? toPaise(payment) : invoice.balance_paise;
-                  if (!p) return setError("Write the amount received in rupees.");
+                  if (!p) return setError(amountProblem(payment) ?? "Write the amount received in rupees.");
                   pay.mutate(p);
                 }}
               >
@@ -406,13 +433,14 @@ export function InvoiceDialog({
               </Button>
             </div>
             <Checkbox
-              checked={invoice.reminders_paused}
+              checked={patch.isPending && patch.variables?.reminders_paused !== undefined ? Boolean(patch.variables.reminders_paused) : invoice.reminders_paused}
+              disabled={patch.isPending}
               onChange={(e) => patch.mutate({ reminders_paused: e.target.checked })}
               label="Pause reminders for this invoice"
               hint="e.g. they promised to pay on a date, or they're querying the invoice"
             />
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="ghost" onClick={() => patch.mutate({ status: "cancelled" }, { onSuccess: onClose })}>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmEnd("cancel")}>
                 Cancel this invoice
               </Button>
               {canAdmin ? (
@@ -434,6 +462,20 @@ export function InvoiceDialog({
           </Button>
         ) : null}
       </div>
+      <ConfirmDialog
+        open={confirmEnd !== null}
+        onClose={() => setConfirmEnd(null)}
+        onConfirm={() => confirmEnd && end(confirmEnd)}
+        loading={patch.isPending}
+        title={confirmEnd === "discard" ? "Discard this draft?" : "Cancel this invoice?"}
+        description={
+          confirmEnd === "discard"
+            ? "Nothing went to the customer. You can still find it under All."
+            : "The customer's payment link stops working and reminders stop. You can reopen it later."
+        }
+        confirmLabel={confirmEnd === "discard" ? "Discard draft" : "Cancel invoice"}
+        cancelLabel="Keep it"
+      />
       <ConfirmDialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}

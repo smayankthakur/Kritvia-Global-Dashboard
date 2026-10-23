@@ -227,7 +227,7 @@ async def _inbox(ctx: RunContext, services: Services, token: str, msg) -> int:
                         dedupe=("gmail:inbox_assistant", msg.id), title=f"Email: {msg.subject[:120]}",
                         input=message_input(channel="email", from_name=msg.sender, from_email=msg.sender_email,
                                             subject=msg.subject, body=msg.body, message_id=msg.id,
-                                            thread_id=msg.thread_id))
+                                            thread_id=msg.thread_id, sender_verified=msg.authenticated))
         return 1
     except DuplicateTrigger:
         return 0
@@ -397,6 +397,12 @@ BILL_SUBJECT = re.compile(r"\b(invoice|bill|tax invoice|payment due|proforma|sta
 BILL_FILES = (".pdf", ".png", ".jpg", ".jpeg", ".webp")
 
 
+def _sender_checked(msg) -> bool:
+    """A forwarded bill is trusted a little only when the business's own mailbox forwarded it and Cloudflare
+    verified its From domain; mail sent straight to the Kritvia address is marked unverified."""
+    return bool(forwarded_from(msg)) and bool(getattr(msg, "authenticated", False))
+
+
 async def _bill_forwarded(ctx: RunContext, services: Services, msg) -> bool:
     """A supplier's bill forwarded to the business's Kritvia address (a bill or invoice in the subject, with a
     PDF or photo): read and filed under Money → Bills, marked as from email so a person checks it is real
@@ -437,7 +443,9 @@ async def _bill_forwarded(ctx: RunContext, services: Services, msg) -> bool:
                 " VALUES (:o, :v, :ve, :n, :g, :a, :gst, :bd, :d, :c, :no, 'email')"),
                 {"o": ctx.org_id, "v": ctx.venture_id, "ve": d.vendor, "n": d.number, "g": d.vendor_gstin,
                  "a": d.amount_paise, "gst": d.gst_paise, "bd": d.bill_date, "d": d.due_on, "c": d.category,
-                 "no": (f"From an email from {msg.sender_email}: {msg.subject}"[:900]
+                 "no": (("" if _sender_checked(msg) else "UNVERIFIED SENDER: this email came straight to the"
+                         " Kritvia address (not forwarded from your own mailbox) or its sender couldn't be"
+                         " checked. ") + f"From an email from {msg.sender_email}: {msg.subject}"[:800]
                         + ". Check it is genuine before paying.")})
     except Exception:  # noqa: BLE001 - most often the same bill forwarded twice (bills_number_uq)
         log.info("forwarded bill not filed", exc_info=True)

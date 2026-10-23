@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select, Switch, Textarea } from "@/components/ui/field";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
@@ -261,17 +261,31 @@ export function SkillsCard({ ventureId, canWrite, canAdmin }: { ventureId: strin
   const remove = useMutation({
     mutationFn: (s: Skill) => unwrap(api.DELETE("/ventures/{venture_id}/skills/{skill_id}", { params: { path: { venture_id: ventureId, skill_id: s.id } } })),
     onSuccess: () => {
+      setRemoving(null);
       toast.success("Skill removed");
       refresh();
     },
     onError: (e) => toast.error("Can't remove it", errorMessage(e)),
   });
+  // A lesson is removed by position, so its text goes along: if the list changed meanwhile (two quick taps),
+  // the API refuses instead of forgetting the wrong one.
   const forget = useMutation({
     mutationFn: ({ s, i }: { s: Skill; i: number }) =>
-      unwrap(api.DELETE("/ventures/{venture_id}/skills/{skill_id}/lessons/{index}", { params: { path: { venture_id: ventureId, skill_id: s.id, index: i } } })),
-    onSuccess: refresh,
-    onError: (e) => toast.error("Can't forget it", errorMessage(e)),
+      unwrap(
+        api.DELETE("/ventures/{venture_id}/skills/{skill_id}/lessons/{index}", {
+          params: { path: { venture_id: ventureId, skill_id: s.id, index: i }, query: { lesson: s.lessons[i] } },
+        }),
+      ),
+    onSuccess: () => {
+      toast.success("Forgotten");
+      refresh();
+    },
+    onError: (e) => {
+      toast.error("Can't forget it", errorMessage(e));
+      refresh();
+    },
   });
+  const [removing, setRemoving] = useState<Skill | null>(null);
 
   return (
     <Card>
@@ -347,7 +361,7 @@ export function SkillsCard({ ventureId, canWrite, canAdmin }: { ventureId: strin
                         <>
                           {s.trigger !== "manual" ? <Switch checked={s.enabled} onChange={() => toggle.mutate(s)} label={`Run ${s.name} by itself`} /> : null}
                           <Button size="icon" variant="ghost" aria-label={`Edit ${s.name}`} icon={<Pencil className="h-4 w-4" />} onClick={() => setEditing({ draft: draftFrom(s), id: s.id })} />
-                          <Button size="icon" variant="ghost" aria-label={`Remove ${s.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => remove.mutate(s)} />
+                          <Button size="icon" variant="ghost" aria-label={`Remove ${s.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => setRemoving(s)} />
                         </>
                       ) : null}
                     </div>
@@ -363,7 +377,14 @@ export function SkillsCard({ ventureId, canWrite, canAdmin }: { ventureId: strin
                           <li key={`${i}-${l}`} className="flex items-start justify-between gap-2 text-sm">
                             <span translate="no">{l}</span>
                             {s.can_edit || canAdmin ? (
-                              <Button size="icon" variant="ghost" aria-label={`Forget: ${l}`} icon={<X className="h-3.5 w-3.5" />} onClick={() => forget.mutate({ s, i })} />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Forget: ${l}`}
+                                icon={<X className="h-3.5 w-3.5" />}
+                                disabled={forget.isPending}
+                                onClick={() => forget.mutate({ s, i })}
+                              />
                             ) : null}
                           </li>
                         ))}
@@ -379,6 +400,15 @@ export function SkillsCard({ ventureId, canWrite, canAdmin }: { ventureId: strin
         }
       </QueryState>
       {editing ? <SkillEditor ventureId={ventureId} initial={editing.draft} skillId={editing.id} onClose={() => setEditing(null)} /> : null}
+      <ConfirmDialog
+        open={removing !== null}
+        onClose={() => setRemoving(null)}
+        onConfirm={() => removing && remove.mutate(removing)}
+        loading={remove.isPending}
+        title={removing ? `Remove the skill "${removing.name}"?` : ""}
+        description="It stops running, and what it learned from your edits is lost."
+        confirmLabel="Remove skill"
+      />
     </Card>
   );
 }

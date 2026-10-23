@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formProblem } from "@/components/invoices/invoice-dialog";
-import { dueLabel, paiseToInput, reminderLabel, rupees, toPaise } from "@/components/invoices/money";
+import { amountProblem, dueLabel, paiseToInput, reminderLabel, rupees, toPaise, toPaiseOrZero, toPaiseSigned } from "@/components/invoices/money";
 import { ventureNav } from "@/lib/nav";
 
 const base = { status: "open" as const, due_on: "2026-10-20", overdue_days: 0, reminders_paused: false, reminders_sent: 0 };
@@ -48,5 +48,36 @@ describe("invoice money", () => {
       const labels = ventureNav("v1", kind).common.map((i) => i.label);
       expect(labels.indexOf("Invoices")).toBe(labels.indexOf("Chats") + 1);
     }
+  });
+});
+
+
+describe("amounts as owners type them (U2)", () => {
+  it("accepts /-, only, rupees and lakh commas", () => {
+    expect(toPaise("₹400/-")).toBe(40000);
+    expect(toPaise("15,000/-")).toBe(1500000);
+    expect(toPaise("Rs. 500 only")).toBe(50000);
+    expect(toPaise("1,50,000 rupees")).toBe(15000000);
+  });
+  it("zero is allowed only where it makes sense", () => {
+    expect(toPaise("0")).toBeNull();
+    expect(toPaiseOrZero("0")).toBe(0);
+    expect(toPaiseOrZero("1,200")).toBe(120000);
+  });
+  it("a bank balance may be below zero", () => {
+    expect(toPaiseSigned("-50,000")).toBe(-5000000);
+    expect(toPaiseSigned("₹-1,200.50")).toBe(-120050);
+    expect(toPaiseSigned("0")).toBe(0);
+    expect(toPaise("-50")).toBeNull();
+  });
+  it("explains what's wrong instead of saving ₹0", () => {
+    expect(amountProblem("18%")).toMatch(/not a percentage/);
+    expect(amountProblem("15k")).toMatch(/full amount/);
+    expect(amountProblem("-50")).toMatch(/below zero/);
+    expect(amountProblem("-50", { negative: true })).toBeNull();
+    expect(amountProblem("0")).toMatch(/more than ₹0/);
+    expect(amountProblem("0", { zero: true })).toBeNull();
+    expect(amountProblem("abc")).toMatch(/in rupees/);
+    expect(amountProblem("")).toBeNull();
   });
 });

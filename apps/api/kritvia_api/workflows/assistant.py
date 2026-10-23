@@ -16,6 +16,10 @@ Guardrails:
     or gets bad fields is reported back to the model, never retried blindly.
   - Everything the tools return is outside text: the router's prompt-injection guard screens it, and
     the system prompt tells the model to treat it as data, never as instructions.
+  - Trust boundary (services.run_trust): once outside text has reached the model, or the run was flagged,
+    or no person started the run (a schedule, an event, a routine), a tool that contacts somewhere outside
+    Kritvia (web.browse, any connected app) becomes an approval card showing exactly where it goes, so text
+    someone else wrote can't send the business's data out. Reading the business's own records is never gated.
   - Run summaries hold counts only. The request, the steps and the answer stay in the encrypted run
     state and are read back through /ventures/{v}/assistant.
 """
@@ -207,11 +211,13 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
         "ready to send, in the language the person used (Hinglish if they wrote Hinglish).\n"
         "- Answer in the person's language, short and clear. Say what you did and what is waiting for "
         "their approval.\n"
-        "- You can do anything Kritvia's app can do for this business. The tools above cover the common things; "
-        "for everything else (agents and their settings, invoices, bills, bank, cash, campaigns, social posts, "
-        "jobs and CVs, staff and attendance, bookings, shipments, tasks, skills, settings…) use kritvia.find with "
-        "a few words, then kritvia.read (GET) or kritvia.do (anything that changes something) with the exact "
-        "action and its fields. Never guess an action or an id: find it first.\n"
+        "- You can read anything in Kritvia for this business, and change its everyday records. The tools above "
+        "cover the common things; for everything else (invoices, bills, bank, cash, campaigns, social posts, jobs "
+        "and CVs, staff and attendance, bookings, shipments, tasks, skills, starting an agent…) use kritvia.find "
+        "with a few words, then kritvia.read (GET) or kritvia.do (anything that changes something) with the exact "
+        "action and its fields. Never guess an action or an id: find it first. Agent settings and autonomy, team "
+        "members, who approves from their phone, payment settings, phone and app connections, privacy and billing "
+        "are changed by a person on their page in Kritvia: say which page instead.\n"
         "- A request with several parts: keep `plan` (the parts still to do) and work through them one tool at a "
         "time; answer when all are done or waiting for approval.\n"
         "- When the person wants something done regularly ('every Monday…', 'whenever a payment comes in…'), "
@@ -248,6 +254,10 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
         log.append({"n": n, "tool": s.tool, "ok": False, "result": f"missing field(s): {', '.join(missing)}"})
         return Goto("think", update={"log": log, "plan": state["plan"]}, note=f"{s.tool}: fields missing")
 
+    from kritvia_api.services import run_trust
+    trust = await run_trust.load(ctx, state)
+    if cap == Capability.READ and run_trust.gate(trust, s.tool):
+        return _outward_card(state, s, n, log, trust)
     if cap == Capability.READ:
         try:
             if s.tool.startswith(mcp.PREFIX):
@@ -257,7 +267,10 @@ async def think(ctx: RunContext, state: dict) -> Goto | Interrupt | Finish:
             log.append({"n": n, "tool": s.tool, "ok": True, "result": _short(result)})
         except Exception as exc:   # a failed lookup goes back to the model, it doesn't end the run
             log.append({"n": n, "tool": s.tool, "ok": False, "result": f"{type(exc).__name__}: {str(exc)[:300]}"})
-        return Goto("think", update={"log": log, "plan": state["plan"]}, note=f"used {s.tool}")
+        update: dict[str, Any] = {"log": log, "plan": state["plan"]}
+        if run_trust.taints(s.tool):
+            update |= run_trust.taint(state, f"read {s.tool}")
+        return Goto("think", update=update, note=f"used {s.tool}")
     if cap == Capability.EXECUTE:
         log.append({"n": n, "tool": s.tool, "ok": False, "result": "that tool can't be used here"})
         return Goto("think", update={"log": log, "plan": state["plan"]})
@@ -335,17 +348,25 @@ async def act(ctx: RunContext, state: dict) -> Goto:
     d = state.get("decision") or {}
     if state["input"].get("skill_id") and d.get("status") == "edited":
         await _learn(ctx, state, pending, final=d.get("payload"), comment=d.get("comment"))
+    outward = bool(pending.get("outward"))     # a look-up a person allowed: its answer is what the model needs
     try:
         if pending["tool"].startswith(mcp.PREFIX):
             result = await ctx.invoke("mcp.call", approval_id=d["approval_id"])
+        elif pending["tool"] == "web.browse":
+            result = await ctx.invoke("web.browse_approved", approval_id=d["approval_id"])
         else:
             result = await ctx.invoke(pending["tool"], approval_id=d["approval_id"])
         log.append({"n": pending["n"], "tool": pending["tool"], "ok": True,
-                    "result": "done (approved by the person): " + _short(result, 600)})
+                    "result": ("returned (approved by the person): " + _short(result)) if outward
+                    else "done (approved by the person): " + _short(result, 600)})
     except Exception as exc:
         log.append({"n": pending["n"], "tool": pending["tool"], "ok": False,
                     "result": f"approved but failed: {type(exc).__name__}: {str(exc)[:300]}"})
-    return Goto("think", update={"log": log, "pending": None}, note=f"{pending['tool']} done")
+    update: dict[str, Any] = {"log": log, "pending": None}
+    if outward or pending["tool"].startswith(mcp.PREFIX):
+        from kritvia_api.services import run_trust
+        update |= run_trust.taint(state, f"read {pending['tool']}")
+    return Goto("think", update=update, note=f"{pending['tool']} done")
 
 
 @wf.step("rejected", agent="assistant")
@@ -362,6 +383,31 @@ async def rejected(ctx: RunContext, state: dict) -> Goto | Finish:
         return Finish("not_done", update={"log": log, "pending": None, "summary": _summary(log, answered=False),
                                           "answer": "Okay, I've stopped. Nothing was sent."})
     return Goto("think", update={"log": log, "pending": None}, note="not approved; trying another way")
+
+
+def _outward_card(state: dict, s: Step, n: int, log: list[dict], trust: Any) -> Interrupt:
+    """A look-up outside Kritvia that this run may not make on its own (see services.run_trust): the card says
+    exactly where it goes, built here from the fields, not from the model's title."""
+    from kritvia_api.services import mcp, run_trust
+    why = ("this request has read text from outside the business" if trust.tainted or trust.flagged
+           else "nobody is waiting on this request, so Kritvia checks first")
+    if s.tool.startswith(mcp.PREFIX):
+        fields = ", ".join(f"{k}: {str(v)[:80]}" for k, v in list(s.args.items())[:6]) or "no fields"
+        title = f"Use {s.tool[len(mcp.PREFIX):]} ({fields})"[:140]
+        action, payload = "mcp.call", {**s.args, "mcp_tool": s.tool}
+    else:
+        url = run_trust.clean_url(s.args.get("url"))
+        task = str(s.args.get("task") or "")[:600]
+        title = f"Look up on the web: {url or task[:100]}"[:140]
+        action, payload = "web.browse_approved", {"task": task, "url": url}
+    return Interrupt(
+        ApprovalRequest(agent="assistant", action=action, key="decision", title=title,
+                        summary=f"Kritvia asks before contacting another site or app: {why}."[:300],
+                        payload=payload, required_roles=("approver", "venture_admin"), always_review=True),
+        resume="act", on_reject="rejected",
+        update={"pending": {"n": n, "tool": s.tool, "outward": True}, "log": log, "plan": state["plan"],
+                run_trust.STATE_KEY: state.get(run_trust.STATE_KEY, {})},
+        note=f"{s.tool} waits for a person: outward look-up")
 
 
 async def _learn(ctx: RunContext, state: dict, pending: dict, *, final: dict | None, comment: str | None) -> None:

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, FormError, Input, Select, Switch, Textarea } from "@/components/ui/field";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { TimeField } from "@/components/ui/time-field";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
@@ -122,9 +123,14 @@ export function CustomWorkflows({ ventureId, canAdmin }: { ventureId: string; ca
     onSuccess: () => void qc.invalidateQueries({ queryKey: key }),
     onError: (e) => toast.error("Couldn't change it", errorMessage(e)),
   });
+  const [removing, setRemoving] = useState<Custom | null>(null);
   const remove = useMutation({
     mutationFn: (c: Custom) => unwrap(api.DELETE("/ventures/{venture_id}/custom-workflows/{custom_id}", path(c))),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: key }),
+    onSuccess: () => {
+      setRemoving(null);
+      toast.success("Workflow removed");
+      void qc.invalidateQueries({ queryKey: key });
+    },
     onError: (e) => toast.error("Couldn't remove it", errorMessage(e)),
   });
   const run = useMutation({
@@ -186,7 +192,7 @@ export function CustomWorkflows({ ventureId, canAdmin }: { ventureId: string; ca
                             Run now
                           </Button>
                           <Switch checked={c.enabled} onChange={() => toggle.mutate(c)} label={`Run ${c.name} every day`} />
-                          <Button size="icon" variant="ghost" aria-label={`Remove ${c.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => remove.mutate(c)} />
+                          <Button size="icon" variant="ghost" aria-label={`Remove ${c.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => setRemoving(c)} />
                         </div>
                       ) : null}
                     </li>
@@ -199,6 +205,15 @@ export function CustomWorkflows({ ventureId, canAdmin }: { ventureId: string; ca
           )
         }
       </QueryState>
+      <ConfirmDialog
+        open={removing !== null}
+        onClose={() => setRemoving(null)}
+        onConfirm={() => removing && remove.mutate(removing)}
+        loading={remove.isPending}
+        title={removing ? `Remove "${removing.name}"?` : ""}
+        description="It stops checking every day. Drafts it already made stay in Approvals."
+        confirmLabel="Remove"
+      />
     </Card>
   );
 }

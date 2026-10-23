@@ -115,8 +115,12 @@ async def test_audience_industry_and_private_codes(client, staff):
     v = await venture(owner, org, "agency", "software")
     r = await owner.post(f"/orgs/{org}/coupon", json={"code": c})
     assert r.status_code == 409 and "different kind of business" in r.text
+    # switching the business to the coupon's industry afterwards doesn't unlock it (S19): the first choice counts
     await owner.put(f"/ventures/{v}/settings", json={"industry": "kitchen", "kind": "kitchen"})
     assert (await owner.get(f"/ventures/{v}/settings")).json()["industry"] == "kitchen"
+    assert "different kind of business" in (await owner.post(f"/orgs/{org}/coupon", json={"code": c})).text
+    # Kritvia's team can correct it (a real kitchen that picked the wrong type at sign-up)
+    await _admin_sql("UPDATE venture_settings SET coupon_industry = 'kitchen' WHERE venture_id = $1", uuid.UUID(v))
     # too long after signing up
     await sql("UPDATE coupons SET created_at = now() - interval '30 days' WHERE code = $1", c)
     await _admin_sql("UPDATE organisations SET created_at = now() - interval '10 days' WHERE id = $1", org)

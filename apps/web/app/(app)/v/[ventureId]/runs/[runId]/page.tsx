@@ -125,7 +125,14 @@ function RunDetailView() {
           you work under <Link href={`/v/${v.id}/agents`} className="text-accent hover:underline">Agents</Link>.
         </Notice>
       ) : null}
-      {r.error ? (
+      {r.error && (r.status === "queued" || r.status === "running") ? (
+        // A passing problem (an AI provider or Google down for a moment): the run is already booked to try
+        // again by itself, so it isn't shown as a failure the owner has to deal with.
+        <Notice tone="warning" title="Hit a passing problem; trying again by itself" className="mb-4">
+          Kritvia tries again in a few minutes (up to 3 times). Nothing to do unless you want to cancel it.{" "}
+          <span className="font-mono text-xs break-words">{r.error}</span>
+        </Notice>
+      ) : r.error ? (
         <Notice tone="danger" title="This run failed" className="mb-4">
           <span className="font-mono text-xs break-words">{r.error}</span>
         </Notice>

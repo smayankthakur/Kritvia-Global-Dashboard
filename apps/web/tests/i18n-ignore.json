@@ -1,0 +1,13 @@
+{
+  "note": "Hindi coverage (tests/hindi-coverage.test.ts). 'strings': interface text that stays as it is in Hindi mode: brand and product names, technical names a person must type or find exactly as written, sample data. 'files': screens that stay English on purpose. 'outsideScopeMissing': how many English strings on screens outside the covered ones still have no Hindi; it may only go down (lower it when you translate more).",
+  "files": ["components/invoices/invoice-document.tsx"],
+  "filesWhy": "The printed tax invoice stays in English, like the GST documents it matches.",
+  "strings": [
+    "Tally", "Glow Salon FC Road Pune", "HSN/SAC", "CGST + SGST", "Facebook / Instagram (Meta)", "Google Ads", "Meta", "Google",
+    "Google Business Profile", "Facebook", "GSTR-1 JSON", "python kritvia_tally_sync.py", "Alt+E", "XML (Data Interchange)",
+    "Google Workspace", "WhatsApp Business", "X-Kritvia-Timestamp", "(unix seconds) and",
+    "X-Kritvia-Signature: sha256=HMAC(secret, \"&lt;ts&gt;.&lt;body&gt;\")", ". Requests older than 5 minutes are refused.",
+    "@BotFather", "123456789:AA…", "Slack", "Incoming Webhooks", "IndiaMART", "Lead Manager → Pull API"
+  ],
+  "outsideScopeMissing": 1000
+}

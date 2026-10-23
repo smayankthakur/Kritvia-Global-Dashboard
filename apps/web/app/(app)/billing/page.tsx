@@ -119,6 +119,8 @@ export default function BillingPage() {
     onSuccess: () => {
       setCancelOpen(false);
       toast.success("Your plan will end at the close of the paid period");
+      void qc.invalidateQueries({ queryKey: ["billing", org?.id] });
+      void qc.invalidateQueries({ queryKey: ["plan", org?.id] });
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
@@ -135,20 +137,20 @@ export default function BillingPage() {
         <Card>
           <CardHeader title={p.plan.code === "free" || p.plan.code === "expired" ? p.plan.name : `${p.plan.name} plan`} description={p.renews_at ? `Renews ${formatDate(p.renews_at)}` : coupon.data?.running ? (couponNote(coupon.data) ?? undefined) : p.plan.code === "free" ? trialNote(p.trial) : p.plan.code === "expired" ? "Read-only until you choose a plan" : undefined} />
           <div className="space-y-4 p-4">
-            <Meter label="AI this month" used={p.tokens} limit={p.plan.monthly_tokens} unit="tokens" />
+            <Meter label="AI used this month" used={p.tokens} limit={p.plan.monthly_tokens} unit="tokens" />
             <Meter label="Businesses" used={p.ventures} limit={p.plan.max_ventures} />
             <Meter label="People" used={p.members} limit={p.plan.max_members} />
             <Meter label="Business memory" used={p.storage_bytes} limit={p.plan.storage_bytes} unit="bytes" />
             {p.tokens_left === 0 ? (
               <Notice tone="warning" title="AI allowance used">
-                Kritvia keeps working on your server&apos;s private model; steps that need a hosted model wait until next month, an extra usage pack or an upgrade.
+                Kritvia keeps working on its private model; steps that need a hosted AI model wait until next month or an upgrade.
               </Notice>
             ) : null}
-            <p className="text-xs text-subtle">Only hosted models count. Private (local) model use is always free.</p>
+            <p className="text-xs text-subtle">AI usage is counted in tokens (roughly, pieces of words). Only hosted AI models count; Kritvia&apos;s private model is always free.</p>
           </div>
         </Card>
         <Card>
-          <CardHeader title="Extra AI usage" description="For a busy month. A pack adds hosted-AI tokens for the month you buy it." />
+          <CardHeader title="Extra AI usage" description="For a busy month: a pack adds AI usage for the month you buy it. Packs go on sale when online payments are live." />
           <ul className="divide-y divide-border">
             {p.token_packs.map((t) => (
               <li key={t.code} className="flex items-center justify-between gap-3 px-4 py-3">

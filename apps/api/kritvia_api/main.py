@@ -32,8 +32,9 @@ def check_production_config() -> None:
         problems.append("DISPATCH_MODE must be 'arq' in production")
     if s.email_code_minutes > 15:
         problems.append("EMAIL_CODE_MINUTES must be 15 or less (sign-in and reset codes expire quickly)")
-    if s.mail_transport == "log" and s.signup_open:
-        problems.append("MAIL_TRANSPORT=log would write sign-in codes to the logs; use smtp, or set SIGNUP_OPEN=false")
+    if s.mail_transport != "smtp":
+        problems.append(f"MAIL_TRANSPORT={s.mail_transport} doesn't deliver email (and 'log' would write sign-in,"
+                        " reset and invitation codes to the logs, kept for a year); use smtp")
     if not s.client_ip_header.strip():
         problems.append("CLIENT_IP_HEADER is not set, so every visitor would share one rate-limit bucket"
                         " (behind Cloudflare Tunnel set CLIENT_IP_HEADER=cf-connecting-ip)")
@@ -44,6 +45,8 @@ def check_production_config() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     check_production_config()
+    from kritvia_api import logredact
+    logredact.install()          # emails and phone numbers masked in every log line (kept for a year)
     yield
     await dispose_engine()
 
@@ -92,6 +95,8 @@ def create_app() -> FastAPI:
             h.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
         return response
 
+    from kritvia_api.apiclient import ApiClientMiddleware
+    app.add_middleware(ApiClientMiddleware)       # /v1 prefix, Idempotency-Key, one error format (developer API)
     # Outermost: oversized bodies are refused before anything buffers or parses them.
     app.add_middleware(BodyLimitMiddleware)
 
@@ -102,19 +107,29 @@ def create_app() -> FastAPI:
               email_in.router, whatsapp_chats.router, invoices.router, chat_approvals.router, payments.router, first_win.router, gst.router, bookings.router, reviews.router, automations.router, partners.router, device_link.router, coupons.router, analytics.router, api_keys.router, custom_workflows.router, sso.router, trade.router, teams.router, skills.router, agent_team.router, browser.router, calls.router,
               bank.router, bills.router, campaigns.router, social.router, events.router, people.router, cash.router, ads.router, app_store.router):
         app.include_router(r)
+    from kritvia_api.routers import exports, ses_feedback
+    app.include_router(exports.router)            # organisation export (owners)
+    app.include_router(ses_feedback.router)       # SES bounces and complaints -> suppression list
 
     @app.get("/healthz", tags=["ops"])
     async def healthz() -> dict:
         return {"status": "ok"}
 
     @app.get("/readyz", tags=["ops"])
-    async def readyz() -> dict:
+    async def readyz(response: Response) -> dict:
+        """The database and the run queue (Valkey). 503 with queue "down" when Valkey doesn't answer: runs
+        can't start then, and the health watchdog restarts Valkey, not the API."""
         from sqlalchemy import text
 
         from kritvia_api.db.session import tenant_tx
+        from kritvia_api.engine.context import get_services
         async with tenant_tx(None, "system") as conn:
             migrations = (await conn.execute(text("SELECT count(*) FROM schema_migrations"))).scalar()
-        return {"status": "ok", "migrations": migrations}
+        ping = getattr(get_services().dispatcher, "ping", None)
+        queue = "n/a" if ping is None else ("ok" if await ping() else "down")
+        if queue == "down":
+            response.status_code = 503
+        return {"status": "ok" if queue != "down" else "degraded", "migrations": migrations, "queue": queue}
 
     @app.get("/livez", tags=["ops"])
     async def livez(response: Response) -> dict:

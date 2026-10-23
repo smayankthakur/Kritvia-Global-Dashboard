@@ -148,3 +148,37 @@ async def test_the_egress_proxy():
         site.shutdown()
     with pytest.raises(guard.Blocked):
         await guard.resolve_public("10.1.2.3", 443)
+
+
+NPM_SRI = "sha512-" + "A" * 86 + "=="
+PYPI_SHA = "sha256:" + "a" * 64
+OCI_SHA = "sha256:" + "b" * 64
+
+
+def test_a_pinned_release_is_checked_before_it_runs():
+    """S6: an approval's fingerprint goes into the instance, which verifies the download before running it."""
+    image, cmd, env = runner.image_and_command(runner.Package(registryType="npm", identifier="@acme/x", version="1.2.3",
+                                                              integrity=NPM_SRI))
+    assert cmd[:2] == ["sh", "-c"] and "npm pack" in cmd[2] and "process.exit(3)" in cmd[2]
+    assert env["KV_PKG"] == "@acme/x@1.2.3" and env["KV_INTEGRITY"] == NPM_SRI
+    image, cmd, env = runner.image_and_command(runner.Package(registryType="pypi", identifier="acme-mcp", version="2.0",
+                                                              integrity=PYPI_SHA, file="acme_mcp-2.0-py3-none-any.whl"))
+    assert cmd[:2] == ["python", "-c"] and "sha256" in cmd[2] and env["KV_FILE"].endswith(".whl")
+    image, cmd, _ = runner.image_and_command(runner.Package(registryType="oci", identifier="ghcr.io/acme/mcp:1.0",
+                                                            version="1.0", integrity=OCI_SHA))
+    assert image == f"ghcr.io/acme/mcp@{OCI_SHA}" and cmd == []           # by digest, never by tag
+    with pytest.raises(runner.HTTPException):                             # a malformed fingerprint is refused
+        runner.validate(runner.StartIn(package=runner.Package(registryType="npm", identifier="x", version="1",
+                                                              integrity="md5-abc")))
+
+
+async def test_the_control_api_never_answers_over_a_sandbox_network(monkeypatch):
+    """S7: a request arriving on one of the runner's sandbox addresses gets nothing, token or not."""
+    monkeypatch.setattr(runner, "LOCAL", False)
+    monkeypatch.setattr(runner, "_sandbox_ips", {"testserver"})
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=runner.app), base_url="http://testserver") as c:
+        r = await c.put(f"/instances/{uuid.uuid4()}", json=CFG, headers=AUTH)
+        assert r.status_code == 404
+    monkeypatch.setattr(runner, "_sandbox_ips", set())
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=runner.app), base_url="http://testserver") as c:
+        assert (await c.get("/healthz")).status_code == 200

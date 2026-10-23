@@ -137,7 +137,7 @@ function AppsLink({ ventureId }: { ventureId: string }) {
       <Plug className="h-5 w-5 text-subtle" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="font-semibold">Give the assistant more apps</p>
-        <p className="text-sm text-muted">Connect any MCP server, a GitHub project or any web app with an API from the App store.</p>
+        <p className="text-sm text-muted">Connect the other apps you use, like Notion, HubSpot or Zapier, or any web app with an API, from the App store.</p>
       </div>
       <Link href={`/v/${ventureId}/apps`} className="text-sm font-medium text-accent underline-offset-2 hover:underline">
         Open the App store

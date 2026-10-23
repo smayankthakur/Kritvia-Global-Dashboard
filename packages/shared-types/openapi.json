@@ -6195,6 +6195,11 @@
             "title": "Device",
             "type": "string"
           },
+          "match": {
+            "description": "the number this device shows; the computer picks it to say yes",
+            "title": "Match",
+            "type": "string"
+          },
           "secret": {
             "description": "kept by the web app in an httpOnly cookie, never shown to the page",
             "title": "Secret",
@@ -6203,7 +6208,8 @@
         },
         "required": [
           "secret",
-          "device"
+          "device",
+          "match"
         ],
         "title": "ClaimOut",
         "type": "object"
@@ -8083,6 +8089,19 @@
           "approve": {
             "title": "Approve",
             "type": "boolean"
+          },
+          "match": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the number the new device shows; needed for a yes",
+            "title": "Match"
           }
         },
         "required": [
@@ -13168,6 +13187,19 @@
             "title": "Approve",
             "type": "boolean"
           },
+          "match": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the number the computer shows; needed for a yes",
+            "title": "Match"
+          },
           "token": {
             "pattern": "^[A-Za-z0-9_-]{32,64}$",
             "title": "Token",
@@ -13200,6 +13232,18 @@
       },
       "LinkStateOut": {
         "properties": {
+          "claimed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
           "device": {
             "anyOf": [
               {
@@ -13216,6 +13260,51 @@
             "format": "date-time",
             "title": "Expires At",
             "type": "string"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "its internet address",
+            "title": "Ip"
+          },
+          "options": {
+            "default": [],
+            "description": "pick the number the new device shows",
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "approximate city and country, from Cloudflare",
+            "title": "Place"
+          },
+          "same_network": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "false: a different network from the device deciding (unknown when either address is)",
+            "title": "Same Network"
           },
           "status": {
             "enum": [
@@ -15401,6 +15490,18 @@
       },
       "PeekOut": {
         "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
           "device": {
             "anyOf": [
               {
@@ -15418,6 +15519,18 @@
             "title": "Expires At",
             "type": "string"
           },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "its internet address",
+            "title": "Ip"
+          },
           "kind": {
             "enum": [
               "offer",
@@ -15425,6 +15538,39 @@
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "options": {
+            "default": [],
+            "description": "pick the number the new device shows",
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "approximate city and country, from Cloudflare",
+            "title": "Place"
+          },
+          "same_network": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "false: a different network from the device deciding (unknown when either address is)",
+            "title": "Same Network"
           },
           "status": {
             "title": "Status",
@@ -16793,6 +16939,11 @@
             "title": "Expires At",
             "type": "string"
           },
+          "match": {
+            "description": "the number this page shows; the phone picks it to say yes",
+            "title": "Match",
+            "type": "string"
+          },
           "secret": {
             "description": "kept by the web app in an httpOnly cookie, never shown to the page",
             "title": "Secret",
@@ -16812,7 +16963,8 @@
           "token",
           "secret",
           "url",
-          "expires_at"
+          "expires_at",
+          "match"
         ],
         "title": "RequestOut",
         "type": "object"
@@ -16924,6 +17076,19 @@
               }
             ],
             "title": "Note"
+          },
+          "package_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the package_hash of the entry as reviewed (needed to approve)",
+            "title": "Package Hash"
           },
           "status": {
             "enum": [
@@ -20879,6 +21044,30 @@
             ],
             "description": "hosted: registry type, name and version",
             "title": "Package"
+          },
+          "package_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "send it back with an approval: it applies only to this exact package",
+            "title": "Package Hash"
+          },
+          "pinned": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the registry fingerprint the approval pinned",
+            "title": "Pinned"
           },
           "repo_url": {
             "anyOf": [
@@ -28264,6 +28453,9 @@
             },
             "description": "Successful Response"
           },
+          "409": {
+            "description": "the wrong number: the sign-in is refused"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -28548,6 +28740,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "409": {
+            "description": "expired, already answered, or the wrong number (refused)"
           },
           "422": {
             "content": {
@@ -29372,6 +29567,29 @@
         "summary": "Razorpay Hook",
         "tags": [
           "payments"
+        ]
+      }
+    },
+    "/hooks/ses/feedback": {
+      "post": {
+        "operationId": "ses_feedback_hooks_ses_feedback_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ses Feedback Hooks Ses Feedback Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ses Feedback",
+        "tags": [
+          "webhooks"
         ]
       }
     },
@@ -31428,6 +31646,53 @@
         "summary": "Dashboard",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/orgs/{org_id}/export": {
+      "get": {
+        "description": "Everything this organisation keeps in Kritvia, as a ZIP (owners only).",
+        "operationId": "export_org_orgs__org_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Org Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Org",
+        "tags": [
+          "orgs"
         ]
       }
     },
@@ -33543,6 +33808,7 @@
     },
     "/readyz": {
       "get": {
+        "description": "The database and the run queue (Valkey). 503 with queue \"down\" when Valkey doesn't answer: runs\ncan't start then, and the health watchdog restarts Valkey, not the API.",
         "operationId": "readyz_readyz_get",
         "responses": {
           "200": {
@@ -34587,6 +34853,25 @@
               "default": 100,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "description": "the X-Next-Cursor of the previous page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "the X-Next-Cursor of the previous page",
+              "title": "Cursor"
             }
           }
         ],
@@ -36154,6 +36439,7 @@
     },
     "/ventures/{venture_id}/automations": {
       "get": {
+        "description": "Oldest first; a full page carries X-Next-Cursor for the next one.",
         "operationId": "list__ventures__venture_id__automations_get",
         "parameters": [
           {
@@ -36164,6 +36450,35 @@
               "format": "uuid",
               "title": "Venture Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
             }
           }
         ],
@@ -37447,6 +37762,65 @@
           }
         ],
         "summary": "Bill Paid",
+        "tags": [
+          "bills"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/bills/{bill_id}/reopen": {
+      "post": {
+        "description": "Undoes \"paid\" or \"cancelled\": the bill is open again, with nothing paid on it. A bank line that\nrecorded the payment goes back to the bank tab to be matched again. For a mis-tap, or a payment\nthat bounced.",
+        "operationId": "reopen_bill_ventures__venture_id__bills__bill_id__reopen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bill_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Bill Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierBillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reopen Bill",
         "tags": [
           "bills"
         ]
@@ -43901,6 +44275,39 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "created: newest first, paged with cursor / X-Next-Cursor",
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "due",
+              "description": "created: newest first, paged with cursor / X-Next-Cursor",
+              "enum": [
+                "due",
+                "created"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
@@ -45667,7 +46074,7 @@
     },
     "/ventures/{venture_id}/leads": {
       "get": {
-        "description": "No Google lookups here: a prospect is named from Google Maps only when its lead is opened.",
+        "description": "Newest first. No Google lookups here: a prospect is named from Google Maps only when its lead is opened.\nA full page carries X-Next-Cursor; send it back as `cursor` for the next page.",
         "operationId": "list_leads_ventures__venture_id__leads_get",
         "parameters": [
           {
@@ -45688,6 +46095,25 @@
               "default": 50,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "description": "the X-Next-Cursor of the previous page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "the X-Next-Cursor of the previous page",
+              "title": "Cursor"
             }
           }
         ],
@@ -46753,6 +47179,7 @@
         ]
       },
       "put": {
+        "description": "Where customers pay. Changing the UPI ID is for the business's owner only, needs a sign-in from the last few\nminutes, tells every owner by email and goes in the audit log; invoices already issued keep the UPI ID they\nwere issued with (test report round 2, S11).",
         "operationId": "put_settings_ventures__venture_id__payment_settings_put",
         "parameters": [
           {
@@ -46864,6 +47291,7 @@
     },
     "/ventures/{venture_id}/proposals": {
       "get": {
+        "description": "Newest first; a full page carries X-Next-Cursor for the next one.",
         "operationId": "list_proposals_ventures__venture_id__proposals_get",
         "parameters": [
           {
@@ -46891,6 +47319,35 @@
                 }
               ],
               "title": "Lead Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
             }
           }
         ],
@@ -49297,6 +49754,25 @@
             "schema": {
               "title": "Index",
               "type": "integer"
+            }
+          },
+          {
+            "description": "the lesson's text: refused if the one at this position is another",
+            "in": "query",
+            "name": "lesson",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "the lesson's text: refused if the one at this position is another",
+              "title": "Lesson"
             }
           }
         ],

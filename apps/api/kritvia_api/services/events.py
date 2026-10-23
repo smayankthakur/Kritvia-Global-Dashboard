@@ -67,12 +67,20 @@ async def dispatch(services, now: datetime | None = None) -> dict[str, int]:
         by_venture[e.venture_id].append(e)
     skills = alerts = 0
     for venture_id, events in by_venture.items():
+        ids = [e.id for e in events]
         try:
             s, a = await _venture(services, venture_id, events, now or datetime.now(UTC))
             skills += s
             alerts += a
+            done = True
         except Exception:  # noqa: BLE001 - one business's problem never holds up the others
-            log.exception("events for %s were not acted on", venture_id)
+            log.exception("events for %s were not acted on; they are tried again", venture_id)
+            done = False
+        # Claimed events are a lease: marked done only once acted on. Failed ones (and any left by a worker
+        # stopped mid-way) come back after the lease, up to 5 tries; skills started from them are
+        # deduplicated per event, so a retry never starts one twice.
+        async with tenant_tx(None, "system") as conn:
+            await conn.execute(text("SELECT private.events_done(:ids, :ok)"), {"ids": ids, "ok": done})
     return {"events": len(got), "skills": skills, "alerts": alerts}
 
 

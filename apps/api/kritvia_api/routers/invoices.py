@@ -16,7 +16,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -194,10 +194,13 @@ def _db_error(exc: DBAPIError) -> None:
 
 
 @router.get("/ventures/{venture_id}/invoices", response_model=InvoicesOut)
-async def list_invoices(venture_id: uuid.UUID, db: TenantDB,
+async def list_invoices(venture_id: uuid.UUID, db: TenantDB, response: Response,
                         show: Literal["open", "overdue", "paid", "draft", "all"] = "open",
                         q: str | None = Query(default=None, max_length=100),
-                        limit: int = Query(default=200, ge=1, le=500)) -> InvoicesOut:
+                        limit: int = Query(default=200, ge=1, le=500),
+                        order: Literal["due", "created"] = Query(
+                            default="due", description="created: newest first, paged with cursor / X-Next-Cursor"),
+                        cursor: str | None = Query(default=None, max_length=200)) -> InvoicesOut:
     await venture_org(db, venture_id)
     today = today_ist()
     where = {"open": "status = 'open'", "overdue": "status = 'open' AND due_on < :today",
@@ -206,9 +209,17 @@ async def list_invoices(venture_id: uuid.UUID, db: TenantDB,
     if q:
         where += " AND (customer_name ILIKE :q OR number ILIKE :q)"
         params["q"] = f"%{q}%"
-    order = "paid_on DESC" if show == "paid" else "due_on ASC"
-    rows = (await db.execute(text(f"SELECT {COLS} FROM invoices WHERE venture_id = :v AND {where}"
-                                  f" ORDER BY {order}, created_at DESC LIMIT :l"), params)).all()
+    from kritvia_api import pagination
+    if order == "created" or cursor:
+        after, cp = pagination.where(cursor)
+        params.update(cp)
+        rows = (await db.execute(text(f"SELECT {COLS} FROM invoices WHERE venture_id = :v AND {where} AND {after}"
+                                      f" ORDER BY {pagination.order()} LIMIT :l"), params)).all()
+        pagination.set_next(response, rows, limit)
+    else:
+        by = "paid_on DESC" if show == "paid" else "due_on ASC"
+        rows = (await db.execute(text(f"SELECT {COLS} FROM invoices WHERE venture_id = :v AND {where}"
+                                      f" ORDER BY {by}, created_at DESC LIMIT :l"), params)).all()
     t = (await db.execute(text(
         "SELECT coalesce(sum(amount_paise - paid_paise) FILTER (WHERE status = 'open'), 0) AS outstanding,"
         " coalesce(sum(amount_paise - paid_paise) FILTER (WHERE status = 'open' AND due_on < :today), 0) AS overdue,"

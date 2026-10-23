@@ -78,13 +78,15 @@ function download(a: A, name: string) {
   URL.revokeObjectURL(url);
 }
 
+// The charts are hidden from screen readers (the figcaption reads the numbers out), so nothing inside them may
+// take keyboard focus: Recharts' keyboard layer is off.
 function MoneyChart({ a }: { a: A }) {
   const data = a.trend as Point[];
   return (
     <figure>
       <div className="h-64 w-full" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }} accessibilityLayer={false}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis dataKey="start" tickFormatter={(d: string) => label(a.bucket, d)} tick={tick} axisLine={{ stroke: "var(--border)" }} tickLine={false} minTickGap={16} />
             <YAxis tickFormatter={(v: number) => shortRs(v)} tick={tick} axisLine={false} tickLine={false} width={56} />
@@ -109,7 +111,7 @@ function WorkChart({ a }: { a: A }) {
     <figure>
       <div className="h-56 w-full" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }} barGap={2}>
+          <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }} barGap={2} accessibilityLayer={false}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis dataKey="start" tickFormatter={(d: string) => label(a.bucket, d)} tick={tick} axisLine={{ stroke: "var(--border)" }} tickLine={false} minTickGap={16} />
             <YAxis allowDecimals={false} tick={tick} axisLine={false} tickLine={false} />

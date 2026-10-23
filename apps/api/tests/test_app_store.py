@@ -29,6 +29,9 @@ async def sql(q: str, *args):
         await conn.close()
 
 
+INTEGRITY = "sha512-" + "A" * 86 + "=="
+
+
 class Net:
     """A small internet: hosts -> handlers. Every request is recorded."""
 
@@ -353,7 +356,8 @@ def github(net):
 
     net.hosts["api.github.com"] = api
     net.hosts["raw.githubusercontent.com"] = raw
-    net.hosts["registry.npmjs.org"] = lambda r: httpx.Response(200, json={"dist-tags": {"latest": "1.4.0"}})
+    net.hosts["registry.npmjs.org"] = lambda r: httpx.Response(200, json={
+        "dist-tags": {"latest": "1.4.0"}, "versions": {"1.4.0": {"dist": {"integrity": INTEGRITY}}}})
     return net
 
 
@@ -417,9 +421,15 @@ async def test_github_skills_and_a_reviewed_hosted_app(desk, github, fake_llm, m
     assert mine["status"] == "pending" and mine["submitted_by"] == mayank.email
     bad = await mayank.post("/staff/apps/review", json={"id": cid, "status": "approved", "egress_hosts": ["10.0.0.1"]})
     assert bad.status_code == 422
-    ok = await mayank.post("/staff/apps/review", json={"id": cid, "status": "approved",
+    # an approval names the package as the reviewer saw it (S6): without it, or after it changed, it's refused
+    assert (await mayank.post("/staff/apps/review", json={"id": cid, "status": "approved",
+                                                          "egress_hosts": ["api.acme-crm.com"]})).status_code == 409
+    assert (await mayank.post("/staff/apps/review", json={"id": cid, "status": "approved", "egress_hosts": [],
+                                                          "package_hash": "0" * 64})).status_code == 409
+    ok = await mayank.post("/staff/apps/review", json={"id": cid, "status": "approved", "package_hash": mine["package_hash"],
                                                        "egress_hosts": ["api.acme-crm.com"], "note": "read the code"})
-    assert next(s for s in ok.json() if s["id"] == cid)["status"] == "approved"
+    reviewed = next(s for s in ok.json() if s["id"] == cid)
+    assert reviewed["status"] == "approved" and reviewed["pinned"] == INTEGRITY
     # a later registry or GitHub refresh never changes the approved version
     await sql("SELECT private.catalog_upsert($1::jsonb)", json.dumps({
         "id": cid, "source": "github", "kind": "hosted", "title": "crm-tools", "status": "pending",
@@ -433,6 +443,7 @@ async def test_github_skills_and_a_reviewed_hosted_app(desk, github, fake_llm, m
     assert app["kind"] == "hosted" and app["url"] == f"runner:{app['id']}"
     cfg = runner.configs[app["id"]]
     assert cfg["package"]["version"] == "1.4.0" and cfg["egress_hosts"] == ["api.acme-crm.com"]
+    assert cfg["package"]["integrity"] == INTEGRITY            # the runner checks the release before running it
     # the runner restarted (it lost the instance): the next call starts it again and carries on
     runner.configs.clear()
     script(fake_llm, {"tool": "app.crm.find_contact", "args": {"name": "Ravi"}},
@@ -447,10 +458,15 @@ async def test_hosted_apps_are_off_without_a_runner(desk, net):
     mayank, v = desk["mayank"], desk["v"]
     await sql("SELECT private.catalog_upsert($1::jsonb)", json.dumps({
         "id": "github:acme/off", "source": "github", "kind": "hosted", "title": "off", "status": "pending",
-        "package": {"registryType": "npm", "identifier": "off-mcp", "version": "1.0.0", "env": []}}))
+        "package": {"registryType": "npm", "identifier": "off-mcp", "version": "1.0.0", "env": [],
+                    "integrity": INTEGRITY}}))
     await sql("UPDATE app_catalog SET status = 'approved' WHERE id = 'github:acme/off'")
     r = await mayank.post(f"/ventures/{v}/apps/hosted", json={"name": "off", "catalog_id": "github:acme/off"})
     assert r.status_code == 422 and "MCP_RUNNER_URL" in r.json()["detail"]
+    # approved before approvals were pinned (no fingerprint): it needs a fresh review, it never runs as it is
+    await sql("UPDATE app_catalog SET package = package - 'integrity' WHERE id = 'github:acme/off'")
+    r = await mayank.post(f"/ventures/{v}/apps/hosted", json={"name": "off", "catalog_id": "github:acme/off"})
+    assert r.status_code == 422 and "fresh review" in r.json()["detail"]
 
 
 # ------------------------------------------------------------------------------ the registry --

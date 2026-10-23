@@ -12,11 +12,15 @@ open a role, mark attendance, create a campaign, change booking hours, read the 
                                through the assistant what they couldn't do on the page
 
 The call goes through the app itself (in-process, same checks, same row-level security), with a token that
-lives one minute. What is never reachable this way:
-  - anything outside this business (only /ventures/{this business}/…)
-  - approvals, trust and autonomy (the assistant can't approve its own drafts or give itself more freedom),
-    members, privacy requests, connected-app and connector secrets, API keys, billing, the assistant itself
-  - file uploads (they need a person's file) and deleting the business
+lives one minute. What it may reach is an ALLOW-list (test report round 2, S3):
+  - reads: any GET of this business (only /ventures/{this business}/…), except the few that hold link codes,
+    keys or the assistant's own controls (DENY)
+  - changes: only the business's ordinary records (WRITE_AREAS: leads, tasks and boards, invoices and bills,
+    bookings, notes, proposals, campaigns as drafts, staff and attendance, shipments, kitchen records,
+    routines…), minus the parts of those areas that reach outside or change who is paid (WRITE_EXCEPT)
+  - never: approvals, trust and autonomy, agent settings (workflow-configs), members and invites, approver
+    links, payment settings, phone and speech credentials, connectors, connected apps, API keys, billing, SSO,
+    retention and privacy (DPDP) requests, the assistant itself, file uploads, deleting the business
 Write actions are always reviewed by a person (never sent by earned trust).
 """
 from __future__ import annotations
@@ -30,9 +34,27 @@ from typing import Any
 import httpx
 
 PREFIX = "/ventures/{venture_id}"
+# Never reached, not even to read: the assistant's own controls, and anything that returns a link code or a key.
 DENY = ("/approvals", "/trust", "/members", "/invites", "/privacy", "/apps", "/assistant", "/api-keys",
-        "/billing", "/sso", "/audit/export", "/erase", "/connectors/email-forwarding/rotate")
-DENY_WRITES = ("/connectors", "/settings/models", "/ai-models", "/phone/outbound", "/facebook")
+        "/billing", "/sso", "/audit/export", "/erase", "/connectors/email-forwarding", "/approver-links",
+        "/voice/keys", "/dpdp-requests", "/retention", "/connectors/google/picker")
+# The only areas (first path part after /ventures/{venture_id}) where the assistant may change something.
+WRITE_AREAS = frozenset({
+    "ads", "ask", "attendance", "automations", "bank", "bills", "booking-services", "bookings", "boards", "cards",
+    "lists", "campaigns", "candidates", "cash", "custom-workflows", "event-alerts", "facts", "invoices", "jobs",
+    "kitchen", "leads", "loan-applications", "meetings", "notes", "proposals", "rate-card", "review-replies", "runs",
+    "shipments", "skills", "social", "staff", "tickets", "vocabulary", "whatsapp",
+})
+# Inside those areas: what reaches outside the app or can't be undone stays on its page.
+WRITE_EXCEPT = (
+    "/campaigns/{campaign_id}/send",            # one yes sends to a whole list: decided on the Campaigns page
+    "/review-replies/{reply_id}/post",          # publishes on Google
+    "/whatsapp/templates",                      # submits to Meta
+    "/kitchen/import", "/vocabulary/import",    # bulk imports
+    "/bank/statements",                         # a person's statement file
+)
+# Agents the assistant doesn't start through kritvia.do: itself, and the ones that reach outside on their own.
+NOT_STARTED_HERE = frozenset({"assistant", "browser", "prospector"})
 MAX_RESULT = 6000
 METHODS = ("get", "post", "put", "patch", "delete")
 transport_override: httpx.AsyncBaseTransport | None = None      # tests may inject
@@ -59,12 +81,12 @@ class Action:
         extra = [p for p in self.path_params if p != "venture_id"]
         if extra:
             out["path"] = {p: _agent_keys() if p == "workflow" else "id (from an earlier lookup)" for p in extra}
-        if self.id == "POST /ventures/{venture_id}/runs":
-            out["body"] = {**self.body, "workflow": _agent_keys()}
         if self.query:
             out["query"] = self.query
         if self.body:
             out["body"] = self.body
+        if self.id == "POST /ventures/{venture_id}/runs":
+            out["body"] = {**self.body, "workflow": _agent_keys()}
         return out
 
 
@@ -111,15 +133,17 @@ def _body_fields(op: dict, comps: dict) -> tuple[dict[str, str], bool]:
 
 
 def allowed(method: str, path: str) -> bool:
+    """Whether the assistant may use this API action at all (reads broadly, changes only by allow-list)."""
     if not (path == PREFIX or path.startswith(PREFIX + "/")):
         return False
     if any(d in path for d in DENY):
         return False
-    if method != "get" and any(d in path for d in DENY_WRITES):
+    if method == "get":
+        return True
+    area = path[len(PREFIX):].split("/")[1] if path != PREFIX else ""
+    if area not in WRITE_AREAS:
         return False
-    if method == "delete" and path == PREFIX:
-        return False
-    return True
+    return not any(x in path for x in WRITE_EXCEPT)
 
 
 _catalogue: list[Action] | None = None
@@ -240,8 +264,11 @@ async def call(user_id: uuid.UUID, a: Action, venture_id: uuid.UUID, *, path: di
     from kritvia_api.main import app
     from kritvia_api.security import issue_access_token
     url = build_path(a, venture_id, path)
-    if a.method == "POST" and a.path.endswith("/runs") and isinstance(body, dict) and body.get("workflow") == "assistant":
-        raise ActionError("the assistant can't start itself")
+    if not allowed(a.method.lower(), a.path):
+        raise ActionError("the assistant can't use that action; it's done on its page in Kritvia")
+    if a.method == "POST" and a.path.endswith("/runs") and isinstance(body, dict) \
+            and body.get("workflow") in NOT_STARTED_HERE:
+        raise ActionError(f"the assistant can't start the {body.get('workflow')} agent; start it from its page")
     q = {k: v for k, v in (query or {}).items() if k in a.query and v is not None and not isinstance(v, dict | list)}
     transport = transport_override or httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://kritvia.internal", timeout=60) as client:

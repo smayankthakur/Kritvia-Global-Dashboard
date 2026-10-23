@@ -85,15 +85,80 @@ async def get_settings_(venture_id: uuid.UUID, db: TenantDB) -> PaymentSettingsO
         razorpay=RazorpayInfo(key_id=rz.external_id, webhook_url=_hook_url(rz.id), last_error=rz.last_error) if rz else None)
 
 
+FRESH_SIGN_IN_MINUTES = 10
+
+
+async def _signed_in_minutes_ago(db, request: Request) -> float | None:
+    """How long ago the caller's own sign-in began (None when the token carries no sign-in, e.g. an API key)."""
+    from kritvia_api.security import token_family
+    auth = request.headers.get("authorization", "")
+    if not auth.lower().startswith("bearer "):
+        return None
+    try:
+        fam = token_family(auth.split(" ", 1)[1].strip())
+    except Exception:  # noqa: BLE001 - an unreadable token was already refused by the auth dependency
+        return None
+    if fam is None:
+        return None
+    started = (await db.execute(text("SELECT private.auth_family_signed_in_at(:f)"), {"f": fam})).scalar()
+    if started is None:
+        return None
+    from datetime import timezone
+    return (datetime.now(timezone.utc) - started).total_seconds() / 60
+
+
 @router.put("/ventures/{venture_id}/payment-settings", response_model=PaymentSettingsOut)
-async def put_settings(venture_id: uuid.UUID, body: PaymentSettings, user_id: UserId, db: TenantDB) -> PaymentSettingsOut:
+async def put_settings(venture_id: uuid.UUID, body: PaymentSettings, user_id: UserId, db: TenantDB,
+                       request: Request) -> PaymentSettingsOut:
+    """Where customers pay. Changing the UPI ID is for the business's owner only, needs a sign-in from the last few
+    minutes, tells every owner by email and goes in the audit log; invoices already issued keep the UPI ID they
+    were issued with (test report round 2, S11)."""
     org = await _require_admin(db, venture_id)
+    before = (await db.execute(text("SELECT upi_id FROM venture_payment_settings WHERE venture_id = :v"),
+                               {"v": venture_id})).scalar()
+    upi_changed = (before or None) != (body.upi_id or None)
+    if upi_changed:
+        owner = bool((await db.execute(text("SELECT CAST(:o AS uuid) = ANY (private.owned_orgs())"),
+                                       {"o": org})).scalar())
+        if not owner:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "only the business's owner can change where customers pay")
+        ago = await _signed_in_minutes_ago(db, request)
+        if ago is None or ago > FRESH_SIGN_IN_MINUTES:
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                "sign in again to change where customers pay: for safety this needs a sign-in "
+                                f"from the last {FRESH_SIGN_IN_MINUTES} minutes")
     await db.execute(text(
         "INSERT INTO venture_payment_settings (venture_id, org_id, upi_id, payee_name, updated_by)"
         " VALUES (:v, :o, :u, :p, :by) ON CONFLICT (venture_id) DO UPDATE SET upi_id = EXCLUDED.upi_id,"
         " payee_name = EXCLUDED.payee_name, updated_by = EXCLUDED.updated_by, updated_at = now()"),
         {"v": venture_id, "o": org, "u": body.upi_id, "p": (body.payee_name or "").strip() or None, "by": user_id})
+    if upi_changed:
+        await db.execute(text("SELECT audit_event(:o, :v, 'payments.upi_changed', 'venture_payment_settings', :e,"
+                              " CAST(:d AS jsonb))"),
+                         {"o": org, "v": venture_id, "e": str(venture_id),
+                          "d": json.dumps({"by": str(user_id), "had_one": bool(before), "has_one": bool(body.upi_id)})})
+        await _tell_owners_upi(db, venture_id, before, body.upi_id)
     return await get_settings_(venture_id, db)
+
+
+async def _tell_owners_upi(db, venture_id: uuid.UUID, before: str | None, after: str | None) -> None:
+    """Every owner hears about a change of UPI ID (best effort: a mail problem never undoes the change)."""
+    import logging
+
+    from kritvia_api.services.mailer import get_mailer
+    name = (await db.execute(text("SELECT name FROM ventures WHERE id = :v"), {"v": venture_id})).scalar() or "your business"
+    emails = [r.email for r in (await db.execute(text("SELECT email FROM private.org_owner_emails(:v)"),
+                                                 {"v": venture_id})).all() if r.email]
+    link = get_settings().public_web_url.rstrip("/") + f"/v/{venture_id}/settings?tab=payments"
+    body = (f"The UPI ID customers pay {name} to was changed in Kritvia.\n\n"
+            f"Before: {before or '(none)'}\nNow: {after or '(none)'}\n\n"
+            "Invoices already sent keep the UPI ID they were sent with; new ones use the new ID.\n"
+            f"If you didn't expect this, change it back and check who has access: {link}")
+    for e in emails:
+        try:
+            await get_mailer().send(e, f"{name}: the UPI ID for payments was changed", body)
+        except Exception:  # noqa: BLE001
+            logging.getLogger(__name__).info("UPI change email failed", exc_info=True)
 
 
 class RazorpayConnectIn(BaseModel):

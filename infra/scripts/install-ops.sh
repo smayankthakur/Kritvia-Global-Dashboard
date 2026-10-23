@@ -3,7 +3,7 @@
 #   - health watchdog every minute (healthcheck.sh: restarts what stopped or hangs; alerts by AWS SNS email
 #     and/or Telegram when configured)
 #   - nightly encrypted backup at 02:15 IST, once BACKUP_AGE_RECIPIENT and BACKUP_RCLONE_REMOTE are set
-#   - daily log archive kept one year on this server (archive-logs.sh)
+#   - hourly log archive kept one year on this server (archive-logs.sh; deploy.sh also archives before restarting)
 #   - the AWS CLI (used for SNS alerts; S3 backups go through rclone with the instance role)
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "run with sudo"; exit 1; }
@@ -24,7 +24,7 @@ mkdir -p /var/lib/kritvia
   echo "SHELL=/bin/bash"
   echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   echo "* * * * * root $DIR/infra/scripts/healthcheck.sh >/dev/null 2>&1"
-  echo "10 0 * * * root $DIR/infra/scripts/archive-logs.sh >> /var/log/kritvia-logs.log 2>&1   # 05:40 IST"
+  echo "10 * * * * root $DIR/infra/scripts/archive-logs.sh >> /var/log/kritvia-logs.log 2>&1   # hourly, from where the last one stopped"
   if [ -n "${BACKUP_AGE_RECIPIENT:-}" ] && [ -n "${BACKUP_RCLONE_REMOTE:-}" ]; then
     echo "45 20 * * * root $DIR/infra/scripts/backup.sh >> /var/log/kritvia-backup.log 2>&1   # 02:15 IST"
   fi

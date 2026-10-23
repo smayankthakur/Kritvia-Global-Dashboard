@@ -96,9 +96,12 @@ async def venture_org(db: AsyncConnection, venture_id: uuid.UUID) -> uuid.UUID:
 
 
 UserId = Annotated[uuid.UUID, Depends(current_user_id)]
-TenantDB = Annotated[AsyncConnection, Depends(tenant_db)]
-# The same transaction, committed as soon as the endpoint returns (before the response is sent), so
-# background tasks added by the endpoint, such as dispatching runs to the worker, see its changes.
-TenantDBCommitFirst = Annotated[AsyncConnection, Depends(tenant_db, scope="function")]
-AnonDB = Annotated[AsyncConnection, Depends(anonymous_db)]
+# Every endpoint's transaction commits as soon as the endpoint returns, BEFORE the response is sent
+# (scope="function"). With FastAPI's default it committed after the response had gone out, so the next
+# request could miss what the previous one just wrote: right after sign-up, /auth/me found no such user
+# and the brand-new person was signed out. It also means a response is never sent for a write that then
+# fails to commit, and background tasks see the endpoint's changes.
+TenantDB = Annotated[AsyncConnection, Depends(tenant_db, scope="function")]
+TenantDBCommitFirst = TenantDB
+AnonDB = Annotated[AsyncConnection, Depends(anonymous_db, scope="function")]
 Svc = Annotated[Services, Depends(services_dep)]

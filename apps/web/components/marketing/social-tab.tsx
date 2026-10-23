@@ -44,6 +44,7 @@ function FacebookCard({ ventureId, page, canAdmin }: { ventureId: string; page: 
   const remove = useMutation({
     mutationFn: () => unwrap(api.DELETE("/ventures/{venture_id}/connectors/facebook", { params: { path: { venture_id: ventureId } } })),
     onSuccess: done,
+    onError: (e) => setErr(errorMessage(e)),
   });
   return (
     <Card>
@@ -66,7 +67,10 @@ function FacebookCard({ ventureId, page, canAdmin }: { ventureId: string; page: 
             <Field label="Page ID" hint="Page → About → Page transparency">
               <Input value={pageId} onChange={(e) => setPageId(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={30} />
             </Field>
-            <Field label="Page access token" hint="Meta Business Suite, with pages_manage_posts. Kept encrypted; never shown again.">
+            <Field
+              label="Page key from Meta"
+              hint="A long code from Meta Business Suite that lets Kritvia post to your Page (ask whoever manages your Page if unsure). Kept encrypted; never shown again."
+            >
               <Input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} maxLength={1000} />
             </Field>
             <div className="flex items-end">
@@ -94,7 +98,7 @@ export function SocialTab({ ventureId, canAdmin }: { ventureId: string; canAdmin
   const now = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/social/draft-now", { params: { path: { venture_id: ventureId } } })),
     onSuccess: () => {
-      toast.success("Post drafted", "It waits for your yes on the board.");
+      toast.success("Post drafted", "It waits for your yes with your other drafts.");
       void qc.invalidateQueries({ queryKey: ["social", ventureId] });
     },
     onError: (e) => toast.error("Couldn't write a post", errorMessage(e)),

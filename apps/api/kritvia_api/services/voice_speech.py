@@ -57,8 +57,19 @@ def set_transport(t: httpx.AsyncBaseTransport | None) -> None:
     _transport = t
 
 
-def _http(timeout: float = 30) -> httpx.AsyncClient:
-    return httpx.AsyncClient(timeout=timeout, transport=_transport)
+def _http(timeout: float = 30, local: bool = False) -> httpx.AsyncClient:
+    """A client for the speech providers. Everything except Kritvia's own speech server (VOICE_LOCAL_URL,
+    set by the operator) may be an address a customer typed (an OpenAI-compatible server), so those
+    connections go only to public addresses checked when they open (services/netguard.py)."""
+    if _transport is not None or local:
+        return httpx.AsyncClient(timeout=timeout, transport=_transport, follow_redirects=False)
+    from kritvia_api.services import mcp, netguard
+    return httpx.AsyncClient(timeout=timeout, transport=netguard.guarded_transport(mcp.resolve),
+                             follow_redirects=False)
+
+
+def _blocked(exc: httpx.HTTPError) -> bool:
+    return "private network" in str(exc) or "unix sockets" in str(exc)
 
 
 class SpeechError(Exception):
@@ -119,7 +130,7 @@ async def transcribe(svc, actor, stack: Stack, pcm: bytes, rate: int) -> str:
             t = await router_transcribe(svc.router, actor.call_ctx("voice"), audio, "turn.wav",
                                         language=lang2, tier="dictation", no_training=True)
             return t.text.strip()
-        async with _http() as h:
+        async with _http(local=stack.stt == "local") as h:
             if stack.stt == "sarvam":
                 key, base = stack.key("sarvam")
                 data: dict[str, Any] = {"language_code": stack.language if stack.language in ("hi-IN", "en-IN") else "unknown"}
@@ -155,6 +166,8 @@ async def transcribe(svc, actor, stack: Stack, pcm: bytes, rate: int) -> str:
                 _ok(r, "the speech server")
                 return str(r.json().get("text") or "").strip()
     except httpx.HTTPError as exc:
+        if _blocked(exc):
+            raise SpeechError("the speech server must be on the public internet") from None
         raise SpeechError(f"speech-to-text didn't answer ({type(exc).__name__})") from None
     raise SpeechError(f"unknown speech-to-text provider {stack.stt!r}")
 
@@ -167,7 +180,7 @@ async def synthesize(stack: Stack, say: str, rate: int) -> bytes:
         return b""
     st = get_settings()
     try:
-        async with _http(45) as h:
+        async with _http(45, local=stack.tts in ("local", "platform")) as h:
             if stack.tts == "sarvam":
                 key, base = stack.key("sarvam")
                 out_rate = 8000 if rate <= 8000 else 16000
@@ -202,6 +215,8 @@ async def synthesize(stack: Stack, say: str, rate: int) -> bytes:
                 _ok(r, "the speech server")
                 return vm.resample(r.content, 24000, rate)       # OpenAI's "pcm" is 24 kHz 16-bit mono
     except httpx.HTTPError as exc:
+        if _blocked(exc):
+            raise SpeechError("the speech server must be on the public internet") from None
         raise SpeechError(f"text-to-speech didn't answer ({type(exc).__name__})") from None
     raise SpeechError(f"unknown voice provider {stack.tts!r}")
 

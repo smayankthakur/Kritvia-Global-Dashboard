@@ -83,7 +83,8 @@ async def test_businesses_with_a_website_are_emailed_first_and_by_themselves(biz
     mayank, v = biz["mayank"], biz["v"]
     r = await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
         "searches": "restaurants in Nangloi, Delhi", "offer": "a website with online ordering for ₹9,999",
-        "email_offer": "an AI assistant that answers your enquiries on WhatsApp", "new_per_day": 2}})
+        "email_offer": "an AI assistant that answers your enquiries on WhatsApp", "new_per_day": 2,
+        "send_without_asking": True}})
     assert r.status_code == 200, r.text
     script_outreach(fake_llm)
     r = await run(mayank, v)

@@ -148,6 +148,9 @@ def to_dict(r: Any) -> dict[str, Any]:
     return {k: getattr(r, k) for k in ("freq", "weekdays", "day_of_month", "at_time")}
 
 
+RETRY_AFTER = timedelta(minutes=15)    # an automation whose start failed outright is tried again then
+
+
 async def fire_due(services, now: datetime | None = None) -> int:
     """Called by the worker every minute: start every automation whose time has come, then set its next time.
     A failed start is recorded on the automation and tried again at its next time."""
@@ -163,30 +166,35 @@ async def fire_due(services, now: datetime | None = None) -> int:
         due = (await conn.execute(text("SELECT * FROM private.claim_due_automations(:n)"), {"n": now})).all()
     started = 0
     for d in due:
-        error = None
-        async with tenant_tx(d.run_as, "agent", "automation") as conn:
-            a = (await conn.execute(text(
-                "SELECT a.*, coalesce(s.timezone, 'Asia/Kolkata') AS tz FROM automations a"
-                " LEFT JOIN venture_settings s ON s.venture_id = a.venture_id WHERE a.id = :a"), {"a": d.automation_id})).first()
-        if a is None:
-            continue
+        # Everything for one automation is inside the try, and its next time is always set (the claim is a
+        # 15-minute lease, so even a worker killed mid-loop leaves nothing stranded: it comes back).
+        error, nxt = None, None
         try:
-            await start_run(services, actor_user_id=d.run_as, actor_type="agent", venture_id=d.venture_id,
-                            workflow="automation", input={"automation_id": str(a.id)}, trigger_kind="schedule",
-                            dedupe=("automation", f"{a.id}:{now:%Y%m%d%H%M}"), title=f"Automation: {a.name}"[:120])
-            started += 1
-        except DuplicateTrigger:
-            pass
-        except PlanRestricted as exc:
-            error = str(exc)[:300]
+            async with tenant_tx(d.run_as, "agent", "automation") as conn:
+                a = (await conn.execute(text(
+                    "SELECT a.*, coalesce(s.timezone, 'Asia/Kolkata') AS tz FROM automations a"
+                    " LEFT JOIN venture_settings s ON s.venture_id = a.venture_id WHERE a.id = :a"), {"a": d.automation_id})).first()
+            if a is None:
+                continue
+            try:
+                tz = ZoneInfo(a.tz)
+            except Exception:  # noqa: BLE001
+                tz = ZoneInfo("Asia/Kolkata")
+            nxt = next_run(a.freq, list(a.weekdays), a.day_of_month, a.at_time, tz, now)
+            try:
+                await start_run(services, actor_user_id=d.run_as, actor_type="agent", venture_id=d.venture_id,
+                                workflow="automation", input={"automation_id": str(a.id)}, trigger_kind="schedule",
+                                dedupe=("automation", f"{a.id}:{d.due_at:%Y%m%d%H%M}"), title=f"Automation: {a.name}"[:120])
+                started += 1
+            except DuplicateTrigger:
+                pass
+            except PlanRestricted as exc:
+                error = str(exc)[:300]
         except Exception as exc:  # noqa: BLE001
-            log.exception("automation %s didn't start", a.id)
+            log.exception("automation %s didn't start", d.automation_id)
             error = f"didn't start ({type(exc).__name__})"
-        try:
-            tz = ZoneInfo(a.tz)
-        except Exception:  # noqa: BLE001
-            tz = ZoneInfo("Asia/Kolkata")
-        nxt = next_run(a.freq, list(a.weekdays), a.day_of_month, a.at_time, tz, now)
-        async with tenant_tx(None, "system") as conn:
-            await conn.execute(text("SELECT private.set_automation_next(:a, :n, :e)"), {"a": a.id, "n": nxt, "e": error})
+        finally:
+            async with tenant_tx(None, "system") as conn:
+                await conn.execute(text("SELECT private.set_automation_next(:a, :n, :e)"),
+                                   {"a": d.automation_id, "n": nxt or now + RETRY_AFTER, "e": error})
     return started

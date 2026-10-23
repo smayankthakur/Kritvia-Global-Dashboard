@@ -22,6 +22,34 @@ from defusedxml import ElementTree as ET
 MAX_BYTES = 40 * 1024 * 1024
 _CTRL = re.compile(rb"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
+# Control characters other than tab, newline and carriage return (and the XML-forbidden ones), on decoded text.
+_CTRL_TEXT = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\ufffe\uffff]")
+
+
+def _decode(data: bytes) -> str:
+    """The export as text: byte-order mark first, then the XML declaration's encoding, then UTF-8, then
+    Latin-1 (never fails)."""
+    if data[:3] == b"\xef\xbb\xbf":
+        return data[3:].decode("utf-8", "replace")
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return data.decode("utf-16", "replace")
+    if len(data) >= 4 and data[0] == 0 and data[1] != 0:
+        return data.decode("utf-16-be", "replace")      # UTF-16 without a byte-order mark
+    if len(data) >= 4 and data[0] != 0 and data[1] == 0:
+        return data.decode("utf-16-le", "replace")
+    head = data[:200].decode("ascii", "ignore")
+    enc = re.search(r'encoding=["\']([A-Za-z0-9_.-]{2,30})["\']', head)
+    if enc:
+        try:
+            return data.decode(enc.group(1))
+        except (LookupError, UnicodeDecodeError):
+            pass
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data.decode("latin-1")
+
+
 
 class TallyParseError(Exception):
     pass
@@ -86,12 +114,10 @@ def _date(s: str | None) -> date | None:
 def parse_vouchers(data: bytes) -> list[Voucher]:
     if len(data) > MAX_BYTES:
         raise TallyParseError("file is larger than 40 MB; export a shorter period")
-    cleaned = _CTRL.sub(b"", data)
-    # Tally exports declare encodings like "UTF-16" or "ISO-8859-1"; decode to text and let ET re-parse.
-    try:
-        text = cleaned.decode("utf-16") if cleaned[:2] in (b"\xff\xfe", b"\xfe\xff") else cleaned.decode("utf-8")
-    except UnicodeDecodeError:
-        text = cleaned.decode("latin-1")
+    # Decode first (Tally often exports UTF-16, which is half NUL bytes), then strip the control
+    # characters Tally leaves in names: stripping bytes before decoding destroyed UTF-16 and Devanagari.
+    text = _decode(data)
+    text = _CTRL_TEXT.sub("", text)
     text = re.sub(r"<\?xml[^>]*\?>", "", text, count=1)
     try:
         root = ET.fromstring(text)

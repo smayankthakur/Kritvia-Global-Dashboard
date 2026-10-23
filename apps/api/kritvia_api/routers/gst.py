@@ -158,7 +158,7 @@ async def issue(venture_id: uuid.UUID, body: GstInvoiceIn, user_id: UserId, db: 
         raise HTTPException(status.HTTP_403_FORBIDDEN, "your role can see invoices but not issue them")
     p = await _profile(db, venture_id)
     if p is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Add the business's GST details first (Settings → Connectors → GST)")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Add the business's GST details first (Settings → Connectors → GST invoices)")
     pos = body.place_of_supply or (body.customer_gstin[:2] if body.customer_gstin else p.state_code)
     if pos not in gst.STATES:
         raise HTTPException(422, "unknown place of supply")
@@ -366,7 +366,7 @@ async def _gstr1(db, venture_id: uuid.UUID, month: str):
     await venture_org(db, venture_id)
     p = await _profile(db, venture_id)
     if p is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "add the business's GST details first (Invoices → New GST invoice)")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Add the business's GST details first (Settings → Connectors → GST invoices)")
     first, last = _month(month)
     rows = (await db.execute(text(
         "SELECT id, number, issued_on, customer_name, customer_gstin, place_of_supply, reverse_charge, amount_paise,"

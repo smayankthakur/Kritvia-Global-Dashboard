@@ -25,7 +25,14 @@ function Review({ a }: { a: A }) {
     mutationFn: (status: "approved" | "rejected" | "pending") =>
       unwrap(
         api.POST("/staff/apps/review", {
-          body: { id: a.id, status, note: note.trim() || null, egress_hosts: hosts.split(/[\s,]+/).map((h) => h.trim()).filter(Boolean) },
+          body: {
+            id: a.id,
+            status,
+            note: note.trim() || null,
+            egress_hosts: hosts.split(/[\s,]+/).map((h) => h.trim()).filter(Boolean),
+            // the approval covers exactly the package shown here; if it changed meanwhile, the API refuses
+            package_hash: a.package_hash ?? null,
+          },
         }),
       ),
     onSuccess: (_d, status) => {
@@ -43,6 +50,7 @@ function Review({ a }: { a: A }) {
           <p className="text-xs text-subtle">
             {a.id} · {a.package} · sent by {a.submitted_by ?? "the registry"} · {formatRelative(a.updated_at)}
           </p>
+          {a.pinned ? <p className="text-xs break-all text-subtle">Pinned release: {a.pinned}</p> : null}
         </div>
         <Badge tone={TONE[a.status]}>{a.status}</Badge>
       </div>

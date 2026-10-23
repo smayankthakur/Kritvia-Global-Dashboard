@@ -87,6 +87,25 @@ describe("BFF proxy", () => {
     expect(cookies.every((c) => c.includes("Max-Age=0"))).toBe(true);
   });
 
+  it("keeps the session when renewing hits a passing problem (rate limit, API down), and doesn't cache it", async () => {
+    for (const fail of [() => json(429, { detail: "slow down" }), () => json(503, {}), () => Promise.reject(new TypeError("fetch failed"))]) {
+      resetRefreshCache();
+      let renew = 0;
+      const { fetchMock } = mockApi((c) => {
+        if (!c.url.endsWith("/auth/refresh")) return json(401, { detail: "expired" });
+        renew++;
+        return renew === 1 ? fail() : json(200, { access_token: "AT2", refresh_token: "RT2", expires_in: 900 });
+      });
+      const res = await proxyRequest(browserReq("auth/me", { cookie: "kv_at=OLD; kv_rt=RT1" }), ["auth", "me"], { apiUrl: API, fetch: fetchMock });
+      expect(res.status).toBe(503);
+      expect(res.headers.getSetCookie()).toHaveLength(0);
+      // the very next request tries again (the failure wasn't cached) and gets new cookies
+      const again = await proxyRequest(browserReq("auth/me", { cookie: "kv_rt=RT1" }), ["auth", "me"], { apiUrl: API, fetch: fetchMock });
+      expect(renew).toBe(2);
+      expect(again.headers.getSetCookie().some((c) => c.startsWith("kv_at=AT2"))).toBe(true);
+    }
+  });
+
   it("passes a 401 through when there is no refresh cookie", async () => {
     const { fetchMock, calls } = mockApi(() => json(401, { detail: "missing bearer token" }));
     const res = await proxyRequest(browserReq("auth/me"), ["auth", "me"], { apiUrl: API, fetch: fetchMock });

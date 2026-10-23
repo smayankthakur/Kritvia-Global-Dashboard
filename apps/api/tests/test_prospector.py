@@ -93,7 +93,7 @@ async def biz(world, client):
     v = (await mayank.post(f"/orgs/{world['org']}/ventures",
                            json={"name": "Studio", "slug": f"studio-{uuid.uuid4().hex[:6]}"})).json()["id"]
     await mayank.put(f"/ventures/{v}/settings", json={"kind": "software", "business_name": "Sitelytc", "city": "Delhi"})
-    r = await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+    r = await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {"send_without_asking": True, 
         "searches": "restaurants in Nangloi, Delhi", "offer": "a website with online ordering for ₹9,999"}})
     assert r.status_code == 200, r.text
     return {**world, "v": v}
@@ -225,7 +225,7 @@ async def test_finds_businesses_without_a_website_and_drafts_whatsapp(biz, place
 
 async def test_daily_cap(biz, places, fake_llm, world):
     mayank, v = biz["mayank"], biz["v"]
-    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {"send_without_asking": True, 
         "searches": "restaurants in Nangloi, Delhi", "new_per_day": 2}})
     script_outreach(fake_llm)
     assert (await run(mayank, v))["summary"]["added"] == 2
@@ -236,7 +236,7 @@ async def test_daily_cap(biz, places, fake_llm, world):
 
 async def test_whatsapp_sent_then_follow_up_then_sequence_ends(biz, places, fake_llm):
     mayank, v = biz["mayank"], biz["v"]
-    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {"send_without_asking": True, 
         "searches": "restaurants in Nangloi, Delhi", "followups": 1, "follow_up_days": 3}})
     script_outreach(fake_llm)
     await run(mayank, v)
@@ -290,7 +290,7 @@ async def test_owner_can_require_approval_and_price_guesses_always_wait(biz, pla
     mayank, v = biz["mayank"], biz["v"]
     approver = await make_actor(client, "pros-approver")
     await join(mayank, approver, biz["org"], v, "approver")
-    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {"send_without_asking": True, 
         "searches": "restaurants in Nangloi, Delhi", "offer": "a website with online ordering for ₹9,999",
         "new_per_day": 1}})
     # the model makes up a price: even with "send without asking" on, a person must look
@@ -507,7 +507,7 @@ async def _growth_biz(client, monkeypatch):
         await conn.close()
     v = (await owner.post(f"/orgs/{org}/ventures", json={"name": "Shop", "slug": "shop"})).json()["id"]
     await owner.put(f"/ventures/{v}/settings", json={"kind": "software", "business_name": "Shop", "city": "Delhi"})
-    r = await owner.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+    r = await owner.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {"send_without_asking": True, 
         "searches": "restaurants in Nangloi, Delhi", "offer": "a website for ₹9,999"}})
     assert r.status_code == 200, r.text
     return owner, org, v
@@ -541,7 +541,7 @@ async def test_chains_and_hotels_are_left_out(biz, services, monkeypatch, fake_l
 async def test_owner_can_keep_chains_and_hotels(biz, services, monkeypatch, fake_llm):
     fake = FakePlaces(pages=(MIXED,))
     monkeypatch.setattr(services, "places", PlacesClient("test-key", transport=httpx.MockTransport(fake)))
-    await biz["mayank"].put(f"/ventures/{biz['v']}/workflow-configs/prospector", json={"enabled": True, "settings": {
+    await biz["mayank"].put(f"/ventures/{biz['v']}/workflow-configs/prospector", json={"enabled": True, "settings": {"send_without_asking": True, 
         "searches": "restaurants in Nangloi, Delhi", "skip_chains": False, "skip_hotels": False, "new_per_day": 10}})
     script_outreach(fake_llm)
     r = await run(biz["mayank"], biz["v"])
@@ -573,7 +573,7 @@ async def test_businesses_with_a_website_when_selling_something_else(biz, places
     """With 'Only businesses without their own website' off, a place with its own site is a prospect too, and
     the first message talks about the offer, not about lacking a website."""
     mayank, v = biz["mayank"], biz["v"]
-    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {
+    await mayank.put(f"/ventures/{v}/workflow-configs/prospector", json={"enabled": True, "settings": {"send_without_asking": True, 
         "searches": "restaurants in Nangloi, Delhi", "offer": "AI staff that reply to every enquiry in minutes",
         "only_no_website": False, "new_per_day": 10}})
     script_outreach(fake_llm)

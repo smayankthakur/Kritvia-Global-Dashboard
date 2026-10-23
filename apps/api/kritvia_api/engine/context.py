@@ -193,7 +193,16 @@ class RunContext:
     # --- tools --------------------------------------------------------------
     async def invoke(self, tool: str, args: dict[str, Any] | None = None, *,
                      approval_id: uuid.UUID | str | None = None) -> dict[str, Any]:
-        return await self.services.tools.invoke(self, tool, args or {}, approval_id=approval_id)
+        """Runs a tool. An approved action that already ran (the step is running again after a restart)
+        isn't run twice: its recorded result comes back with already_done=True, so the step can finish."""
+        from kritvia_api.engine.tools import AlreadyExecuted
+        try:
+            return await self.services.tools.invoke(self, tool, args or {}, approval_id=approval_id)
+        except AlreadyExecuted as done:
+            if approval_id is None:
+                raise
+            self.note(f"{tool} had already run before a restart; not done again")
+            return {**done.result, "already_done": True}
 
     def note(self, message: str) -> None:
         """Non-sensitive line for the run timeline (never put personal data here)."""

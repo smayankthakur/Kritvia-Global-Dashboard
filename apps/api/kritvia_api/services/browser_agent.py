@@ -87,8 +87,11 @@ class BrowserClient:
         except BrowserError:
             pass
 
-    async def submit(self, url: str, fields: list[dict], button: str) -> dict:
-        return await self._call("POST", "/submit", {"url": url, "fields": fields, "button": button}, wait_busy=True)
+    async def submit(self, url: str, fields: list[dict], button: str, form: dict | None = None) -> dict:
+        """`form`: where the approved form sends (action, method, hidden-field names); the browser refuses to
+        send if the page's form differs now."""
+        return await self._call("POST", "/submit", {"url": url, "fields": fields, "button": button, "form": form},
+                                wait_busy=True)
 
 
 class FieldPick(BaseModel):
@@ -225,8 +228,11 @@ def proposal_from(step: BrowserStep, page: dict, task: str) -> dict[str, Any]:
                        "kind": kind})
     if not fields:
         raise BrowserError("a form needs at least one field filled in")
+    pin = btn.get("form_pin") or {"action": None, "method": None, "hidden": []}
     return {"url": page.get("url"), "page_title": page.get("title") or "", "task": task[:500], "fields": fields,
-            "button": {"label": btn.get("name") or "Send", "selector": btn["selector"]}}
+            "button": {"label": btn.get("name") or "Send", "selector": btn["selector"],
+                       "form": {"action": pin.get("action"), "method": pin.get("method"),
+                                "hidden": list(pin.get("hidden") or [])[:60]}}}
 
 
 async def browse(ctx, client: BrowserClient, task: str, url: str | None, *, max_actions: int,

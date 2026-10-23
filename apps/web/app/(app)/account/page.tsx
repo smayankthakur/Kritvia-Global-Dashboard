@@ -12,7 +12,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Notice, PageHeader } from "@/components/ui/page";
 import { useToast } from "@/components/ui/toast";
-import { api, errorMessage, unwrap } from "@/lib/api";
+import { api, errorMessage, saveBlob, unwrap } from "@/lib/api";
 import { meKey, useAccess } from "@/lib/access";
 
 export default function AccountPage() {
@@ -23,14 +23,9 @@ export default function AccountPage() {
   const [err, setErr] = useState<string | null>(null);
   const exportData = useMutation({
     mutationFn: () => unwrap(api.GET("/auth/me/export")),
-    onSuccess: (data) => {
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `kritvia-my-data-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    },
+    // saveBlob puts the link in the page and frees the file a moment later; iPhones need both to save it.
+    onSuccess: (data) =>
+      saveBlob(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), `kritvia-my-data-${new Date().toISOString().slice(0, 10)}.json`),
     onError: (e) => toast.error(errorMessage(e)),
   });
   const remove = useMutation({

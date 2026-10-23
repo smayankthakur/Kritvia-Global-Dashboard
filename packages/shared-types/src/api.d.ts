@@ -688,6 +688,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/ses/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ses Feedback */
+        post: operations["ses_feedback_hooks_ses_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/slack/interact": {
         parameters: {
             query?: never;
@@ -1393,6 +1410,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{org_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Org
+         * @description Everything this organisation keeps in Kritvia, as a ZIP (owners only).
+         */
+        get: operations["export_org_orgs__org_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{org_id}/grants": {
         parameters: {
             query?: never;
@@ -2021,7 +2058,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Readyz */
+        /**
+         * Readyz
+         * @description The database and the run queue (Valkey). 503 with queue "down" when Valkey doesn't answer: runs
+         *     can't start then, and the health watchdog restarts Valkey, not the API.
+         */
         get: operations["readyz_readyz_get"];
         put?: never;
         post?: never;
@@ -2775,7 +2816,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List */
+        /**
+         * List
+         * @description Oldest first; a full page carries X-Next-Cursor for the next one.
+         */
         get: operations["list__ventures__venture_id__automations_get"];
         put?: never;
         /** Create */
@@ -3059,6 +3103,28 @@ export interface paths {
         put?: never;
         /** Bill Paid */
         post: operations["bill_paid_ventures__venture_id__bills__bill_id__paid_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/bills/{bill_id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen Bill
+         * @description Undoes "paid" or "cancelled": the bill is open again, with nothing paid on it. A bank line that
+         *     recorded the payment goes back to the bank tab to be matched again. For a mis-tap, or a payment
+         *     that bounced.
+         */
+        post: operations["reopen_bill_ventures__venture_id__bills__bill_id__reopen_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4991,7 +5057,8 @@ export interface paths {
         };
         /**
          * List Leads
-         * @description No Google lookups here: a prospect is named from Google Maps only when its lead is opened.
+         * @description Newest first. No Google lookups here: a prospect is named from Google Maps only when its lead is opened.
+         *     A full page carries X-Next-Cursor; send it back as `cursor` for the next page.
          */
         get: operations["list_leads_ventures__venture_id__leads_get"];
         put?: never;
@@ -5213,7 +5280,12 @@ export interface paths {
         };
         /** Get Settings */
         get: operations["get_settings__ventures__venture_id__payment_settings_get"];
-        /** Put Settings */
+        /**
+         * Put Settings
+         * @description Where customers pay. Changing the UPI ID is for the business's owner only, needs a sign-in from the last few
+         *     minutes, tells every owner by email and goes in the audit log; invoices already issued keep the UPI ID they
+         *     were issued with (test report round 2, S11).
+         */
         put: operations["put_settings_ventures__venture_id__payment_settings_put"];
         post?: never;
         delete?: never;
@@ -5249,7 +5321,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Proposals */
+        /**
+         * List Proposals
+         * @description Newest first; a full page carries X-Next-Cursor for the next one.
+         */
         get: operations["list_proposals_ventures__venture_id__proposals_get"];
         put?: never;
         post?: never;
@@ -8871,6 +8946,11 @@ export interface components {
             /** Device */
             device: string;
             /**
+             * Match
+             * @description the number this device shows; the computer picks it to say yes
+             */
+            match: string;
+            /**
              * Secret
              * @description kept by the web app in an httpOnly cookie, never shown to the page
              */
@@ -9583,6 +9663,11 @@ export interface components {
         DecideIn: {
             /** Approve */
             approve: boolean;
+            /**
+             * Match
+             * @description the number the new device shows; needed for a yes
+             */
+            match?: string | null;
         };
         /** DecisionIn */
         DecisionIn: {
@@ -11385,6 +11470,11 @@ export interface components {
         LinkAnswerIn: {
             /** Approve */
             approve: boolean;
+            /**
+             * Match
+             * @description the number the computer shows; needed for a yes
+             */
+            match?: string | null;
             /** Token */
             token: string;
         };
@@ -11398,6 +11488,8 @@ export interface components {
         };
         /** LinkStateOut */
         LinkStateOut: {
+            /** Claimed At */
+            claimed_at?: string | null;
             /**
              * Device
              * @description the device that scanned the code
@@ -11408,6 +11500,27 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+            /**
+             * Ip
+             * @description its internet address
+             */
+            ip?: string | null;
+            /**
+             * Options
+             * @description pick the number the new device shows
+             * @default []
+             */
+            options: string[];
+            /**
+             * Place
+             * @description approximate city and country, from Cloudflare
+             */
+            place?: string | null;
+            /**
+             * Same Network
+             * @description false: a different network from the device deciding (unknown when either address is)
+             */
+            same_network?: boolean | null;
             /**
              * Status
              * @enum {string}
@@ -12230,6 +12343,8 @@ export interface components {
         };
         /** PeekOut */
         PeekOut: {
+            /** Created At */
+            created_at?: string | null;
             /**
              * Device
              * @description offer: the device showing the code; request: the device asking to sign in
@@ -12241,10 +12356,31 @@ export interface components {
              */
             expires_at: string;
             /**
+             * Ip
+             * @description its internet address
+             */
+            ip?: string | null;
+            /**
              * Kind
              * @enum {string}
              */
             kind: "offer" | "request";
+            /**
+             * Options
+             * @description pick the number the new device shows
+             * @default []
+             */
+            options: string[];
+            /**
+             * Place
+             * @description approximate city and country, from Cloudflare
+             */
+            place?: string | null;
+            /**
+             * Same Network
+             * @description false: a different network from the device deciding (unknown when either address is)
+             */
+            same_network?: boolean | null;
             /** Status */
             status: string;
         };
@@ -12811,6 +12947,11 @@ export interface components {
              */
             expires_at: string;
             /**
+             * Match
+             * @description the number this page shows; the phone picks it to say yes
+             */
+            match: string;
+            /**
              * Secret
              * @description kept by the web app in an httpOnly cookie, never shown to the page
              */
@@ -12863,6 +13004,11 @@ export interface components {
             id: string;
             /** Note */
             note?: string | null;
+            /**
+             * Package Hash
+             * @description the package_hash of the entry as reviewed (needed to approve)
+             */
+            package_hash?: string | null;
             /**
              * Status
              * @enum {string}
@@ -14000,6 +14146,16 @@ export interface components {
              * @description hosted: registry type, name and version
              */
             package?: string | null;
+            /**
+             * Package Hash
+             * @description send it back with an approval: it applies only to this exact package
+             */
+            package_hash?: string | null;
+            /**
+             * Pinned
+             * @description the registry fingerprint the approval pinned
+             */
+            pinned?: string | null;
             /** Repo Url */
             repo_url: string | null;
             /** Review Note */
@@ -16969,6 +17125,13 @@ export interface operations {
                     "application/json": components["schemas"]["LinkAnswerOut"];
                 };
             };
+            /** @description the wrong number: the sign-in is refused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -17194,6 +17357,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["LinkStateOut"];
                 };
+            };
+            /** @description expired, already answered, or the wrong number (refused) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -17813,6 +17983,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ses_feedback_hooks_ses_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -19144,6 +19336,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DashboardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_org_orgs__org_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -21193,6 +21416,8 @@ export interface operations {
             query?: {
                 status?: "pending" | "decided" | "all";
                 limit?: number;
+                /** @description the X-Next-Cursor of the previous page */
+                cursor?: string | null;
             };
             header?: never;
             path: {
@@ -22115,7 +22340,10 @@ export interface operations {
     };
     list__ventures__venture_id__automations_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
             header?: never;
             path: {
                 venture_id: string;
@@ -22821,6 +23049,38 @@ export interface operations {
                 "application/json": components["schemas"]["PaidIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierBillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_bill_ventures__venture_id__bills__bill_id__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                bill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -26413,6 +26673,9 @@ export interface operations {
                 show?: "open" | "overdue" | "paid" | "draft" | "all";
                 q?: string | null;
                 limit?: number;
+                /** @description created: newest first, paged with cursor / X-Next-Cursor */
+                order?: "due" | "created";
+                cursor?: string | null;
             };
             header?: never;
             path: {
@@ -27438,6 +27701,8 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                /** @description the X-Next-Cursor of the previous page */
+                cursor?: string | null;
             };
             header?: never;
             path: {
@@ -28112,6 +28377,8 @@ export interface operations {
         parameters: {
             query?: {
                 lead_id?: string | null;
+                limit?: number;
+                cursor?: string | null;
             };
             header?: never;
             path: {
@@ -29424,7 +29691,10 @@ export interface operations {
     };
     forget_lesson_ventures__venture_id__skills__skill_id__lessons__index__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description the lesson's text: refused if the one at this position is another */
+                lesson?: string | null;
+            };
             header?: never;
             path: {
                 venture_id: string;

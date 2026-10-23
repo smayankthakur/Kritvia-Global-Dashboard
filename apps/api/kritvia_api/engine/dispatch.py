@@ -100,11 +100,24 @@ class ArqDispatcher:
                 queue = PRIORITY_QUEUE
         except Exception:  # noqa: BLE001  never let the choice of queue stop a run
             log.warning("priority check failed for run %s", run_id, exc_info=True)
-        # One queued job per run at a time; the sweeper recovers anything missed.
+        # One queued job per run per queue at a time; the sweeper recovers anything missed. The job ids
+        # differ per queue: a run stranded on the priority queue (that worker died) can still be put on
+        # the shared one, instead of arq refusing it as a duplicate for a day.
         if queue:
-            await pool.enqueue_job("execute_run", str(run_id), _job_id=f"run:{run_id}", _queue_name=queue)
+            await pool.enqueue_job("execute_run", str(run_id), _job_id=f"run:{run_id}:priority", _queue_name=queue)
         else:
             await pool.enqueue_job("execute_run", str(run_id), _job_id=f"run:{run_id}")
+
+    async def ping(self) -> bool:
+        """Whether Valkey answers (for /readyz)."""
+        import asyncio as _a
+        try:
+            pool = await _a.wait_for(self._get_pool(), 3)
+            return bool(await _a.wait_for(pool.ping(), 3))
+        except Exception:  # noqa: BLE001
+            async with self._lock:
+                self._pool = None          # reconnect next time
+            return False
 
     async def close(self) -> None:
         if self._pool is not None:

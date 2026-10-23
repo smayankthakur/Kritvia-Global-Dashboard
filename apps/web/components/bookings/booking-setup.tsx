@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { Checkbox, Field, FormError, Input, Select } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { TimeField } from "@/components/ui/time-field";
@@ -12,7 +13,7 @@ import { TimeField } from "@/components/ui/time-field";
 const OPEN_PRESETS = ["09:00", "10:00", "11:00", "14:00"];
 const CLOSE_PRESETS = ["13:00", "18:00", "20:00", "21:00"];
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
-import { paiseToInput, rupees, toPaise } from "@/components/invoices/money";
+import { amountProblem, paiseToInput, rupees, toPaise } from "@/components/invoices/money";
 
 export const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const DAY_NAME: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
@@ -33,10 +34,12 @@ function HoursEditor({ hours, onChange, disabled }: { hours: Spans; onChange: (h
       {DAYS.map((d) => {
         const spans = hours[d] ?? [];
         return (
-          <div key={d} className="grid grid-cols-[6.5rem_1fr] items-center gap-2 text-sm sm:grid-cols-[6.5rem_1fr_1fr]">
+          // On a phone the day sits on its own line and each span gets the full width (a lunch-break span
+          // squeezed into the day-name column left the time pickers unreadable).
+          <div key={d} className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-[6.5rem_1fr_1fr] sm:items-center sm:gap-2">
             <span className="font-medium">{DAY_NAME[d]}</span>
             {[0, 1].map((i) => (
-              <div key={i} className="flex items-center gap-1">
+              <div key={i} className="flex min-w-0 items-center gap-1">
                 <TimeField className="min-w-0 flex-1" clearable step={15} presets={OPEN_PRESETS} placeholder="Opens" aria-label={`${DAY_NAME[d]} ${i ? "second" : "first"} span opens`} value={spans[i]?.[0] ?? ""} onChange={(v) => set(d, i, 0, v)} disabled={disabled} />
                 <span aria-hidden>–</span>
                 <TimeField className="min-w-0 flex-1" clearable step={15} presets={CLOSE_PRESETS} placeholder="Closes" aria-label={`${DAY_NAME[d]} ${i ? "second" : "first"} span closes`} value={spans[i]?.[1] ?? ""} onChange={(v) => set(d, i, 1, v)} disabled={disabled} />
@@ -48,6 +51,21 @@ function HoursEditor({ hours, onChange, disabled }: { hours: Spans; onChange: (h
       <p className="text-xs text-subtle">Leave a day empty when you&apos;re closed. Use the second span for a lunch break.</p>
     </div>
   );
+}
+
+type NumKey = "capacity" | "notice_hours" | "days_ahead";
+const NUMS: Record<NumKey, { label: string; hint?: string; min: number; max: number }> = {
+  capacity: { label: "At the same time", hint: "Chairs, rooms or staff", min: 1, max: 50 },
+  notice_hours: { label: "Notice needed (hours)", min: 0, max: 168 },
+  days_ahead: { label: "Book up to (days ahead)", min: 1, max: 90 },
+};
+
+/** The whole number typed in a booking setting, or why it can't be saved. */
+export function numberProblem(k: NumKey, value: string): number | string {
+  const { min, max, label } = NUMS[k];
+  if (!/^\d+$/.test(value.trim())) return `${label}: write a number from ${min} to ${max}.`;
+  const n = Number(value);
+  return n < min || n > max ? `${label}: write a number from ${min} to ${max}.` : n;
 }
 
 export function cleanSpans(h: Spans): Spans {
@@ -69,12 +87,16 @@ export function BookingSetup({ ventureId }: { ventureId: string }) {
   const [form, setForm] = useState<Settings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [svc, setSvc] = useState({ name: "", minutes: "30", price: "" });
+  // Number boxes keep what is typed (an emptied box stays empty until the next digit) and are checked on Save.
+  const [raw, setRaw] = useState<Partial<Record<NumKey, string>>>({});
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
 
   const save = useMutation({
     mutationFn: (b: Settings) => unwrap(api.PUT("/ventures/{venture_id}/booking-settings", { params: { path: { venture_id: ventureId } }, body: b })),
     onSuccess: (d) => {
       qc.setQueryData(sKey, d);
       setForm(null);
+      setRaw({});
       setError(null);
       toast.success("Booking hours saved");
     },
@@ -96,8 +118,14 @@ export function BookingSetup({ ventureId }: { ventureId: string }) {
   });
   const remove = useMutation({
     mutationFn: (id: string) => unwrap(api.DELETE("/ventures/{venture_id}/booking-services/{service_id}", { params: { path: { venture_id: ventureId, service_id: id } } })),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: svKey }),
+    onSuccess: () => {
+      setRemoving(null);
+      toast.success("Service removed");
+      void qc.invalidateQueries({ queryKey: svKey });
+    },
+    onError: (e) => toast.error("Couldn't remove it", errorMessage(e)),
   });
+  const priceError = amountProblem(svc.price);
 
   if (!settings.data) return null;
   const d = settings.data;
@@ -112,7 +140,13 @@ export function BookingSetup({ ventureId }: { ventureId: string }) {
           className="space-y-4 p-4"
           onSubmit={(e) => {
             e.preventDefault();
-            save.mutate({ ...f, hours: cleanSpans(f.hours as Spans) });
+            const nums: Partial<Settings> = {};
+            for (const k of Object.keys(NUMS) as NumKey[]) {
+              const n = numberProblem(k, raw[k] ?? String(f[k]));
+              if (typeof n === "string") return setError(n);
+              nums[k] = n;
+            }
+            save.mutate({ ...f, ...nums, hours: cleanSpans(f.hours as Spans) });
           }}
         >
           <HoursEditor hours={f.hours as Spans} onChange={(h) => setForm({ ...f, hours: h })} disabled={ro} />
@@ -126,15 +160,23 @@ export function BookingSetup({ ventureId }: { ventureId: string }) {
                 ))}
               </Select>
             </Field>
-            <Field label="At the same time" hint="Chairs, rooms or staff">
-              <Input type="number" min={1} max={50} value={f.capacity} onChange={(e) => setForm({ ...f, capacity: Number(e.target.value) || 1 })} disabled={ro} />
-            </Field>
-            <Field label="Notice needed (hours)">
-              <Input type="number" min={0} max={168} value={f.notice_hours} onChange={(e) => setForm({ ...f, notice_hours: Number(e.target.value) || 0 })} disabled={ro} />
-            </Field>
-            <Field label="Book up to (days ahead)">
-              <Input type="number" min={1} max={90} value={f.days_ahead} onChange={(e) => setForm({ ...f, days_ahead: Number(e.target.value) || 14 })} disabled={ro} />
-            </Field>
+            {(Object.keys(NUMS) as NumKey[]).map((k) => {
+              const value = raw[k] ?? String(f[k]);
+              const problem = numberProblem(k, value);
+              return (
+                <Field key={k} label={NUMS[k].label} hint={NUMS[k].hint} error={typeof problem === "string" ? problem : null}>
+                  <Input
+                    inputMode="numeric"
+                    value={value}
+                    onChange={(e) => {
+                      setRaw({ ...raw, [k]: e.target.value.replace(/[^\d]/g, "") });
+                      setForm({ ...f });
+                    }}
+                    disabled={ro}
+                  />
+                </Field>
+              );
+            })}
           </div>
           <Checkbox checked={f.use_calendar} onChange={(e) => setForm({ ...f, use_calendar: e.target.checked })} label="Check my Google Calendar and add bookings to it" disabled={ro} />
           <Checkbox checked={f.enabled} onChange={(e) => setForm({ ...f, enabled: e.target.checked })} label="Take bookings in chats and email" disabled={ro} />
@@ -154,7 +196,7 @@ export function BookingSetup({ ventureId }: { ventureId: string }) {
                   <span className="font-medium">{s.name}</span> · {s.minutes} min{s.price_paise ? ` · ${rupees(s.price_paise)}` : ""}
                 </span>
                 {!ro ? (
-                  <Button variant="ghost" size="icon" aria-label={`Remove ${s.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => remove.mutate(s.id)} />
+                  <Button variant="ghost" size="icon" aria-label={`Remove ${s.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => setRemoving({ id: s.id, name: s.name })} />
                 ) : null}
               </li>
             ))}
@@ -162,26 +204,35 @@ export function BookingSetup({ ventureId }: { ventureId: string }) {
           </ul>
           {!ro ? (
             <form
-              className="grid grid-cols-[1fr_5.5rem_6rem_auto] items-end gap-2"
+              className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[1fr_5.5rem_6rem_auto]"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (svc.name.trim()) add.mutate();
+                if (svc.name.trim() && !priceError) add.mutate();
               }}
             >
-              <Field label="Service">
+              <Field label="Service" className="col-span-2 sm:col-span-1">
                 <Input value={svc.name} onChange={(e) => setSvc({ ...svc, name: e.target.value })} maxLength={80} placeholder="Haircut" />
               </Field>
               <Field label="Minutes">
                 <Input type="number" min={5} max={600} value={svc.minutes} onChange={(e) => setSvc({ ...svc, minutes: e.target.value })} />
               </Field>
-              <Field label="Price (₹)">
+              <Field label="Price (₹)" error={priceError}>
                 <Input value={svc.price} onChange={(e) => setSvc({ ...svc, price: e.target.value })} inputMode="decimal" placeholder={paiseToInput(40000)} />
               </Field>
-              <Button type="submit" icon={<Plus className="h-4 w-4" />} loading={add.isPending}>
+              <Button type="submit" className="col-span-2 sm:col-span-1" icon={<Plus className="h-4 w-4" />} loading={add.isPending} disabled={Boolean(priceError)}>
                 Add
               </Button>
             </form>
           ) : null}
+          <ConfirmDialog
+            open={removing !== null}
+            onClose={() => setRemoving(null)}
+            onConfirm={() => removing && remove.mutate(removing.id)}
+            loading={remove.isPending}
+            title={removing ? `Remove ${removing.name}?` : ""}
+            description="Customers can't book it any more. Bookings already made stay."
+            confirmLabel="Remove"
+          />
         </div>
       </Card>
     </div>

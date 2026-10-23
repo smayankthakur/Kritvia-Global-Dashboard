@@ -52,7 +52,11 @@ class Index:
             from kritvia_api.main import app
             openapi = app.openapi()
         routes = {p: {m.upper() for m in ops} for p, ops in openapi.get("paths", {}).items()}
-        crons = set(re.findall(r"cron\((\w+)", WORKER.read_text())) if WORKER.exists() else None
+        src = WORKER.read_text() if WORKER.exists() else None
+        # cron(job, ...) entries, and the daily jobs run by daily_jobs from the DAILY table ("name", "fn", h, m, ...)
+        # ...and the heartbeats, which run from their own task (_beat_forever(ctx, heartbeat))
+        crons = (set(re.findall(r"cron\((\w+)", src)) | set(re.findall(r'^\s*\("\w+", "(\w+)", \d+, \d+', src, re.M))
+                 | set(re.findall(r"_beat_forever\(ctx, (\w+)\)", src)) if src is not None else None)
         # Kritvia's own workflows (tests may register throwaway ones in the same registry)
         ours = {w.name: w for w in registry.all()
                 if any(s.fn.__module__.startswith("kritvia_api.") for s in w.steps.values())}

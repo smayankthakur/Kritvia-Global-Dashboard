@@ -40,6 +40,7 @@ export default async function NoticePage({ params, searchParams }: Props) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Asia/Kolkata",
   });
   return (
     <main id="main" lang={lang === "hi" ? "hi" : "en-IN"} className="mx-auto max-w-2xl px-4 py-10 text-[15px] leading-relaxed text-muted">

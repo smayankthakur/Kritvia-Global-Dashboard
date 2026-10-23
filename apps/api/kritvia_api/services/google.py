@@ -8,6 +8,7 @@ Drive files with Google's file picker (drive.file).
 from __future__ import annotations
 
 import base64
+import re
 import time
 import uuid
 from dataclasses import dataclass
@@ -65,15 +66,50 @@ class GmailMessage:
     date: str
     body: str
     attachments: list[dict[str, Any]]
-    authenticated: bool = False   # Gmail's own check: the sender's domain signed it (DMARC, or DKIM + SPF)
+    authenticated: bool = False   # Gmail's own check (its topmost header): the From domain passed DMARC or signed it
 
 
-def sender_authenticated(auth_results: list[str]) -> bool:
-    """True when Gmail's Authentication-Results show the From domain really sent the message."""
-    for v in auth_results:
-        v = v.lower()
-        if "dmarc=pass" in v or ("dkim=pass" in v and "spf=pass" in v):
-            return True
+_AUTH_PART = re.compile(r"\b(dmarc|dkim)=(\w+)([^;]*)", re.I)
+
+
+def _authserv(header: str) -> str:
+    """The server that wrote an (ARC-)Authentication-Results header: 'mx.google.com', or for ARC's
+    'i=1; mx.cloudflare.net; ...' the part after the instance number."""
+    parts = [p.strip().lower() for p in header.split(";")]
+    if parts and parts[0].startswith("i=") and len(parts) > 1:
+        parts = parts[1:]
+    return parts[0].split()[0] if parts and parts[0] else ""
+
+
+def _aligned(domain: str, from_domain: str) -> bool:
+    """DMARC's relaxed alignment, approximately: the same domain, or one a subdomain of the other."""
+    d, f = domain.lower().strip(".@ "), from_domain.lower().strip(".@ ")
+    return bool(d and f) and (d == f or d.endswith("." + f) or f.endswith("." + d))
+
+
+def sender_authenticated(auth_results: list[str], from_email: str = "", authserv: str = "mx.google.com") -> bool:
+    """True when Gmail's own Authentication-Results show the From domain really sent the message.
+
+    Only the topmost header stamped by mx.google.com counts: Gmail adds its own above everything else, so
+    a header a sender wrote into the message further down is ignored. The pass must be about the From
+    domain: dmarc=pass for header.from=<that domain>, or a DKIM signature from that domain. SPF alone, or
+    a DKIM pass for some other domain (a sender signing with their own domain while showing a bank in
+    From), doesn't count."""
+    from_domain = from_email.rpartition("@")[2].lower() if "@" in from_email else ""
+    header = next((v for v in auth_results if _authserv(v) == authserv), None)
+    if header is None or not from_domain:
+        return False
+    for kind, result, rest in _AUTH_PART.findall(header):
+        if result.lower() != "pass":
+            continue
+        if kind.lower() == "dmarc":
+            m = re.search(r"header\.from=([^\s;]+)", rest, re.I)
+            if m and _aligned(m.group(1), from_domain):
+                return True
+        else:
+            m = re.search(r"header\.(?:d|i)=@?([^\s;]+)", rest, re.I)
+            if m and _aligned(m.group(1).rpartition("@")[2], from_domain):
+                return True
     return False
 
 
@@ -218,7 +254,7 @@ class GoogleClient:
                             sender_email=addr.lower(), to=headers.get("to", ""),
                             subject=headers.get("subject", ""), date=headers.get("date", ""),
                             body=body or m.get("snippet", ""), attachments=attachments,
-                            authenticated=sender_authenticated(auth))
+                            authenticated=sender_authenticated(auth, addr.lower()))
 
     async def get_attachment(self, token: str, message_id: str, attachment_id: str) -> bytes:
         body = await self._req("GET", f"{GMAIL}/messages/{message_id}/attachments/{attachment_id}", token)

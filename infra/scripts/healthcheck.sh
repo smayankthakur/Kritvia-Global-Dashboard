@@ -38,7 +38,14 @@ streak() {  # streak NAME ok|fail -> prints how many minutes in a row NAME has f
 }
 heal=()
 
-if ok_http http://127.0.0.1:8000/readyz; then streak api ok >/dev/null; else
+# /readyz answers 503 with "queue":"down" when the API is fine but Valkey (the run queue) isn't: then
+# Valkey is what gets restarted, not the API.
+ready=$(curl -sS -m 10 http://127.0.0.1:8000/readyz 2>/dev/null || true)
+if grep -q '"queue":"down"' <<<"$ready"; then
+  streak api ok >/dev/null
+  fails+=("Valkey (the run queue) is not answering; new runs wait until it is back")
+  if [ "$(streak valkey fail)" -ge 3 ]; then $DC restart valkey >/dev/null 2>&1; heal+=("valkey"); streak valkey ok >/dev/null; fi
+elif grep -q '"status":"ok"' <<<"$ready"; then streak api ok >/dev/null; streak valkey ok >/dev/null; else
   fails+=("API not ready (127.0.0.1:8000/readyz)")
   if [ "$(streak api fail)" -ge 3 ]; then $DC restart api >/dev/null 2>&1; heal+=("api"); streak api ok >/dev/null; fi
 fi
@@ -123,6 +130,7 @@ public=()
 for f in "${fails[@]}"; do
   case "$f" in
     "API not ready"*) public+=("The API and agents were not responding") ;;
+    "Valkey"*) public+=("New agent runs were delayed") ;;
     "web app"*) public+=("The web app was not responding") ;;
     "public URL"*) public+=("Kritvia could not be reached from the internet") ;;
     "service(s) were down"*|"service(s) were not working"*) public+=("A service stopped and was restarted automatically") ;;

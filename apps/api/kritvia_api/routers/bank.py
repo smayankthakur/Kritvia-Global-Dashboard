@@ -6,7 +6,7 @@
   GET  /ventures/{v}/bank/lines?state=        lines, with what each one was matched to
   POST /ventures/{v}/bank/lines/{id}/confirm  record the payment (optionally choosing another invoice or bill)
   POST /ventures/{v}/bank/lines/{id}/ignore   not a customer or supplier payment (salary, transfer, fees)
-  POST /ventures/{v}/bank/lines/{id}/reset    undo an ignore
+  POST /ventures/{v}/bank/lines/{id}/reset    undo an ignore, or take back a recorded payment
   POST /ventures/{v}/bank/confirm-sure        confirm every 'sure' match in one go
   POST /ventures/{v}/bank/rematch             match again (after adding invoices or bills)
 
@@ -312,6 +312,29 @@ async def record(db, venture_id: uuid.UUID, line, kind: str, target: uuid.UUID, 
         " WHERE id = :id"), {"k": kind, "m": target, "u": user_id, "id": line.id})
 
 
+async def _undo_record(db, venture_id: uuid.UUID, line) -> None:
+    """Takes back the payment a recorded line made: a wrong match, or the wrong invoice or bill."""
+    if line.match_kind == "invoice":
+        pays = (await db.execute(text(
+            "DELETE FROM invoice_payments WHERE venture_id = :v AND bank_line_id = :l RETURNING invoice_id, amount_paise"),
+            {"v": venture_id, "l": line.id})).all()
+        for p in pays:
+            await db.execute(text(
+                "UPDATE invoices SET paid_paise = greatest(paid_paise - :a, 0),"
+                " status = CASE WHEN status = 'paid' THEN 'open' ELSE status END,"
+                " paid_on = CASE WHEN paid_paise - :a > 0 THEN paid_on END, updated_at = now()"
+                " WHERE id = :i AND venture_id = :v"), {"a": p.amount_paise, "i": p.invoice_id, "v": venture_id})
+    elif line.match_kind == "bill" and line.match_id:
+        await db.execute(text(
+            "UPDATE bills SET paid_paise = greatest(paid_paise - least(:a, paid_paise), 0),"
+            " status = CASE WHEN status = 'paid' THEN 'open' ELSE status END,"
+            " paid_on = CASE WHEN paid_paise - least(:a, paid_paise) > 0 THEN paid_on END,"
+            " paid_ref = CASE WHEN paid_paise - least(:a, paid_paise) > 0 THEN paid_ref END,"
+            " bank_line_id = CASE WHEN bank_line_id = :l THEN NULL ELSE bank_line_id END, updated_at = now()"
+            " WHERE id = :i AND venture_id = :v"), {"a": abs(line.amount_paise), "l": line.id, "i": line.match_id,
+                                                    "v": venture_id})
+
+
 @router.post("/ventures/{venture_id}/bank/lines/{line_id}/confirm", response_model=LineOut)
 async def confirm_line(venture_id: uuid.UUID, line_id: uuid.UUID, body: ConfirmIn, user_id: UserId,
                        db: TenantDB) -> LineOut:
@@ -345,10 +368,12 @@ async def reset_line(venture_id: uuid.UUID, line_id: uuid.UUID, db: TenantDB) ->
     await venture_org(db, venture_id)
     await can_write(db, venture_id)
     line = await _get_line(db, venture_id, line_id)
-    if line.state != "ignored":
-        raise HTTPException(status.HTTP_409_CONFLICT, "only an ignored line can be brought back")
-    await db.execute(text("UPDATE bank_lines SET state = 'unmatched', decided_by = NULL, decided_at = NULL"
-                          " WHERE id = :id"), {"id": line_id})
+    if line.state not in ("ignored", "confirmed"):
+        raise HTTPException(status.HTTP_409_CONFLICT, "only an ignored or recorded line can be brought back")
+    if line.state == "confirmed":
+        await _undo_record(db, venture_id, line)
+    await db.execute(text("UPDATE bank_lines SET state = 'unmatched', match_kind = NULL, match_id = NULL,"
+                          " confidence = NULL, decided_by = NULL, decided_at = NULL WHERE id = :id"), {"id": line_id})
     await rematch(db, venture_id)
     return _line((await db.execute(text(f"{LINE_SQL} WHERE l.id = :id"), {"id": line_id})).first())
 

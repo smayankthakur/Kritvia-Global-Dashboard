@@ -9,7 +9,9 @@ import path from "node:path";
  * test database (E2E_ADMIN_DSN), so this runs only where that database is reachable.
  */
 const API = process.env.E2E_API_URL ?? "http://localhost:8000";
-const ADMIN_DSN = process.env.E2E_ADMIN_DSN ?? "postgresql://postgres:postgres@localhost/kritvia_test";
+// The API's own database (as postgres), e.g. postgresql://postgres:postgres@localhost/kritvia_e2e. Without it
+// these tests are skipped: guessing the database set the plan on the wrong one and failed confusingly.
+const ADMIN_DSN = process.env.E2E_ADMIN_DSN ?? "";
 const SHOTS = path.resolve(process.cwd(), "e2e/screenshots");
 mkdirSync(SHOTS, { recursive: true });
 
@@ -23,6 +25,7 @@ async function shot(page: Page, name: string) {
 }
 
 test.describe.serial("Scale and Enterprise features", () => {
+  test.skip(!ADMIN_DSN, "set E2E_ADMIN_DSN to the API's database (the plan is set there with psql)");
   let page: Page;
   let venture = "";
   let org = "";

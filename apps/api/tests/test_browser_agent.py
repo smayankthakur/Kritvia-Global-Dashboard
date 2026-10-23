@@ -30,7 +30,8 @@ BULK = {"url": "https://sharmasweets.example/bulk", "title": "Bulk orders", "tex
             {"ref": 2, "tag": "textarea", "name": "Order", "field": True, "selector": "#order"},
             {"ref": 3, "tag": "input", "type": "password", "name": "Password", "field": True, "sensitive": True,
              "selector": "#pw"},
-            {"ref": 4, "tag": "button", "name": "Send order", "submits": True, "selector": "#send"},
+            {"ref": 4, "tag": "button", "name": "Send order", "submits": True, "selector": "#send",
+             "form_pin": {"action": "https://sharmasweets.example/bulk-order", "method": "post", "hidden": ["csrf"]}},
         ], "blocked": [], "notes": []}
 
 
@@ -65,8 +66,8 @@ class FakeBrowser:
     async def close(self, sid: str) -> None:
         self.open_sessions -= 1
 
-    async def submit(self, url: str, fields: list[dict], button: str) -> dict:
-        self.submitted.append({"url": url, "fields": fields, "button": button})
+    async def submit(self, url: str, fields: list[dict], button: str, form: dict | None = None) -> dict:
+        self.submitted.append({"url": url, "fields": fields, "button": button, "form": form})
         return {"url": url + "/thanks", "title": "Thanks", "text": "Thank you, we will call you within a day."}
 
 
@@ -148,7 +149,9 @@ async def test_a_form_is_sent_only_after_a_yes_exactly_as_shown(shop, fake_llm, 
     assert r.status_code == 200, r.text
     assert browser.submitted == [{"url": "https://sharmasweets.example/bulk", "button": "#send", "fields": [
         {"selector": "#name", "value": "Browse Shop", "kind": "fill"},
-        {"selector": "#order", "value": "20 kg kaju katli", "kind": "fill"}]}]
+        {"selector": "#order", "value": "20 kg kaju katli", "kind": "fill"}],
+        # where the approved form sends is checked again by the browser before sending (S10)
+        "form": {"action": "https://sharmasweets.example/bulk-order", "method": "post", "hidden": ["csrf"]}}]
     job = (await mayank.get(f"/ventures/{v}/browser/{job['run_id']}")).json()
     assert job["status"] == "completed" and job["answer"].startswith("Sent. sharmasweets.example then showed: Thank you")
     assert job["form"] is None

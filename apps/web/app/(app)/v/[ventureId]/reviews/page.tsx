@@ -15,6 +15,7 @@ import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
+import { reviewKey } from "@/lib/reviews";
 import { useVenture } from "@/lib/venture";
 
 /** The weekly Google listing check (agent "Google listing check"): opening hours, website and phone. */
@@ -30,15 +31,15 @@ function ListingCheck({ check }: { check: Schemas["ListingCheckOut"] }) {
       </div>
       {check.hours_match === false ? (
         <p className="text-muted">
-          Google shows {check.google_hours}; Kritvia has {check.kritvia_hours}. An update is waiting for your yes in{" "}
+          {`Google shows ${check.google_hours}; Kritvia has ${check.kritvia_hours}.`} <span>An update is waiting for your yes in</span>{" "}
           <Link className="text-accent underline underline-offset-2" href="/inbox">
             Approvals
           </Link>
           .
         </p>
       ) : null}
-      {check.note ? <p className="text-muted">To compare hours, {check.note}.</p> : null}
-      {missing.length ? <p className="text-muted">Your Google listing has no {missing.join(" or ")}: add it in Google Business Profile so customers can reach you.</p> : null}
+      {check.note ? <p className="text-muted">{`To compare hours, ${check.note}.`}</p> : null}
+      {missing.length ? <p className="text-muted">{`Your Google listing has no ${missing.join(" or ")}: add it in Google Business Profile so customers can reach you.`}</p> : null}
     </Card>
   );
 }
@@ -115,6 +116,7 @@ function ReplyBox({ ventureId, review, mapsUrl }: { ventureId: string; review: S
     mutationFn: (b: Schemas["ReplyPatch"]) =>
       unwrap(api.PATCH("/ventures/{venture_id}/review-replies/{reply_id}", { params: { path: { venture_id: ventureId, reply_id: review.reply!.id } }, body: b })),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["reviews", ventureId] }),
+    onError: (e) => toast.error("Couldn't save that", errorMessage(e)),
   });
   const post = useMutation({
     mutationFn: async () => {
@@ -147,10 +149,22 @@ function ReplyBox({ ventureId, review, mapsUrl }: { ventureId: string; review: S
             Reply on Google <ExternalLink className="h-3.5 w-3.5" aria-hidden />
           </a>
         ) : null}
-        <Button size="sm" variant="ghost" onClick={() => patch.mutate({ draft: text.trim() || undefined, status: "posted" })}>
+        <Button
+          size="sm"
+          variant="ghost"
+          loading={patch.isPending && patch.variables?.status === "posted"}
+          disabled={patch.isPending}
+          onClick={() => patch.mutate({ draft: text.trim() || undefined, status: "posted" })}
+        >
           I posted it
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => patch.mutate({ status: "dismissed" })}>
+        <Button
+          size="sm"
+          variant="ghost"
+          loading={patch.isPending && patch.variables?.status === "dismissed"}
+          disabled={patch.isPending}
+          onClick={() => patch.mutate({ status: "dismissed" })}
+        >
           No reply needed
         </Button>
       </div>
@@ -165,9 +179,21 @@ export default function ReviewsPage() {
     queryKey: ["reviews", v.id],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/reviews", { params: { path: { venture_id: v.id } } })),
   });
+  const toast = useToast();
   const save = useMutation({
     mutationFn: (b: Schemas["ReviewSettings"]) => unwrap(api.PUT("/ventures/{venture_id}/review-settings", { params: { path: { venture_id: v.id } }, body: b })),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["reviews", v.id] }),
+    // Ticks change at once and go back if the save fails, so the boxes never feel dead.
+    onMutate: async (b) => {
+      await qc.cancelQueries({ queryKey: ["reviews", v.id] });
+      const before = qc.getQueryData<Data>(["reviews", v.id]);
+      if (before) qc.setQueryData<Data>(["reviews", v.id], { ...before, settings: b });
+      return { before };
+    },
+    onError: (e, _b, c) => {
+      if (c?.before) qc.setQueryData(["reviews", v.id], c.before);
+      toast.error("Couldn't save that", errorMessage(e));
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["reviews", v.id] }),
   });
   return (
     <div className="space-y-6">
@@ -219,13 +245,13 @@ export default function ReviewsPage() {
                   <CardHeader title="Latest reviews" description="The reviews Google shows first (up to five), read live from Google Maps." />
                   {d.reviews.length ? (
                     <ul className="divide-y divide-border">
-                      {d.reviews.map((r, i) => (
-                        <li key={i} className="space-y-2 px-4 py-4">
+                      {d.reviews.map((r) => (
+                        <li key={reviewKey(r)} className="space-y-2 px-4 py-4">
                           <p className="flex flex-wrap items-center gap-2 text-sm">
                             <Stars n={r.rating} /> <span className="font-medium">{r.author}</span> <span className="text-xs text-subtle">{r.when}</span>
                           </p>
                           {r.text ? <p className="text-sm whitespace-pre-line">{r.text}</p> : null}
-                          <ReplyBox ventureId={v.id} review={r} mapsUrl={d.place?.maps_url} />
+                          <ReplyBox key={reviewKey(r)} ventureId={v.id} review={r} mapsUrl={d.place?.maps_url} />
                         </li>
                       ))}
                     </ul>

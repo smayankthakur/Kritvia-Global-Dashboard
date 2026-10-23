@@ -9,7 +9,7 @@ import { SkillsCard } from "@/components/skills/skills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select, Switch } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
@@ -197,9 +197,14 @@ export default function AutomationsPage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: key }),
     onError: (e) => toast.error("Couldn't change it", errorMessage(e)),
   });
+  const [removing, setRemoving] = useState<Auto | null>(null);
   const remove = useMutation({
     mutationFn: (a: Auto) => unwrap(api.DELETE("/ventures/{venture_id}/automations/{automation_id}", { params: { path: { venture_id: v.id, automation_id: a.id } } })),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: key }),
+    onSuccess: () => {
+      setRemoving(null);
+      toast.success("Automation removed");
+      void qc.invalidateQueries({ queryKey: key });
+    },
     onError: (e) => toast.error("Couldn't remove it", errorMessage(e)),
   });
   const runNow = useMutation({
@@ -311,7 +316,7 @@ export default function AutomationsPage() {
                             Run now
                           </Button>
                           <Switch checked={a.enabled} onChange={() => toggle.mutate(a)} label={`Run ${a.name} on its schedule`} />
-                          <Button size="icon" variant="ghost" aria-label={`Remove ${a.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => remove.mutate(a)} />
+                          <Button size="icon" variant="ghost" aria-label={`Remove ${a.name}`} icon={<Trash2 className="h-4 w-4" />} onClick={() => setRemoving(a)} />
                         </>
                       ) : null}
                     </div>
@@ -329,6 +334,15 @@ export default function AutomationsPage() {
       <CustomWorkflows ventureId={v.id} canAdmin={Boolean(v.can_admin || v.is_owner)} />
       <AgentIdeas ventureId={v.id} kind={v.kind} />
       {viewing ? <Results ventureId={v.id} a={viewing} onClose={() => setViewing(null)} /> : null}
+      <ConfirmDialog
+        open={removing !== null}
+        onClose={() => setRemoving(null)}
+        onConfirm={() => removing && remove.mutate(removing)}
+        loading={remove.isPending}
+        title={removing ? `Remove "${removing.name}"?` : ""}
+        description="It stops running. Results it already delivered stay where they went."
+        confirmLabel="Remove"
+      />
     </div>
   );
 }

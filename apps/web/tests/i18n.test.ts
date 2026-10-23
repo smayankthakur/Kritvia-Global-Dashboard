@@ -42,3 +42,21 @@ describe("Hindi interface", () => {
     expect(latinOnly.length).toBeLessThan(40);
   });
 });
+
+describe("Hindi sentences with amounts, dates and names (U5, U6)", () => {
+  const t = (s: string) => translateString(dict, s);
+  it("translates whole sentences built with amounts", () => {
+    expect(t("₹6,000 still due of ₹10,000")).toBe("₹10,000 में से ₹6,000 बाकी");
+    expect(t("₹4,000.50 paid of ₹10,000")).toBe("₹10,000 में से ₹4,000.50 मिल चुका");
+    expect(t("It arrived: paid in full (₹1,200)")).toBe("पैसा आ गया: पूरा भुगतान (₹1,200)");
+    expect(t("Mark ₹12,400 to Sharma Traders as paid?")).toBe("Sharma Traders को ₹12,400 का भुगतान हो गया?");
+    expect(t("You pay Mehta Sweets directly. This page is provided by Kritvia.")).toContain("Mehta Sweets");
+    expect(t("Invoice INV-7 for ₹500 is settled.")).toBe("इनवॉइस INV-7 (₹500) का भुगतान हो चुका है।");
+    expect(t("3 min ago")).toBe("3 मिनट पहले");
+  });
+  it("'Paid' only becomes भुगतान before a date, never half a sentence", () => {
+    expect(t("Paid 3 Oct 2026")).toBe("भुगतान 3 Oct 2026");
+    expect(t("Paid this month")).not.toContain("this month");
+    expect(t("Paid in full")).not.toBe("भुगतान in full");
+  });
+});

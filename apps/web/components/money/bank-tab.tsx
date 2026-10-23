@@ -7,7 +7,8 @@ import { rupees } from "@/components/invoices/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
+import { Field, FormError, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { Stat, StatGrid } from "@/components/ui/stat";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
@@ -94,6 +95,8 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
     onSuccess: () => refresh(),
     onError: (e) => toast.error("Couldn't change it", errorMessage(e)),
   });
+  const [matching, setMatching] = useState<Line | null>(null);
+  const [takeBack, setTakeBack] = useState<Line | null>(null);
   const counts = lines.data?.counts ?? {};
   const last = statements.data?.[0];
 
@@ -128,8 +131,9 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
           </div>
           {last ? (
             <p className="text-xs text-subtle">
-              Last statement{last.source === "email" ? ` (by email from ${last.sender ?? "the bank"})` : ""}: {last.account_label ? `${last.account_label}, ` : ""}
-              {last.period_from ? `${formatDate(last.period_from)} to ${formatDate(last.period_to)}` : "no dates"} ({last.lines} lines)
+              {`Last statement${last.source === "email" ? ` (by email from ${last.sender ?? "the bank"})` : ""}: ${last.account_label ? `${last.account_label}, ` : ""}${
+                last.period_from ? `${formatDate(last.period_from)} to ${formatDate(last.period_to)}` : "no dates"
+              } (${last.lines} lines)`}
             </p>
           ) : null}
         </Card>
@@ -199,8 +203,18 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
                           </Button>
                         ) : null}
                         {l.state === "suggested" || l.state === "unmatched" ? (
-                          <Button size="sm" variant="ghost" onClick={() => act.mutate({ line: l, what: "ignore" })}>
-                            Ignore
+                          <>
+                            <Button size="sm" variant={l.state === "unmatched" ? "primary" : "ghost"} onClick={() => setMatching(l)}>
+                              {l.state === "unmatched" ? "Match to…" : "Another…"}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => act.mutate({ line: l, what: "ignore" })}>
+                              Ignore
+                            </Button>
+                          </>
+                        ) : null}
+                        {l.state === "confirmed" ? (
+                          <Button size="sm" variant="ghost" onClick={() => setTakeBack(l)}>
+                            Take back
                           </Button>
                         ) : null}
                         {l.state === "ignored" ? (
@@ -228,6 +242,41 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
           }
         </QueryState>
       </Card>
+      {matching ? (
+        <MatchDialog
+          ventureId={ventureId}
+          line={matching}
+          onClose={() => setMatching(null)}
+          onDone={() => {
+            setMatching(null);
+            refresh();
+          }}
+        />
+      ) : null}
+      <ConfirmDialog
+        open={takeBack !== null}
+        onClose={() => setTakeBack(null)}
+        onConfirm={() =>
+          takeBack &&
+          act.mutate(
+            { line: takeBack, what: "reset" },
+            {
+              onSuccess: () => {
+                setTakeBack(null);
+                toast.success("Taken back", "The payment is off the invoice or bill, and the line can be matched again.");
+              },
+            },
+          )
+        }
+        loading={act.isPending}
+        title="Take back this payment?"
+        description={
+          takeBack?.match
+            ? `${rupees(Math.abs(takeBack.amount_paise))} comes off ${takeBack.match.kind === "invoice" ? "invoice" : "bill"} ${takeBack.match.number ?? ""} (${takeBack.match.party}), which is owed again. The line goes back to Not matched.`
+            : "The payment comes off the invoice or bill, and the line goes back to Not matched."
+        }
+        confirmLabel="Take it back"
+      />
       {state === "unmatched" && canWrite && (counts.unmatched ?? 0) > 0 ? (
         <RematchButton ventureId={ventureId} onDone={refresh} />
       ) : null}
@@ -249,5 +298,83 @@ function RematchButton({ ventureId, onDone }: { ventureId: string; onDone: () =>
     <Button variant="ghost" loading={m.isPending} onClick={() => m.mutate()}>
       Match again (after adding invoices or bills)
     </Button>
+  );
+}
+
+/** Point a line at the invoice (a credit) or bill (a debit) it really pays, when the narration didn't say. */
+function MatchDialog({ ventureId, line, onClose, onDone }: { ventureId: string; line: Line; onClose: () => void; onDone: () => void }) {
+  const toast = useToast();
+  const credit = line.amount_paise > 0;
+  const [choice, setChoice] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const options = useQuery({
+    queryKey: ["bank-match-options", ventureId, credit],
+    queryFn: async () =>
+      credit
+        ? (await unwrap(api.GET("/ventures/{venture_id}/invoices", { params: { path: { venture_id: ventureId }, query: { show: "open" } } }))).invoices.map(
+            (i) => ({ id: i.id, label: `${i.customer_name}${i.number ? ` · ${i.number}` : ""} · ${rupees(i.balance_paise)} owed` }),
+          )
+        : (await unwrap(api.GET("/ventures/{venture_id}/bills", { params: { path: { venture_id: ventureId }, query: { show: "open" } } }))).bills.map((b) => ({
+            id: b.id,
+            label: `${b.vendor}${b.number ? ` · ${b.number}` : ""} · ${rupees(b.balance_paise)} to pay`,
+          })),
+  });
+  const record = useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.POST("/ventures/{venture_id}/bank/lines/{line_id}/confirm", {
+          params: { path: { venture_id: ventureId, line_id: line.id } },
+          body: { match_kind: credit ? "invoice" : "bill", match_id: choice },
+        }),
+      ),
+    onSuccess: () => {
+      toast.success("Recorded", credit ? "The payment is on the invoice." : "The payment is on the bill.");
+      onDone();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      size="sm"
+      title={credit ? "Which invoice does this pay?" : "Which bill does this pay?"}
+      description={`${formatDate(line.line_date)} · ${rupees(Math.abs(line.amount_paise))} · ${line.narration}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+          <Button variant="primary" disabled={!choice} loading={record.isPending} onClick={() => record.mutate()}>
+            Record
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <QueryState query={options} loading={<SkeletonRows rows={2} />}>
+          {(opts: { id: string; label: string }[]) =>
+            opts.length ? (
+              <Field label={credit ? "Open invoice" : "Open bill"}>
+                <Select value={choice} onChange={(e) => setChoice(e.target.value)}>
+                  <option value="">Choose…</option>
+                  {opts.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : (
+              <EmptyState
+                title={credit ? "No open invoices" : "No open bills"}
+                description={credit ? "Add the invoice on Invoices first, then match the line." : "Add the bill on the Bills tab first, then match the line."}
+              />
+            )
+          }
+        </QueryState>
+        <FormError message={error} />
+      </div>
+    </Dialog>
   );
 }

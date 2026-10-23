@@ -5,18 +5,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { InstallApp } from "@/components/devices/install-app";
 import { PushToggle } from "@/components/notifications/push-toggle";
 import { AuthCard } from "@/components/shell/auth-card";
+import { PickNumber, ShowNumber, WhereIsIt } from "@/components/devices/where";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { linkPost, tokenFromHash } from "@/lib/link-client";
 
 const RESUME = "kv-link-token";
-type Peek = { kind: "offer" | "request"; status: string; device: string | null; expires_at: string };
+type Peek = {
+  kind: "offer" | "request";
+  status: string;
+  device: string | null;
+  expires_at: string;
+  created_at?: string | null;
+  place?: string | null;
+  ip?: string | null;
+  same_network?: boolean | null;
+  options?: string[];
+};
 type View =
   | { s: "loading" }
   | { s: "none" }
-  | { s: "approve-on-computer"; device: string | null }
+  | { s: "approve-on-computer"; device: string | null; match: string | null }
   | { s: "signed-in" }
-  | { s: "confirm"; device: string | null }
+  | { s: "confirm"; peek: Peek }
   | { s: "need-signin" }
   | { s: "answered"; approved: boolean }
   | { s: "refused" }
@@ -73,14 +84,14 @@ export function LinkFlow() {
       const p = await linkPost<Peek>("peek", { token: t });
       if (p.status !== 200) return setView({ s: "expired", detail: p.data.detail });
       if (p.data.kind === "offer") {
-        const c = await linkPost<{ device: string }>("claim", { token: t });
+        const c = await linkPost<{ device: string; match?: string }>("claim", { token: t });
         if (c.status !== 200) return setView({ s: "expired", detail: c.data.detail });
-        setView({ s: "approve-on-computer", device: p.data.device });
+        setView({ s: "approve-on-computer", device: p.data.device, match: c.data.match ?? null });
         void poll(t);
         return;
       }
       const me = await api.GET("/auth/me");
-      if (me.response.status === 200) setView({ s: "confirm", device: p.data.device });
+      if (me.response.status === 200) setView({ s: "confirm", peek: p.data });
       else setView({ s: "need-signin" });
     })();
     return () => {
@@ -88,10 +99,10 @@ export function LinkFlow() {
     };
   }, [poll]);
 
-  const answer = async (approve: boolean) => {
+  const answer = async (approve: boolean, match?: string) => {
     if (!token) return;
     setBusy(true);
-    const r = await api.POST("/auth/link/answer", { body: { token, approve } });
+    const r = await api.POST("/auth/link/answer", { body: { token, approve, match: match ?? null } });
     setBusy(false);
     if (r.response.ok) setView({ s: "answered", approved: approve });
     else setView({ s: "expired", detail: (r.error as { detail?: string } | undefined)?.detail });
@@ -122,7 +133,8 @@ export function LinkFlow() {
         <AuthCard title="Now say yes on your computer" subtitle={view.device ? `Kritvia on ${view.device} is asking you to confirm.` : undefined}>
           <div className="space-y-3 text-center">
             <Laptop className="mx-auto h-10 w-10 animate-pulse text-accent" aria-hidden />
-            <p className="text-sm text-muted">Tap <strong>Yes, sign it in</strong> on the computer. This page continues by itself.</p>
+            {view.match ? <ShowNumber match={view.match} pickOn="the computer" /> : null}
+            <p className="text-sm text-muted">On the computer, tap the number above. This page continues by itself.</p>
           </div>
         </AuthCard>
       );
@@ -144,17 +156,17 @@ export function LinkFlow() {
           <div className="space-y-4 text-center">
             <Smartphone className="mx-auto h-10 w-10 text-accent" aria-hidden />
             <p>
-              Sign in <strong>{view.device ?? "that device"}</strong> as you?
+              Sign in <strong>{view.peek.device ?? "that device"}</strong> as you?
             </p>
-            <p className="text-sm text-muted">Only say yes if you are standing at that computer.</p>
-            <div className="flex justify-center gap-2">
-              <Button variant="primary" loading={busy} onClick={() => void answer(true)}>
-                Yes, sign it in
-              </Button>
-              <Button variant="ghost" disabled={busy} onClick={() => void answer(false)}>
-                Not me
-              </Button>
-            </div>
+            <WhereIsIt place={view.peek.place} ip={view.peek.ip} sameNetwork={view.peek.same_network} at={view.peek.created_at} />
+            <p className="text-sm text-muted">Only say yes if you are sitting at that computer right now.</p>
+            <PickNumber
+              options={view.peek.options ?? []}
+              busy={busy}
+              shownOn="the computer"
+              onPick={(n) => void answer(true, n)}
+              onRefuse={() => void answer(false)}
+            />
           </div>
         </AuthCard>
       );

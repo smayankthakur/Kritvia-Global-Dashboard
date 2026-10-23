@@ -41,11 +41,27 @@ class Line:
     reference: str | None
     amount_paise: int            # credit > 0, debit < 0
     balance_paise: int | None = None
+    occurrence: int = 1          # the 2nd, 3rd… identical line in the same statement (two ₹2,000 ATM withdrawals)
+
+    @property
+    def key(self) -> str:
+        return f"{self.day.isoformat()}|{self.amount_paise}|{norm(self.narration)}|{(self.reference or '').strip()}"
 
     @property
     def fingerprint(self) -> str:
-        key = f"{self.day.isoformat()}|{self.amount_paise}|{norm(self.narration)}|{(self.reference or '').strip()}"
+        """Identifies a line across uploads. The first of identical lines keeps the plain key (as before, so
+        statements already uploaded still deduplicate); later ones add their position among the identical
+        lines, so real repeated transactions on one day are kept, and uploading the same file again adds none."""
+        key = self.key if self.occurrence <= 1 else f"{self.key}#{self.occurrence}"
         return hashlib.sha256(key.encode()).hexdigest()
+
+
+def number_repeats(lines: list[Line]) -> list[Line]:
+    seen: dict[str, int] = {}
+    for ln in lines:
+        seen[ln.key] = seen.get(ln.key, 0) + 1
+        ln.occurrence = seen[ln.key]
+    return lines
 
 
 @dataclass
@@ -354,6 +370,7 @@ def read(data: bytes, filename: str, pdf_text: str | None = None) -> Statement:
         st = from_rows(_csv_rows(data))
     if not st.lines:
         raise StatementError("no transactions found in this statement")
+    number_repeats(st.lines)
     return st
 
 

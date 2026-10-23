@@ -44,7 +44,7 @@ function Row({ inv, onOpen }: { inv: Invoice; onOpen: () => void }) {
         </span>
         {inv.status === "open" && inv.paid_paise ? (
           <span className="col-span-2 text-xs text-subtle">
-            {rupees(inv.paid_paise)} paid of {rupees(inv.amount_paise)}
+            {`${rupees(inv.paid_paise)} paid of ${rupees(inv.amount_paise)}`}
           </span>
         ) : null}
       </button>

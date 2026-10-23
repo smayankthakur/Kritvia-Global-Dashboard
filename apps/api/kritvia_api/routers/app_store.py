@@ -214,6 +214,9 @@ class StaffApp(CatalogApp):
     submitted_by: str | None
     reviewed_at: datetime | None
     updated_at: datetime
+    package_hash: str | None = Field(default=None, description="send it back with an approval: it applies only to"
+                                                                " this exact package")
+    pinned: str | None = Field(default=None, description="the registry fingerprint the approval pinned")
 
 
 class ReviewIn(BaseModel):
@@ -222,6 +225,8 @@ class ReviewIn(BaseModel):
     egress_hosts: list[str] = Field(default_factory=list, max_length=30,
                                     description="the internet sites it may reach, e.g. api.example.com")
     note: str | None = Field(default=None, max_length=500)
+    package_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$",
+                                     description="the package_hash of the entry as reviewed (needed to approve)")
 
 
 # ----------------------------------------------------------------------------------- helpers --
@@ -621,7 +626,9 @@ async def staff_apps(user_id: UserId, db: TenantDB) -> list[StaffApp]:
     for d in rows:
         r = SimpleNamespace(**d)
         out.append(StaffApp(**_catalog(r).model_dump(), review_note=r.review_note, submitted_by=r.submitter,
-                            reviewed_at=r.reviewed_at, updated_at=r.updated_at))
+                            reviewed_at=r.reviewed_at, updated_at=r.updated_at,
+                            package_hash=github_install.package_hash(r.package),
+                            pinned=(r.package or {}).get("integrity")))
     return out
 
 
@@ -632,8 +639,27 @@ async def staff_review(body: ReviewIn, user_id: UserId, db: TenantDB) -> list[St
     bad = [h for h in hosts if not HOST_RE.match(h)]
     if bad:
         raise HTTPException(422, f"not a site name: {', '.join(bad)}")
-    ok = (await db.execute(text("SELECT private.catalog_review(:id, :s, :h, :n, :u)"),
-                           {"id": body.id, "s": body.status, "h": hosts, "n": body.note, "u": user_id})).scalar()
-    if not ok:
+    row = (await db.execute(text("SELECT package FROM app_catalog WHERE id = :id AND kind = 'hosted'"),
+                            {"id": body.id})).first()
+    if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "nothing to review with that id")
+    current = row.package or {}
+    new_pkg = current
+    if body.status == "approved":
+        # The approval covers exactly the package the reviewer looked at (S6): if it changed since the page was
+        # opened (a resubmission or a registry refresh), they look again. It is pinned to the registry's own
+        # fingerprint of that release, which the runner checks before anything runs.
+        if not body.package_hash or body.package_hash != github_install.package_hash(current):
+            raise HTTPException(status.HTTP_409_CONFLICT, "the package changed since you opened it; reload and"
+                                                          " review it again")
+        try:
+            new_pkg = await github_install.pin(current)
+        except mcp.McpError as exc:
+            raise HTTPException(422, str(exc)) from None
+    ok = (await db.execute(text(
+        "SELECT private.catalog_review(:id, :s, :h, :n, :u, CAST(:old AS jsonb), CAST(:new AS jsonb))"),
+        {"id": body.id, "s": body.status, "h": hosts, "n": body.note, "u": user_id,
+         "old": json.dumps(current), "new": json.dumps(new_pkg)})).scalar()
+    if not ok:
+        raise HTTPException(status.HTTP_409_CONFLICT, "the package changed while you reviewed it; reload and look again")
     return await staff_apps(user_id, db)

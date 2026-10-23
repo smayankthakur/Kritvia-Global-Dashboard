@@ -354,9 +354,13 @@ class KeyIn(BaseModel):
             raise ValueError("the server address must start with https://")
         import ipaddress
         from urllib.parse import urlsplit
+
+        from kritvia_api.services.netguard import public_ip
         host = (urlsplit(v).hostname or "").lower()
         try:
-            public = ipaddress.ip_address(host).is_global
+            # A literal address is judged as netguard judges it (NAT64 and IPv4-mapped forms included); a name
+            # is checked again when each connection opens (services/voice_speech.py), so DNS can't move it inside.
+            public = public_ip(ipaddress.ip_address(host.strip("[]")))
         except ValueError:
             public = "." in host and not host.endswith((".local", ".internal", ".localhost", ".lan"))
         if not public:
@@ -763,7 +767,7 @@ async def _stream_twiml(conn, svc, p: vc.Principal, s: vc.Settings, connector_id
     if vs.tts_ready(stack):
         return None          # no voice set up: Twilio's own speech instead of silence
     return tw.stream(_wss(f"/hooks/voice/stream/twilio/{connector_id}"),
-                     {"call": str(call_id), "sig": vc.stream_sig(connector_id, call_id)})
+                     {"call": str(call_id), "sig": vc.stream_link_sig(connector_id, call_id)})
 
 
 @router.post("/hooks/voice/twilio/{connector_id}/incoming", response_class=Response)
@@ -876,7 +880,9 @@ async def _pump(ws: WebSocket, session) -> None:
 @router.websocket("/hooks/voice/stream/exotel/{connector_id}")
 async def exotel_stream(ws: WebSocket, connector_id: uuid.UUID) -> None:
     """Exotel's Voicebot applet: the caller's audio in, Kritvia's voice out. The link carries the business's
-    secret (inbound, set in its Exotel flow) or a signature for one call Kritvia placed (outbound)."""
+    secret (inbound, set in its Exotel flow; Exotel can't send a header, so it's in the address: Kritvia's own
+    logs hide it, and Settings can issue a new one at any time) or, for a call Kritvia placed (outbound), a
+    signature bound to that call that expires after 15 minutes and works only while the call is open."""
     import hashlib
     import hmac
     from kritvia_api.engine.context import get_services
@@ -892,9 +898,12 @@ async def exotel_stream(ws: WebSocket, connector_id: uuid.UUID) -> None:
     elif pr is not None and q.get("call") and q.get("sig"):
         try:
             call_id = uuid.UUID(q["call"])
-            ok = hmac.compare_digest(vc.stream_sig(connector_id, call_id), q["sig"])
+            ok = vc.stream_link_ok(connector_id, call_id, q["sig"])
         except ValueError:
             ok = False
+        if ok:
+            async with tenant_tx(pr.run_as, "agent", "voice") as conn:
+                ok = await vc.call_open(conn, connector_id, call_id)
     if not ok:
         await security_event("webhook.bad_signature", "warning", provider="exotel_voice")
         await ws.close(code=1008)
@@ -912,7 +921,6 @@ async def exotel_stream(ws: WebSocket, connector_id: uuid.UUID) -> None:
 @router.websocket("/hooks/voice/stream/twilio/{connector_id}")
 async def twilio_stream(ws: WebSocket, connector_id: uuid.UUID) -> None:
     """Twilio Media Streams (stream mode): the call's signature comes in the start message's parameters."""
-    import hmac
     from kritvia_api.engine.context import get_services
     from kritvia_api.services import voice_stream as vstream
     svc = get_services()
@@ -934,9 +942,12 @@ async def twilio_stream(ws: WebSocket, connector_id: uuid.UUID) -> None:
     params = ((start or {}).get("start") or {}).get("customParameters") or {}
     try:
         call_id = uuid.UUID(str(params.get("call")))
-        good = hmac.compare_digest(vc.stream_sig(connector_id, call_id), str(params.get("sig") or ""))
+        good = vc.stream_link_ok(connector_id, call_id, str(params.get("sig") or ""))
     except ValueError:
         good = False
+    if good:
+        async with tenant_tx(pr.run_as, "agent", "voice") as conn:
+            good = await vc.call_open(conn, connector_id, call_id)
     if start is None or not good:
         await security_event("webhook.bad_signature", "warning", provider="twilio_voice")
         await ws.close(code=1008)

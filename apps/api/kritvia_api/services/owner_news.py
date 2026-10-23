@@ -54,10 +54,16 @@ async def tell_admins(services, conn, venture_id: uuid.UUID, *, subject: str, bo
             except TelegramError as exc:
                 log.info("owner news: Telegram didn't take it (%s)", exc)
         if p.email:
+            # These digests are product email: people who unsubscribed don't get them (push and Telegram
+            # still do), and each one carries the one-click unsubscribe link and headers.
+            from kritvia_api.routers.privacy import one_click_url, unsubscribe_url
             try:
+                if not (await conn.execute(text("SELECT product_email_allowed(:u)"), {"u": p.user_id})).scalar():
+                    continue
                 await get_mailer().send(p.email, subject, f"{body}\n\nOpen Kritvia: {link}\n\n"
                                                           "Kritvia. To get these in Telegram and approve drafts "
-                                                          "with one tap: Your account, Approve from your phone.")
+                                                          "with one tap: Your account, Approve from your phone.",
+                                        unsubscribe_url=unsubscribe_url(p.user_id), one_click_url=one_click_url(p.user_id))
                 told.email += 1
             except Exception:  # noqa: BLE001
                 log.info("owner news: email failed", exc_info=True)

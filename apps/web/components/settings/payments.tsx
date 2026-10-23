@@ -112,6 +112,10 @@ export function PaymentsCard({ ventureId }: { ventureId: string }) {
         </form>
         <FormError message={error} />
         <p className="text-xs text-subtle">
+          Only the business&apos;s owner can change the UPI ID, within 10 minutes of signing in (sign out and back in if it asks), and every
+          owner gets an email when it changes. Invoices already sent keep the UPI ID they were sent with.
+        </p>
+        <p className="text-xs text-subtle">
           Kritvia can&apos;t see payments made straight to your UPI ID. The customer can tap &quot;I&apos;ve paid&quot; on the page, and you confirm
           it on Invoices when the money shows in your bank.
         </p>
@@ -161,7 +165,10 @@ export function PaymentsCard({ ventureId }: { ventureId: string }) {
             <ol className="list-decimal space-y-1 pl-5 text-muted">
               <li>In Razorpay Dashboard, open Account &amp; Settings → Webhooks → Add new webhook.</li>
               <li>Paste the address and the secret below.</li>
-              <li>Tick the event payment_link.paid, then Create webhook.</li>
+              <li>
+                Under events, tick <span className="font-mono">payment_link.paid</span> (it tells Kritvia when a customer pays), then Create
+                webhook.
+              </li>
             </ol>
             <CopyField label="Webhook URL" value={hook.webhook_url} />
             <CopyField label="Secret (shown only now)" value={hook.webhook_secret} secret />

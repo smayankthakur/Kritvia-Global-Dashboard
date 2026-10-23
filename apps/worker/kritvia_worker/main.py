@@ -13,9 +13,11 @@ Cron (IST)
   every 10 minutes        poll_indiamart   new IndiaMART enquiries -> Lead triage (IndiaMART allows a call
                                            every 5 minutes)
   every 15 minutes        reembed          embed chunks whose embedding was deferred (Ollama down)
-  03:15 daily             purge_expired    retention: delete documents past their deadline
-  06:30 daily             morning_check    alert (audit + log) if a scheduled plan is missing or failed
-  08:40 daily             self_check       tell each business's owners what is stuck in their automation
+  daily (DAILY, IST)      daily_jobs       each once a day after its time, caught up the same day if the
+                                           worker was busy or down then; claimed in the database:
+    03:15                 purge_expired    retention: documents past their deadline, old runs, usage rows
+    06:30                 morning_check    alert (audit + log) if a scheduled plan is missing or failed
+    08:40                 self_check       tell each business's owners what is stuck in their automation
   every 30 minutes        nudge_expiring   tell owners about drafts that expire within the next hours
   hourly (:17)            sync_app_store   the official MCP Registry into the App store
 
@@ -24,10 +26,12 @@ priority processing (Scale, Enterprise), from their own queue, and keeps a heart
 API knows it is there (engine/dispatch.py). No cron jobs: those stay on the main worker.
 
 A failing job never takes the worker down; failures are logged, visible in the
-run timeline, and retried by the sweeper where safe.
+run timeline, and retried by the sweeper where safe. Runs and scheduled jobs don't compete for slots
+(RUN_SLOTS), and the heartbeat comes from its own task, not a job.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -49,14 +53,48 @@ logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"),
                     format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 
+# How many workflow runs one worker executes at once. arq's own job limit is this plus room for the
+# scheduled jobs, and a run that finds every run slot taken returns at once (it stays queued; the sweeper
+# brings it back within a minute) instead of holding a job slot: so scheduled jobs (the schedules, the
+# sweeper, approvals expiring, the daily jobs) never wait behind long runs.
+RUN_SLOTS = int(os.environ.get("WORKER_MAX_RUNS") or os.environ.get("WORKER_MAX_JOBS") or "8")
+CRON_SLOTS = 6
+_runs: asyncio.Semaphore | None = None
+HEARTBEAT_EVERY = 30
+
+
+def _run_slots() -> asyncio.Semaphore:
+    global _runs
+    if _runs is None:
+        _runs = asyncio.Semaphore(RUN_SLOTS)
+    return _runs
+
+
+async def _beat_forever(ctx: dict, beat) -> None:
+    """The worker's heartbeat, from its own task rather than an arq job, so a worker busy with long runs
+    still reports it is alive (the server's watchdog restarts a worker whose heartbeat stops)."""
+    while True:
+        try:
+            await beat(ctx)
+        except Exception:  # noqa: BLE001 - try again next time
+            log.warning("heartbeat failed", exc_info=True)
+        await asyncio.sleep(HEARTBEAT_EVERY)
+
+
 async def startup(ctx: dict) -> None:
     services = build_services(dispatch_mode="arq")
     set_services(services)
     ctx["services"] = services
-    log.info("worker %s started", services.worker_id)
+    from kritvia_api import logredact
+    logredact.install()
+    ctx["heartbeat_task"] = asyncio.get_running_loop().create_task(_beat_forever(ctx, heartbeat))
+    log.info("worker %s started (%d run slots)", services.worker_id, RUN_SLOTS)
 
 
 async def shutdown(ctx: dict) -> None:
+    task = ctx.pop("heartbeat_task", None)
+    if task is not None:
+        task.cancel()
     svc = ctx.get("services")
     if svc is not None:
         await svc.router.aclose()
@@ -68,14 +106,53 @@ async def shutdown(ctx: dict) -> None:
 
 async def execute_run(ctx: dict, run_id: str) -> str | None:
     import uuid
-    return await advance_run(ctx["services"], uuid.UUID(run_id))
+    slots = _run_slots()
+    if slots.locked():
+        return "busy"          # stays queued; the sweeper hands it out again when a slot is free
+    async with slots:
+        return await advance_run(ctx["services"], uuid.UUID(run_id))
+
+
+def _scheduled_minute(ctx: dict) -> datetime | None:
+    """The minute this cron job was due (arq's score), not when it got a slot."""
+    score = ctx.get("score") if isinstance(ctx, dict) else None
+    if not score:
+        return None
+    return datetime.fromtimestamp(score / 1000, IST).replace(second=0, microsecond=0)
 
 
 async def fire_schedules(ctx: dict, now: datetime | None = None) -> int:
-    """Start every enabled workflow whose schedule (HH:MM IST) is this minute.
-    Idempotent per day: the trigger key is workflow + date, so a restarted worker
-    that fires twice in the same minute starts one run."""
-    now = (now or datetime.now(IST)).astimezone(IST)
+    """Start every enabled workflow whose schedule (HH:MM IST) has come. Uses the minute the job was due,
+    and catches up on minutes missed while the worker was busy or restarting (up to 30, remembered in
+    Valkey). Idempotent: the trigger key is workflow + date + HH:MM, so a minute fired twice starts one run."""
+    if now is not None:
+        return await _fire_minute(ctx, now.astimezone(IST))
+    due = _scheduled_minute(ctx) or datetime.now(IST).replace(second=0, microsecond=0)
+    minutes = [due]
+    redis = ctx.get("redis")
+    key = "kritvia:fire_schedules:last"
+    if redis is not None:
+        try:
+            last = await redis.get(key)
+            if last:
+                prev = datetime.fromisoformat(last.decode() if isinstance(last, bytes) else last).astimezone(IST)
+                gap = int((due - prev).total_seconds() // 60)
+                if 1 < gap <= 30:
+                    minutes = [prev + timedelta(minutes=i) for i in range(1, gap + 1)]
+        except Exception:  # noqa: BLE001 - without the marker, just this minute
+            log.warning("could not read the schedule marker", exc_info=True)
+    started = 0
+    for m in minutes:
+        started += await _fire_minute(ctx, m)
+    if redis is not None:
+        try:
+            await redis.set(key, due.isoformat(), ex=86400)
+        except Exception:  # noqa: BLE001
+            pass
+    return started
+
+
+async def _fire_minute(ctx: dict, now: datetime) -> int:
     hhmm = now.strftime("%H:%M")
     async with tenant_tx(None, "system") as conn:
         due = (await conn.execute(text("SELECT * FROM private.scheduled_workflows(:t)"), {"t": hhmm})).all()
@@ -223,17 +300,34 @@ async def reembed(ctx: dict) -> int:
     return total
 
 
+# Nightly retention: (label, SQL). Each in its own transaction, so one that fails (and is logged) never
+# rolls back the others.
+PURGES = (
+    ("expired documents", "SELECT private.purge_expired_documents(1000)"),
+    ("closed organisations", "SELECT private.purge_closed_orgs(30)"),
+    ("removed businesses", "SELECT private.purge_removed_ventures(30)"),
+    ("old support messages", "SELECT private.purge_support(730)"),
+    ("closed privacy requests", "SELECT private.purge_privacy_requests(1095)"),
+    ("security events over a year old", "SELECT private.purge_security_events(365)"),
+    # Finished runs (with their steps, cards and board tickets) after 180 days, AI usage rows after 400
+    # days (a full year of monthly usage stays), start records of old messages after 180 days.
+    ("old finished runs", "SELECT private.purge_run_history(180, 5000)"),
+    ("old AI usage rows", "SELECT private.purge_model_calls(400, 20000)"),
+    ("old trigger records", "SELECT private.purge_trigger_events(180, 20000)"),
+    ("expired idempotency keys", "SELECT private.purge_idempotency_keys()"),
+)
+
+
 async def purge_expired(ctx: dict) -> int:
-    async with tenant_tx(None, "system") as conn:
-        n = (await conn.execute(text("SELECT private.purge_expired_documents(1000)"))).scalar()
-        orgs = (await conn.execute(text("SELECT private.purge_closed_orgs(30)"))).scalar()
-        ventures = (await conn.execute(text("SELECT private.purge_removed_ventures(30)"))).scalar()
-        support = (await conn.execute(text("SELECT private.purge_support(730)"))).scalar()
-        privacy = (await conn.execute(text("SELECT private.purge_privacy_requests(1095)"))).scalar()
-        await conn.execute(text("SELECT private.purge_security_events(365)"))   # security log: one year
-    log.info("retention purge removed %s document(s), %s closed organisation(s), %s removed business(es),"
-             " %s old support message(s) and %s closed privacy request(s)", n, orgs, ventures, support, privacy)
-    return n or 0
+    removed: dict[str, int] = {}
+    for label, sql in PURGES:
+        try:
+            async with tenant_tx(None, "system") as conn:
+                removed[label] = int((await conn.execute(text(sql))).scalar() or 0)
+        except Exception:  # noqa: BLE001 - the next purge still runs
+            log.exception("retention purge failed: %s", label)
+    log.info("retention purge removed: %s", ", ".join(f"{n} {label}" for label, n in removed.items()) or "nothing")
+    return removed.get("expired documents", 0)
 
 
 async def morning_check(ctx: dict) -> list[str]:
@@ -258,9 +352,54 @@ def _every(minutes: int) -> set[int]:
     return set(range(0, 60, minutes))
 
 
+# Daily jobs (IST): (name, function, hour, minute, weekday 0=Monday or None, day of month or None). They
+# run from daily_jobs once their time has passed and they haven't run that day: a worker that was busy or
+# down at that minute catches up later the same day, and two workers never both run one (the day is
+# claimed in the database).
+DAILY = (
+    ("purge_expired", "purge_expired", 3, 15, None, None),
+    ("purge_candidates", "purge_candidates", 3, 35, None, None),
+    ("morning_check", "morning_check", 6, 30, None, None),
+    ("self_check", "self_check", 8, 40, None, None),
+    ("cash_week", "cash_week", 9, 5, 0, None),
+    ("bills_due", "bills_due", 9, 15, None, None),
+    ("gstr1_ready", "gstr1_ready", 9, 25, None, 3),
+    ("attendance_check", "attendance_check", 12, 5, None, None),
+)
+
+
+async def daily_jobs(ctx: dict, now: datetime | None = None) -> list[str]:
+    now = (now or datetime.now(IST)).astimezone(IST)
+    ran = []
+    for name, fn_name, hour, minute, weekday, mday in DAILY:
+        if weekday is not None and now.weekday() != weekday:
+            continue
+        if mday is not None and now.day != mday:
+            continue
+        if (now.hour, now.minute) < (hour, minute):
+            continue
+        async with tenant_tx(None, "system") as conn:
+            mine = (await conn.execute(text("SELECT private.claim_daily_job(:n, :d)"),
+                                       {"n": name, "d": now.date()})).scalar()
+        if not mine:
+            continue
+        try:
+            await globals()[fn_name](ctx)
+            ran.append(name)
+        except Exception:  # noqa: BLE001 - one job's failure never stops the others
+            log.exception("daily job %s failed", name)
+    return ran
+
+
 async def priority_startup(ctx: dict) -> None:
-    await startup(ctx)
+    services = build_services(dispatch_mode="arq")
+    set_services(services)
+    ctx["services"] = services
+    from kritvia_api import logredact
+    logredact.install()
     await priority_heartbeat(ctx)
+    ctx["heartbeat_task"] = asyncio.get_running_loop().create_task(_beat_forever(ctx, priority_heartbeat))
+    log.info("priority worker %s started (%d run slots)", services.worker_id, RUN_SLOTS)
 
 
 async def priority_heartbeat(ctx: dict) -> None:
@@ -310,25 +449,17 @@ class WorkerSettings:
         cron(poll_indiamart, minute=_every(10), second=45),
         cron(reembed, minute=_every(15), second=40),
         cron(resume_paused, minute=_every(10), second=25),
-        cron(purge_expired, hour={3}, minute={15}),
-        cron(morning_check, hour={6}, minute={30}),
-        cron(self_check, hour={8}, minute={40}, run_at_startup=False),
+        cron(daily_jobs, second=55, run_at_startup=False),      # the DAILY jobs, with same-day catch-up
         cron(nudge_expiring, minute={7, 37}, second=15, run_at_startup=False),
-        cron(bills_due, hour={9}, minute={15}, run_at_startup=False),
-        cron(gstr1_ready, hour={9}, minute={25}, run_at_startup=False),
-        cron(cash_week, hour={9}, minute={5}, run_at_startup=False),
-        cron(heartbeat, second={0, 30}),
         cron(watchdog_check, second=50, run_at_startup=False),
         cron(sync_app_store, minute={17}, second=30),
         cron(dispatch_events, second=20, run_at_startup=False),
-        cron(attendance_check, hour={12}, minute={5}, run_at_startup=False),
-        cron(purge_candidates, hour={3}, minute={35}, run_at_startup=False),
     ]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
     timezone = IST
-    max_jobs = int(os.environ.get("WORKER_MAX_JOBS", "8"))
+    max_jobs = RUN_SLOTS + CRON_SLOTS
     job_timeout = 1800
     keep_result = 0          # lets the same run be re-enqueued as soon as a job finishes
     allow_abort_jobs = True
@@ -338,7 +469,7 @@ class PriorityWorkerSettings:
     """The reserved worker for priority processing: `arq kritvia_worker.main.PriorityWorkerSettings`."""
     queue_name = PRIORITY_QUEUE
     functions = [execute_run]
-    cron_jobs = [cron(priority_heartbeat, second={0, 30})]
+    cron_jobs: list = []                       # its heartbeat runs from its own task (priority_startup)
     on_startup = priority_startup
     on_shutdown = priority_shutdown
     redis_settings = WorkerSettings.redis_settings

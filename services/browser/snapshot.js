@@ -85,7 +85,14 @@
       item.form = forms.indexOf(form);
       item.search_form = isSearchForm(form);
     }
-    if (submits) item.submits = true;
+    if (submits) {
+      item.submits = true;
+      // what the form sends to, so an approved submit can be checked against it later (never values)
+      const action = el.getAttribute("formaction") ? el.formAction : (form.action || location.href);
+      const method = ((el.getAttribute("formmethod") ? el.formMethod : form.method) || "get").toLowerCase();
+      const hidden = Array.from(form.querySelectorAll("input[type=hidden]")).map((i) => i.name).filter(Boolean).sort();
+      item.form_pin = { action, method, hidden };
+    }
     elements.push(item);
   }
   const hasPassword = Boolean(document.querySelector("input[type=password]"));

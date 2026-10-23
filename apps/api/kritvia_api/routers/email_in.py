@@ -46,8 +46,10 @@ class ForwardingOut(BaseModel):
 
 
 def _local(slug: str) -> str:
+    """A new address: the business's name and 128 random bits, so it can't be guessed from a forwarded mail's
+    headers or found by trying (addresses made before this keep working)."""
     base = re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-")[:30] or "biz"
-    return f"{base}-{secrets.token_hex(5)}"
+    return f"{base}-{secrets.token_hex(16)}"
 
 
 @router.post("/ventures/{venture_id}/connectors/email-forwarding", response_model=ForwardingOut, status_code=201)
@@ -122,11 +124,18 @@ async def email_inbound(request: Request, svc: Svc) -> EmailInOut:
         if confirm:
             # Gmail asks the new forwarding address to confirm: the owner enters the code in Gmail, or (newer
             # Gmail) opens the confirmation link. Both are shown on Settings, and the owners are told now.
-            await conn.execute(text(
+            # Only a confirmation Cloudflare verified as google.com's replaces one that is already waiting, so
+            # mail sent straight to the address can't swap in someone else's mailbox.
+            stored = (await conn.execute(text(
                 "UPDATE connectors SET meta = meta || jsonb_build_object('gmail_code', CAST(:c AS text),"
                 " 'gmail_link', CAST(:l AS text), 'gmail_mailbox', CAST(:m AS text)), updated_at = now()"
-                " WHERE id = :id"),
-                {"c": confirm["code"], "l": confirm["link"], "m": confirm["mailbox"], "id": p.connector_id})
+                " WHERE id = :id AND (CAST(:ver AS boolean) OR coalesce(meta ->> 'gmail_code', '') = ''"
+                " AND coalesce(meta ->> 'gmail_link', '') = '') RETURNING id"),
+                {"c": confirm["code"], "l": confirm["link"], "m": confirm["mailbox"], "id": p.connector_id,
+                 "ver": bool(confirm.get("verified"))})).first()
+            if stored is None:
+                await security_event("email_in.unverified_confirmation", "warning", request=request, provider="email_in")
+                return EmailInOut(accepted=True, confirmation=False)
             try:
                 from kritvia_api.services.owner_news import tell_admins
                 who = confirm["mailbox"] or "your mailbox"

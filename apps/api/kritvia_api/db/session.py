@@ -26,7 +26,10 @@ _engine: AsyncEngine | None = None
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
-        _engine = create_async_engine(get_settings().database_url, pool_size=10, pool_pre_ping=True)
+        # hide_parameters: database errors (and their tracebacks in the logs, kept for a year) show the
+        # statement but never its values, which are names, phone numbers and amounts.
+        _engine = create_async_engine(get_settings().database_url, pool_size=10, pool_pre_ping=True,
+                                      hide_parameters=True)
     return _engine
 
 

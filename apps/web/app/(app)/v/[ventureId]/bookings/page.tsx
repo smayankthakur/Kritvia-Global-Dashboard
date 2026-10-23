@@ -7,7 +7,7 @@ import { BookingSetup } from "@/components/bookings/booking-setup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select } from "@/components/ui/field";
 import { Notice, PageHeader } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
@@ -20,6 +20,7 @@ import { useVenture } from "@/lib/venture";
 type Booking = Schemas["BookingOut"];
 
 const CHANNEL: Record<string, string> = { whatsapp: "WhatsApp", telegram: "Telegram", email: "Email", manual: "By hand" };
+const STATUS: Record<string, string> = { done: "Done", no_show: "Didn't come", cancelled: "Cancelled", confirmed: "Booked" };
 
 function AddBooking({ ventureId, onClose }: { ventureId: string; onClose: () => void }) {
   const qc = useQueryClient();
@@ -76,7 +77,7 @@ function AddBooking({ ventureId, onClose }: { ventureId: string; onClose: () => 
           <Select value={sid} onChange={(e) => { setServiceId(e.target.value); setSlot(""); }}>
             {(services.data ?? []).map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} ({s.minutes} min)
+                {`${s.name} (${s.minutes} min)`}
               </option>
             ))}
           </Select>
@@ -106,10 +107,19 @@ function AddBooking({ ventureId, onClose }: { ventureId: string; onClose: () => 
 function Row({ b, ventureId, canWrite }: { b: Booking; ventureId: string; canWrite: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const set = useMutation({
-    mutationFn: (status: "done" | "no_show" | "cancelled") =>
+    mutationFn: (status: "done" | "no_show" | "cancelled" | "confirmed") =>
       unwrap(api.PATCH("/ventures/{venture_id}/bookings/{booking_id}", { params: { path: { venture_id: ventureId, booking_id: b.id } }, body: { status } })),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["bookings", ventureId] }),
+    onSuccess: (_d, status) => {
+      setConfirmCancel(false);
+      void qc.invalidateQueries({ queryKey: ["bookings", ventureId] });
+      if (status === "confirmed") return toast.success("Booking is back on");
+      const undo = { label: "Undo", onClick: () => set.mutate("confirmed") };
+      if (status === "done") toast.success("Marked done", "If the service has a price, an invoice draft is waiting on Invoices.", undo);
+      else if (status === "no_show") toast.success(`${b.customer_name} marked as didn't come`, undefined, undo);
+      else toast.success("Booking cancelled", "The customer isn't told by Kritvia; let them know.", undo);
+    },
     onError: (e) => toast.error("Couldn't change it", errorMessage(e)),
   });
   return (
@@ -128,22 +138,32 @@ function Row({ b, ventureId, canWrite }: { b: Booking; ventureId: string; canWri
           ) : null}
           {b.in_calendar ? <Badge>in calendar</Badge> : null}
           {b.reminded_at ? <Badge tone="success">reminded</Badge> : null}
-          {b.status !== "confirmed" ? <Badge tone="neutral">{b.status.replace("_", "-")}</Badge> : null}
+          {b.status !== "confirmed" ? <Badge tone="neutral">{STATUS[b.status] ?? b.status}</Badge> : null}
         </p>
       </div>
       {canWrite && b.status === "confirmed" ? (
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={() => set.mutate("done")}>
+          <Button size="sm" variant="ghost" loading={set.isPending && set.variables === "done"} onClick={() => set.mutate("done")}>
             Done
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => set.mutate("no_show")}>
-            No-show
+          <Button size="sm" variant="ghost" loading={set.isPending && set.variables === "no_show"} onClick={() => set.mutate("no_show")}>
+            Didn&apos;t come
           </Button>
-          <Button size="sm" variant="ghost" className="text-danger" onClick={() => set.mutate("cancelled")}>
-            Cancel
+          <Button size="sm" variant="ghost" className="ml-2 text-danger" onClick={() => setConfirmCancel(true)}>
+            Cancel booking
           </Button>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
+        onConfirm={() => set.mutate("cancelled")}
+        loading={set.isPending}
+        title={`Cancel ${b.customer_name}'s booking?`}
+        description={`${formatTime(b.starts_at)}, ${b.service_name}. The time becomes free for others. You can undo it.`}
+        confirmLabel="Cancel booking"
+        cancelLabel="Keep it"
+      />
     </li>
   );
 }

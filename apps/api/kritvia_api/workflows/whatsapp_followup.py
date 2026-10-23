@@ -189,12 +189,9 @@ async def _done(ctx: RunContext, contact_id: uuid.UUID) -> None:
 
 @wf.step("sent", agent="followup")
 async def sent(ctx: RunContext, state: dict) -> Finish:
-    from kritvia_api.engine.tools import AlreadyExecuted
-    try:
-        res = await ctx.invoke("whatsapp.template", approval_id=state["send_decision"]["approval_id"])
-    except AlreadyExecuted as done:
-        res = (done.args[0] if done.args else None) or {}
-    await _done(ctx, uuid.UUID(state["contact_id"]))
+    res = await ctx.invoke("whatsapp.template", approval_id=state["send_decision"]["approval_id"])
+    if not res.get("already_done"):        # counted on the first pass (a re-run after a restart doesn't count again)
+        await _done(ctx, uuid.UUID(state["contact_id"]))
     return Finish("followed_up", update={"summary": {"sent": res.get("status")}},
                   note=f"follow-up {res.get('status')} via {res.get('transport')}")
 

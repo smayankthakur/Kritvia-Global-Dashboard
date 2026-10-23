@@ -42,16 +42,49 @@ COMPOSE=(docker compose -f docker-compose.yml)
 # App store hosted apps: the MCP runner (compose profile "apps") runs once .env has MCP_RUNNER_TOKEN.
 PROFILES=(--profile tunnel); EXTRA=()
 if [ -n "${MCP_RUNNER_TOKEN:-}" ]; then PROFILES+=(--profile apps); EXTRA+=(mcp-runner); fi
+# The browser agent (profile "browser") runs only under gVisor: Chromium opens pages anyone wrote, so it never
+# runs on the host's own kernel in production (test report S5). Without runsc the rest still deploys.
+BROWSER_OFF=""
+if [ -n "${BROWSER_TOKEN:-}" ]; then
+  if [ "${BROWSER_RUNTIME:-}" = "runsc" ] && docker info 2>/dev/null | grep -qi runsc; then
+    PROFILES+=(--profile browser); EXTRA+=(browser-chromium browser-egress browser)
+  else
+    BROWSER_OFF="BROWSER_RUNTIME isn't runsc (or gVisor isn't installed), so the browser agent stays off"
+  fi
+fi
 
 step "building images (old containers keep serving)"
-if ! "${COMPOSE[@]}" build --pull --quiet migrate sandbox-jobs api worker worker-priority web sandbox browser "${EXTRA[@]}" >"$BUILD_LOG" 2>&1; then
+if ! "${COMPOSE[@]}" build --pull --quiet migrate sandbox-jobs api worker worker-priority web sandbox "${EXTRA[@]}" >"$BUILD_LOG" 2>&1; then
   step "BUILD FAILED; nothing was restarted. Last lines of $BUILD_LOG:"
   tail -25 "$BUILD_LOG"
   exit 1
 fi
 
+# Containers that are recreated lose their logs: archive everything since the last archive first.
+bash "$ROOT/infra/scripts/archive-logs.sh" >>"$BUILD_LOG" 2>&1 || step "warning: log archive before restart failed"
+
+if [ -n "$BROWSER_OFF" ]; then
+  step "warning: $BROWSER_OFF (set BROWSER_RUNTIME=runsc in .env)"
+  "${COMPOSE[@]}" --profile browser rm -sf browser browser-chromium browser-egress >>"$BUILD_LOG" 2>&1 || true
+fi
 step "starting changed services"
-"${COMPOSE[@]}" "${PROFILES[@]}" up -d --remove-orphans --quiet-pull >>"$BUILD_LOG" 2>&1
+if ! "${COMPOSE[@]}" "${PROFILES[@]}" up -d --remove-orphans --quiet-pull >>"$BUILD_LOG" 2>&1; then
+  # Most often a migration that failed (it runs before api and worker start, so the old containers keep
+  # serving). Say why, and put the code and images back to the previous version so a later restart
+  # (the health watchdog, a reboot) doesn't start new code against the old database.
+  step "STARTING FAILED. Migration log (last lines):"
+  "${COMPOSE[@]}" logs --tail=40 --no-color migrate 2>/dev/null || true
+  step "other output (last lines of $BUILD_LOG):"
+  tail -15 "$BUILD_LOG"
+  if [ "$before" != "$after" ]; then
+    step "rolling the code back to $before and rebuilding its images"
+    cd "$ROOT" && git reset --quiet --hard "$before" && cd infra
+    "${COMPOSE[@]}" build --quiet migrate api worker worker-priority web "${EXTRA[@]}" >>"$BUILD_LOG" 2>&1 \
+      || step "rebuilding the previous images failed too; see $BUILD_LOG"
+    "${COMPOSE[@]}" "${PROFILES[@]}" up -d --quiet-pull >>"$BUILD_LOG" 2>&1 || true
+  fi
+  exit 1
+fi
 
 ready=no
 for _ in $(seq 1 45); do

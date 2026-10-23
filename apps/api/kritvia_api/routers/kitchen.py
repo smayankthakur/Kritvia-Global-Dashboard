@@ -14,13 +14,12 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import Svc, TenantDB, UserId, venture_org
 from kritvia_api.engine.runner import start_run
 from kritvia_api.errors import raise_for_db
 from kritvia_api.routers.knowledge import read_upload
 from kritvia_api.workflows.common import today_ist
-from kritvia_api.workflows.kitchen import dish_maps, parse_sales_csv, upsert_sales
+from kritvia_api.workflows.kitchen import dish_maps, parse_sales_csv, report_channel, upsert_sales
 from kritvia_api.services.quota import PlanRestricted
 
 router = APIRouter(prefix="/ventures/{venture_id}/kitchen", tags=["kitchen"])
@@ -323,7 +322,7 @@ async def upload_sales(venture_id: uuid.UUID, db: TenantDB, file: UploadFile = F
     """Aggregator export or template CSV: date, dish (code or name), qty[, channel, revenue]."""
     org = await _write_access(db, venture_id)
     codes, names = await dish_maps(db, venture_id)
-    rows, warnings = parse_sales_csv(await read_upload(file, "csv"), codes, names)
+    rows, warnings = parse_sales_csv(await read_upload(file, "csv"), codes, names, report_channel(file.filename))
     try:
         async with db.begin_nested():
             n = await upsert_sales(db, org, venture_id, rows, "csv")
