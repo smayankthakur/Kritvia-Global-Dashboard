@@ -26,11 +26,13 @@ if [ -n "${MANAGED_MIGRATION_DATABASE_URL:-}" ]; then
 else
   DUMP=(docker compose exec -T postgres pg_dump -U postgres -d kritvia -Fc --no-owner)
 fi
-"${DUMP[@]}" | tee >("${TOOL[@]}" pg_restore --list > "$CHECK" 2>&1; echo $? > "$CHECK.rc") \
+# pg_restore --list reads only the archive's table of contents and stops reading; the trailing cat drains
+# the rest, or tee would be killed by SIGPIPE and, under pipefail, the whole backup with it (exit 141).
+"${DUMP[@]}" | tee >("${TOOL[@]}" pg_restore --list > "$CHECK" 2>&1; echo $? > "$CHECK.rc"; cat > /dev/null) \
   | age -r "$BACKUP_AGE_RECIPIENT" > "$OUT"
 for _ in $(seq 1 60); do [ -s "$CHECK.rc" ] && break; sleep 1; done   # the check finishes after the pipe
 rc=$(cat "$CHECK.rc" 2>/dev/null || echo 1)
-tables=$(grep -c "TABLE DATA" "$CHECK" 2>/dev/null || echo 0)
+tables=$(grep -c "TABLE DATA" "$CHECK" 2>/dev/null) || tables=0   # grep -c prints 0 AND fails when none
 rm -f "$CHECK" "$CHECK.rc"
 [ -s "$OUT" ] || { echo "backup is empty"; exit 1; }
 if [ "$rc" != 0 ] || [ "$tables" -lt 10 ]; then
