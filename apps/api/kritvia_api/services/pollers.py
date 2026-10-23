@@ -227,7 +227,8 @@ async def _inbox(ctx: RunContext, services: Services, token: str, msg) -> int:
                         dedupe=("gmail:inbox_assistant", msg.id), title=f"Email: {msg.subject[:120]}",
                         input=message_input(channel="email", from_name=msg.sender, from_email=msg.sender_email,
                                             subject=msg.subject, body=msg.body, message_id=msg.id,
-                                            thread_id=msg.thread_id, sender_verified=msg.authenticated))
+                                            thread_id=msg.thread_id, sender_verified=msg.authenticated,
+                                            automated=getattr(msg, "automated", False)))
         return 1
     except DuplicateTrigger:
         return 0
@@ -368,13 +369,15 @@ async def poll_statements(ctx: RunContext, services: Services, token: str, own_e
 
 
 async def _inbox_forwarded(ctx: RunContext, services: Services, msg) -> int:
+    from kritvia_api.services.auto_reply import automated_sender
     from kritvia_api.workflows.inbox import message_input
     try:
         await start_run(services, actor_user_id=ctx.run_as, actor_type="agent", venture_id=ctx.venture_id,
                         workflow="inbox_assistant", trigger_kind="email", trigger_ref=msg.id[:200],
                         dedupe=("email_in:inbox_assistant", msg.id), title=f"Email: {msg.subject[:120]}",
                         input=message_input(channel="email", from_name=msg.sender, from_email=msg.sender_email,
-                                            subject=msg.subject, body=msg.body, message_id=None, thread_id=None))
+                                            subject=msg.subject, body=msg.body, message_id=None, thread_id=None,
+                                            automated=automated_sender(msg.sender_email, msg.headers)))
         return 1
     except DuplicateTrigger:
         return 0

@@ -20,6 +20,8 @@ from urllib.parse import urlencode
 
 import httpx
 
+from kritvia_api.services.auto_reply import automated_sender
+
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
@@ -67,6 +69,7 @@ class GmailMessage:
     body: str
     attachments: list[dict[str, Any]]
     authenticated: bool = False   # Gmail's own check (its topmost header): the From domain passed DMARC or signed it
+    automated: bool = False       # a machine sent it (no-reply, newsletter, auto-reply): never answered by itself
 
 
 _AUTH_PART = re.compile(r"\b(dmarc|dkim)=(\w+)([^;]*)", re.I)
@@ -254,7 +257,8 @@ class GoogleClient:
                             sender_email=addr.lower(), to=headers.get("to", ""),
                             subject=headers.get("subject", ""), date=headers.get("date", ""),
                             body=body or m.get("snippet", ""), attachments=attachments,
-                            authenticated=sender_authenticated(auth, addr.lower()))
+                            authenticated=sender_authenticated(auth, addr.lower()),
+                            automated=automated_sender(addr.lower(), headers))
 
     async def get_attachment(self, token: str, message_id: str, attachment_id: str) -> bytes:
         body = await self._req("GET", f"{GMAIL}/messages/{message_id}/attachments/{attachment_id}", token)

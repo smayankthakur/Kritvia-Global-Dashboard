@@ -18,11 +18,12 @@ export const FEATURES: Feature[] = [
     id: "messages",
     title: "Answer customers on WhatsApp, email and Telegram",
     answer:
-      "Every email, WhatsApp message and Telegram message lands in one place, sorted as an enquiry, payment, booking or support question. Kritvia drafts a reply in your business's voice, in Hindi, Hinglish or English, and sends it when you approve it.",
+      "Every email, WhatsApp message and Telegram message lands in one place, sorted as an enquiry, payment, booking or support question. Kritvia drafts a reply in your business's voice, in Hindi, Hinglish or English, and sends it when you approve it, or straight away if you let it reply by itself.",
     points: [
       "WhatsApp needs a WhatsApp Business (Meta Cloud API) number. Replies are free-form within 24 hours of the customer's last message; after that WhatsApp requires an approved template, and Kritvia tells you instead of guessing.",
       "A Telegram bot you create with @BotFather answers customers too. It never writes first.",
       "Your website's enquiry form and IndiaMART enquiries arrive in the same inbox.",
+      "Replying by itself is off until you switch it on. Prices that aren't in your records, discounts, refunds and complaints still wait for you, and the customer is told the team will get back to them.",
       "Customers who reply STOP are never messaged again.",
     ],
     plans: "Email and your website form on every plan. WhatsApp, Telegram and IndiaMART from Starter.",

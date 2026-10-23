@@ -12,6 +12,8 @@
  * 18 October 2026 (version 2026-10-18): approvals and requests from a linked WhatsApp number (7.2), skills and
  * team leads (7.13), the browser agent (7.14), AI phone calls (7.15), IndiaMART and Twilio (8.5), acceptable use
  * items 10 and 11.
+ * 23 October 2026 added one sentence to clause 7.3 (the inbox assistant replying by itself) without a new
+ * version: it only applies to businesses that switch it on, under the permission 7.3 already describes.
  */
 export const TERMS_UPDATED = "18 October 2026";
 
@@ -106,7 +108,7 @@ export const TERMS_MD = `These Terms of Service are an agreement between your bu
 
 7.2 **The Approval gate.** By default, an Agent's action that leaves the Service, such as sending an email or WhatsApp message, creating a calendar event or sharing a proposal, waits for a User's Approval. Once a User approves, edits and approves, or sets up an action, that action is your action and you are responsible for it. A User may give Approval in the Service or, if they have linked it, from Telegram, WhatsApp or Slack; an Approval given there has the same effect, and you are responsible for keeping those chat accounts and phones secure. A request a User sends Kritvia from a linked Telegram chat or WhatsApp number is treated as that User's request in the Service. Approving a reply that offers a booking also makes that booking in your calendar.
 
-7.3 **Acting without Approval.** On Plans that allow it, an administrator may let an Agent act without Approval for defined actions. If you switch this on, you accept responsibility for every action the Agent takes within that permission, and you must monitor the Agent's activity log. You can switch it off at any time.
+7.3 **Acting without Approval.** On Plans that allow it, an administrator may let an Agent act without Approval for defined actions. If you switch this on, you accept responsibility for every action the Agent takes within that permission, and you must monitor the Agent's activity log. You can switch it off at any time. If you let the inbox assistant reply to customers by itself, its replies are messages from your business under this clause; it tells anyone who asks that it is your AI assistant, and replies about prices not in your records, discounts, refunds, payment disputes, complaints or promises still wait for Approval.
 
 7.4 **No professional advice.** The Service does not give legal, tax, accounting, credit, lending, medical or investment advice. Loan-document checks, forecasts and similar features support, but do not replace, your own professional judgement and any verification the law or your regulator requires of you. You must not use Outputs as the sole basis for a decision that has legal or similarly significant effects on an individual.
 

@@ -12018,8 +12018,17 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** OptionChoiceOut */
+        OptionChoiceOut: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
         /** OptionOut */
         OptionOut: {
+            /** Choices */
+            choices?: components["schemas"]["OptionChoiceOut"][];
             /** Default */
             default: unknown;
             /**
@@ -12039,7 +12048,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "boolean" | "number" | "text";
+            type: "boolean" | "number" | "text" | "choice" | "multi";
         };
         /** OrgCouponItem */
         OrgCouponItem: {

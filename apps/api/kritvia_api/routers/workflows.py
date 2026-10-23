@@ -20,14 +20,20 @@ from kritvia_api.services.quota import PlanRestricted, plan_for_venture, require
 router = APIRouter(tags=["workflows"])
 
 
+class OptionChoiceOut(BaseModel):
+    value: str
+    label: str
+
+
 class OptionOut(BaseModel):
     key: str
     label: str
-    type: Literal["boolean", "number", "text"]
+    type: Literal["boolean", "number", "text", "choice", "multi"]
     default: Any
     help: str = ""
     min: float | None = None
     max: float | None = None
+    choices: list[OptionChoiceOut] = Field(default_factory=list)
 
 
 class WorkflowOut(BaseModel):
@@ -49,7 +55,8 @@ async def catalogue(_: UserId) -> list[WorkflowOut]:
     return [WorkflowOut(name=w.name, title=w.title, description=w.description, trigger=w.trigger,
                         venture_kinds=list(w.venture_kinds),
                         steps=[{"name": s.name, "agent": s.agent} for s in w.steps.values()],
-                        options=[OptionOut(**o.__dict__) for o in w.options],
+                        options=[OptionOut(**{**o.__dict__, "choices": [OptionChoiceOut(value=v, label=lbl) for v, lbl in o.choices]})
+                                 for o in w.options],
                         starts=w.starts, default_schedule=w.default_schedule)
             for w in registry.all()]
 

@@ -6,7 +6,8 @@ the business's real records.
 - **The owner and the team** ask anything from their own linked chats and get the answer with actual
   numbers: see [Run the business from Telegram or WhatsApp](front-door.md) (owner side).
 - **Customers** asking about their *own* records get an answer straight away, if the business switched it
-  on (below). Everything else a customer writes still gets a draft that waits for a yes.
+  on (below). Everything else a customer writes still gets a draft that waits for a yes, unless the
+  business lets the inbox assistant **reply by itself** (last section).
 
 ## Customers: questions about their own records
 
@@ -56,3 +57,75 @@ assistant's reply language when that is set.
   question (`fact_answer`) and whether it went by itself (`fact_auto`).
 
 Tests: `tests/test_customer_facts.py`.
+
+## Replying by itself
+
+**Switch:** Chats page → "Reply to every customer message by itself", or Agents → Inbox assistant. Options
+(all on the inbox assistant, `workflows/inbox.py`; helpers in `services/auto_reply.py`):
+
+| Option | Default | Meaning |
+|---|---|---|
+| `auto_reply` | off | every customer message on a chosen channel gets an answer straight away |
+| `auto_reply_channels` | WhatsApp, Telegram, Email | the channels it answers on by itself |
+| `reply_tone` | `warm` | `warm` (friendly), `professional` (polite) or `playful` (fun) |
+
+### The voice (`auto_reply.persona`)
+
+Short, WhatsApp-style messages on chats; a proper email on email. It mirrors the customer's language (Hindi
+in Devanagari, Hinglish in Roman script, English), uses light humour, and uses emojis only if the customer
+did. Small talk gets a friendly line and a steer back to the business. A message that needs no answer
+("hi", "thanks") gets one short friendly line.
+
+- **Honesty:** it never says or suggests it is a human. Asked sincerely whether they are talking to a bot,
+  it says it is the business's AI assistant and offers a person.
+- **No invention:** it never makes up prices, offers, discounts, stock, timings or policies. In auto mode
+  the rate card (`rate_cards`) and booking services' prices are put in the prompt as the prices it may quote.
+
+### The money and complaint gate
+
+The draft returns `needs_owner` and `owner_reason` (`price_not_on_record`, `discount_or_offer`,
+`refund_or_payment_dispute`, `commitment_or_deal`, `complaint`, `unsure`). Independently, **code** reads every
+rupee amount and percentage in the draft (`₹`, `Rs`, `INR`, `rupees`, `रुपये`, `5k`, `2 lakh`, …) and holds it
+if any is not in the sources it was given, the rate card, booking prices, the customer's own invoices or the
+offer text. Phone numbers, dates and times are not amounts. Either check holds the reply:
+
+1. the customer gets a **fixed holding line written by code** in their language ("Let me check this with the
+   team and get back to you shortly", in English, Hindi or Hinglish; 🙏 only if they used an emoji), sent
+   by itself (step `hold`, approval "Replied by itself: holding line…");
+2. the team gets a push ("A customer's message needs you");
+3. the real draft waits as a pending card "Needs you (<reason>): …" (step `owner_draft`, `always_review`).
+   It is never sent by itself.
+
+A customer who asks for a person goes down the existing hand-to-person path (chat marked, team notified)
+and gets the holding line "…someone will reply to you soon". An email enquiry that goes to Lead triage gets
+a fixed thank-you ("…we'll send you the details and a quote shortly") while the proposal waits as usual.
+
+### Loops, floods and what never gets a reply
+
+- **Acknowledgements:** no automatic reply to a message that needs none if the business auto-replied to the
+  same person in the last 10 minutes (no "thanks" ↔ "welcome" ping-pong with another bot).
+- **Caps:** 15 automatic replies to one person an hour, 500 per business a day (counted from the inbox
+  runs' summaries, `auto_to` and `auto_sent`). Beyond that the draft waits for a yes, with no holding line.
+- **Never automatic:** spam, updates and notifications; automated email senders (`no-reply@`,
+  `mailer-daemon`, `Auto-Submitted`, `Precedence: bulk/list`, `List-Unsubscribe`/`List-Id`; the Gmail poller
+  sets `automated`); STOP; chats a person took over; runs the injection guard flagged and drafts the
+  guardrails object to; sensitive messages (an ID, card or account number); Prospector replies; a redraft
+  the owner asked for. A reply to an email whose sender Gmail didn't authenticate that draws on the
+  business's own documents or notes is held like a money promise (holding line, then "Needs you").
+- The sender's own phone number is not counted when checking a message for ID numbers (a 12-digit
+  WhatsApp number can pass the Aadhaar check digit).
+
+### Engine and database
+
+- Automatic sends use `ApprovalRequest.auto_option = "auto_reply"` and go through the runner like earned
+  autonomy (it still withholds for sensitive, flagged, `always_review` and guardrail objections), each
+  logging an `ai.auto_option_used` security event; titles start "Replied by itself:".
+- Migration `0077_auto_reply.sql` replaces `private.guard_approval_insert`: besides earned autonomy and
+  `answer_facts` (step `facts`), an `auto_approved` inbox send is allowed only for steps `draft`, `hold`
+  and `facts` of an `inbox_assistant` run in a business whose inbox config is enabled with `auto_reply`
+  on and the send's channel in `auto_reply_channels`. Never for a sensitive approval; never for
+  `owner_draft`.
+- `answer_facts` and `auto_reply` work together: questions about the customer's own records keep the
+  code-written answer (`facts`), sent by itself when either switch is on.
+
+Tests: `tests/test_auto_reply.py`.

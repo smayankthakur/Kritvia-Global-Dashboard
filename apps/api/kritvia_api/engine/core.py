@@ -95,11 +95,13 @@ class Option:
     `key` is the settings key; `default` is what the workflow uses when unset."""
     key: str
     label: str
-    type: Literal["boolean", "number", "text"]
+    type: Literal["boolean", "number", "text", "choice", "multi"]
     default: Any
     help: str = ""
     min: float | None = None
     max: float | None = None
+    # "choice" (one value) and "multi" (a list of values): (value, label) pairs the page offers.
+    choices: tuple[tuple[str, str], ...] = ()
 
 
 class WorkflowDefinitionError(Exception):

@@ -14376,8 +14376,33 @@
         "title": "OnlineOut",
         "type": "object"
       },
+      "OptionChoiceOut": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "OptionChoiceOut",
+        "type": "object"
+      },
       "OptionOut": {
         "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OptionChoiceOut"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
           "default": {
             "title": "Default"
           },
@@ -14420,7 +14445,9 @@
             "enum": [
               "boolean",
               "number",
-              "text"
+              "text",
+              "choice",
+              "multi"
             ],
             "title": "Type",
             "type": "string"

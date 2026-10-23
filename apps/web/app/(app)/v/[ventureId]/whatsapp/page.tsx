@@ -12,6 +12,7 @@ import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Checkbox, Field, FormError, Input, Textarea } from "@/components/ui/field";
 import { Notice, PageHeader } from "@/components/ui/page";
 import { AnswerFactsSwitch } from "@/components/whatsapp/answer-facts";
+import { AutoReplySwitch } from "@/components/whatsapp/auto-reply";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
@@ -509,7 +510,12 @@ function ChatsView() {
           , and new customer messages will appear here.
         </Notice>
       ) : null}
-      {chats.data?.connected || chats.data?.telegram_bot ? <AnswerFactsSwitch ventureId={v.id} canAdmin={canAdmin} /> : null}
+      {chats.data?.connected || chats.data?.telegram_bot ? (
+        <>
+          <AutoReplySwitch ventureId={v.id} canAdmin={canAdmin} />
+          <AnswerFactsSwitch ventureId={v.id} canAdmin={canAdmin} />
+        </>
+      ) : null}
       {chats.data?.telegram_bot ? (
         <p className="text-sm text-muted">
           Customers can chat with your bot at{" "}

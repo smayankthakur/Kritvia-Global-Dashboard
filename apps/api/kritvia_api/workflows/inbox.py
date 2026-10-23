@@ -4,6 +4,8 @@
            -> [approval: gmail.send / whatsapp.send / telegram.send] -> send
   classify -> facts (a question about the sender's own invoice, pay link, booking or shipment, answered
            from the records by code; by itself when answer_facts is on) -> send   | no records -> retrieve
+  With auto_reply on (services/auto_reply.py) replies go out by themselves; a money promise or complaint
+  instead sends a code-written holding line and waits:  draft -> hold -> hold_send -> owner_draft -> send
 
 Reads each incoming email or WhatsApp message, works out what it is (enquiry,
 support question, invoice or payment, scheduling, other), files it in memory so
@@ -28,6 +30,7 @@ from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
+from kritvia_api.services import auto_reply as ar
 from kritvia_api.services import memory, pii, push, wa_inbox
 from kritvia_api.workflows.common import CURRENCY_IN_TEXT
 
@@ -47,6 +50,16 @@ wf = registry.register(Workflow(
                help="Only the customer's own invoices, payment links, bookings and shipments, found by the number or "
                     "checked email they wrote from. The numbers come from your records, never written by AI. "
                     "Everything else still waits for your yes."),
+        Option("auto_reply", "Reply to customers by itself", "boolean", False,
+               help="Every customer message gets a friendly answer straight away, in their language. Still comes to "
+                    "you: prices not in your records, discounts and offers, refunds and payment disputes, promises "
+                    "and deals, complaints, and anything the agent isn't sure of (the customer gets a short 'let me "
+                    "check with the team' meanwhile). It never pretends to be a person."),
+        Option("auto_reply_channels", "Reply by itself on", "multi", ["whatsapp", "telegram", "email"],
+               choices=(("whatsapp", "WhatsApp"), ("telegram", "Telegram"), ("email", "Email"))),
+        Option("reply_tone", "Tone of voice", "choice", "warm",
+               choices=(("warm", "Warm & friendly"), ("professional", "Polite & professional"),
+                        ("playful", "Fun & playful"))),
     )))
 
 CATEGORIES = ("enquiry", "support", "payment", "scheduling", "update", "spam", "other")
@@ -81,6 +94,10 @@ class Reply(BaseModel):
     booking: BookingPick | None = Field(default=None, description=(
         "only when the business takes bookings and the customer clearly chose one service and one of the listed "
         "free times: that service and time; the reply then confirms it"))
+    needs_owner: bool = Field(default=False, description=(
+        "true when the owner must check this reply before it goes out: a price not in what you were given, a "
+        "discount or offer, a refund or payment dispute, a promise or deal, a complaint, or you are unsure"))
+    owner_reason: ar.Reason | None = Field(default=None, description="why the owner must check it")
 
 
 async def _booking_offer(ctx: RunContext) -> dict[str, Any] | None:
@@ -164,7 +181,9 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
             return Finish("opted_out", update={"summary": {"prospect": True, "opted_out": True}},
                           note="a prospect asked not to be contacted again; they won't be")
     # A message carrying an ID, card or account number never leaves the server.
-    held = pii.mask(header + (inp.get("body") or "")).sensitive
+    # Only what the sender wrote counts: their own 12-digit WhatsApp number can pass the Aadhaar check digit
+    # (about one number in ten), which used to mark every message from them as sensitive.
+    held = pii.mask(f"{inp.get('from_name') or ''}\n{inp.get('subject') or ''}\n{inp.get('body') or ''}").sensitive
     c = await ctx.llm_json(
         tier="private" if held else "extract", schema=Classification, sensitive=held,
         system=(f"{await ctx.brief()}\nYou sort the business's incoming messages. Categories: enquiry (a potential "
@@ -189,6 +208,12 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
             await push.notify_venture(ctx.venture_id, title="A customer wants a person",
                                       body=f"{contact.label} on {APP[contact.channel]}",
                                       url=f"/v/{ctx.venture_id}/whatsapp?c={contact.id}", tag=f"wa-{contact.id}")
+            if _auto(cfg, inp):
+                # Replying by itself: the customer isn't left in silence; a code-written line says a person is coming.
+                return Goto("hold", update={"classification": c.model_dump(), "input_sensitive": held,
+                                            "summary": {**summary, "handed_to_person": True},
+                                            "hold": {"kind": "person"}},
+                            note="the customer needs a person; the team was notified and a holding line goes out")
             return Finish("handed_to_person", update={"summary": {**summary, "handed_to_person": True}},
                           note="the customer needs a person; the chat is with the team now and they were notified")
 
@@ -226,17 +251,34 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
                                          title=f"Enquiry: {(inp.get('subject') or c.summary)[:120]}",
                                          input={**inp, "source": channel,
                                                 **({"lead_id": prospect["lead_id"]} if prospect else {})})
+                if _auto(cfg, inp):
+                    # The proposal still waits for a yes; the customer gets a code-written "we'll send it shortly".
+                    return Goto("hold", update={"classification": c.model_dump(), "input_sensitive": held,
+                                                "summary": {**summary, "lead_run_id": str(run_id)},
+                                                "hold": {"kind": "lead"}},
+                                note="enquiry handed to Lead triage; a thank-you goes out by itself")
                 return Finish("handed_to_lead_triage", update={"summary": {**summary, "lead_run_id": str(run_id)}},
                               note="enquiry handed to Lead triage")
             except DuplicateTrigger:
                 return Finish("handed_to_lead_triage", update={"summary": summary}, note="already with Lead triage")
 
-    if not c.needs_reply or not cfg.get("draft_replies", True) or not _recipient(inp):
+    # Replying by itself, a chat gets an answer even to "thanks" or "hi" (not to notifications), but an
+    # acknowledgement right after the business's own automatic reply gets none: two machines thanking each
+    # other forever is the loop this stops.
+    chat_auto = _auto(cfg, inp) and channel in CHATS and c.category not in ("spam", "update") and not prospect
+    if (not c.needs_reply and not chat_auto) or not cfg.get("draft_replies", True) or not _recipient(inp):
         return Finish("filed", update={"summary": summary},
                       note=f"{c.category}; " + ("no reply needed" if not c.needs_reply else "replies are off"))
+    ack = not c.needs_reply
+    if ack:
+        async with ctx.tx() as conn:
+            just_now = await ar.recent(conn, ctx.venture_id, _key(ctx, inp), ar.ACK_QUIET_MINUTES)
+        if just_now:
+            return Finish("filed", update={"summary": summary},
+                          note="an acknowledgement right after an automatic reply; not answered (no loop)")
     return Goto("retrieve", update={"classification": c.model_dump(), "summary": summary, "input_sensitive": held,
-                                    "prospect": prospect},
-                note=f"{c.category}, {c.urgency} urgency, reply needed")
+                                    "prospect": prospect, "ack": ack},
+                note=f"{c.category}, {c.urgency} urgency, " + ("a short friendly reply" if ack else "reply needed"))
 
 
 @wf.step("facts", agent="inbox")
@@ -277,19 +319,27 @@ async def facts(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
         action, payload = "gmail.send", {"to": to, "subject": subject[:300], "body": biz.with_notice(body),
                                          "thread_id": inp.get("thread_id")}
     on = bool(cfg.get("answer_facts"))
-    auto = on and recent < cf.AUTO_PER_HOUR
+    by_reply = not on and _auto(cfg, inp)   # "reply by itself" also covers these code-built answers
+    if on:
+        auto = recent < cf.AUTO_PER_HOUR
+    elif by_reply:
+        async with ctx.tx() as conn:
+            auto = await ar.room(conn, ctx.venture_id, key)
+    else:
+        auto = False
     who = inp.get("from_name") or found.name or to
-    why = ("" if not on else " Sent by itself (Agents → Inbox assistant → answer questions about their own records)."
-           if auto else f" Waiting for you: {cf.AUTO_PER_HOUR} answers already went to this customer in the last hour.")
+    why = ("" if not (on or by_reply) else " Sent by itself (Agents → Inbox assistant)." if auto
+           else " Waiting for you: the hourly or daily limit of automatic answers was reached.")
     return Interrupt(
         ApprovalRequest(agent="inbox", action=action, key="reply_decision",
                         title=f"From your records: {cf.TITLES[q]} for {who}"[:300],
                         summary=(f"{c['summary'][:200]} Written by code from your records (no AI wording)." + why)[:2000],
                         payload=payload, required_roles=("approver", "venture_admin"),
                         sensitive=bool(state.get("input_sensitive")),
-                        auto_option="answer_facts" if auto else None),
+                        auto_option=("answer_facts" if on else "auto_reply") if auto else None),
         resume="send", on_reject="rejected",
-        update={"summary": {**state.get("summary", {}), "fact_answer": q, "fact_to": key, "fact_auto": auto}},
+        update={"summary": {**state.get("summary", {}), "fact_answer": q, "fact_to": key, "fact_auto": auto,
+                            **({"auto_to": key} if by_reply else {})}},
         note=f"answer about their {cf.TITLES[q]} built from the records" + (" (sends by itself)" if auto else ""))
 
 
@@ -343,6 +393,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
               f"Language: {lang}. " + ("Keep it short, no subject line." if channel in CHATS
                                        else f"Plain-text email, sign off as {biz.sign_off}."))
     prospect = state.get("prospect")
+    auto_on = _auto(cfg, inp) and not prospect and not state.get("feedback")
+    if auto_on:
+        system += ar.persona(biz.name, channel, ar.tone(cfg), ack=bool(state.get("ack")))
     if prospect:
         system += (" This person is replying to a message we sent them first, offering: "
                    f"{prospect['offer'] or 'our services'}. Answer what they asked, keep it warm and brief, and "
@@ -363,6 +416,13 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         prompt += f"\n\nBookable services and free times (business's local time):\n{offer['text']}"
     if feedback:
         prompt += f"\n\nThe reviewer rejected the previous draft with this feedback — address it:\n{feedback}"
+    prices: list[str] = []
+    price_paise: list[int] = []
+    if auto_on:
+        async with ctx.tx() as conn:
+            prices, price_paise = await ar.known_from_records(conn, ctx.venture_id)
+        if prices:
+            prompt += "\n\nPrices you may quote (the business's rate card; nothing else):\n" + "\n".join(prices)
     sensitive = (bool(state.get("input_sensitive")) or any(s.get("sensitive") for s in sources)
                  or bool(chat and pii.mask(chat).sensitive))   # an ID number earlier in the chat counts too
     r = await ctx.llm_json(tier="private" if sensitive else "reason", schema=Reply, system=system, prompt=prompt,
@@ -394,20 +454,150 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
     summary = c["summary"][:200] + (" — the agent is not sure the sources answer this." if r.unsure else "")
     if used:
         summary += " Draws on: " + ", ".join(s["title"] for s in used)[:200]
+    # quoting a past proposal to an outside sender always needs a person, and so does a reply drawing on the
+    # business's own documents or notes to a sender nobody could check (forwarded or unauthenticated mail):
+    # it is never sent by earned trust or by itself (round 2, S12)
+    always = (any(s["kind"] == "proposal" for s in used) or (bool(used) and not _sender_verified(inp))
+              or bool(prospect and (r.unsure or guessed)))
+    req: dict[str, Any] = {"agent": "prospector" if prospect else "inbox", "action": action, "key": "reply_decision",
+                           "title": title, "summary": summary, "payload": payload,
+                           "required_roles": ["approver", "venture_admin"], "sensitive": sensitive,
+                           "always_review": always}
+    update: dict[str, Any] = {"citations": [{"document_id": s["document_id"], "title": s["title"]} for s in used],
+                              "redrafts": state.get("redrafts", 0)}
+    note = f"reply drafted citing {len(used)} source(s)" + (" (unsure)" if r.unsure else "")
+    if auto_on and not sensitive:
+        key = _key(ctx, inp)
+        from kritvia_api.services import customer_facts as cf
+        async with ctx.tx() as conn:
+            under = await ar.room(conn, ctx.venture_id, key)
+            mine = await cf.lookup(conn, ctx.venture_id, channel=channel, phone=inp.get("from_phone"),
+                                   email=inp.get("from_email"), chat_id=inp.get("chat_id"),
+                                   sender_verified=_sender_verified(inp))
+        paise = price_paise + [p for i in mine.invoices
+                               for p in (i.amount_paise, i.balance_paise, i.amount_paise - i.balance_paise)]
+        texts = prices + [s["text"] for s in sources] + [offer["text"] if offer else ""]
+        unknown = ar.unknown_amounts(r.body, ar.known_values(texts, paise))
+        reasons: list[str] = []
+        for why in ([r.owner_reason or "unsure"] if r.needs_owner else []) + (["unsure"] if r.unsure else []) \
+                + (["complaint"] if c.get("wants_person") else []) + (["price_not_on_record"] if unknown else []) \
+                + (["unsure"] if always else []):
+            if why not in reasons:
+                reasons.append(why)
+        update["summary"] = {**state.get("summary", {}), "auto_to": key}
+        if not under:
+            req["summary"] += " Waiting for you: the hourly or daily limit of automatic replies was reached."
+            note += "; the automatic-reply limit was reached, so it waits"
+        elif reasons:
+            # A money promise or a complaint: the customer gets a code-written "let me check", the team is
+            # told, and this draft waits for a yes (owner_draft).
+            if unknown:
+                req["summary"] += " Amounts not in your records: " + ", ".join(unknown)[:200]
+            return Goto("hold", update={**update, "held_draft": req, "hold": {"kind": "check", "reasons": reasons}},
+                        note=note + "; needs the owner (" + ", ".join(ar.REASON_WORDS[x] for x in reasons) + ")")
+        else:
+            req["auto_option"] = "auto_reply"
+            req["title"] = f"Replied by itself: {title}"[:300]
+            note += "; sends by itself"
+    return Interrupt(_request(req), resume="send", on_reject="rejected", update=update, note=note)
+
+
+def _request(req: dict[str, Any]) -> ApprovalRequest:
+    return ApprovalRequest(agent=req["agent"], action=req["action"], key=req["key"], title=req["title"][:300],
+                           summary=req["summary"][:2000], payload=req["payload"],
+                           required_roles=tuple(req["required_roles"]), sensitive=bool(req["sensitive"]),
+                           always_review=bool(req.get("always_review")), auto_option=req.get("auto_option"))
+
+
+def _key(ctx: RunContext, inp: dict[str, Any]) -> str:
+    """The sender's tag for the automatic-reply limits (as customer_facts.sender_key)."""
+    from kritvia_api.services import customer_facts as cf
+    channel = inp.get("channel") or "email"
+    return cf.sender_key(ctx.venture_id, channel, _chat_address(inp, channel) or _recipient(inp))
+
+
+def _auto(cfg: dict[str, Any], inp: dict[str, Any]) -> bool:
+    """Replies to this message may go out by themselves (auto_reply on for its channel; not a machine's mail)."""
+    channel = inp.get("channel") or "email"
+    if not ar.enabled(cfg, channel) or inp.get("automated") is True:
+        return False
+    return channel in CHATS or not ar.automated_sender(inp.get("from_email"))
+
+
+@wf.step("hold", agent="inbox")
+async def hold(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
+    """Replying by itself, while a person takes over (a money promise, a complaint, an enquiry's quote): the
+    customer gets a short line written by code in their language, sent by itself."""
+    inp, kind = state["input"], state["hold"]["kind"]
+    channel = inp.get("channel") or "email"
+    async with ctx.tx() as conn:
+        flagged = bool((await conn.execute(text("SELECT run_flagged(:r)"), {"r": ctx.run_id})).scalar())
+        under = await ar.room(conn, ctx.venture_id, _key(ctx, inp))
+    if flagged or state.get("input_sensitive") or not under:
+        return _after_hold(state, sent=False)
+    from kritvia_api.services import customer_facts as cf
+    c = state.get("classification") or {}
+    line = ar.holding(kind, cf.language(c.get("language")), emoji=ar.uses_emoji(inp.get("body")))
+    biz = await ctx.business()
+    to = _recipient(inp)
+    if channel in CHATS:
+        action, payload = f"{channel}.send", {"to": _chat_address(inp, channel) or to, "body": line}
+    else:
+        action, payload = "gmail.send", {"to": to, "subject": ("Re: " + (inp.get("subject") or "your message"))[:300],
+                                         "body": biz.with_notice(f"{line}\n\n{biz.sign_off}"),
+                                         "thread_id": inp.get("thread_id")}
+    what = {"check": "while you check", "person": "a person will reply", "lead": "thanks, the quote follows"}[kind]
     return Interrupt(
-        ApprovalRequest(agent="prospector" if prospect else "inbox", action=action, key="reply_decision",
-                        title=title, summary=summary, payload=payload,
-                        required_roles=("approver", "venture_admin"), sensitive=sensitive,
-                        # quoting a past proposal to an outside sender always needs a person, and so does a
-                        # reply drawing on the business's own documents or notes to a sender nobody could check
-                        # (forwarded or unauthenticated mail): it is never sent by earned trust (round 2, S12)
-                        always_review=any(s["kind"] == "proposal" for s in used)
-                        or (bool(used) and not _sender_verified(inp))
-                        or bool(prospect and (r.unsure or guessed))),
-        resume="send", on_reject="rejected",
-        update={"citations": [{"document_id": s["document_id"], "title": s["title"]} for s in used],
-                "redrafts": state.get("redrafts", 0)},
-        note=f"reply drafted citing {len(used)} source(s)" + (" (unsure)" if r.unsure else ""))
+        ApprovalRequest(agent="inbox", action=action, key="hold_decision",
+                        title=f"Replied by itself: holding line to {inp.get('from_name') or to} ({what})"[:300],
+                        summary="A fixed line written by code (no AI wording), sent while a person takes over.",
+                        payload=payload, required_roles=("approver", "venture_admin"), auto_option="auto_reply"),
+        resume="hold_send", on_reject="hold_done",
+        update={"summary": {**state.get("summary", {}), "auto_to": _key(ctx, inp)}},
+        note=f"holding line ({kind})")
+
+
+@wf.step("hold_send", agent="inbox")
+async def hold_send(ctx: RunContext, state: dict) -> Goto | Finish:
+    d = state["hold_decision"]
+    channel = state["input"].get("channel")
+    action = f"{channel}.send" if channel in CHATS else "gmail.send"
+    res = await ctx.invoke(action, approval_id=d["approval_id"])
+    return _after_hold(state, sent=res.get("status") not in (None, "failed"),
+                       auto_sent=d.get("status") == "auto_approved")
+
+
+@wf.step("hold_done", agent="inbox")
+async def hold_done(ctx: RunContext, state: dict) -> Goto | Finish:
+    return _after_hold(state, sent=False)
+
+
+def _after_hold(state: dict, *, sent: bool, auto_sent: bool = False) -> Goto | Finish:
+    kind = state["hold"]["kind"]
+    summary = {**state.get("summary", {}), "holding_sent": sent, **({"auto_sent": True} if auto_sent else {})}
+    if kind == "check":
+        return Goto("owner_draft", update={"summary": summary},
+                    note="holding line sent; the reply waits for you" if sent else "the reply waits for you")
+    if kind == "person":
+        return Finish("handed_to_person", update={"summary": summary},
+                      note="the customer needs a person; the team was notified" + (" and told them so" if sent else ""))
+    return Finish("handed_to_lead_triage", update={"summary": summary},
+                  note="enquiry handed to Lead triage" + ("; thanked them by itself" if sent else ""))
+
+
+@wf.step("owner_draft", agent="inbox")
+async def owner_draft(ctx: RunContext, state: dict) -> Interrupt:
+    """The reply that needs the owner (money promise, complaint, unsure): waits for a yes, never by itself."""
+    req = dict(state["held_draft"])
+    reasons = (state.get("hold") or {}).get("reasons") or ["unsure"]
+    req["title"] = f"Needs you ({', '.join(ar.REASON_WORDS.get(x, x) for x in reasons)}): {req['title']}"
+    req["always_review"] = True
+    req.pop("auto_option", None)
+    inp = state["input"]
+    await push.notify_venture(ctx.venture_id, title="A customer's message needs you",
+                              body=f"{inp.get('from_name') or _recipient(inp)}: {ar.REASON_WORDS.get(reasons[0], '')}",
+                              url=f"/v/{ctx.venture_id}/inbox", tag=f"hold-{ctx.run_id}")
+    return Interrupt(_request(req), resume="send", on_reject="rejected", note="waiting for you")
 
 
 @wf.step("rejected", agent="inbox")
@@ -489,6 +679,8 @@ async def send(ctx: RunContext, state: dict) -> Finish | Goto:
             return Finish("booking_failed", note=f"booking not made: {made}")
     res = await ctx.invoke(action, approval_id=d["approval_id"])
     summary = {**state.get("summary", {}), "sent": res.get("status")}
+    if d.get("status") == "auto_approved" and summary.get("auto_to"):
+        summary["auto_sent"] = True
     if made:
         summary["booking"] = made
     return Finish("replied", update={"summary": summary},
@@ -503,12 +695,13 @@ def _sender_verified(inp: dict[str, Any]) -> bool:
 def message_input(*, channel: str, from_name: str | None, from_email: str | None = None,
                   from_phone: str | None = None, subject: str | None, body: str, message_id: str | None,
                   thread_id: str | None = None, chat_id: str | None = None,
-                  sender_verified: bool = False) -> dict[str, Any]:
+                  sender_verified: bool = False, automated: bool = False) -> dict[str, Any]:
     """Normalised input for an inbox_assistant run. `chat_id` is a Telegram chat (no phone number);
-    `sender_verified` is true for an email whose sender's domain Gmail authenticated."""
+    `sender_verified` is true for an email whose sender's domain Gmail authenticated; `automated` for mail a
+    machine sent (no-reply, newsletters, auto-replies): never answered by itself."""
     out = {"channel": channel, "from_name": from_name, "from_email": from_email, "from_phone": from_phone,
            "subject": subject or "", "body": (body or "")[:20000], "message_id": message_id, "thread_id": thread_id,
-           "sender_verified": bool(sender_verified)}
+           "sender_verified": bool(sender_verified), "automated": bool(automated)}
     if chat_id:
         out["chat_id"] = chat_id
     return out

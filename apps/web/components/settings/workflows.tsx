@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox, Field, Input, Switch, Textarea } from "@/components/ui/field";
+import { Checkbox, Field, Input, Select, Switch, Textarea } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
@@ -80,6 +80,15 @@ export function optionValues(form: Record<string, unknown>, options: Option[]): 
       else if (n !== o.default) settings[o.key] = n;
     } else if (o.type === "boolean") {
       if (Boolean(raw) !== Boolean(o.default)) settings[o.key] = Boolean(raw);
+    } else if (o.type === "multi") {
+      // Only known choices, in a stable order; an unchanged set is left out like any default.
+      const allowed = (o.choices ?? []).map((c) => c.value);
+      const picked = allowed.filter((v) => Array.isArray(raw) && raw.includes(v));
+      const dflt = Array.isArray(o.default) ? allowed.filter((v) => (o.default as unknown[]).includes(v)) : allowed;
+      if (picked.join("\n") !== dflt.join("\n")) settings[o.key] = picked;
+    } else if (o.type === "choice") {
+      const v = String(raw);
+      if ((o.choices ?? []).some((c) => c.value === v) && v !== String(o.default)) settings[o.key] = v;
     } else if (String(raw) !== String(o.default)) settings[o.key] = String(raw).slice(0, 500);
   }
   return { settings, errors };
@@ -88,6 +97,39 @@ export function optionValues(form: Record<string, unknown>, options: Option[]): 
 function OptionField({ o, value, error, disabled, onChange }: { o: Option; value: unknown; error?: string; disabled: boolean; onChange: (v: unknown) => void }) {
   if (o.type === "boolean") {
     return <Checkbox label={o.label} hint={o.help || undefined} checked={value === undefined ? Boolean(o.default) : Boolean(value)} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />;
+  }
+  if (o.type === "multi") {
+    const current = Array.isArray(value) ? (value as string[]) : Array.isArray(o.default) ? (o.default as string[]) : [];
+    return (
+      <fieldset className="sm:col-span-2">
+        <legend className="text-sm font-medium text-fg">{o.label}</legend>
+        {o.help ? <p className="mt-0.5 text-xs text-subtle">{o.help}</p> : null}
+        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+          {(o.choices ?? []).map((c) => (
+            <Checkbox
+              key={c.value}
+              label={c.label}
+              checked={current.includes(c.value)}
+              disabled={disabled}
+              onChange={(e) => onChange(e.target.checked ? [...current, c.value] : current.filter((v) => v !== c.value))}
+            />
+          ))}
+        </div>
+      </fieldset>
+    );
+  }
+  if (o.type === "choice") {
+    return (
+      <Field label={o.label} hint={o.help || undefined} error={error} className="max-w-xs">
+        <Select value={value === undefined ? String(o.default ?? "") : String(value)} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+          {(o.choices ?? []).map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    );
   }
   // Long text (a list of searches, a one-line pitch) gets the full row.
   const wide = o.type === "text" && (String(o.default ?? "").length > 30 || (o.help ?? "").length > 70);
