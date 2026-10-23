@@ -139,3 +139,11 @@ describe("Meta signup modes", () => {
     expect(x.sessionInfoVersion).toBe("3");
   });
 });
+
+describe("who sent a message", () => {
+  it("marks Kritvia's automatic replies apart from approved ones", () => {
+    expect(senderLabel("kritvia", "Kavya", true)).toBe("Sent by Kritvia (auto)");
+    expect(senderLabel("kritvia", "Kavya")).toBe("Kritvia (approved)");
+    expect(senderLabel("customer", "Kavya", true)).toBe("Kavya");
+  });
+});

@@ -23,7 +23,7 @@ export const FEATURES: Feature[] = [
       "WhatsApp needs a WhatsApp Business (Meta Cloud API) number. Replies are free-form within 24 hours of the customer's last message; after that WhatsApp requires an approved template, and Kritvia tells you instead of guessing.",
       "A Telegram bot you create with @BotFather answers customers too. It never writes first.",
       "Your website's enquiry form and IndiaMART enquiries arrive in the same inbox.",
-      "Replying by itself is off until you switch it on. Prices that aren't in your records, discounts, refunds and complaints still wait for you, and the customer is told the team will get back to them.",
+      "Replying by itself is off until you switch it on. Orders, bookings, payments, prices that aren't in your records, discounts, refunds and complaints still wait for you, and the customer is told the team will get back to them.",
       "Customers who reply STOP are never messaged again.",
     ],
     plans: "Email and your website form on every plan. WhatsApp, Telegram and IndiaMART from Starter.",
@@ -164,7 +164,7 @@ export const FEATURES: Feature[] = [
 
 /** What every agent shares, for the end of the page. */
 export const UNDERNEATH: string[] = [
-  "Nothing is sent, paid or changed without your approval. An agent may act alone on one kind of action only after a long run of approvals without edits, and you can take that back.",
+  "Nothing is sent, paid or changed without your say-so: everything waits for your approval unless you switch on automatic replies. An agent may act alone on one kind of action only after a long run of approvals without edits, and you can take that back.",
   "A memory of your business: upload documents (or connect Google Drive, from Starter), and every answer says which page or message it came from.",
   "A mind map of the people, companies and deals Kritvia has learned about.",
   "Each business's data is sealed off from every other and encrypted with its own key; sensitive records stay on Kritvia's own server in Mumbai.",

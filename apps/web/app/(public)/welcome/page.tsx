@@ -63,7 +63,7 @@ function JsonLd() {
       "Loan document checks",
       "Nightly kitchen plan from Swiggy and Zomato reports",
       "Business memory with citations",
-      "Nothing is sent without your approval",
+      "You approve what goes out, or let it reply by itself",
     ],
     publisher: { "@id": `${SITE_URL}/#organization` },
     offers: [
@@ -133,7 +133,7 @@ export default function WelcomePage() {
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted sm:text-lg lg:mx-0">
               Kritvia reads your inbox, drafts replies, proposals and follow-ups, and keeps a memory of your business with citations. Nothing is
-              sent, paid or changed without your approval.
+              sent, paid or changed without your say-so.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
               <Link href="/register" className={buttonClass("primary", "md", "h-11 px-6 text-[15px]")}>

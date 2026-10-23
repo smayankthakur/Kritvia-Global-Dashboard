@@ -31,9 +31,10 @@ CHANNELS = ("whatsapp", "telegram", "email")
 TONES = ("warm", "professional", "playful")
 PER_CONTACT_HOUR = 15
 PER_BUSINESS_DAY = 500
+PER_CONTACT_SEEN_HOUR = 30      # more messages than this from one sender in an hour: a machine, not a person
 ACK_QUIET_MINUTES = 10
 REASONS = ("price_not_on_record", "discount_or_offer", "refund_or_payment_dispute", "commitment_or_deal",
-           "complaint", "unsure")
+           "complaint", "unsure", "order_booking_payment", "internal_source", "claims_human")
 Reason = Literal["price_not_on_record", "discount_or_offer", "refund_or_payment_dispute", "commitment_or_deal",
                  "complaint", "unsure"]
 REASON_WORDS = {
@@ -43,7 +44,24 @@ REASON_WORDS = {
     "commitment_or_deal": "a promise or deal",
     "complaint": "a complaint",
     "unsure": "something the agent wasn't sure of",
+    # set by code, not by the model
+    "order_booking_payment": "an order, booking or payment",
+    "internal_source": "your own documents or notes",
+    "claims_human": "a reply that sounds like a person wrote it",
 }
+# Reasons the customer hears "sorry, the team will get back to you" for, and "got it, confirming" for.
+SORRY_REASONS = ("complaint", "refund_or_payment_dispute")
+CONFIRM_REASONS = ("order_booking_payment", "commitment_or_deal")
+
+
+def hold_kind(reasons: Iterable[str]) -> str:
+    """Which holding line the customer gets while the owner looks at the reply."""
+    rs = set(reasons)
+    if rs & set(SORRY_REASONS):
+        return "sorry"
+    if rs & set(CONFIRM_REASONS):
+        return "confirm"
+    return "check"
 
 
 # ------------------------------------------------------------------------------------- settings --
@@ -117,6 +135,12 @@ _HOLD = {
     "person": {"en": "I've passed this to the team; someone will reply to you soon.",
                "hi": "हमने यह बात टीम तक पहुँचा दी है; जल्द ही कोई आपसे बात करेगा।",
                "hinglish": "Humne ye baat team tak pahuncha di hai, jaldi koi aapse baat karega."},
+    "sorry": {"en": "Sorry about this! I've passed it to {business}'s team, and someone will get back to you personally soon.",
+              "hi": "इसके लिए माफ़ी चाहते हैं! हमने यह बात {business} की टीम तक पहुँचा दी है, जल्द ही कोई आपसे खुद बात करेगा।",
+              "hinglish": "Iske liye sorry! Humne ye baat {business} ki team tak pahuncha di hai, jaldi koi aapse personally baat karega."},
+    "confirm": {"en": "Got it! Let me confirm this with the team and get right back to you.",
+                "hi": "समझ गए! हम टीम से पक्का करके तुरंत आपको बताते हैं।",
+                "hinglish": "Samajh gaye! Team se confirm karke turant aapko batate hain."},
     "lead": {"en": "Thanks for reaching out! We'll send you the details and a quote shortly.",
              "hi": "संपर्क करने के लिए धन्यवाद! हम जल्द ही आपको पूरी जानकारी और कोटेशन भेजेंगे।",
              "hinglish": "Contact karne ke liye thanks! Hum jaldi hi aapko details aur quote bhejenge."},
@@ -128,11 +152,29 @@ def uses_emoji(s: str | None) -> bool:
     return bool(_EMOJI.search(s or ""))
 
 
-def holding(kind: str, lang: str, *, emoji: bool) -> str:
+def holding(kind: str, lang: str, *, emoji: bool, business: str | None = None) -> str:
     """The fixed line the customer gets while the owner looks at it (written by code, never by AI)."""
     lines = _HOLD.get(kind, _HOLD["check"])
-    line = lines.get(lang, lines["en"])
+    line = lines.get(lang, lines["en"]).replace("{business}", (business or "our").strip()[:80])
     return line + (" 🙏" if emoji else "")
+
+
+# A reply that says (or strongly suggests) a person wrote it. The assistant may say it will get a person;
+# it may never say it is one.
+_HUMAN = re.compile(
+    r"\bi\s*(?:'|’)?\s*a?m\s+(?:a\s+|an\s+)?(?:real\s+|actual\s+|living\s+)?(?:human|person|man|woman|girl|boy|"
+    r"human\s+being)\b"
+    r"|\b(?:i\s*(?:'|’)?\s*a?m|this\s+is)\s+not\s+(?:a\s+|an\s+)?(?:bot|robot|ai|a\.i\.|machine|chatbot|computer)\b"
+    r"|\bmain\s+(?:ek\s+)?(?:asli\s+|real\s+)?(?:insaan|insan|insaan\s+hoon|human|aadmi|ladki|ladka)\b"
+    r"|\b(?:main\s+)?(?:koi\s+)?(?:bot|robot|ai|machine)\s+nahi(?:n)?\s+(?:hoon|hu|hun|hai)\b"
+    r"|मैं\s+(?:एक\s+)?(?:असली\s+)?(?:इंसान|मनुष्य|आदमी|लड़की|लड़का)"
+    r"|(?:बॉट|रोबोट|मशीन|एआई)\s+नहीं\s+(?:हूँ|हूं|हू)",
+    re.I)
+
+
+def claims_human(body: str | None) -> bool:
+    """True when the reply claims to be a person: it then waits for the owner instead of going out."""
+    return bool(_HUMAN.search(body or ""))
 
 
 # ------------------------------------------------------------------------------------ senders --
@@ -267,7 +309,17 @@ async def today(conn, venture_id: uuid.UUID) -> int:
         {"v": venture_id})).scalar() or 0)
 
 
+async def seen(conn, venture_id: uuid.UUID, key: str, minutes: int) -> int:
+    """Messages from this person that reached a reply in the last `minutes`, sent or not."""
+    return int((await conn.execute(text(
+        "SELECT count(*) FROM workflow_runs WHERE venture_id = :v AND workflow = 'inbox_assistant'"
+        " AND created_at > now() - make_interval(mins => :m) AND summary->>'auto_to' = :k"),
+        {"v": venture_id, "k": key, "m": minutes})).scalar() or 0)
+
+
 async def room(conn, venture_id: uuid.UUID, key: str) -> bool:
-    """Under both caps: 15 a person an hour, 500 a business a day."""
+    """Under every cap: 15 replies a person an hour, 500 a business a day, and a sender who wrote fewer than
+    30 messages this hour (more is a machine talking to us: a loop no reply should feed)."""
     return (await recent(conn, venture_id, key, 60) < PER_CONTACT_HOUR
+            and await seen(conn, venture_id, key, 60) < PER_CONTACT_SEEN_HOUR
             and await today(conn, venture_id) < PER_BUSINESS_DAY)

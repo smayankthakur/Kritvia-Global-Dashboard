@@ -159,14 +159,16 @@ async def thread(conn, crypto: EnvelopeCrypto, venture_id: uuid.UUID, contact_id
                  limit: int = 50) -> list[dict[str, Any]]:
     """The latest messages of one chat, oldest first."""
     rows = (await conn.execute(text(
-        "SELECT id, direction, sent_by, kind, body_enc, status, error, created_at FROM wa_messages"
-        " WHERE venture_id = :v AND contact_id = :c ORDER BY created_at DESC, id DESC LIMIT :l"),
+        "SELECT m.id, m.direction, m.sent_by, m.kind, m.body_enc, m.status, m.error, m.created_at,"
+        " coalesce(a.status = 'auto_approved', false) AS auto"
+        " FROM wa_messages m LEFT JOIN approvals a ON a.id = m.approval_id"
+        " WHERE m.venture_id = :v AND m.contact_id = :c ORDER BY m.created_at DESC, m.id DESC LIMIT :l"),
         {"v": venture_id, "c": contact_id, "l": limit})).all()
     out = []
     for r in reversed(rows):
         out.append({"id": r.id, "direction": r.direction, "sent_by": r.sent_by, "kind": r.kind,
                     "body": await crypto.decrypt_str(venture_id, PURPOSE, r.body_enc) or "",
-                    "status": r.status, "error": r.error, "created_at": r.created_at})
+                    "status": r.status, "error": r.error, "created_at": r.created_at, "auto": bool(r.auto)})
     return out
 
 

@@ -39,10 +39,11 @@ export function messageText(body: string, kind?: string | null, channel?: Channe
 }
 
 /** Who wrote a message, as shown above the bubble. */
-export function senderLabel(sentBy: "customer" | "kritvia" | "person" | "phone", customer: string): string {
+export function senderLabel(sentBy: "customer" | "kritvia" | "person" | "phone", customer: string, auto = false): string {
   if (sentBy === "customer") return customer;
   if (sentBy === "phone") return "You, from the phone";
-  return sentBy === "kritvia" ? "Kritvia (approved)" : "Your team";
+  if (sentBy === "kritvia") return auto ? "Sent by Kritvia (auto)" : "Kritvia (approved)";
+  return "Your team";
 }
 
 /** Why a person can't type a reply right now, or null when they can. */

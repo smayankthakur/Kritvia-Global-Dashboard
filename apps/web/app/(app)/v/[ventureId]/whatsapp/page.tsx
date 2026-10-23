@@ -91,7 +91,7 @@ function Bubble({ m, customer }: { m: Message; customer: string }) {
         )}
       >
         <p className="mb-0.5 text-xs text-subtle">
-          {senderLabel(m.sent_by, customer)} · {formatTime(m.created_at)}
+          {senderLabel(m.sent_by, customer, m.auto)} · {formatTime(m.created_at)}
           {m.kind === "template" ? " · template" : ""}
         </p>
         <p translate="no" className={cn("whitespace-pre-wrap break-words", m.kind === "start" && "italic text-muted")}>{messageText(m.body, m.kind)}</p>

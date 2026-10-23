@@ -13,14 +13,18 @@ export default function SecurityPage() {
   return (
     <Doc
       title="How Kritvia keeps your business safe"
-      lead="Kritvia's agents draft; you decide. Nothing is sent, paid or changed outside Kritvia without your approval, and every business you run is sealed off from every other one."
+      lead="Kritvia's agents draft; you decide. Nothing is sent, paid or changed outside Kritvia without your say-so, and every business you run is sealed off from every other one."
     >
-      <h2>Nothing goes out without you</h2>
+      <h2>Nothing goes out without your say-so</h2>
       <ul>
         <li>Emails, calendar invites and other outgoing actions wait in your Inbox for approval. You can edit before approving.</li>
         <li>
           An agent can earn the right to act alone on one specific action only after a long run of approvals without edits, and only on
           paid plans. You can take that right back at any time.
+        </li>
+        <li>
+          If you switch on automatic replies, the inbox assistant answers customers by itself. Orders, bookings, payments, refunds,
+          complaints and prices not in your records still wait for you. It is off until you switch it on.
         </li>
         <li>Prices in proposals come from your rate card, computed by code, never invented by an AI model.</li>
       </ul>

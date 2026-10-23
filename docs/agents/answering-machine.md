@@ -96,8 +96,21 @@ offer text. Phone numbers, dates and times are not amounts. Either check holds t
 3. the real draft waits as a pending card "Needs you (<reason>): …" (step `owner_draft`, `always_review`).
    It is never sent by itself.
 
+**Held by code, whatever the model says** (the owner chose these to see first): the classifier's `intent`
+`order` or `payment` and any reply that confirms a booking (`booking` pick) → reason `order_booking_payment`;
+`intent` `complaint` → `complaint`; `refund` → `refund_or_payment_dispute`; a reply that cites any of the
+business's own documents, notes, Drive files or past proposals (`used_sources`) → `internal_source`; a reply
+that says it is a person (`auto_reply.claims_human`: "I'm a real person", "not a bot", "main insaan hoon",
+"मैं इंसान हूँ"…) → `claims_human`. Offering free booking times still goes out by itself; confirming one waits.
+
+The holding line depends on the reason (`auto_reply.hold_kind`): complaints and refunds get "Sorry about this!
+I've passed it to <business>'s team, and someone will get back to you personally soon"; orders, bookings,
+payments and deals get "Got it! Let me confirm this with the team and get right back to you"; everything else
+"Let me check this with the team…". All three in English, Hindi and Hinglish, written by code.
+
 A customer who asks for a person goes down the existing hand-to-person path (chat marked, team notified)
-and gets the holding line "…someone will reply to you soon". An email enquiry that goes to Lead triage gets
+and gets the holding line "…someone will reply to you soon" (the "sorry" line when they are complaining or
+asking for a refund). An email enquiry that goes to Lead triage gets
 a fixed thank-you ("…we'll send you the details and a quote shortly") while the proposal waits as usual.
 
 ### Loops, floods and what never gets a reply
@@ -105,7 +118,11 @@ a fixed thank-you ("…we'll send you the details and a quote shortly") while th
 - **Acknowledgements:** no automatic reply to a message that needs none if the business auto-replied to the
   same person in the last 10 minutes (no "thanks" ↔ "welcome" ping-pong with another bot).
 - **Caps:** 15 automatic replies to one person an hour, 500 per business a day (counted from the inbox
-  runs' summaries, `auto_to` and `auto_sent`). Beyond that the draft waits for a yes, with no holding line.
+  runs' summaries, `auto_to` and `auto_sent`), and none to a sender who wrote more than 30 messages that
+  reached a reply in the last hour (a machine talking to us). Beyond that the draft waits for a yes, with no
+  holding line.
+- **The chat history** shows automatic replies as "Sent by Kritvia (auto)" (`MessageOut.auto`: the message's
+  approval was `auto_approved`); approved ones stay "Kritvia (approved)".
 - **Never automatic:** spam, updates and notifications; automated email senders (`no-reply@`,
   `mailer-daemon`, `Auto-Submitted`, `Precedence: bulk/list`, `List-Unsubscribe`/`List-Id`; the Gmail poller
   sets `automated`); STOP; chats a person took over; runs the injection guard flagged and drafts the

@@ -30,12 +30,13 @@ def msg(mid: str, body: str, sender: str, name: str = "Kavya") -> dict:
 
 def script(fake, *, body="Namaste! Batayiye, main kaise help kar sakta hoon?", category="support", needs_reply=True,
            wants_person=False, fact_question="none", needs_owner=False, owner_reason=None, unsure=False,
-           language="hinglish"):
+           language="hinglish", intent="question", used_sources=()):
     fake.on("You sort the business's incoming messages", {
         "category": category, "summary": "A customer writes to the studio.", "needs_reply": needs_reply,
-        "language": language, "urgency": "medium", "wants_person": wants_person, "fact_question": fact_question})
-    fake.on("You answer the business's", {"subject": "", "body": body, "used_sources": [], "unsure": unsure,
-                                          "needs_owner": needs_owner, "owner_reason": owner_reason})
+        "language": language, "urgency": "medium", "wants_person": wants_person, "fact_question": fact_question,
+        "intent": intent})
+    fake.on("You answer the business's", {"subject": "", "body": body, "used_sources": list(used_sources),
+                                          "unsure": unsure, "needs_owner": needs_owner, "owner_reason": owner_reason})
 
 
 @pytest.fixture
@@ -143,17 +144,89 @@ async def test_a_price_not_on_record_gets_a_holding_line_and_waits(studio, clien
     assert sent_to(meta, "919822200003") == [HOLD_CHECK]          # never the ₹40,000
 
 
-@pytest.mark.parametrize("reason,words", [("discount_or_offer", "a discount or offer"),
-                                          ("refund_or_payment_dispute", "a refund or payment dispute"),
-                                          ("commitment_or_deal", "a promise or deal"), ("complaint", "a complaint")])
-async def test_money_promises_and_complaints_wait_for_the_owner(studio, client, fake_llm, meta, reason, words):
+HOLD_SORRY = "Iske liye sorry! Humne ye baat Sharma Studio ki team tak pahuncha di hai, jaldi koi aapse personally baat karega."
+HOLD_CONFIRM = "Samajh gaye! Team se confirm karke turant aapko batate hain."
+
+
+@pytest.mark.parametrize("reason,words,line", [("discount_or_offer", "a discount or offer", HOLD_CHECK),
+                                               ("refund_or_payment_dispute", "a refund or payment dispute", HOLD_SORRY),
+                                               ("commitment_or_deal", "a promise or deal", HOLD_CONFIRM),
+                                               ("complaint", "a complaint", HOLD_SORRY)])
+async def test_money_promises_and_complaints_wait_for_the_owner(studio, client, fake_llm, meta, reason, words, line):
     await configure(studio, auto_reply=True)
     phone = f"91982220{abs(hash(reason)) % 10000:04d}"
     run, aps = await wa_turn(studio, client, fake_llm, meta, phone, "Kuch karo please 🙏",
                              body="Ho jayega ji.", needs_owner=True, owner_reason=reason)
     assert [(a["step"], a["status"]) for a in aps] == [("hold", "auto_approved"), ("owner_draft", "pending")]
     assert words in aps[1]["title"]
-    assert sent_to(meta, phone) == [HOLD_CHECK + " 🙏"]            # emoji only because they used one
+    assert sent_to(meta, phone) == [line + " 🙏"]                  # emoji only because they used one
+
+
+# ------------------------------------------------ what the owner asked to see first, enforced by code --
+@pytest.mark.parametrize("intent,line,words", [
+    ("order", HOLD_CONFIRM, "an order, booking or payment"),
+    ("payment", HOLD_CONFIRM, "an order, booking or payment"),
+    ("complaint", HOLD_SORRY, "a complaint"),
+    ("refund", HOLD_SORRY, "a refund or payment dispute")])
+async def test_orders_payments_complaints_and_refunds_wait_even_if_the_model_doesnt_say_so(
+        studio, client, fake_llm, meta, intent, line, words):
+    await configure(studio, auto_reply=True)
+    phone = f"91982230{abs(hash(intent)) % 10000:04d}"
+    run, aps = await wa_turn(studio, client, fake_llm, meta, phone, "Kuch kaam hai", intent=intent,
+                             body="Ho gaya ji, sab set hai!")              # the model didn't flag it
+    assert [(a["step"], a["status"]) for a in aps] == [("hold", "auto_approved"), ("owner_draft", "pending")], intent
+    assert words in aps[1]["title"]
+    assert sent_to(meta, phone) == [line]                                 # never "sab set hai"
+
+
+@pytest.mark.parametrize("body", ["Main ek insaan hoon, bot nahi 🙂", "I'm a real person, not a bot!",
+                                  "मैं इंसान हूँ, बॉट नहीं हूँ"])
+async def test_a_reply_claiming_to_be_a_person_waits(studio, client, fake_llm, meta, body):
+    await configure(studio, auto_reply=True)
+    phone = f"91982240{abs(hash(body)) % 10000:04d}"
+    run, aps = await wa_turn(studio, client, fake_llm, meta, phone, "Are you a bot?", intent="chat", body=body)
+    assert [(a["step"], a["status"]) for a in aps] == [("hold", "auto_approved"), ("owner_draft", "pending")]
+    assert "a reply that sounds like a person wrote it" in aps[1]["title"]
+    assert body not in sent_to(meta, phone)
+
+
+async def test_a_reply_quoting_the_businesss_own_documents_waits(studio, client, fake_llm, meta, monkeypatch):
+    from kritvia_api.engine.context import RunContext
+    real = RunContext.invoke
+
+    async def invoke(self, name, args=None, **kw):
+        if name == "knowledge.search":
+            return {"hits": [{"document_id": str(uuid.uuid4()), "title": "Internal price notes", "kind": "note",
+                              "text": "Margins: we can go to ₹38,000 for friends.", "sensitive": False}]}
+        return await real(self, name, args, **kw)
+    monkeypatch.setattr(RunContext, "invoke", invoke)
+    await configure(studio, auto_reply=True)
+    run, aps = await wa_turn(studio, client, fake_llm, meta, "919822250001", "Website kitne ka?",
+                             body="Website design ₹45,000 se shuru hota hai.", used_sources=[1])
+    assert [(a["step"], a["status"]) for a in aps] == [("hold", "auto_approved"), ("owner_draft", "pending")]
+    assert "your own documents or notes" in aps[1]["title"]
+
+
+async def test_a_sender_flooding_messages_gets_no_more_automatic_replies(studio, client, fake_llm, meta, monkeypatch):
+    await configure(studio, auto_reply=True)
+    monkeypatch.setattr(ar, "PER_CONTACT_SEEN_HOUR", 2)
+    phone = "919822260001"
+    statuses = []
+    for n in range(3):
+        _, aps = await wa_turn(studio, client, fake_llm, meta, phone, f"Spam {n}", body=f"Reply {n}")
+        statuses.append(aps[-1]["status"])
+    assert statuses == ["auto_approved", "auto_approved", "pending"]
+
+
+async def test_the_chat_history_marks_automatic_replies(studio, client, fake_llm, meta):
+    await configure(studio, auto_reply=True)
+    phone = "919822270001"
+    await wa_turn(studio, client, fake_llm, meta, phone, "Hi!", intent="chat", body="Hello! Kaise madad karun?")
+    chats = (await studio["mayank"].get(f"/ventures/{studio['v']}/whatsapp/chats")).json()["chats"]
+    cid = next(c["id"] for c in chats if c["phone"].endswith("9822270001"))
+    msgs = (await studio["mayank"].get(f"/ventures/{studio['v']}/whatsapp/chats/{cid}")).json()["messages"]
+    out = [m for m in msgs if m["direction"] == "out"]
+    assert out and out[-1]["auto"] is True and out[-1]["sent_by"] == "kritvia"
 
 
 async def test_someone_who_wants_a_person_is_told_the_team_will_reply(studio, client, fake_llm, meta):

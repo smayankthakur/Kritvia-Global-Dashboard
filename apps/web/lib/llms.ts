@@ -25,7 +25,7 @@ export function llmsTxt(): string {
 > Kritvia is an AI business operating system for Indian small and medium businesses. AI agents read the business's
 > inbox (email, WhatsApp, Telegram, website forms), draft replies, proposals and follow-ups in Hindi, Hinglish or
 > English, and keep a memory of the business with citations. Nothing is sent, paid or changed without a person's
-> approval. Made by ${BUSINESS.legalName}, New Delhi, India.
+> approval, unless the business switches on automatic replies to customers. Made by ${BUSINESS.legalName}, New Delhi, India.
 
 ## What it does
 ${FEATURES.map((f) => `- ${f.title}: ${f.answer} Plans: ${f.plans}`).join("\n")}

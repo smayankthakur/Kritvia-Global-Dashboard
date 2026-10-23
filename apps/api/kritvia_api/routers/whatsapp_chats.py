@@ -68,6 +68,7 @@ class MessageOut(BaseModel):
     status: Literal["received", "sent", "failed"]
     error: str | None
     created_at: datetime
+    auto: bool = Field(default=False, description="sent by Kritvia by itself (an automatic reply), not approved by a person")
 
 
 class ChatDetailOut(BaseModel):

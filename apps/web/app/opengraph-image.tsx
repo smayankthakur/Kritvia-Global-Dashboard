@@ -47,7 +47,7 @@ export default function OpengraphImage() {
             AI agents for your business that draft. You approve.
           </div>
           <div style={{ fontSize: 30, color: "#c9cce0", maxWidth: 980 }}>
-            Inbox replies, priced proposals and document checks in Hindi, Hinglish or English. Nothing is sent without your yes.
+            Inbox replies, priced proposals and document checks in Hindi, Hinglish or English. You decide what goes out.
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 24, color: "#a8adc7" }}>

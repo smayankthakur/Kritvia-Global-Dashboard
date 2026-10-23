@@ -86,7 +86,7 @@ export default function RegisterPage() {
             for my business.
           </>
         }
-        hint="Nothing is sent on your behalf without your approval."
+        hint="Nothing is sent on your behalf without your approval, unless you switch on automatic replies."
       />
       <fieldset disabled={!agreed} aria-describedby={agreed ? undefined : "terms-first"} className="min-w-0 disabled:opacity-60">
         <FormError message={googleError} />

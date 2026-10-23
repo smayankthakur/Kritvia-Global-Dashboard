@@ -245,7 +245,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="flex flex-wrap items-center justify-between gap-2 lg:col-span-2">
-        <p className="text-sm text-muted">Connect the tools your business already uses. Nothing is sent without your approval.</p>
+        <p className="text-sm text-muted">Connect the tools your business already uses. Nothing is sent without your approval unless you switch on automatic replies.</p>
         <ConnectVideo />
       </div>
       {!canAdmin ? (
@@ -279,7 +279,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
               ]}
             />
           ) : (
-            <p className="text-sm text-muted">Connect the mailbox this venture sends from. Nothing is sent without approval.</p>
+            <p className="text-sm text-muted">Connect the mailbox this venture sends from. Nothing is sent without approval unless you switch on automatic replies.</p>
           )}
           <div className="flex flex-wrap gap-2">
             <Button variant={google ? "secondary" : "primary"} disabled={!canAdmin} loading={connect.isPending} onClick={() => connect.mutate()}>

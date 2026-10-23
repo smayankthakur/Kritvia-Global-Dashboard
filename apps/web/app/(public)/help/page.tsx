@@ -43,9 +43,10 @@ const ARTICLES: { q: string; a: string[] }[] = [
     "On the sign-in page choose Forgot your password. We email a 6-digit code; enter it with a new password. Every other session is signed out.",
     "If you signed up with Google or email codes you have no password — just keep signing in that way.",
   ]},
-  { q: "Approvals: nothing goes out without you", a: [
+  { q: "Approvals: nothing goes out without your say-so", a: [
     "Drafts wait in your Inbox. Approve, edit then approve, or reject with a note so the agent redrafts.",
     "After many approvals without edits, an agent becomes eligible to act alone on that one action. You choose whether to allow it (paid plans).",
+    "You can also let the inbox assistant reply to customers by itself (Chats page). Orders, bookings, payments, refunds, complaints and prices not in your records still wait for you.",
   ]},
   { q: "Lead triage and proposals (agencies)", a: [
     "Fill in your Rate card first: prices in proposals always come from it.",

@@ -79,6 +79,13 @@ class Classification(BaseModel):
         "whether an invoice is paid; pay_link = how or where to pay; booking = when their appointment or "
         "booking is; shipment = where their order or shipment is. Anything else (prices, new orders, "
         "complaints, several questions at once, someone else's records): none"))
+    intent: Literal["chat", "question", "order", "booking", "payment", "complaint", "refund", "other"] = Field(
+        default="other", description=(
+            "what the sender wants: chat = a greeting, thanks or small talk; question = asks for information; "
+            "order = wants to buy, order, confirm or change an order or a custom job; booking = wants an "
+            "appointment, visit or reservation; payment = says they paid, wants to pay, or sends payment details; "
+            "complaint = unhappy or complaining; refund = wants money back, a cancellation or raises a dispute; "
+            "other = anything else"))
 
 
 class BookingPick(BaseModel):
@@ -212,7 +219,8 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
                 # Replying by itself: the customer isn't left in silence; a code-written line says a person is coming.
                 return Goto("hold", update={"classification": c.model_dump(), "input_sensitive": held,
                                             "summary": {**summary, "handed_to_person": True},
-                                            "hold": {"kind": "person"}},
+                                            "hold": {"kind": "sorry" if c.intent in ("complaint", "refund")
+                                                     else "person"}},
                             note="the customer needs a person; the team was notified and a holding line goes out")
             return Finish("handed_to_person", update={"summary": {**summary, "handed_to_person": True}},
                           note="the customer needs a person; the chat is with the team now and they were notified")
@@ -479,9 +487,18 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         texts = prices + [s["text"] for s in sources] + [offer["text"] if offer else ""]
         unknown = ar.unknown_amounts(r.body, ar.known_values(texts, paise))
         reasons: list[str] = []
+        # Code, not the model, holds what the owner asked to see first: complaints and refunds, orders,
+        # bookings and payments, anything quoting the business's own documents, and a reply claiming to be
+        # a person.
+        intent = c.get("intent") or "other"
+        by_code = ((["complaint"] if intent == "complaint" else [])
+                   + (["refund_or_payment_dispute"] if intent == "refund" else [])
+                   + (["order_booking_payment"] if intent in ("order", "payment") or booking else [])
+                   + (["internal_source"] if used else [])
+                   + (["claims_human"] if ar.claims_human(r.body) else []))
         for why in ([r.owner_reason or "unsure"] if r.needs_owner else []) + (["unsure"] if r.unsure else []) \
                 + (["complaint"] if c.get("wants_person") else []) + (["price_not_on_record"] if unknown else []) \
-                + (["unsure"] if always else []):
+                + by_code + (["unsure"] if always else []):
             if why not in reasons:
                 reasons.append(why)
         update["summary"] = {**state.get("summary", {}), "auto_to": key}
@@ -493,7 +510,8 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
             # told, and this draft waits for a yes (owner_draft).
             if unknown:
                 req["summary"] += " Amounts not in your records: " + ", ".join(unknown)[:200]
-            return Goto("hold", update={**update, "held_draft": req, "hold": {"kind": "check", "reasons": reasons}},
+            return Goto("hold", update={**update, "held_draft": req,
+                                        "hold": {"kind": ar.hold_kind(reasons), "reasons": reasons}},
                         note=note + "; needs the owner (" + ", ".join(ar.REASON_WORDS[x] for x in reasons) + ")")
         else:
             req["auto_option"] = "auto_reply"
@@ -537,8 +555,8 @@ async def hold(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
         return _after_hold(state, sent=False)
     from kritvia_api.services import customer_facts as cf
     c = state.get("classification") or {}
-    line = ar.holding(kind, cf.language(c.get("language")), emoji=ar.uses_emoji(inp.get("body")))
     biz = await ctx.business()
+    line = ar.holding(kind, cf.language(c.get("language")), emoji=ar.uses_emoji(inp.get("body")), business=biz.name)
     to = _recipient(inp)
     if channel in CHATS:
         action, payload = f"{channel}.send", {"to": _chat_address(inp, channel) or to, "body": line}
@@ -546,7 +564,8 @@ async def hold(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
         action, payload = "gmail.send", {"to": to, "subject": ("Re: " + (inp.get("subject") or "your message"))[:300],
                                          "body": biz.with_notice(f"{line}\n\n{biz.sign_off}"),
                                          "thread_id": inp.get("thread_id")}
-    what = {"check": "while you check", "person": "a person will reply", "lead": "thanks, the quote follows"}[kind]
+    what = {"check": "while you check", "person": "a person will reply", "lead": "thanks, the quote follows",
+            "sorry": "sorry, a person will reply", "confirm": "got it, confirming with you"}.get(kind, "while you check")
     return Interrupt(
         ApprovalRequest(agent="inbox", action=action, key="hold_decision",
                         title=f"Replied by itself: holding line to {inp.get('from_name') or to} ({what})"[:300],
@@ -575,10 +594,10 @@ async def hold_done(ctx: RunContext, state: dict) -> Goto | Finish:
 def _after_hold(state: dict, *, sent: bool, auto_sent: bool = False) -> Goto | Finish:
     kind = state["hold"]["kind"]
     summary = {**state.get("summary", {}), "holding_sent": sent, **({"auto_sent": True} if auto_sent else {})}
-    if kind == "check":
+    if kind in ("check", "sorry", "confirm") and state.get("held_draft"):
         return Goto("owner_draft", update={"summary": summary},
                     note="holding line sent; the reply waits for you" if sent else "the reply waits for you")
-    if kind == "person":
+    if kind in ("person", "sorry"):
         return Finish("handed_to_person", update={"summary": summary},
                       note="the customer needs a person; the team was notified" + (" and told them so" if sent else ""))
     return Finish("handed_to_lead_triage", update={"summary": summary},

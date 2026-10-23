@@ -55,7 +55,7 @@ const LAYERS: ShowcaseItem[] = [
     icon: ShieldCheck,
     tag: "Layer 4 · Approve & act",
     title: "You say yes. Then it does the work.",
-    text: "Nothing is sent, paid or changed until you approve. Then it sends, books and sets the reminder, and tells you what it did.",
+    text: "Nothing is sent, paid or changed until you approve, unless you let it reply by itself. Then it sends, books and sets the reminder, and tells you what it did.",
     window: "Kritvia · Approvals",
     scene: (reduce) => <Act reduce={reduce} />,
   },

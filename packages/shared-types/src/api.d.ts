@@ -11813,6 +11813,12 @@ export interface components {
         };
         /** MessageOut */
         MessageOut: {
+            /**
+             * Auto
+             * @description sent by Kritvia by itself (an automatic reply), not approved by a person
+             * @default false
+             */
+            auto: boolean;
             /** Body */
             body: string;
             /**
