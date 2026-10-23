@@ -205,6 +205,10 @@ def build_tools() -> ToolRegistry:
         q = str(p.get("query") or "").strip()[:100]
         status = str(p.get("status") or "").strip().lower()[:20]
         where, params = ["venture_id = :v", "opted_out_at IS NULL"], {"v": ctx.venture_id}
+        since = _since(p.get("since"))
+        if since is not None:
+            where.append("created_at >= :since")       # "new leads today": since = the start of today, IST
+            params["since"] = since
         if q:
             where.append("(name ILIKE :q OR company ILIKE :q OR email ILIKE :q OR coalesce(phone, '') ILIKE :q)")
             params["q"] = "%" + q.replace("\\", "").replace("%", "").replace("_", " ") + "%"
@@ -218,6 +222,30 @@ def build_tools() -> ToolRegistry:
         return {"leads": [{"id": str(r.id), "name": r.name, "company": r.company, "email": r.email,
                            "phone": r.phone, "status": r.status, "score": r.score, "source": r.source,
                            "added": r.created_at.date().isoformat()} for r in rows]}
+
+    @reg.tool("payments.received", Capability.READ,
+              "Payments the business received in a period: who paid, how much, for which invoice, and how")
+    async def payments_received(ctx: RunContext, p: dict[str, Any], _: ApprovedAction | None) -> dict[str, Any]:
+        from datetime import datetime
+
+        from kritvia_api.services import automations as au
+        from kritvia_api.workflows.collections import nice_date, rupees
+        period = str(p.get("period") or "today").strip().lower().replace(" ", "_")
+        if period not in au.PERIODS:
+            period = "today"
+        async with ctx.tx() as conn:
+            tz = await _tz(conn, ctx.venture_id)
+            start, end = au.period_range(period, tz, datetime.now(tz))
+            rows = (await conn.execute(text(
+                "SELECT i.customer_name, i.number, p.amount_paise, p.paid_on, p.method FROM invoice_payments p"
+                " JOIN invoices i ON i.id = p.invoice_id WHERE p.venture_id = :v AND p.paid_on >= CAST(:s AS date)"
+                " AND p.paid_on < CAST(:e AS date) ORDER BY p.paid_on DESC, p.amount_paise DESC LIMIT 50"),
+                {"v": ctx.venture_id, "s": start, "e": end})).all()
+        return {"period": au.PERIOD_WORDS[period], "count": len(rows),
+                "total": rupees(sum(r.amount_paise for r in rows)),
+                "payments": [{"customer": r.customer_name, "invoice": r.number or "(no number)",
+                              "amount": rupees(r.amount_paise), "on": nice_date(r.paid_on), "how": r.method}
+                             for r in rows]}
 
     @reg.tool("mcp.call", Capability.SEND, "Use a tool of a connected app (MCP) that changes something")
     async def mcp_call(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
@@ -242,6 +270,28 @@ def build_tools() -> ToolRegistry:
             return ZoneInfo(tz or "Asia/Kolkata")
         except Exception:
             return ZoneInfo("Asia/Kolkata")
+
+    def _since(raw: Any):
+        """'today' / 'yesterday' / 'YYYY-MM-DD' -> the start of that day in IST (None when not given)."""
+        from datetime import date, datetime, time, timedelta
+
+        from kritvia_api.workflows.common import IST
+        v = str(raw or "").strip().lower()
+        if not v:
+            return None
+        today = datetime.now(IST).date()
+        if v == "today":
+            d = today
+        elif v == "yesterday":
+            d = today - timedelta(days=1)
+        elif v in ("this week", "this_week", "last_7_days"):
+            d = today - timedelta(days=6)
+        else:
+            try:
+                d = date.fromisoformat(v[:10])
+            except ValueError:
+                return None
+        return datetime.combine(d, time.min, tzinfo=IST)
 
     @reg.tool("business.numbers", Capability.READ,
               "The business's numbers for a period: money received, invoices issued, still to collect and overdue "

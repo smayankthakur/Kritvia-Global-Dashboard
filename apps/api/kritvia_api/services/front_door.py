@@ -1,6 +1,8 @@
-"""Run the business from Telegram or WhatsApp ("the front door", owner side).
+"""Run the business from Telegram, WhatsApp, Email or Slack ("the front door", owner side).
 
-A team member links their own chat once (Account → Approve from your phone). From then on, in that chat:
+A team member links their own chat once (Account → Ask Kritvia from anywhere): Telegram and WhatsApp by a
+one-time code, Slack by a confirmation DM, and email by a private ask address (services/ask_anywhere.py,
+which also handles the email and Slack doors). From then on, in that chat:
 
   a message      -> the Kritvia assistant, as that person ("Pichle hafte kitne leads aaye?", "Send Priya the
                     proposal follow-up"); the answer comes back in the same chat. Drafts it makes arrive
@@ -46,12 +48,17 @@ Say = Callable[[str], Awaitable[None]]
 @dataclass
 class Asker:
     """A linked person writing from their chat."""
-    channel: str              # telegram | whatsapp
+    channel: str              # telegram | whatsapp | email | slack
     venture_id: uuid.UUID
     user_id: uuid.UUID
-    chat: str                 # Telegram chat id / WhatsApp number (digits)
+    chat: str                 # Telegram chat id / WhatsApp number (digits) / ask address id / Slack member id
     message_id: str           # for dedupe
     business: str | None
+    target: dict[str, Any] | None = None    # extra fields the answer needs (email thread, Slack channel)
+
+    def reply_target(self) -> dict[str, Any]:
+        """Where the answer goes: back to this chat, for this person (front_door.reply checks both again)."""
+        return {**(self.target or {}), "channel": self.channel, "chat": self.chat, "user": str(self.user_id)}
 
 
 def command(text_: str) -> str | None:
@@ -85,7 +92,8 @@ async def waiting(venture_id: uuid.UUID, user_id: uuid.UUID) -> list[uuid.UUID]:
         rows = (await conn.execute(text(
             "SELECT a.id FROM approvals a WHERE a.venture_id = :v AND a.status = 'pending'"
             " AND EXISTS (SELECT 1 FROM private.approval_chat_targets(a.id, 'telegram') t WHERE t.user_id = :u"
-            "             UNION SELECT 1 FROM private.approval_chat_targets(a.id, 'whatsapp') t WHERE t.user_id = :u)"
+            "             UNION SELECT 1 FROM private.approval_chat_targets(a.id, 'whatsapp') t WHERE t.user_id = :u"
+            "             UNION SELECT 1 FROM private.approval_chat_targets(a.id, 'slack') t WHERE t.user_id = :u)"
             " ORDER BY a.created_at LIMIT 5"), {"v": venture_id, "u": user_id})).all()
     return [r.id for r in rows]
 
@@ -105,8 +113,7 @@ async def ask_assistant(svc, a: Asker, request: str) -> str:
         await start_run(svc, actor_user_id=a.user_id, actor_type="user", venture_id=a.venture_id,
                         workflow="assistant", trigger_kind=a.channel, trigger_ref=a.message_id[:200],
                         title="Assistant request",
-                        input={"request": request.strip()[:4000],
-                               "reply_to": {"channel": a.channel, "chat": a.chat, "user": str(a.user_id)}})
+                        input={"request": request.strip()[:4000], "reply_to": a.reply_target()})
     except DuplicateTrigger:
         return "duplicate"
     except ValueError as exc:
@@ -173,7 +180,8 @@ async def handle(svc, a: Asker, *, text_: str, say: Say, resend_cards: Callable[
         return
     started = await ask_assistant(svc, a, text_)
     if started == "ok":
-        await say("On it.")
+        if a.channel != "email":           # by email, one answer is enough
+            await say("On it.")
     elif started == "off":
         await say("The Kritvia assistant can't take requests for this business right now. Check its plan, or ask "
                   "an admin to switch it on in Agents.")
@@ -206,7 +214,7 @@ async def run_skill(svc, a: Asker, name: str) -> str:
         s = await sk.load(conn, EnvelopeCrypto(conn, svc.keys), a.venture_id, hits[0])
     try:
         await sk.start(svc, s, actor_user_id=a.user_id, actor_type="user", trigger_kind=a.channel,
-                       reply_to={"channel": a.channel, "chat": a.chat, "user": str(a.user_id)})
+                       reply_to=a.reply_target())
     except ValueError:
         return "That skill can't run right now. Check it in Kritvia."
     return f"Running \"{s['name']}\"."
@@ -219,7 +227,13 @@ async def reply(venture_id: uuid.UUID, target: dict[str, Any], body: str) -> Non
     from kritvia_api.services.chat_approvals import approver
     try:
         ch, chat, who = str(target.get("channel") or ""), str(target.get("chat") or ""), str(target.get("user") or "")
-        if ch not in ("telegram", "whatsapp") or not chat or not body.strip():
+        if not chat or not body.strip():
+            return
+        if ch in ("email", "slack"):
+            from kritvia_api.services import ask_anywhere
+            await (ask_anywhere.email_reply if ch == "email" else ask_anywhere.slack_reply)(venture_id, target, body)
+            return
+        if ch not in ("telegram", "whatsapp"):
             return
         link = await approver(venture_id, ch, chat)
         if link is None or str(link.user_id) != who:

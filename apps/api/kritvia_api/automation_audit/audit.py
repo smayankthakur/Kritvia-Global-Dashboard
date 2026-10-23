@@ -26,7 +26,7 @@ WEB_AGENTS = REPO / "apps/web/components/settings/workflows.tsx"
 
 # Tools that are plumbing for other tools rather than a business job of their own.
 INFRA_TOOLS = frozenset({"whatsapp.templates", "leads.search", "tasks.search", "shipments.search",
-                         "indiamart.enquiries"})
+                         "indiamart.enquiries", "payments.received"})
 
 
 @dataclass

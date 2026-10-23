@@ -58,9 +58,10 @@ def message(title: str, body: str, path: str, business: str | None = None) -> di
 
 WEB_API = "https://slack.com/api"
 # What Kritvia's Slack app asks for: post and DM (approval cards), find a member by their Kritvia email
-# (to link them), and one channel for notices (the installer picks it on Slack's consent screen).
+# (to link them), one channel for notices (the installer picks it on Slack's consent screen), and read the
+# DMs and mentions a linked member sends it (asking the business: services/ask_anywhere.py).
 FORM_METHODS = frozenset({"users.lookupByEmail", "users.info"})
-APP_SCOPES = "chat:write,im:write,users:read,users:read.email,incoming-webhook"
+APP_SCOPES = "chat:write,im:write,im:history,app_mentions:read,users:read,users:read.email,incoming-webhook"
 
 
 def verify_signature(signing_secret: str, timestamp: str, body: bytes, signature: str, *, now: float) -> bool:

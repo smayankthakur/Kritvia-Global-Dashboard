@@ -65,7 +65,8 @@ class Mailer:
         return self.transport != "smtp" or bool(self.host)
 
     async def send(self, to: str, subject: str, body: str, *, unsubscribe_url: str | None = None,
-                   one_click_url: str | None = None) -> None:
+                   one_click_url: str | None = None, headers: dict[str, str] | None = None,
+                   reply_to: str | None = None) -> None:
         """unsubscribe_url: the page linked in the email; one_click_url: where mail apps POST
         "List-Unsubscribe=One-Click" (defaults to unsubscribe_url). Addresses that hard-bounced or
         complained (SES feedback, routers/ses_feedback.py) are skipped: sending to them gets Kritvia's
@@ -76,8 +77,13 @@ class Mailer:
         msg = EmailMessage(policy=LONG_HEADERS)   # long URLs in List-Unsubscribe stay plain (no RFC 2047 encoding)
         msg["From"], msg["To"], msg["Subject"] = self.sender, to, subject
         from kritvia_api.config import get_settings
-        if get_settings().support_email:
+        if reply_to:
+            msg["Reply-To"] = reply_to                          # e.g. a person's ask address: their reply asks again
+        elif get_settings().support_email:
             msg["Reply-To"] = get_settings().support_email      # replies reach a person, not no-reply@
+        for k, v in (headers or {}).items():                   # threading: In-Reply-To / References only
+            if k in ("In-Reply-To", "References") and v and "\n" not in v and "\r" not in v:
+                msg[k] = v[:300]
         if unsubscribe_url:
             msg["List-Unsubscribe"] = f"<{one_click_url or unsubscribe_url}>"
             msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"

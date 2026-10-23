@@ -12,6 +12,9 @@
  * only what a person approved) and AI phone calls on the business's own Twilio number.
  * 21 October 2026 (pre-launch audit): Google Business Profile access named in "Google user data" (Google was already a
  * listed provider and the feature is switched on by the business), without a new version.
+ * 23 October 2026: the approximate place of a sign-in IP (city and country, from Cloudflare) shown when approving a new
+ * device, and the one-way fingerprint of a person's private "ask by email" address, named in the security records row
+ * (no new provider, no new purpose), without a new version.
  */
 export const PRIVACY_UPDATED = "18 October 2026";
 
@@ -39,7 +42,7 @@ This policy is published under the Digital Personal Data Protection Act, 2023 an
 | --- | --- | --- | --- |
 | Name, email address, password (stored only as an Argon2 hash), organisation and role | You, at sign-up or when invited; Google, if you sign in with Google (name and email); your organisation's identity provider, if it uses single sign-on (name and email) | To create and run your account and sign you in | Consent; data you provided for this purpose (DPDP Act s.7(a)) |
 | Your confirmation that you are 18 or older, and when you accepted our Terms and this policy | You, at sign-up | To keep Kritvia for adults only and to show which terms you agreed to | Legal duty (DPDP Act s.9); data you provided for this purpose |
-| Sign-in and security records: time, IP address, device and browser, session tokens, one-time codes; for API keys, a one-way fingerprint of each key, its name, first characters and when it was last used | Your use of Kritvia | To keep accounts secure, detect misuse, and investigate incidents | Data you provided for this purpose; legal duties to keep security logs |
+| Sign-in and security records: time, IP address and the approximate place it points to (city and country, shown when you approve signing in on another device), device and browser, session tokens, one-time codes; for API keys, a one-way fingerprint of each key, its name, first characters and when it was last used; for your private "ask by email" address, a one-way fingerprint of it, its last characters and when it was last used | Your use of Kritvia | To keep accounts secure, detect misuse, and investigate incidents | Data you provided for this purpose; legal duties to keep security logs |
 | Billing details: legal name, GSTIN, billing address, billing contact, plan, payment status and invoices | You; Razorpay (payment status only) | To bill you and issue invoices | Data you provided for this purpose; compliance with tax law |
 | Support messages and contact-form details | You | To answer you and improve help content | Data you provided for this purpose |
 | Usage metadata: features used, agent runs, AI-model usage counts and costs, error records | Your use of Kritvia | To operate, secure and bill the service, enforce plan limits, and fix faults | Data you provided for this purpose |

@@ -218,8 +218,9 @@ async def advance_run(services: Services, run_id: uuid.UUID, max_steps: int | No
                 # nothing, or two cards for one draft.
                 auto = await _create_approval(ctx, state, step_name, result, step_count=step_count)
                 if auto:
-                    await _log_step(ctx, step_name, "ok", started,
-                                    note=(note or "") + " [auto-approved: earned autonomy]")
+                    why = (f"the business switched on {result.request.auto_option}"
+                           if auto == "option" else "earned autonomy")
+                    await _log_step(ctx, step_name, "ok", started, note=(note or "") + f" [auto-approved: {why}]")
                     step_name = result.resume
                     await _checkpoint(ctx, state, step_name, step_count)
                     continue
@@ -396,19 +397,22 @@ async def _log_step(ctx: RunContext, step: str, status: str, started: float, *,
              "d": int((time.perf_counter() - started) * 1000)})
 
 
-async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrupt, *, step_count: int) -> bool:
+async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrupt, *,
+                           step_count: int) -> str | None:
     """Insert the approval (or reuse the one this step already made) and, unless it is auto-approved
-    (earned autonomy), park the run as waiting in the same transaction. Returns True if auto-approved."""
+    (earned autonomy, or a workflow option the business switched on: ApprovalRequest.auto_option), park the
+    run as waiting in the same transaction. Returns "trust" or "option" if auto-approved, else None."""
     req = it.request
     cap = ctx.services.tools.capability(req.action)
     if cap.value not in ("write", "send"):
         raise ValueError(f"approvals are for write/send tools; {req.action} is {cap}")
+    by_option = bool(req.auto_option) and (await ctx.settings()).get(req.auto_option) is True
     async with ctx.tx(req.agent) as conn:
         trusted = bool((await conn.execute(
             text("SELECT auto_run FROM agent_trust WHERE venture_id = :v AND agent = :a AND action = :t"),
             {"v": ctx.venture_id, "a": req.agent, "t": req.action})).scalar())
         # A sensitive draft, or one marked for review, is never auto-approved, whatever its history.
-        auto = trusted and not req.sensitive and not req.always_review
+        auto = (trusted or by_option) and not req.sensitive and not req.always_review
         if auto:
             # Guardrails: a run that read text trying to instruct the AI, or a draft carrying a secret
             # or injection text, waits for a person even though the agent earned autonomy.
@@ -444,6 +448,9 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
         if auto:
             state[req.key] = {"status": "auto_approved", "approval_id": str(approval_id), "payload": req.payload,
                               "comment": None}
+            if by_option and not trusted:
+                await security_event("ai.auto_option_used", "info", org_id=ctx.org_id, workflow=ctx.workflow,
+                                     action=req.action, option=req.auto_option)
         else:
             state[PENDING] = {"approval_id": str(approval_id), "key": req.key, "resume": it.resume,
                               "on_reject": it.on_reject}
@@ -463,7 +470,9 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
                                 payload=req.payload, sensitive=req.sensitive, agent=req.agent, action=req.action)
         if push.enabled():
             asyncio.get_running_loop().create_task(_notify(approval_id, req.title, ctx.venture_id, req.agent))
-    return auto
+    if not auto:
+        return None
+    return "option" if by_option and not trusted else "trust"
 
 
 async def _notify(approval_id: uuid.UUID, title: str, venture_id: uuid.UUID, agent: str) -> None:

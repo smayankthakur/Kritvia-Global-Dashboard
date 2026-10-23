@@ -2,6 +2,8 @@
 
   classify -> (spam | handed to lead triage | filed) | retrieve -> draft
            -> [approval: gmail.send / whatsapp.send / telegram.send] -> send
+  classify -> facts (a question about the sender's own invoice, pay link, booking or shipment, answered
+           from the records by code; by itself when answer_facts is on) -> send   | no records -> retrieve
 
 Reads each incoming email or WhatsApp message, works out what it is (enquiry,
 support question, invoice or payment, scheduling, other), files it in memory so
@@ -41,6 +43,10 @@ wf = registry.register(Workflow(
                help="e.g. 'English', 'Hindi', 'Hinglish', or 'same as the customer'."),
         Option("hand_off_leads", "Hand enquiries to Lead triage when it is on", "boolean", True),
         Option("file_in_memory", "File every message in Knowledge (tasks and facts are extracted)", "boolean", True),
+        Option("answer_facts", "Answer customers' questions about their own records by themselves", "boolean", False,
+               help="Only the customer's own invoices, payment links, bookings and shipments, found by the number or "
+                    "checked email they wrote from. The numbers come from your records, never written by AI. "
+                    "Everything else still waits for your yes."),
     )))
 
 CATEGORIES = ("enquiry", "support", "payment", "scheduling", "update", "spam", "other")
@@ -55,6 +61,11 @@ class Classification(BaseModel):
     wants_person: bool = Field(default=False, description=(
         "true if the sender asks to talk to a person or the owner, is angry or complaining, or raises something "
         "only the owner should answer (a refund, a dispute, a legal matter)"))
+    fact_question: Literal["none", "balance", "pay_link", "booking", "shipment"] = Field(default="none", description=(
+        "only when the sender asks about THEIR OWN records with this business: balance = how much they owe or "
+        "whether an invoice is paid; pay_link = how or where to pay; booking = when their appointment or "
+        "booking is; shipment = where their order or shipment is. Anything else (prices, new orders, "
+        "complaints, several questions at once, someone else's records): none"))
 
 
 class BookingPick(BaseModel):
@@ -190,6 +201,14 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
         except Exception as exc:  # filing is an enhancement; never block the reply on it
             ctx.note(f"could not file message ({type(exc).__name__})")
 
+    # A question about the sender's own records (their balance, a pay link, their booking or shipment) is
+    # answered from those records by code; the step falls back to a normal draft when there is nothing to say.
+    if (c.fact_question != "none" and not prospect and not c.wants_person and _recipient(inp)
+            and _sender_verified(inp) and (cfg.get("answer_facts") or cfg.get("draft_replies", True))):
+        return Goto("facts", update={"classification": c.model_dump(), "summary": summary, "input_sensitive": held,
+                                     "prospect": None},
+                    note=f"{c.category}; asks about their own {c.fact_question.replace('_', ' ')}")
+
     # Chat enquiries stay in the chat (the lead is recorded above); Lead triage takes email and forms.
     if c.category == "enquiry" and cfg.get("hand_off_leads", True) and _recipient(inp) and contact is None:
         async with ctx.tx() as conn:
@@ -218,6 +237,60 @@ async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
     return Goto("retrieve", update={"classification": c.model_dump(), "summary": summary, "input_sensitive": held,
                                     "prospect": prospect},
                 note=f"{c.category}, {c.urgency} urgency, reply needed")
+
+
+@wf.step("facts", agent="inbox")
+async def facts(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
+    """The customer asked about their own records: the answer is written by code from those records
+    (services/customer_facts.py), and sent by itself when the business switched on answer_facts."""
+    from kritvia_api.services import customer_facts as cf
+    inp, c, cfg = state["input"], state["classification"], await ctx.settings()
+    channel = inp.get("channel") or "email"
+    address = _chat_address(inp, channel)
+    if channel in CHATS and address:
+        async with ctx.tx() as conn:
+            if await wa_inbox.newer_inbound(conn, ctx.venture_id, address, inp.get("message_id"), channel=channel):
+                return Finish("superseded", note="the customer wrote again; the newer message is answered with this one")
+            contact = await wa_inbox.find_contact(conn, ctx.venture_id, address, channel=channel)
+            if contact is not None and not contact.automatic:
+                return Finish("person_handling", note="a person took over this chat")
+    to = _recipient(inp)
+    key = cf.sender_key(ctx.venture_id, channel, address or to)
+    async with ctx.tx() as conn:
+        found = await cf.lookup(conn, ctx.venture_id, channel=channel, phone=inp.get("from_phone"),
+                                email=inp.get("from_email"), chat_id=inp.get("chat_id"),
+                                sender_verified=_sender_verified(inp))
+        recent = await cf.recent_auto_answers(conn, ctx.venture_id, key)
+    biz = await ctx.business()
+    chosen = str(cfg.get("reply_language") or "").strip().lower()
+    lang = c.get("language") if chosen in ("", "same as the customer") else chosen
+    q = c["fact_question"]
+    body = cf.compose(q, found, lang, biz.name)
+    if body is None:
+        if not cfg.get("draft_replies", True):
+            return Finish("filed", note=f"nothing in the records about their {cf.TITLES[q]}; replies are off")
+        return Goto("retrieve", note=f"nothing in the records about their {cf.TITLES[q]}; drafting a reply")
+    if channel in CHATS:
+        action, payload = f"{channel}.send", {"to": address or to, "body": body}
+    else:
+        subject = "Re: " + (inp.get("subject") or "your message")
+        action, payload = "gmail.send", {"to": to, "subject": subject[:300], "body": biz.with_notice(body),
+                                         "thread_id": inp.get("thread_id")}
+    on = bool(cfg.get("answer_facts"))
+    auto = on and recent < cf.AUTO_PER_HOUR
+    who = inp.get("from_name") or found.name or to
+    why = ("" if not on else " Sent by itself (Agents → Inbox assistant → answer questions about their own records)."
+           if auto else f" Waiting for you: {cf.AUTO_PER_HOUR} answers already went to this customer in the last hour.")
+    return Interrupt(
+        ApprovalRequest(agent="inbox", action=action, key="reply_decision",
+                        title=f"From your records: {cf.TITLES[q]} for {who}"[:300],
+                        summary=(f"{c['summary'][:200]} Written by code from your records (no AI wording)." + why)[:2000],
+                        payload=payload, required_roles=("approver", "venture_admin"),
+                        sensitive=bool(state.get("input_sensitive")),
+                        auto_option="answer_facts" if auto else None),
+        resume="send", on_reject="rejected",
+        update={"summary": {**state.get("summary", {}), "fact_answer": q, "fact_to": key, "fact_auto": auto}},
+        note=f"answer about their {cf.TITLES[q]} built from the records" + (" (sends by itself)" if auto else ""))
 
 
 @wf.step("retrieve", agent="retrieval")

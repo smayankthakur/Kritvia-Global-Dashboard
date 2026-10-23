@@ -1725,6 +1725,85 @@
         "title": "ApproverLinksOut",
         "type": "object"
       },
+      "AskAddressOut": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the full address: only in the answer that made it",
+            "title": "Address"
+          },
+          "available": {
+            "description": "this server receives email, so ask addresses work",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "exists": {
+            "default": false,
+            "title": "Exists",
+            "type": "boolean"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "its last characters, to recognise it",
+            "title": "Hint"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "your_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "only mail from this address is answered",
+            "title": "Your Email"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "AskAddressOut",
+        "type": "object"
+      },
       "AssistantItem": {
         "properties": {
           "answer": {
@@ -29593,6 +29672,26 @@
         ]
       }
     },
+    "/hooks/slack/events": {
+      "post": {
+        "description": "Kritvia's Slack app's Events API: a direct message to the app, or a mention of it, from a linked member\nasks the business (services/ask_anywhere.py). Signed like interactions; Slack's retries are acknowledged and\ndropped (each event is also taken once by its id), and the work runs after the 200 Slack needs within 3 s.",
+        "operationId": "slack_events_hooks_slack_events_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Slack Events",
+        "tags": [
+          "approvals"
+        ]
+      }
+    },
     "/hooks/slack/interact": {
       "post": {
         "description": "Kritvia's Slack app: a button press or a submitted form. Slack signs each request with the app's\nsigning secret; anything unsigned, stale or replayed outside five minutes is refused.",
@@ -35952,6 +36051,141 @@
         "summary": "Ask",
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/ask-address": {
+      "delete": {
+        "operationId": "remove_ask_address_ventures__venture_id__ask_address_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Ask Address",
+        "tags": [
+          "connectors"
+        ]
+      },
+      "get": {
+        "description": "Your private address for asking this business by email (only that it exists: the address is shown once).",
+        "operationId": "get_ask_address_ventures__venture_id__ask_address_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskAddressOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Ask Address",
+        "tags": [
+          "connectors"
+        ]
+      },
+      "post": {
+        "description": "Makes your ask address (a new one each time: the old one stops working). Shown once.",
+        "operationId": "make_ask_address_ventures__venture_id__ask_address_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskAddressOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Make Ask Address",
+        "tags": [
+          "connectors"
         ]
       }
     },

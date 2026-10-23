@@ -378,6 +378,30 @@ def slack_blocks(text_: str, approval_id: uuid.UUID, venture_id: uuid.UUID, sens
             {"type": "actions", "elements": buttons}]
 
 
+async def slack_card_to(venture_id: uuid.UUID, approval_id: uuid.UUID, bot: str, channel: str) -> None:
+    """One pending draft's card again, into this Slack conversation (/waiting from Slack)."""
+    from kritvia_api.engine.context import get_services
+    from kritvia_api.services import slack
+    p = await slack.app_token(venture_id)
+    if p is None:
+        return
+    card = await card_for(p[0].run_as, venture_id, approval_id)
+    if card is None:
+        return
+    async with tenant_tx(p[0].run_as, "agent", "slack") as conn:
+        business = (await conn.execute(text("SELECT name FROM ventures WHERE id = :v"), {"v": venture_id})).scalar()
+    try:
+        res = await get_services().slack.api(bot, "chat.postMessage", {
+            "channel": channel, "text": f"A draft needs your yes: {card['title'][:120]}",
+            "blocks": slack_blocks(_body(card, business), approval_id, venture_id, _no_buttons(card)),
+            "unfurl_links": False, "unfurl_media": False})
+    except slack.SlackError:
+        return
+    if res.get("channel") and res.get("ts"):
+        await _keep_notes(p[0].run_as, "slack", p[0].org_id, venture_id, approval_id,
+                          [(str(res["channel"])[:64], str(res["ts"])[:64])])
+
+
 async def _slack_cards(venture_id, approval_id, card: dict[str, Any]) -> None:
     from kritvia_api.engine.context import get_services
     from kritvia_api.services import slack

@@ -139,7 +139,7 @@ async def test_a_card_is_made_once_and_the_run_waits_in_the_same_step(world, ser
                      workflow="test_flow", services=services)
     it = Interrupt(ApprovalRequest(agent="mailer", action="gmail.send", title="Send test",
                                    payload={"to": "x@example.com", "subject": "hi", "body": "hello"}), resume="send")
-    assert await _create_approval(ctx, {"input": {}}, "ask", it, step_count=1) is False
+    assert await _create_approval(ctx, {"input": {}}, "ask", it, step_count=1) is None
     st = (await admin("SELECT status, lease_owner FROM workflow_runs WHERE id = $1", run_id))[0]
     assert st["status"] == "waiting" and st["lease_owner"] is None          # parked with the card, atomically
     # the step running again (after a crash) reuses the waiting card instead of making a second one

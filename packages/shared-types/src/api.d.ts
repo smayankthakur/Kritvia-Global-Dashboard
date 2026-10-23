@@ -705,6 +705,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/slack/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Slack Events
+         * @description Kritvia's Slack app's Events API: a direct message to the app, or a mention of it, from a linked member
+         *     asks the business (services/ask_anywhere.py). Signed like interactions; Slack's retries are acknowledged and
+         *     dropped (each event is also taken once by its id), and the work runs after the 200 Slack needs within 3 s.
+         */
+        post: operations["slack_events_hooks_slack_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/slack/interact": {
         parameters: {
             query?: never;
@@ -2697,6 +2719,31 @@ export interface paths {
         /** Ask */
         post: operations["ask_ventures__venture_id__ask_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ventures/{venture_id}/ask-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ask Address
+         * @description Your private address for asking this business by email (only that it exists: the address is shown once).
+         */
+        get: operations["get_ask_address_ventures__venture_id__ask_address_get"];
+        put?: never;
+        /**
+         * Make Ask Address
+         * @description Makes your ask address (a new one each time: the old one stops working). Shown once.
+         */
+        post: operations["make_ask_address_ventures__venture_id__ask_address_post"];
+        /** Remove Ask Address */
+        delete: operations["remove_ask_address_ventures__venture_id__ask_address_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7353,6 +7400,38 @@ export interface components {
              * @description the business's WhatsApp number when connected
              */
             whatsapp_number?: string | null;
+        };
+        /** AskAddressOut */
+        AskAddressOut: {
+            /**
+             * Address
+             * @description the full address: only in the answer that made it
+             */
+            address?: string | null;
+            /**
+             * Available
+             * @description this server receives email, so ask addresses work
+             */
+            available: boolean;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Exists
+             * @default false
+             */
+            exists: boolean;
+            /**
+             * Hint
+             * @description its last characters, to recognise it
+             */
+            hint?: string | null;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /**
+             * Your Email
+             * @description only mail from this address is answered
+             */
+            your_email?: string | null;
         };
         /** AssistantItem */
         AssistantItem: {
@@ -18009,6 +18088,26 @@ export interface operations {
             };
         };
     };
+    slack_events_hooks_slack_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     slack_interact_hooks_slack_interact_post: {
         parameters: {
             query?: never;
@@ -22057,6 +22156,97 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AnswerOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ask_address_ventures__venture_id__ask_address_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskAddressOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    make_ask_address_ventures__venture_id__ask_address_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskAddressOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_ask_address_ventures__venture_id__ask_address_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

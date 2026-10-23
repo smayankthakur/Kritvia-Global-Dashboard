@@ -48,6 +48,11 @@ class ApprovalRequest:
     # True: a person must look at this one even if the agent has earned autonomy for the action
     # (for example a reply that quotes internal documents to an outside sender).
     always_review: bool = False
+    # The name of a boolean option of this workflow. When the business switched it on, the card is approved
+    # by itself (like earned autonomy, and withheld the same way: never sensitive or always_review drafts,
+    # never a flagged run or a draft the guardrails object to). Used for answers built entirely by code from
+    # the business's own records, e.g. a customer's invoice balance (services/customer_facts.py).
+    auto_option: str | None = None
 
 
 @dataclass

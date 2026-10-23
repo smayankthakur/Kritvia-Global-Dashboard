@@ -1,4 +1,5 @@
-"""Email forwarding: a business's own Kritvia address, and the endpoint its forwarded mail arrives at.
+"""Email forwarding: a business's own Kritvia address, and the endpoint its forwarded mail arrives at; and
+each person's private ask address (ask Kritvia by email: services/ask_anywhere.py, migration 0076).
 
 See services/email_in.py and migration 0031. Setting up an address needs a venture admin; the
 inbound endpoint is public but only accepts messages signed by the Cloudflare email worker.
@@ -21,7 +22,7 @@ from kritvia_api.db.session import tenant_tx
 from kritvia_api.deps import Svc, TenantDB, UserId
 from kritvia_api.ratelimit import client_ip, limiter
 from kritvia_api.routers.connectors import _plan_allows, _require_admin
-from kritvia_api.services import email_in
+from kritvia_api.services import ask_anywhere, email_in
 from kritvia_api.services.security_log import security_event
 
 router = APIRouter(tags=["connectors"])
@@ -114,6 +115,14 @@ async def email_inbound(request: Request, svc: Svc) -> EmailInOut:
     if local is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "unknown address")
     await limiter.hit(f"email-in:{local}", per_minute=120)
+    if ask_anywhere.is_ask_local(local):
+        # A person asking their business by email (services/ask_anywhere.py). Mail that isn't verifiably from
+        # that person is dropped without a bounce, so trying addresses tells nobody anything.
+        out = await ask_anywhere.email_ask(svc, local, f"{local}@{s.inbound_email_domain.lower()}",
+                                           email_in.parse(raw))
+        if out == "unknown":
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "unknown address")
+        return EmailInOut(accepted=True)
     async with tenant_tx(None, "system") as conn:
         p = (await conn.execute(text("SELECT * FROM private.email_in_principal(:l)"), {"l": local})).first()
     if p is None:
@@ -160,3 +169,62 @@ async def email_inbound(request: Request, svc: Svc) -> EmailInOut:
         return EmailInOut(accepted=False)
     started = await deliver_forwarded(svc, p.org_id, p.venture_id, p.run_as, msg)
     return EmailInOut(accepted=True, started=started)
+
+
+# ------------------------------------------------------------- ask by email --
+async def _visible(db, venture_id: uuid.UUID) -> None:
+    if (await db.execute(text("SELECT 1 FROM ventures WHERE id = :v"), {"v": venture_id})).first() is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "venture not found")
+
+
+class AskAddressOut(BaseModel):
+    available: bool = Field(description="this server receives email, so ask addresses work")
+    exists: bool = False
+    address: str | None = Field(default=None, description="the full address: only in the answer that made it")
+    hint: str | None = Field(default=None, description="its last characters, to recognise it")
+    created_at: datetime | None = None
+    last_used_at: datetime | None = None
+    your_email: str | None = Field(default=None, description="only mail from this address is answered")
+
+
+@router.get("/ventures/{venture_id}/ask-address", response_model=AskAddressOut)
+async def get_ask_address(venture_id: uuid.UUID, user_id: UserId, db: TenantDB) -> AskAddressOut:
+    """Your private address for asking this business by email (only that it exists: the address is shown once)."""
+    await _visible(db, venture_id)
+    me = (await db.execute(text("SELECT email FROM users WHERE id = :u"), {"u": user_id})).scalar()
+    row = (await db.execute(text("SELECT hint, created_at, last_used_at FROM ask_addresses"
+                                 " WHERE venture_id = :v AND user_id = :u"), {"v": venture_id, "u": user_id})).first()
+    if row is None:
+        return AskAddressOut(available=_enabled(), your_email=me)
+    return AskAddressOut(available=_enabled(), exists=True, hint=row.hint, created_at=row.created_at,
+                         last_used_at=row.last_used_at, your_email=me)
+
+
+@router.post("/ventures/{venture_id}/ask-address", response_model=AskAddressOut, status_code=201)
+async def make_ask_address(venture_id: uuid.UUID, user_id: UserId, db: TenantDB) -> AskAddressOut:
+    """Makes your ask address (a new one each time: the old one stops working). Shown once."""
+    from sqlalchemy.exc import DBAPIError
+
+    from kritvia_api.errors import raise_for_db
+    await _visible(db, venture_id)
+    if not _enabled():
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "this server doesn't receive email yet")
+    if not (await db.execute(text("SELECT :v = ANY (private.writable_ventures())"), {"v": venture_id})).scalar():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "asking this business needs an operator or admin role")
+    local = ask_anywhere.new_local()
+    try:
+        await db.execute(text("SELECT ask_address_set(:v, :h, :t)"),
+                         {"v": venture_id, "h": ask_anywhere.local_hash(local), "t": local[-6:]})
+    except DBAPIError as exc:
+        raise_for_db(exc, "venture not found")
+    me = (await db.execute(text("SELECT email FROM users WHERE id = :u"), {"u": user_id})).scalar()
+    await security_event("ask_email.address_made", "info", user_id=user_id)
+    return AskAddressOut(available=True, exists=True, address=f"{local}@{get_settings().inbound_email_domain.lower()}",
+                         hint=local[-6:], created_at=datetime.now(UTC), your_email=me)
+
+
+@router.delete("/ventures/{venture_id}/ask-address", status_code=204)
+async def remove_ask_address(venture_id: uuid.UUID, user_id: UserId, db: TenantDB) -> None:
+    await _visible(db, venture_id)
+    await db.execute(text("DELETE FROM ask_addresses WHERE venture_id = :v AND user_id = :u"),
+                     {"v": venture_id, "u": user_id})

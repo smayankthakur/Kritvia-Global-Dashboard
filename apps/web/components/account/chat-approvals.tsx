@@ -1,11 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, MessageCircle, Send, Trash2 } from "lucide-react";
+import { BellRing, Mail, MessageCircle, Send, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
+import { CopyField } from "@/components/ui/copy";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
@@ -16,9 +18,11 @@ type Link = Schemas["ApproverLinkOut"];
 export const approverLinksKey = (ventureId: string) => ["approver-links", ventureId] as const;
 
 export const CHANNEL_NAME: Record<string, string> = { telegram: "Telegram", slack: "Slack", whatsapp: "WhatsApp" };
+export const askAddressKey = (ventureId: string) => ["ask-address", ventureId] as const;
 
-/** "Approve from your phone": link your Telegram chat, WhatsApp number or Slack account to one business. In Telegram and
- * WhatsApp you can also ask the business anything (the front door). */
+/** "Ask Kritvia from anywhere": link your Telegram chat, WhatsApp number or Slack account to one business, or make a private
+ * email address for it. Drafts that need your yes arrive in the chats; in all four you can ask the business anything and get
+ * the answer from its records (the front door). */
 export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; ventureName: string }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -26,6 +30,30 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
   const q = useQuery({
     queryKey: key,
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/approver-links", { params: { path: { venture_id: ventureId } } })),
+  });
+  const ask = useQuery({
+    queryKey: askAddressKey(ventureId),
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/ask-address", { params: { path: { venture_id: ventureId } } })),
+  });
+  const [shownAddress, setShownAddress] = useState<string | null>(null);
+  const [confirmNew, setConfirmNew] = useState(false);
+  const makeAddress = useMutation({
+    mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/ask-address", { params: { path: { venture_id: ventureId } } })),
+    onSuccess: (out) => {
+      setShownAddress(out.address ?? null);
+      setConfirmNew(false);
+      void qc.invalidateQueries({ queryKey: askAddressKey(ventureId) });
+    },
+    onError: (e) => toast.error("Can't make an address", errorMessage(e)),
+  });
+  const removeAddress = useMutation({
+    mutationFn: () => unwrap(api.DELETE("/ventures/{venture_id}/ask-address", { params: { path: { venture_id: ventureId } } })),
+    onSuccess: () => {
+      setShownAddress(null);
+      toast.success("Address removed", "Mail to it is no longer answered.");
+      void qc.invalidateQueries({ queryKey: askAddressKey(ventureId) });
+    },
+    onError: (e) => toast.error("Can't remove it", errorMessage(e)),
   });
   const [tgLink, setTgLink] = useState<string | null>(null);
   const [waLink, setWaLink] = useState<string | null>(null);
@@ -60,10 +88,10 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
     <CardHeader
       title={
         <span className="flex items-center gap-2">
-          <BellRing className="h-4 w-4 text-subtle" aria-hidden /> Approve from your phone
+          <BellRing className="h-4 w-4 text-subtle" aria-hidden /> Ask Kritvia from anywhere
         </span>
       }
-      description={`Get ${ventureName}'s drafts that need your yes in Telegram, WhatsApp or Slack, with Approve, Reject and Ask for changes. In Telegram and WhatsApp you can also ask the business anything, by message or voice note. You act as yourself, with the same rights as here.`}
+      description={`Ask ${ventureName} anything from WhatsApp, Telegram, Slack or email, and get the answer from its own records: money in, who owes what, bookings, leads. Drafts that need your yes arrive in the chats with Approve, Reject and Ask for changes. You act as yourself, with the same rights as here.`}
     />
   );
   if (q.isLoading) {
@@ -97,7 +125,8 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
           </p>
           <p className="text-xs text-muted">
             {linked
-              ? `${linked.label ?? CHANNEL_NAME[channel]} · since ${formatRelative(linked.created_at)}`
+              ? `${linked.label ?? CHANNEL_NAME[channel]} · since ${formatRelative(linked.created_at)}` +
+                (channel === "slack" ? ". Ask by messaging the Kritvia app directly, or mention it in a channel." : "")
               : available
                 ? channel === "telegram"
                   ? `Through ${d.telegram_bot}, the business's bot.`
@@ -140,7 +169,67 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
             () => slack.mutate(),
             slack.isPending,
           )}
+          <li className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-sm font-medium text-fg">
+                Email
+                {ask.data?.exists ? <Badge tone="success" dot>on</Badge> : null}
+              </p>
+              <p className="text-xs text-muted">
+                {!ask.data
+                  ? "…"
+                  : !ask.data.available
+                    ? "Not available on this server yet."
+                    : ask.data.exists
+                      ? `Your private address ends in …${ask.data.hint}` +
+                        (ask.data.last_used_at ? `, last used ${formatRelative(ask.data.last_used_at)}.` : ". Not used yet.")
+                      : "A private address only for you. Only mail from your own address is answered, and the answer comes back to it."}
+              </p>
+            </div>
+            {ask.data?.available ? (
+              ask.data.exists ? (
+                <div className="flex gap-2">
+                  <Button size="sm" loading={makeAddress.isPending} onClick={() => setConfirmNew(true)}>
+                    New address
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-danger"
+                    icon={<Trash2 className="h-4 w-4" />}
+                    loading={removeAddress.isPending}
+                    onClick={() => removeAddress.mutate()}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <Button size="sm" icon={<Mail className="h-4 w-4" />} loading={makeAddress.isPending} onClick={() => makeAddress.mutate()}>
+                  Make my address
+                </Button>
+              )
+            ) : null}
+          </li>
         </ul>
+        {shownAddress ? (
+          <div className="mt-3 space-y-2 rounded-md border border-border bg-surface-2 p-3 text-sm">
+            <CopyField value={shownAddress} label="Your ask address" />
+            <p className="text-muted">
+              Save it as a contact. Kritvia shows it only now. Email it from {ask.data?.your_email ?? "your own address"}, with your question in the subject
+              or the message; the answer comes back by email. Mail from any other address is ignored.
+            </p>
+          </div>
+        ) : null}
+        <ConfirmDialog
+          open={confirmNew}
+          onClose={() => setConfirmNew(false)}
+          onConfirm={() => makeAddress.mutate()}
+          loading={makeAddress.isPending}
+          title="Make a new address?"
+          description="The old address stops working at once."
+          confirmLabel="Make a new one"
+          cancelLabel="Keep the old one"
+        />
         {tgLink && !mine("telegram") ? (
           <div className="mt-3 rounded-md border border-border bg-surface-2 p-3 text-sm">
             <p className="text-fg">Open this on the phone that has Telegram and tap Start. It works once, for 15 minutes.</p>
@@ -167,13 +256,13 @@ export function ChatApprovals({ ventureId, ventureName }: { ventureId: string; v
             </div>
           </div>
         ) : null}
-        {mine("telegram") || mine("whatsapp") ? (
+        {mine("telegram") || mine("whatsapp") || mine("slack") || ask.data?.exists ? (
           <div className="mt-4 rounded-md border border-border p-3 text-sm">
-            <p className="font-medium text-fg">Run the business from your chat</p>
+            <p className="font-medium text-fg">Run the business from anywhere</p>
             <p className="mt-1 text-muted">
-              Ask anything by message or voice note, in Hindi, Hinglish or English: &quot;Is hafte kitna paisa aaya?&quot;, &quot;Priya ko follow-up bhejo&quot;, &quot;Add a
-              task for Neha&quot;. The answer comes back in the chat; anything that sends or changes something arrives as a draft for your yes. Quick: /today, /week,
-              /waiting, /help.
+              Ask anything in Hindi, Hinglish or English: &quot;Is hafte kitna paisa aaya?&quot;, &quot;Kaun baaki hai?&quot;, &quot;Aaj ki bookings&quot;, &quot;Priya ko
+              follow-up bhejo&quot;. The answer comes back where you asked, with the actual names and amounts; anything that sends or changes something arrives as a
+              draft for your yes. Quick: /today, /week, /waiting, /help. Voice notes work in Telegram and WhatsApp.
             </p>
           </div>
         ) : null}

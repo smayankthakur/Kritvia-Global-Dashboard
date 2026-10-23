@@ -8,6 +8,7 @@
   POST   /ventures/{v}/connectors/slack/install  "Add to Slack" (admins), bound to this browser by a nonce
   POST   /connectors/slack/complete              the web app's OAuth callback finishes it
   POST   /hooks/slack/interact                   button presses and the "Ask for changes" form (signed)
+  POST   /hooks/slack/events                     a linked member asking the business in a DM or a mention (signed)
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlencode
 
 import jwt
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
@@ -317,3 +318,40 @@ async def slack_interact(request: Request, svc: Svc) -> Response:
     if out is None:
         return Response(status_code=200)
     return Response(content=json.dumps(out), media_type="application/json")
+
+
+@router.post("/hooks/slack/events", response_model=None)
+async def slack_events(request: Request, svc: Svc, background: BackgroundTasks) -> Response:
+    """Kritvia's Slack app's Events API: a direct message to the app, or a mention of it, from a linked member
+    asks the business (services/ask_anywhere.py). Signed like interactions; Slack's retries are acknowledged and
+    dropped (each event is also taken once by its id), and the work runs after the 200 Slack needs within 3 s."""
+    await limiter.hit(f"hook-ip:{client_ip(request)}", per_minute=600)
+    body = await request.body()
+    if len(body) > 64 * 1024:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "payload too large")
+    if not slack.verify_signature(get_settings().slack_signing_secret, request.headers.get("x-slack-request-timestamp", ""),
+                                  body, request.headers.get("x-slack-signature", ""), now=time.time()):
+        await security_event("webhook.bad_signature", "warning", request=request, provider="slack_events")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad signature")
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        raise HTTPException(422, "expected a Slack event") from None
+    if not isinstance(payload, dict):
+        raise HTTPException(422, "expected a Slack event")
+    if payload.get("type") == "url_verification":
+        return Response(content=json.dumps({"challenge": str(payload.get("challenge") or "")[:200]}),
+                        media_type="application/json")
+    if request.headers.get("x-slack-retry-num"):
+        return Response(status_code=200)
+    if payload.get("type") == "event_callback":
+        from kritvia_api.services import ask_anywhere
+
+        async def work() -> None:
+            try:
+                await ask_anywhere.slack_event(payload, svc)
+            except Exception:  # noqa: BLE001 - Slack already has its 200; the person can ask again
+                import logging
+                logging.getLogger(__name__).exception("Slack event failed")
+        background.add_task(work)
+    return Response(status_code=200)
