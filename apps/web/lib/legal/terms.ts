@@ -1,5 +1,5 @@
 /**
- * Terms of Service, version 2026-10-18. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Terms of Service, version 2026-10-23. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Terms of Service). Keep the two in step; when the text changes, bump
  * TERMS_VERSION in the API settings (terms_version) so everyone is asked to accept again.
  * 17 October 2026 added clause 10.10 (optional coupons) without a new version: it only applies to
@@ -12,10 +12,11 @@
  * 18 October 2026 (version 2026-10-18): approvals and requests from a linked WhatsApp number (7.2), skills and
  * team leads (7.13), the browser agent (7.14), AI phone calls (7.15), IndiaMART and Twilio (8.5), acceptable use
  * items 10 and 11.
- * 23 October 2026 added one sentence to clause 7.3 (the inbox assistant replying by itself) without a new
- * version: it only applies to businesses that switch it on, under the permission 7.3 already describes.
+ * 23 October 2026 (version 2026-10-23): clause 7.3 covers the inbox assistant replying to customers by itself
+ * (off until a business switches it on; orders, bookings, payments, prices not on record, discounts, refunds,
+ * disputes, complaints and promises still wait for Approval). Everyone is asked to accept this version.
  */
-export const TERMS_UPDATED = "18 October 2026";
+export const TERMS_UPDATED = "23 October 2026";
 
 export const TERMS_MD = `These Terms of Service are an agreement between your business and Sitelytc Digital Media Private Limited for the use of Kritvia. Please read them with our [Privacy Policy](/privacy).
 

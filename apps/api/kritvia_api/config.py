@@ -151,7 +151,7 @@ class Settings(BaseSettings):
     # Kritvia's own team (comma-separated sign-in emails): they see Pilot health across organisations.
     # Empty (or unset) = the founder, FOUNDER_EMAIL below. STAFF_EMAILS in .env replaces that list.
     staff_emails: str = ""
-    terms_version: str = "2026-10-18"   # Terms of Service + Privacy Policy in force; bump when they change
+    terms_version: str = "2026-10-23"   # Terms of Service + Privacy Policy in force; bump when they change
     email_code_minutes: int = Field(default=10, ge=5, le=15)   # sign-in and password-reset codes
     # System email for sign-in codes: smtp | log | memory (see services/mailer.py)
     mail_transport: str = "log"

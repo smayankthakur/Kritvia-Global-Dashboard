@@ -160,6 +160,8 @@ Push to `main` → CI (API tests, web lint/types/tests/build, image builds, sand
 
 By hand on the VM: `sudo /opt/kritvia/infra/scripts/deploy.sh --bg`, then `tail -f /var/log/kritvia-deploy.log` (it ends with `DEPLOY-DONE`). Deploys are quiet:
 
+- Only one deploy runs at a time (`/var/lib/kritvia/deploy.lock`): a second one, from CI or by hand, exits at once instead of rolling the code back mid-deploy. The health watchdog also stands down while the lock is held.
+- Take a backup first: `sudo /opt/kritvia/infra/scripts/backup.sh` (it checks the dump lists every table before it reports `backup ok`).
 - Images build while the old containers keep serving, and only changed services restart.
 - While `/var/lib/kritvia/deploying` exists, the health watchdog skips its checks, so a deploy doesn't open a status-page incident or send an alert email. A marker older than 30 minutes is ignored, so a stuck deploy is still reported.
 - Build output goes to `/var/lib/kritvia/deploy-build.log`.

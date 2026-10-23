@@ -1,5 +1,5 @@
 /**
- * Privacy Policy, version 2026-10-18. Master copy: the Claude Doc "Kritvia — Terms of Service and
+ * Privacy Policy, version 2026-10-23. Master copy: the Claude Doc "Kritvia — Terms of Service and
  * Privacy Policy" (tab Privacy Policy). Every factual statement here was checked against the code;
  * if routing, retention or providers change (infra/litellm/tiers.yaml, migrations, worker purges),
  * change this text too and bump terms_version in the API settings.
@@ -15,8 +15,10 @@
  * 23 October 2026: the approximate place of a sign-in IP (city and country, from Cloudflare) shown when approving a new
  * device, and the one-way fingerprint of a person's private "ask by email" address, named in the security records row
  * (no new provider, no new purpose), without a new version.
+ * 23 October 2026 (version 2026-10-23): republished with Terms version 2026-10-23 so the date shown matches the
+ * text above; replying by itself uses the same model routing and the same message data already described.
  */
-export const PRIVACY_UPDATED = "18 October 2026";
+export const PRIVACY_UPDATED = "23 October 2026";
 
 export const PRIVACY_MD = `## 1. Who we are and what this policy covers
 
