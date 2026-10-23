@@ -216,7 +216,12 @@ async def razorpay_webhook(request: Request) -> dict:
     if not hmac.compare_digest(sig, good):
         await security_event("webhook.bad_signature", "warning", request=request, provider="razorpay")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad signature")
-    ev = json.loads(raw)
+    try:
+        ev = json.loads(raw)
+        if not isinstance(ev, dict):
+            raise ValueError
+    except ValueError:
+        raise HTTPException(422, "body must be a JSON object") from None
     event_id = request.headers.get("x-razorpay-event-id") or hashlib.sha256(raw).hexdigest()
     name = str(ev.get("event", ""))
     payload = ev.get("payload", {})

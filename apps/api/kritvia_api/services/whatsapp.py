@@ -289,11 +289,40 @@ def _meta_error(r: httpx.Response, fallback: str) -> str:
     return (msg or fallback)[:300]
 
 
+UNREACHABLE = "couldn't reach WhatsApp; try again in a minute"
+
+
+class _Graph:
+    """The HTTP client for Meta's Graph API. A network failure (timeout, reset, DNS) becomes a
+    WhatsAppError, so every caller's `except WhatsAppError` records the failure instead of a 500."""
+
+    def __init__(self, client: httpx.AsyncClient) -> None:
+        self.client = client
+
+    async def request(self, method: str, url: str, **kw: Any) -> httpx.Response:
+        try:
+            return await self.client.request(method, url, **kw)
+        except httpx.HTTPError:
+            raise WhatsAppError(UNREACHABLE) from None
+
+    async def get(self, url: str, **kw: Any) -> httpx.Response:
+        return await self.request("GET", url, **kw)
+
+    async def post(self, url: str, **kw: Any) -> httpx.Response:
+        return await self.request("POST", url, **kw)
+
+    async def delete(self, url: str, **kw: Any) -> httpx.Response:
+        return await self.request("DELETE", url, **kw)
+
+    def stream(self, method: str, url: str, **kw: Any):
+        return self.client.stream(method, url, **kw)
+
+
 class WhatsAppClient:
     def __init__(self, app_secret: str = "", verify_token: str = "",
                  transport: httpx.AsyncBaseTransport | None = None) -> None:
         self.app_secret, self.verify_token = app_secret, verify_token
-        self._http = httpx.AsyncClient(transport=transport, timeout=30)
+        self._http = _Graph(httpx.AsyncClient(transport=transport, timeout=30))
 
     @property
     def configured(self) -> bool:
@@ -479,5 +508,5 @@ class WhatsAppClient:
             await self._http.post(f"{GRAPH}/{conn.phone_number_id}/messages",
                                   headers={"Authorization": f"Bearer {conn.access_token}"},
                                   json={"messaging_product": "whatsapp", "status": "read", "message_id": message_id})
-        except httpx.HTTPError:
+        except WhatsAppError:
             pass

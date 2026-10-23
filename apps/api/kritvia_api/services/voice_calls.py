@@ -362,14 +362,21 @@ async def new_call(conn, crypto: EnvelopeCrypto, p: Principal, *, direction: str
     state = {"turns": [{"who": "agent", "text": first}], "no_input": 0, "purpose": purpose, "callee": callee,
              "details": [], "started": datetime.now(UTC).isoformat()}
     cid = uuid.uuid4()
-    await conn.execute(text(
+    # The provider may deliver the same call twice at once: the second insert waits for the first, finds
+    # the call there and joins it instead of failing on the unique (connector, provider call id).
+    made = (await conn.execute(text(
         "INSERT INTO calls (id, org_id, venture_id, connector_id, direction, test, provider_call_id, phone_enc,"
         " phone_hash, status, state_enc, created_by, approval_id)"
-        " VALUES (:id, :o, :v, :c, :d, :t, :pc, :pe, :ph, :st, :s, :by, :a)"),
+        " VALUES (:id, :o, :v, :c, :d, :t, :pc, :pe, :ph, :st, :s, :by, :a)"
+        " ON CONFLICT (connector_id, provider_call_id) DO NOTHING RETURNING id"),
         {"id": cid, "o": p.org_id, "v": p.venture_id, "c": p.connector_id, "d": direction, "t": test,
          "pc": provider_call_id, "pe": await crypto.encrypt(p.venture_id, PHONE, phone) if phone else None,
          "ph": phone_hash(p.venture_id, phone) if phone else None, "st": status,
          "s": await crypto.encrypt(p.venture_id, STATE, json.dumps(state)), "by": created_by, "a": approval_id})
+            ).scalar()
+    if made is None:
+        cid = (await conn.execute(text("SELECT id FROM calls WHERE connector_id = :c AND provider_call_id = :pc"),
+                                  {"c": p.connector_id, "pc": provider_call_id})).scalar_one()
     return cid, first
 
 

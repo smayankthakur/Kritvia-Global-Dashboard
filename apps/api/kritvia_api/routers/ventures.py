@@ -279,11 +279,14 @@ class AcceptedOut(BaseModel):
 
 
 @router.post("/invitations/accept", response_model=AcceptedOut)
-async def accept_invitation(body: AcceptIn, db: TenantDB) -> AcceptedOut:
+async def accept_invitation(body: AcceptIn, db: TenantDB, svc: Svc) -> AcceptedOut:
     try:
         async with db.begin_nested():
             row = (await db.execute(text("SELECT * FROM accept_invitation(:h)"),
                                     {"h": hashlib.sha256(body.token.encode()).hexdigest()})).first()
+            # The plan's people limit holds at the moment someone joins, not only when the invitation
+            # was sent: a refusal here undoes the acceptance, so the invitation can be used later.
+            await require_room(db, row.org_id, "member", svc.router.local_deployments(), added=True)
     except DBAPIError as exc:
         raise_for_db(exc, "invitation not found or expired")
     return AcceptedOut(**row._mapping)

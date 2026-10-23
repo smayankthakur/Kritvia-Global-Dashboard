@@ -289,21 +289,34 @@ async def update_invoice(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: Inv
 async def record_payment(venture_id: uuid.UUID, invoice_id: uuid.UUID, body: PaymentIn, user_id: UserId,
                          db: TenantDB) -> InvoiceOut:
     """Records money received. Paid in full: the invoice is paid and reminders stop."""
-    cur = await _one(db, venture_id, invoice_id)
+    await _one(db, venture_id, invoice_id)
     await _can_write(db, venture_id)
+    # Locked for the rest of the request: two payments recorded at the same moment are applied one
+    # after the other, each against the balance the other left.
+    cur = (await db.execute(text("SELECT status, amount_paise, paid_paise FROM invoices"
+                                 " WHERE id = :id AND venture_id = :v FOR UPDATE"),
+                            {"id": invoice_id, "v": venture_id})).first()
+    if cur is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "invoice not found")
     if cur.status != "open":
         raise HTTPException(status.HTTP_409_CONFLICT, f"this invoice is {cur.status}")
     balance = cur.amount_paise - cur.paid_paise
     if body.amount_paise > balance:
         raise HTTPException(422, f"that is more than the ₹{balance / 100:,.2f} still due")
     paid_on = body.paid_on or today_ist()
-    full = body.amount_paise == balance
-    r = (await db.execute(text(
-        "UPDATE invoices SET paid_paise = paid_paise + :a, status = CASE WHEN :full THEN 'paid' ELSE status END,"
-        " paid_on = :d, customer_says_paid_at = NULL, customer_paid_ref = NULL, updated_at = now()"
-        " WHERE id = :id AND venture_id = :v AND status = 'open'"
-        f" RETURNING {COLS}"),
-        {"a": body.amount_paise, "full": full, "d": paid_on, "id": invoice_id, "v": venture_id})).first()
+    try:
+        async with db.begin_nested():
+            # "Paid in full" is decided by the database from the amounts it holds, never from an
+            # earlier read.
+            r = (await db.execute(text(
+                "UPDATE invoices SET paid_paise = paid_paise + :a,"
+                " status = CASE WHEN paid_paise + :a >= amount_paise THEN 'paid' ELSE status END,"
+                " paid_on = :d, customer_says_paid_at = NULL, customer_paid_ref = NULL, updated_at = now()"
+                " WHERE id = :id AND venture_id = :v AND status = 'open' AND paid_paise + :a <= amount_paise"
+                f" RETURNING {COLS}"),
+                {"a": body.amount_paise, "d": paid_on, "id": invoice_id, "v": venture_id})).first()
+    except DBAPIError as exc:
+        _db_error(exc)
     if r is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "this invoice changed; refresh and try again")
     await db.execute(text(

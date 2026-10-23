@@ -738,13 +738,16 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
         raise HTTPException(422, "body must be JSON") from None
     accepted = ignored = 0
     principals: dict[str, Any] = {}
+    allowed: dict[uuid.UUID, bool] = {}     # plan verdict per business, read once per delivery
     for m in parse_inbound(payload if isinstance(payload, dict) else {}):
         if m.phone_number_id not in principals:
             async with tenant_tx(None, "system") as conn:
                 principals[m.phone_number_id] = (await conn.execute(
                     text("SELECT * FROM private.whatsapp_principal(:p)"), {"p": m.phone_number_id})).first()
         p = principals[m.phone_number_id]
-        if p is None or not await _plan_allows(p.run_as, p.venture_id, "whatsapp"):
+        if p is not None and p.venture_id not in allowed:
+            allowed[p.venture_id] = await _plan_allows(p.run_as, p.venture_id, "whatsapp")
+        if p is None or not allowed[p.venture_id]:
             ignored += 1
             continue
         # Staff checking in or out (IN / OUT) are noted on the attendance sheet, not kept as customer chats.
@@ -818,6 +821,21 @@ async def whatsapp_inbound(request: Request, svc: Svc) -> WhatsAppHookOut:
             accepted += 1
     return WhatsAppHookOut(accepted=accepted, ignored=ignored)
 
+
+LEAD_DEDUPE_WINDOW_S = 600
+
+
+def lead_dedupe_key(body: bytes, signed_ts: str | None, now: float | None = None) -> str:
+    """What makes two lead-form deliveries "the same one". A signed request is identified by its
+    timestamp and body (a replay repeats both; a new submission has a new timestamp). An unsigned one
+    by its body within a 10-minute window, so a sender's retry is caught but the same form filled in
+    again later (two people sending identical minimal details) is still a new lead."""
+    if signed_ts:
+        return hashlib.sha256(signed_ts.encode() + b"." + body).hexdigest()
+    bucket = int((time.time() if now is None else now) // LEAD_DEDUPE_WINDOW_S)
+    return hashlib.sha256(f"{bucket}.".encode() + body).hexdigest()
+
+
 @router.post("/hooks/{connector_id}", response_model=HookOut, status_code=202)
 async def inbound_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> HookOut:
     """Signed lead-form webhook.
@@ -850,8 +868,8 @@ async def inbound_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> H
         if not hmac.compare_digest(sig, sign(secret, ts, body)):
             await security_event("webhook.bad_signature", "warning", request=request, org_id=p.org_id, provider="lead_form")
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "bad signature")
-        # Replays inside the 5-minute window are harmless: the same body maps to the same run
-        # (deduplicated below), so a re-sent request never starts a second one.
+        # Replays inside the 5-minute window are harmless: the same timestamp and body map to the same
+        # run (deduplicated below), so a re-sent request never starts a second one.
     elif not (key and hmac.compare_digest(key, secret)):
         await security_event("webhook.bad_signature", "warning", request=request, org_id=p.org_id, provider="lead_form")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing signature")
@@ -879,7 +897,7 @@ async def inbound_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> H
     try:
         run_id = await start_run(svc, actor_user_id=p.run_as, actor_type="agent", venture_id=p.venture_id,
                                  workflow=workflow, input=inp, trigger_kind="webhook",
-                                 dedupe=("webhook", hashlib.sha256(body).hexdigest()),
+                                 dedupe=("webhook", lead_dedupe_key(body, ts if sig else None)),
                                  title=f"Web form: {lead.get('company') or lead.get('from_name') or 'lead'}")
     except DuplicateTrigger:
         return HookOut(accepted=True, duplicate=True)

@@ -123,24 +123,41 @@ class TokenGate:
             self._agent_cache[key] = (time.monotonic() + self.ttl, over)
         return over
 
+    # The cache is only trusted while an organisation is comfortably inside its allowance: from this
+    # share of it onwards every model call re-reads usage, so a burst of calls can't run past the cap.
+    CACHE_BELOW = 0.9
+
     async def over_limit(self, conn, org_id: uuid.UUID, local: list[str]) -> bool:
         hit = self._cache.get(org_id)
         if hit and hit[0] > time.monotonic():
             return hit[1]
         u = await org_usage(conn, org_id, local)
-        over = bool(u and u.tokens_left == 0)
-        self._cache[org_id] = (time.monotonic() + self.ttl, over)
+        left = u.tokens_left if u else None
+        over = left is not None and left <= 0
+        allowance = (u.plan.monthly_tokens or 0) + u.bonus_tokens if u else 0
+        if left is None or (not over and allowance and u.tokens < allowance * self.CACHE_BELOW):
+            # Only a clear "has room" (or no limit at all) is cached; "over" and "nearly over" are
+            # asked again each time, so a raised allowance or a coupon applies at once too.
+            self._cache[org_id] = (time.monotonic() + self.ttl, over)
+        else:
+            self._cache.pop(org_id, None)
         return over
 
 
-async def require_room(conn, org_id: uuid.UUID, what: str, local: list[str]) -> None:
-    """Refuses (402) a new venture or member beyond the plan."""
+async def require_room(conn, org_id: uuid.UUID, what: str, local: list[str], *, added: bool = False) -> None:
+    """Refuses (402) a new venture or member beyond the plan. `added` means the new one is already in
+    this transaction (an accepted invitation), so the count may reach the limit but not pass it.
+
+    Takes a lock on the organisation for the rest of the caller's transaction, so two requests that
+    both see room for one more can't both add one: the second waits, then counts the first's."""
+    await conn.execute(text("SELECT pg_advisory_xact_lock(hashtextextended('kritvia-room:' || :o, 0))"),
+                       {"o": str(org_id)})
     u = await org_usage(conn, org_id, local)
     if u is None:
         return  # not a member: the caller's own authorisation check answers
     lim = u.plan.max_ventures if what == "venture" else u.plan.max_members
     used = u.ventures if what == "venture" else u.members
-    if lim is not None and used >= lim:
+    if lim is not None and (used > lim if added else used >= lim):
         noun = ("business" if lim == 1 else "businesses") if what == "venture" else ("person" if lim == 1 else "people")
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
                             f"{u.plan.label} includes {lim} {noun}; upgrade to add more")

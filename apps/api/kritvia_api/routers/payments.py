@@ -184,6 +184,12 @@ async def _page(token: str):
 @router.get("/public/pay/{token}", response_model=PayPageOut)
 async def pay_page(token: str, request: Request) -> PayPageOut:
     await limiter.hit(f"pay-page:{client_ip(request)}", per_minute=60)
+    return await _pay_page_out(token)
+
+
+async def _pay_page_out(token: str) -> PayPageOut:
+    """What the payment page shows. No rate limit of its own: each endpoint that answers with it counts
+    its own request once."""
     r = await _page(token)
     note = f"Invoice {r.number}" if r.number else f"{r.business} invoice"
     upi = None
@@ -247,7 +253,12 @@ async def pay_online(token: str, request: Request, svc: Svc) -> OnlineOut:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "online payment isn't working right now; pay by UPI or "
                                                          "ask the business") from None
     async with tenant_tx(r.run_as, "agent", "razorpay") as conn:
+        # The new link becomes the current one; every earlier link stays on the invoice, because it can
+        # still be paid at Razorpay and the webhook must find the invoice for it.
         await conn.execute(text("UPDATE invoices SET pay_link_id = :l, pay_link_url = :u, pay_link_paise = :p,"
+                                " pay_link_ids = (SELECT CASE WHEN cardinality(x) > 50 THEN x[cardinality(x) - 49:] ELSE x END"
+                                "   FROM (SELECT array_append(array_remove(pay_link_ids, CAST(:l AS text)),"
+                                "                             CAST(:l AS text)) AS x) t),"
                                 " updated_at = now() WHERE id = :i"),
                            {"l": str(link["id"])[:60], "u": link["short_url"], "p": r.balance_paise, "i": r.invoice_id})
     return OnlineOut(url=link["short_url"])
@@ -271,7 +282,7 @@ async def customer_paid(token: str, body: PaidClaimIn, request: Request) -> PayP
         await push.notify_venture(r.venture_id, title="A customer says they paid",
                                   body=f"{r.customer_name[:40]} · {rupees(r.balance_paise)} · confirm it on Invoices",
                                   url=f"/v/{r.venture_id}/invoices", tag=f"paid-{r.invoice_id}")
-    return await pay_page(token, request)
+    return await _pay_page_out(token)
 
 
 # ------------------------------------------------------------ Razorpay webhook --
@@ -304,7 +315,8 @@ async def razorpay_hook(connector_id: uuid.UUID, request: Request, svc: Svc) -> 
     async with tenant_tx(p.run_as, "agent", "razorpay") as conn:
         inv = (await conn.execute(text(
             "SELECT id, org_id, customer_name, amount_paise, paid_paise, status, number FROM invoices"
-            " WHERE venture_id = :v AND pay_link_id = :l FOR UPDATE"), {"v": p.venture_id, "l": ev["link_id"]})).first()
+            " WHERE venture_id = :v AND (pay_link_id = :l OR pay_link_ids @> ARRAY[CAST(:l AS text)]) FOR UPDATE"),
+            {"v": p.venture_id, "l": ev["link_id"]})).first()
         if inv is None:
             return HookOut(recorded=False)
         added = (await conn.execute(text(

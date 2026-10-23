@@ -153,12 +153,13 @@ async def test_razorpay_link_and_webhook_mark_paid(biz, client, rzp):
     url2 = (await client.post(f"/public/pay/{token}/online")).json()["url"]
     assert url2 == "https://rzp.io/i/T0002" and rzp.links[-1]["amount"] == 60000
 
-    # webhook: unsigned or wrongly signed is refused; an old link's payment isn't matched
+    # webhook: unsigned or wrongly signed is refused; a link this business never made isn't matched
+    # (a payment on one of the invoice's own earlier links is: test_robustness_fixes)
     raw, headers = signed(secret, paid("plink_T0002", "pay_A1", 60000))
     path = "/hooks/razorpay/" + out["connector_id"]
     assert (await client.post(path, content=raw, headers={"content-type": "application/json"})).status_code == 401
     assert (await client.post(path, content=raw, headers={**headers, "x-razorpay-signature": "0" * 64})).status_code == 401
-    other = signed(secret, paid("plink_T0001", "pay_A0", 100000))
+    other = signed(secret, paid("plink_UNKNOWN", "pay_A0", 100000))
     assert (await client.post(path, content=other[0], headers=other[1])).json() == {"recorded": False}
     r = await client.post(path, content=raw, headers=headers)
     assert r.json() == {"recorded": True}
@@ -191,6 +192,6 @@ async def test_reminders_carry_the_payment_link(biz, fake_llm):
     r = await mayank.post(f"/ventures/{v}/runs", json={"workflow": "collections", "input": {}})
     assert r.status_code == 201
     a = [x for x in (await mayank.get("/approvals/inbox")).json() if x["action"] == "gmail.send"
-         and "GS-200" in x["payload"]["body"]][-1]
+         and "GS-200" in (x["payload"] or {}).get("body", "")][-1]
     assert f"Pay online: {i['pay_url']}" in a["payload"]["body"]
     assert i["pay_url"] in fake_llm.chat_calls("You write short, warm payment reminders")[-1]["prompt"]

@@ -12,6 +12,7 @@ import json
 # Longest prefix wins. Webhooks carry small JSON; the public upload link carries a few scans.
 LIMITS: tuple[tuple[str, int], ...] = (
     ("/hooks/", 256 * 1024),
+    ("/hooks/tally/", 41 * 1024 * 1024),      # the Tally companion's Day Book export (endpoint caps at 40 MB)
     ("/public/", 1024 * 1024),
     ("/public/billing/", 256 * 1024),
     ("/public/support", 64 * 1024),
@@ -19,15 +20,20 @@ LIMITS: tuple[tuple[str, int], ...] = (
     ("/public/email-in", 26 * 1024 * 1024),   # one forwarded email; Cloudflare caps mail at 25 MB
     ("/auth/", 64 * 1024),
 )
-DEFAULT_LIMIT = 60 * 1024 * 1024
+# Everything else: ordinary JSON requests are small (the largest field is a 200,000-character note), so
+# they get 2 MB; only a file upload (a multipart form: documents, statements, CVs, recordings) gets more.
+DEFAULT_LIMIT = 2 * 1024 * 1024
+UPLOAD_LIMIT = 60 * 1024 * 1024
 
 
-def limit_for(path: str) -> int:
-    best = ("", DEFAULT_LIMIT)
+def limit_for(path: str, content_type: str = "") -> int:
+    best = ("", 0)
     for prefix, n in LIMITS:
         if path.startswith(prefix) and len(prefix) > len(best[0]):
             best = (prefix, n)
-    return best[1]
+    if best[0]:
+        return best[1]
+    return UPLOAD_LIMIT if content_type.lower().lstrip().startswith("multipart/") else DEFAULT_LIMIT
 
 
 class TooLarge(Exception):
@@ -41,7 +47,8 @@ class BodyLimitMiddleware:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http" or scope["method"] in ("GET", "HEAD", "OPTIONS"):
             return await self.app(scope, receive, send)
-        limit = limit_for(scope.get("path", ""))
+        ctype = next((v.decode("latin-1") for k, v in scope.get("headers", []) if k == b"content-type"), "")
+        limit = limit_for(scope.get("path", ""), ctype)
         for name, value in scope.get("headers", []):
             if name == b"content-length":
                 try:
