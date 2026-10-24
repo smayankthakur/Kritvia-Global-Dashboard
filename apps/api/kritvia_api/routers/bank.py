@@ -56,6 +56,7 @@ class StatementOut(BaseModel):
 
 
 class UploadOut(BaseModel):
+    recorded_by_autopilot: int = Field(default=0, description="sure invoice matches autopilot recorded (undo on each)")
     statement: StatementOut
     new_lines: int
     already_seen: int
@@ -183,9 +184,34 @@ async def import_statement(db, *, org: uuid.UUID, venture_id: uuid.UUID, data: b
              "a": ln.amount_paise, "b": ln.balance_paise, "f": ln.fingerprint})
         new += r.rowcount or 0
     sure, likely = await rematch(db, venture_id)
+    auto = await _autopilot_record(db, venture_id, uploaded_by) if sure else 0
     row = (await db.execute(text("SELECT * FROM bank_statements WHERE id = :s"), {"s": sid})).first()
-    return UploadOut(statement=_statement(row), new_lines=new, already_seen=len(st.lines) - new, sure=sure,
-                     likely=likely)
+    return UploadOut(statement=_statement(row), new_lines=new, already_seen=len(st.lines) - new, sure=sure - auto,
+                     likely=likely, recorded_by_autopilot=auto)
+
+
+async def _autopilot_record(db, venture_id: uuid.UUID, user_id: uuid.UUID | None) -> int:
+    """With autopilot on (Starter and up), money coming in that surely matches an invoice is recorded straight
+    away, as the person who uploaded the statement; each one can be undone on Money → Bank. Money going out
+    (bills) still waits for a person."""
+    from kritvia_api.services import autopilot
+    from kritvia_api.services.quota import plan_for_venture
+    if user_id is None or not await autopilot.is_on(db, venture_id):
+        return 0
+    if not (await plan_for_venture(db, venture_id)).autonomy:
+        return 0
+    ids = (await db.execute(text("SELECT id FROM bank_lines WHERE venture_id = :v AND state = 'suggested'"
+                                 " AND confidence = 'sure' AND match_kind = 'invoice' AND amount_paise > 0"
+                                 " ORDER BY line_date"), {"v": venture_id})).scalars().all()
+    n = 0
+    for lid in ids:
+        line = await _get_line(db, venture_id, lid)
+        try:
+            await record(db, venture_id, line, "invoice", line.match_id, user_id)
+            n += 1
+        except HTTPException:
+            continue
+    return n
 
 
 @router.post("/ventures/{venture_id}/bank/statements", response_model=UploadOut, status_code=201)

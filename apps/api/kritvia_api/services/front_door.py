@@ -40,7 +40,7 @@ HELP = ("Ask me anything about {business} in Hindi, Hinglish or English, by mess
         "• Priya ko proposal ka follow-up bhejo\n"
         "• Add a task for Neha to send the Acme quote by Friday\n\n"
         "Anything that sends, books or changes something comes back here as a draft for your yes.\n"
-        "Quick: /today, /week, /waiting, /skills, /run <skill name>, /help")
+        "Quick: /today, /week, /waiting, /skills, /run <skill name>, /pause, /resume, /help")
 
 Say = Callable[[str], Awaitable[None]]
 
@@ -66,7 +66,29 @@ def command(text_: str) -> str | None:
     if not w or not w[0].startswith("/"):
         return None
     c = w[0][1:].split("@", 1)[0].lower()
-    return c if c in ("today", "week", "waiting", "help", "start", "skills", "run") else "unknown"
+    return c if c in ("today", "week", "waiting", "help", "start", "skills", "run", "pause", "resume") else "unknown"
+
+
+_PAUSE = {"pause", "pause autopilot", "stop autopilot", "autopilot off", "autopilot band karo", "autopilot band"}
+_RESUME = {"resume", "resume autopilot", "start autopilot", "autopilot on", "autopilot chalu karo", "autopilot chalu"}
+
+
+def autopilot_word(text_: str) -> str | None:
+    """PAUSE / RESUME (the words the 8 pm summary offers), with or without a slash."""
+    t = " ".join(text_.strip().lower().lstrip("/").split()).rstrip(".!")
+    return "pause" if t in _PAUSE else "resume" if t in _RESUME else None
+
+
+async def set_autopilot(a: "Asker", on: bool) -> str:
+    """Admins switch the business's autopilot from their chat; others are told who can."""
+    from kritvia_api.services import autopilot
+    async with tenant_tx(a.user_id) as conn:
+        if not (await conn.execute(text("SELECT private.can_admin_venture(:v)"), {"v": a.venture_id})).scalar():
+            return "Only an admin of the business can switch autopilot on or off."
+        await autopilot.set_on(conn, a.venture_id, on, a.user_id)
+    return ("Autopilot is on: agents do routine work by themselves again. Money, complaints and orders still "
+            "come to you." if on else
+            "Autopilot is paused: every draft waits for your yes until you send RESUME.")
 
 
 async def numbers(venture_id: uuid.UUID, user_id: uuid.UUID, period: str) -> str:
@@ -150,6 +172,10 @@ async def handle(svc, a: Asker, *, text_: str, say: Say, resend_cards: Callable[
             return
         await say(f"Heard: {heard[:600]}")
         text_ = heard
+    word = autopilot_word(text_)
+    if word:
+        await say(await set_autopilot(a, word == "resume"))
+        return
     c = command(text_)
     if c in ("help", "start", "unknown"):
         await say(HELP.format(business=a.business or "your business"))

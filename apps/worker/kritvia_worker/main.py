@@ -231,6 +231,12 @@ async def cash_week(ctx: dict) -> int:
     return await cash.cash_week(ctx["services"])
 
 
+async def autopilot_evening(ctx: dict) -> int:
+    """20:00 IST: what autopilot did today, to each business that has it on (PAUSE / RESUME to change it)."""
+    from kritvia_api.services import autopilot
+    return await autopilot.evening(ctx["services"])
+
+
 async def dispatch_events(ctx: dict) -> int:
     """The business event stream: skills that start right after an event, and "tell me when" alerts."""
     from kritvia_api.services import events
@@ -365,6 +371,7 @@ DAILY = (
     ("bills_due", "bills_due", 9, 15, None, None),
     ("gstr1_ready", "gstr1_ready", 9, 25, None, 3),
     ("attendance_check", "attendance_check", 12, 5, None, None),
+    ("autopilot_evening", "autopilot_evening", 20, 0, None, None),
 )
 
 

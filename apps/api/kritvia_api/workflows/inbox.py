@@ -157,7 +157,7 @@ def _chat_address(inp: dict[str, Any], channel: str) -> str:
 
 @wf.step("classify", agent="inbox")
 async def classify(ctx: RunContext, state: dict) -> Goto | Finish:
-    inp, cfg = state["input"], await ctx.settings()
+    inp, cfg = state["input"], await _cfg(ctx)
     channel = inp.get("channel") or "email"
     contact = None
     address = _chat_address(inp, channel)
@@ -294,7 +294,7 @@ async def facts(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
     """The customer asked about their own records: the answer is written by code from those records
     (services/customer_facts.py), and sent by itself when the business switched on answer_facts."""
     from kritvia_api.services import customer_facts as cf
-    inp, c, cfg = state["input"], state["classification"], await ctx.settings()
+    inp, c, cfg = state["input"], state["classification"], await _cfg(ctx)
     channel = inp.get("channel") or "email"
     address = _chat_address(inp, channel)
     if channel in CHATS and address:
@@ -344,7 +344,8 @@ async def facts(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
                         summary=(f"{c['summary'][:200]} Written by code from your records (no AI wording)." + why)[:2000],
                         payload=payload, required_roles=("approver", "venture_admin"),
                         sensitive=bool(state.get("input_sensitive")),
-                        auto_option=("answer_facts" if on else "auto_reply") if auto else None),
+                        auto_option=("answer_facts" if on else "auto_reply") if auto else None,
+                        autopilot=bool(auto)),
         resume="send", on_reject="rejected",
         update={"summary": {**state.get("summary", {}), "fact_answer": q, "fact_to": key, "fact_auto": auto,
                             **({"auto_to": key} if by_reply else {})}},
@@ -370,7 +371,7 @@ async def retrieve(ctx: RunContext, state: dict) -> Goto:
 
 @wf.step("draft", agent="inbox")
 async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
-    inp, c, cfg = state["input"], state["classification"], await ctx.settings()
+    inp, c, cfg = state["input"], state["classification"], await _cfg(ctx)
     channel = inp.get("channel") or "email"
     chat, earlier = "", []
     address = _chat_address(inp, channel)
@@ -535,7 +536,22 @@ def _request(req: dict[str, Any]) -> ApprovalRequest:
     return ApprovalRequest(agent=req["agent"], action=req["action"], key=req["key"], title=req["title"][:300],
                            summary=req["summary"][:2000], payload=req["payload"],
                            required_roles=tuple(req["required_roles"]), sensitive=bool(req["sensitive"]),
-                           always_review=bool(req.get("always_review")), auto_option=req.get("auto_option"))
+                           always_review=bool(req.get("always_review")), auto_option=req.get("auto_option"),
+                           autopilot=bool(req.get("auto_option")))
+
+
+async def _cfg(ctx: RunContext) -> dict[str, Any]:
+    """The inbox assistant's settings; with the business's autopilot on, it replies by itself on every channel
+    and answers customers from their records (services/autopilot.py), with all the same guards."""
+    cfg = await ctx.settings()
+    from kritvia_api.services import autopilot
+    async with ctx.tx() as conn:
+        on = await autopilot.is_on(conn, ctx.venture_id)
+    if on:
+        cfg = {**cfg, "auto_reply": True, "answer_facts": True}
+        if not isinstance(cfg.get("auto_reply_channels"), list):
+            cfg.pop("auto_reply_channels", None)
+    return cfg
 
 
 def _key(ctx: RunContext, inp: dict[str, Any]) -> str:
@@ -582,7 +598,8 @@ async def hold(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
         ApprovalRequest(agent="inbox", action=action, key="hold_decision",
                         title=f"Replied by itself: holding line to {inp.get('from_name') or to} ({what})"[:300],
                         summary="A fixed line written by code (no AI wording), sent while a person takes over.",
-                        payload=payload, required_roles=("approver", "venture_admin"), auto_option="auto_reply"),
+                        payload=payload, required_roles=("approver", "venture_admin"), auto_option="auto_reply",
+                        autopilot=True),
         resume="hold_send", on_reject="hold_done",
         update={"summary": {**state.get("summary", {}), "auto_to": _key(ctx, inp)}},
         note=f"holding line ({kind})")

@@ -48,6 +48,19 @@ def post_days(raw: str) -> set[str]:
     return {d for d in got if d in DAYS} or {"mon", "wed", "fri"}
 
 
+def offers_changed(cfg: dict, body: str) -> bool:
+    """A post quoting an amount, a percentage or an offer word the owner's own offers don't contain: autopilot
+    leaves it for the owner (the prompt already forbids it; this is the code check)."""
+    from kritvia_api.services import auto_reply as ar
+    offers = str(cfg.get("offers") or "")
+    if ar.unknown_amounts(body, ar.known_values([offers])):
+        return True
+    if ar._DISCOUNT_AMOUNT.search(body) and not ar._DISCOUNT_AMOUNT.search(offers):
+        return True
+    return bool(ar._MONEY_WORDS.search(body)) or (
+        "discount_or_offer" in ar.handoff_reasons("", body) and "discount_or_offer" not in ar.handoff_reasons("", offers))
+
+
 @wf.step("route", agent="social")
 async def route(ctx: RunContext, state: dict) -> Goto | Finish:
     from kritvia_api.services import social
@@ -112,7 +125,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
                         title=f"Post on {where}: {d.topic.strip()[:80]}"[:140],
                         summary="Edit the text if you like; it goes out as you approve it.",
                         payload={"post_id": str(pid), "body": body, "channels": state["channels"]},
-                        expires_in_hours=36),
+                        expires_in_hours=36, autopilot=not offers_changed(cfg, body)),
         resume="posted", on_reject="dismissed", update={"post_id": str(pid)}, note="post drafted")
 
 

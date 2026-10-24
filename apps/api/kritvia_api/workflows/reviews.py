@@ -139,6 +139,13 @@ async def _draft_replies_profile(ctx: RunContext, s) -> tuple[int | None, int]:
     return drafted, low
 
 
+def _stars(v) -> int:
+    try:
+        return int(float(v))
+    except (TypeError, ValueError):
+        return 0
+
+
 @wf.step("reply", agent="reviews")
 async def reply(ctx: RunContext, state: dict) -> Interrupt | Finish:
     inp: dict[str, Any] = state["input"]
@@ -153,7 +160,9 @@ async def reply(ctx: RunContext, state: dict) -> Interrupt | Finish:
                         title=f"Reply on Google to {first}'s {inp.get('rating')}-star review"[:140],
                         summary=f"Their review: {str(inp.get('review') or '(no text)')[:300]}",
                         payload={"reply_id": str(r.id), "review_name": r.review_name, "comment": r.draft},
-                        expires_in_hours=96),
+                        expires_in_hours=96,
+                        # autopilot answers 4-5 star reviews; 1-3 stars always come to the owner
+                        autopilot=_stars(inp.get("rating")) >= 4),
         resume="replied", on_reject="reply_skipped", note="reply drafted")
 
 
@@ -277,7 +286,7 @@ async def ask(ctx: RunContext, state: dict) -> Interrupt | Finish:
                         title=f"Ask {inp.get('name') or 'a customer'} for a Google review"[:140],
                         summary=f"After a {'finished booking' if inp['source'] == 'booking' else 'paid invoice'}, by "
                                 f"{inp['channel']}.", payload=payload,
-                        required_roles=("approver", "venture_admin"), expires_in_hours=48),
+                        required_roles=("approver", "venture_admin"), expires_in_hours=48, autopilot=True),
         resume="sent", on_reject="skipped", update={"action": action, "request_id": str(rid)},
         note="review request drafted")
 

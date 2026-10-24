@@ -101,7 +101,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         ApprovalRequest(agent="booking_reminders", action=action, key="send_decision",
                         title=f"Booking reminder to {b.customer_name}"[:140],
                         summary=f"{b.service_name}, {when}, by {b.channel}."[:300], payload=payload,
-                        required_roles=("approver", "venture_admin"), expires_in_hours=20),
+                        required_roles=("approver", "venture_admin"), expires_in_hours=20, autopilot=True),
         resume="sent", on_reject="skipped", update={"action": action, "booking_id": str(b.id)},
         note=f"reminder drafted ({b.channel})")
 

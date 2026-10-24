@@ -230,7 +230,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
                          + f". Reminder {inv.reminders_sent + 1}."
                          + (" It mentions another amount; check it." if guessed else ""))[:300],
                 payload={"to": inv.customer_email, "subject": subject, "body": body, "thread_id": None},
-                required_roles=("approver", "venture_admin"), always_review=bool(guessed), expires_in_hours=48),
+                required_roles=("approver", "venture_admin"), always_review=bool(guessed), expires_in_hours=48,
+                # autopilot sends the first two friendly reminders; later ones ask (services/autopilot.py)
+                autopilot=inv.reminders_sent < 2),
             resume="sent", on_reject="skipped", update={**update, "action": "gmail.send"},
             note=f"email reminder drafted ({'overdue' if late > 0 else 'before due'})")
 
@@ -279,7 +281,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
             summary=f"{facts['amount']} for {number}. Reminder {inv.reminders_sent + 1}, with your template '{t.title}'."[:300],
             payload={"to": inv.customer_phone, "template": t.title, "template_id": str(t.id), "language": t.language,
                      "params": params, "body": body},
-            required_roles=("approver", "venture_admin"), expires_in_hours=48),
+            required_roles=("approver", "venture_admin"), expires_in_hours=48, autopilot=inv.reminders_sent < 2),
         resume="sent", on_reject="skipped", update={**update, "action": "whatsapp.template"},
         note="WhatsApp reminder drafted")
 

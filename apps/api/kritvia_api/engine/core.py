@@ -53,6 +53,10 @@ class ApprovalRequest:
     # never a flagged run or a draft the guardrails object to). Used for answers built entirely by code from
     # the business's own records, e.g. a customer's invoice balance (services/customer_facts.py).
     auto_option: str | None = None
+    # Routine work the business's autopilot may do by itself (services/autopilot.py): the workflow sets it
+    # only when its own checks passed (a 4-5 star review, the first two payment reminders...). It counts only
+    # when autopilot is on, the plan allows the agent's action, and the database guard agrees.
+    autopilot: bool = False
 
 
 @dataclass

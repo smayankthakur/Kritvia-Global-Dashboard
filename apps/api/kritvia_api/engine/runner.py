@@ -441,8 +441,14 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
         trusted = bool((await conn.execute(
             text("SELECT auto_run FROM agent_trust WHERE venture_id = :v AND agent = :a AND action = :t"),
             {"v": ctx.venture_id, "a": req.agent, "t": req.action})).scalar())
+        # Autopilot (services/autopilot.py): routine work the workflow marked, when the business switched it
+        # on and its plan allows the agent's action; the database guard has the last word (migration 0080).
+        by_autopilot = False
+        if req.autopilot and not trusted and not by_option:
+            from kritvia_api.services import autopilot
+            by_autopilot = await autopilot.allowed(conn, ctx.venture_id, req.agent, req.action)
         # A sensitive draft, or one marked for review, is never auto-approved, whatever its history.
-        auto = (trusted or by_option) and not req.sensitive and not req.always_review
+        auto = (trusted or by_option or by_autopilot) and not req.sensitive and not req.always_review
         if auto:
             # Guardrails: a run that read text trying to instruct the AI, or a draft carrying a secret
             # or injection text, waits for a person even though the agent earned autonomy.
@@ -452,7 +458,7 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
                 auto = False
                 await security_event("ai.autonomy_withheld", "warning", org_id=ctx.org_id, workflow=ctx.workflow,
                                      action=req.action, reasons=",".join(reasons) or "run flagged")
-        if auto and by_option and not trusted:
+        if auto and (by_option or by_autopilot) and not trusted:
             # Replying by itself has per-person and per-business limits. Checking them earlier in the step
             # isn't enough when several messages arrive at once (round 3, B4): check again here, one run
             # at a time per business, and reserve the slot on the run before the lock is released.
@@ -502,6 +508,9 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
             if by_option and not trusted:
                 await security_event("ai.auto_option_used", "info", org_id=ctx.org_id, workflow=ctx.workflow,
                                      action=req.action, option=req.auto_option)
+            elif by_autopilot:
+                await security_event("ai.autopilot_used", "info", org_id=ctx.org_id, workflow=ctx.workflow,
+                                     action=req.action, agent=req.agent)
         else:
             state[PENDING] = {"approval_id": str(approval_id), "key": req.key, "resume": it.resume,
                               "on_reject": it.on_reject}

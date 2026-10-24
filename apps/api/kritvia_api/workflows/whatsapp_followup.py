@@ -173,7 +173,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
                      f"{still.followups_sent + 1} of {maxf}, with your approved template '{t.title}'.")[:300],
             payload={"to": c.phone, "template": t.title, "template_id": str(t.id), "language": t.language,
                      "params": params, "body": body},
-            required_roles=("approver", "venture_admin"), expires_in_hours=24),
+            required_roles=("approver", "venture_admin"), expires_in_hours=24, autopilot=True),
         resume="sent", on_reject="skipped", update={"contact_id": str(cid)},
         note=f"follow-up drafted with '{t.title}'")
 

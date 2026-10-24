@@ -521,7 +521,7 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
                      "thread_id": lead.thread_id if step else None},
             # Sent without asking when the owner switched that on (it grants this agent's trust);
             # a price the offer doesn't contain always waits for a person.
-            always_review=bool(guessed), expires_in_hours=48),
+            always_review=bool(guessed), expires_in_hours=48, autopilot=True),
         resume="sent", on_reject="skipped",
         update={"lead_id": str(lead.id), "step": step, "channel": "email"},
         note=f"{'follow-up ' + str(step) if step else 'first email'} drafted")
