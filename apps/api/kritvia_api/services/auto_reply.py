@@ -31,10 +31,11 @@ CHANNELS = ("whatsapp", "telegram", "email")
 TONES = ("warm", "professional", "playful")
 PER_CONTACT_HOUR = 15
 PER_BUSINESS_DAY = 500
+PER_BUSINESS_DAY_EMAIL = 100   # well under Gmail's daily sending limit, so a flood can't block the owner's own mail
 PER_CONTACT_SEEN_HOUR = 30      # more messages than this from one sender in an hour: a machine, not a person
 ACK_QUIET_MINUTES = 10
 REASONS = ("price_not_on_record", "discount_or_offer", "refund_or_payment_dispute", "commitment_or_deal",
-           "complaint", "unsure", "order_booking_payment", "internal_source", "claims_human")
+           "complaint", "unsure", "order_booking_payment", "internal_source", "claims_human", "legal")
 Reason = Literal["price_not_on_record", "discount_or_offer", "refund_or_payment_dispute", "commitment_or_deal",
                  "complaint", "unsure"]
 REASON_WORDS = {
@@ -48,9 +49,10 @@ REASON_WORDS = {
     "order_booking_payment": "an order, booking or payment",
     "internal_source": "your own documents or notes",
     "claims_human": "a reply that sounds like a person wrote it",
+    "legal": "a legal matter (court, lawyer, consumer forum, police)",
 }
 # Reasons the customer hears "sorry, the team will get back to you" for, and "got it, confirming" for.
-SORRY_REASONS = ("complaint", "refund_or_payment_dispute")
+SORRY_REASONS = ("complaint", "refund_or_payment_dispute", "legal")
 CONFIRM_REASONS = ("order_booking_payment", "commitment_or_deal")
 
 
@@ -155,8 +157,25 @@ def uses_emoji(s: str | None) -> bool:
 def holding(kind: str, lang: str, *, emoji: bool, business: str | None = None) -> str:
     """The fixed line the customer gets while the owner looks at it (written by code, never by AI)."""
     lines = _HOLD.get(kind, _HOLD["check"])
-    line = lines.get(lang, lines["en"]).replace("{business}", (business or "our").strip()[:80])
+    line = lines.get(lang, lines["en"])
+    name = (business or "").strip()[:80]
+    if name:
+        line = line.replace("{business}", name)
+    else:   # no business name yet: "the team", never "our's team"
+        line = (line.replace("{business}'s team", "the team").replace("{business} की टीम", "टीम")
+                .replace("{business} ki team", "team").replace("{business}", "the team"))
     return line + (" 🙏" if emoji else "")
+
+
+_SIGNATURE = {"en": "— {business}'s AI assistant", "hi": "— {business} का AI सहायक",
+              "hinglish": "— {business} ka AI assistant"}
+
+
+def signature(business: str | None, lang: str) -> str:
+    """The line code adds to the first reply a person gets by itself (in a day): it says plainly that an AI
+    wrote it, whatever the AI's own wording says (round 3, C6)."""
+    name = (business or "").strip()[:80] or "the business"
+    return _SIGNATURE.get(lang, _SIGNATURE["en"]).replace("{business}", name)
 
 
 # A reply that says (or strongly suggests) a person wrote it. The assistant may say it will get a person;
@@ -172,9 +191,37 @@ _HUMAN = re.compile(
     re.I)
 
 
-def claims_human(body: str | None) -> bool:
-    """True when the reply claims to be a person: it then waits for the owner instead of going out."""
-    return bool(_HUMAN.search(body or ""))
+# "I'm definitely a real human", "you're talking to a real person", "not a bot, I promise"
+_HUMAN_MORE = re.compile(
+    r"\bi\s*(?:'|’)?\s*a?m\s+(?:\w+\s+){0,3}(?:human|human\s+being|real\s+person|actual\s+person)\b"
+    r"|\b(?:talking|speaking|chatting)\s+(?:to|with)\s+(?:a\s+)?(?:real|actual|live)\s+(?:human|person)\b"
+    r"|(?:^|[\s,.!])not\s+(?:a\s+|an\s+)?(?:bot|robot|chatbot|machine|ai)\b"
+    r"|\bmy\s+name\s+is\s+\w+"
+    r"|\bmera\s+naam\s+\w+\s+(?:hai|h)\b|मेरा\s+नाम",
+    re.I)
+# A personal introduction: "I'm Priya from the front desk", "this is Rahul here", "main Priya hoon". The name
+# is matched case-sensitively (a capital letter), so "I'm happy to help" isn't one.
+_INTRO = re.compile(
+    r"\b(?:[Ii]\s*(?:'|’)?\s*[Aa]?m|[Tt]his\s+is|[Ii]t'?s|[Mm]yself)\s+([A-Z][a-z]{2,})\b"
+    r"(?=\s*(?:,|!|\.|here|from|at|speaking|and|\(|$))"
+    r"|\b[Mm]ain\s+([A-Z][a-z]{2,})\s+(?:hoon|hu|hun)\b")
+_NOT_NAMES = {"Here", "Sorry", "Glad", "Happy", "Sure", "Just", "Not", "Afraid", "Excited", "Back", "Available",
+              "Your", "The", "From", "Great", "Good", "Fine", "Okay", "Done", "Really", "Very", "Also", "Still",
+              "Aapka", "Aapki", "Haan", "Bilkul"}
+
+
+def claims_human(body: str | None, business: str | None = None) -> bool:
+    """True when the reply claims to be a person, or introduces itself by a person's name: it then waits for
+    the owner instead of going out."""
+    b = body or ""
+    if _HUMAN.search(b) or _HUMAN_MORE.search(b):
+        return True
+    biz = {w.lower() for w in re.findall(r"[A-Za-z]+", business or "")}
+    for m in _INTRO.finditer(b):
+        name = m.group(1) or m.group(2) or ""
+        if name and name not in _NOT_NAMES and name.lower() not in biz:
+            return True
+    return False
 
 
 # ------------------------------------------------------------------------------------ senders --
@@ -226,13 +273,13 @@ def amounts_in(s: str) -> list[tuple[str, int]]:
 
 
 def known_values(texts: Iterable[str], paise: Iterable[int] = ()) -> tuple[set[int], set[float]]:
-    """Every amount (any number, read as rupees) and percentage that appears in what the agent was given."""
+    """The amounts the agent may quote: the records' own (rate card, booking prices, the customer's invoices)
+    and amounts the given texts present as money (with ₹ or a price word). A bare number in a text, such as a
+    shop number, a date or a time, is not a price (round 3, C3)."""
     money, pct = set(int(p) for p in paise if p is not None), set()
     for t in texts:
-        for m in _ANY_NUM.finditer(t or ""):
-            p = _paise(m.group(1), m.group(2))
-            if p is not None:
-                money.add(p)
+        for _, p in amounts_in(t or "") + price_amounts_in(t or ""):
+            money.add(p)
         for m in _PERCENT.finditer(t or ""):
             pct.add(float(m.group(1)))
     return money, pct
@@ -250,6 +297,15 @@ _PRICE_AFTER = re.compile(rf"{_NUM}\s*(?:/-\s*)?(?:per|/)\s*"          # "500 pe
 _PRICE_AFTER_WORD = re.compile(rf"{_NUM}\s*(?:/-)?\s*\b{_PRICE_WORD}\b", re.I)
 
 
+# "I can do it for 1500", "only 999", "sirf 800 mein": a bare number of 50 or more after for/at/only/just,
+# unless a time, a count of people or days follows ("at 5 pm", "for 2 people", "in 3 days").
+_PRICE_FOR = re.compile(
+    rf"\b(?:for|at|only|just|sirf|bas|matra|keval)\s+{_NUM}(?!\s*(?:%|am\b|pm\b|baje|o'?clock|:|people|persons?|"
+    r"guests?|log\b|logon|days?|din\b|hours?|hrs?|ghante|minutes?|mins?|weeks?|months?|years?|saal|pieces?|pcs|"
+    r"plates?|kg|kilo|items?|pages?|th\b|st\b|nd\b|rd\b))", re.I)
+_PRICE_MEIN = re.compile(rf"{_NUM}\s+(?:mein|me|में)\b", re.I)
+
+
 def price_amounts_in(s: str) -> list[tuple[str, int]]:
     """Bare numbers that the text presents as a price (no ₹ sign), as (as written, paise)."""
     out = []
@@ -258,14 +314,89 @@ def price_amounts_in(s: str) -> list[tuple[str, int]]:
             p = _paise(m.group(1), m.group(2))
             if p is not None:
                 out.append((m.group(0).strip(), p))
+    for rx in (_PRICE_FOR, _PRICE_MEIN):
+        for m in rx.finditer(s or ""):
+            p = _paise(m.group(1), m.group(2))
+            if p is not None and p >= 5_000:      # 50 rupees or more; "for 2", "at 9" aren't prices
+                out.append((m.group(0).strip(), p))
+    return out
+
+
+# Any amount next to off/discount/cashback is a discount, whatever the number ("₹300 off" where ₹300 is a
+# listed price is still a discount).
+_DISCOUNT_AMOUNT = re.compile(
+    rf"(?:{_CUR_PRE}\s*)?\d[\d,]*(?:\.\d+)?\s*(?:%|percent|rs\.?|rupees?|/-)?\s*"
+    r"(?:off\b|discount|cashback|kam\b|chhoot|chhut|छूट|की\s+छूट|ki\s+chhoot)"
+    rf"|(?:discount|cashback|chhoot|छूट)\s+(?:of\s+)?(?:{_CUR_PRE}\s*)?\d", re.I)
+
+# Amounts written in words: "five hundred rupees", "paanch sau rupaye", "do hazaar", "पाँच सौ रुपये".
+_NUM_WORDS = (r"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|"
+              r"fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lakhs|lac|crore|"
+              r"ek|do|teen|char|chaar|paanch|panch|chhe|chhah|saat|aath|nau|das|bees|tees|chalis|pachaas|pachas|"
+              r"sau|hazaar|hazar|hajar|dedh|dhai|dhaai|sava|saadhe|"
+              r"एक|दो|तीन|चार|पाँच|पांच|छह|सात|आठ|नौ|दस|बीस|तीस|चालीस|पचास|सौ|हज़ार|हजार|लाख|करोड़|डेढ़|ढाई)")
+_MONEY_WORDS = re.compile(
+    rf"(?:{_CUR_PRE}\s*)?\b{_NUM_WORDS}(?:[\s-]+(?:and\s+)?{_NUM_WORDS})*\s*(?:{_CUR_POST}|rupees?|rupaye|rupaiye)",
+    re.I)
+
+
+def money_words_in(s: str | None) -> list[str]:
+    """Amounts written in words, and amounts next to off/discount/cashback, in a draft."""
+    out = [m.group(0).strip() for m in _MONEY_WORDS.finditer(s or "")]
+    out += [m.group(0).strip() for m in _DISCOUNT_AMOUNT.finditer(s or "")]
+    return out
+
+
+# What the owner always sees first, decided by words in the customer's message or the draft (code, not the
+# model, so a message can't talk its way past it). English, Hinglish and Hindi.
+_CUSTOMER_WORDS: dict[str, re.Pattern[str]] = {
+    "refund_or_payment_dispute": re.compile(
+        r"\brefunds?\b|\brefunded\b|money\s+back|return\s+(?:my|the)\s+(?:money|payment|amount)|charge\s*back|"
+        r"paise?\s+(?:wapas|vapas|wapis|vapis)|paisa\s+(?:wapas|vapas)|(?:wapas|vapas)\s+(?:karo|kijiye|chahiye|do)|"
+        r"double\s+(?:charged|payment|deducted)|deducted\s+twice|पैसे\s+वापस|रिफंड|पैसा\s+वापस", re.I),
+    "discount_or_offer": re.compile(
+        r"\bdiscount|\bcoupon|\bpromo\s*code|\bcashback|\bkam\s+(?:karo|kar\s+do|kijiye|kariye)|\bchhoot|"
+        r"\bbargain|best\s+price|last\s+price|\bछूट|डिस्काउंट|कम\s+कर", re.I),
+    "complaint": re.compile(
+        r"\bcomplain|\bterrible|\bworst\b|\bpathetic|\bhorrible|\bfraud|\bcheat|\bscam\b|\bdisgust|"
+        r"\bunacceptable|\bdisappointed|\bangry|\bbekaar|\bbekar\b|\bghatiya|\bdhokha|\bshikayat|"
+        r"शिकायत|धोखा|घटिया|बेकार", re.I),
+    "legal": re.compile(
+        r"\bcourt\b|\blegal\s+(?:action|notice)|\blawyer|\badvocate|consumer\s+(?:forum|court|helpline)|"
+        r"\bpolice\b|\bfir\b|\bsue\b|\bvakeel|\bwakil|वकील|अदालत|कोर्ट|पुलिस|उपभोक्ता", re.I),
+}
+_DRAFT_WORDS: dict[str, re.Pattern[str]] = {
+    "refund_or_payment_dispute": re.compile(r"\brefund|money\s+back|paise?\s+(?:wapas|vapas)|पैसे\s+वापस|रिफंड", re.I),
+    "discount_or_offer": re.compile(
+        r"\bdiscount|\bcoupon|\bcashback|\bhalf\s+(?:price|rate|off)|\bfree\s+(?:of\s+(?:cost|charge)|delivery|"
+        r"shipping|service|session|trial\s+session|consultation|gift|sample)|\bfor\s+free\b|\bfree\s+mein|"
+        r"\bmuft|\bwaive|\bcomplimentary|\bspecial\s+(?:price|rate|offer|deal)|\bchhoot|मुफ़्त|मुफ्त|छूट|डिस्काउंट",
+        re.I),
+    "commitment_or_deal": re.compile(
+        r"\bguarantee|\bwarranty|\bwe\s+promise|\bi\s+promise|\bpromise\s+you|\bpakka\s+(?:se|guarantee)|"
+        r"\b100\s*%\s*(?:sure|guaranteed|guarantee)|गारंटी|वादा", re.I),
+}
+
+
+def handoff_reasons(customer: str | None, draft: str | None) -> list[str]:
+    """Reasons, from the words used, that this reply must wait for the owner (empty: none found)."""
+    out = [k for k, rx in _CUSTOMER_WORDS.items() if rx.search(customer or "")]
+    out += [k for k, rx in _DRAFT_WORDS.items() if rx.search(draft or "") and k not in out]
+    if money_words_in(draft) and "price_not_on_record" not in out:
+        out.append("price_not_on_record")
     return out
 
 
 def unknown_amounts(body: str, known: tuple[set[int], set[float]]) -> list[str]:
     """Amounts and percentages in a draft that aren't in the business's records: a money promise for the owner."""
     money, pct = known
-    out = [w for w, p in amounts_in(body) if p not in money]
-    out += [w for w, p in price_amounts_in(body) if p not in money and w not in out]
+    found = [(w, p) for w, p in amounts_in(body) if p not in money]
+    out = [w for w, _ in found]
+    seen = {p for _, p in found}
+    for w, p in price_amounts_in(body):
+        if p not in money and p not in seen and w not in out:
+            out.append(w)
+            seen.add(p)
     out += [m.group(0).strip() for m in _PERCENT.finditer(body or "") if float(m.group(1)) not in pct]
     return out
 
@@ -298,15 +429,18 @@ async def recent(conn, venture_id: uuid.UUID, key: str, minutes: int) -> int:
     return int((await conn.execute(text(
         "SELECT count(*) FROM workflow_runs WHERE venture_id = :v AND workflow = 'inbox_assistant'"
         " AND created_at > now() - make_interval(mins => :m) AND summary->>'auto_to' = :k"
-        " AND summary->>'auto_sent' = 'true'"), {"v": venture_id, "k": key, "m": minutes})).scalar() or 0)
+        " AND (summary->>'auto_sent' = 'true' OR summary->>'auto_pending' = 'true')"),
+        {"v": venture_id, "k": key, "m": minutes})).scalar() or 0)
 
 
-async def today(conn, venture_id: uuid.UUID) -> int:
-    """Replies this business sent by itself in the last 24 hours."""
+async def today(conn, venture_id: uuid.UUID, channel: str | None = None) -> int:
+    """Replies this business sent (or is sending) by itself in the last 24 hours; on one channel if given."""
     return int((await conn.execute(text(
         "SELECT count(*) FROM workflow_runs WHERE venture_id = :v AND workflow = 'inbox_assistant'"
-        " AND created_at > now() - interval '24 hours' AND summary->>'auto_sent' = 'true'"),
-        {"v": venture_id})).scalar() or 0)
+        " AND created_at > now() - interval '24 hours'"
+        " AND (summary->>'auto_sent' = 'true' OR summary->>'auto_pending' = 'true')"
+        " AND (CAST(:ch AS text) IS NULL OR summary->>'auto_channel' = :ch)"),
+        {"v": venture_id, "ch": channel})).scalar() or 0)
 
 
 async def seen(conn, venture_id: uuid.UUID, key: str, minutes: int) -> int:
@@ -317,9 +451,11 @@ async def seen(conn, venture_id: uuid.UUID, key: str, minutes: int) -> int:
         {"v": venture_id, "k": key, "m": minutes})).scalar() or 0)
 
 
-async def room(conn, venture_id: uuid.UUID, key: str) -> bool:
-    """Under every cap: 15 replies a person an hour, 500 a business a day, and a sender who wrote fewer than
-    30 messages this hour (more is a machine talking to us: a loop no reply should feed)."""
+async def room(conn, venture_id: uuid.UUID, key: str, *, channel: str | None = None) -> bool:
+    """Under every cap: 15 replies a person an hour, 500 a business a day (100 of them by email), and a
+    sender who wrote fewer than 30 messages this hour (more is a machine talking to us: a loop no reply
+    should feed). Final say under a lock: engine/runner._reserve_auto_slot."""
     return (await recent(conn, venture_id, key, 60) < PER_CONTACT_HOUR
             and await seen(conn, venture_id, key, 60) < PER_CONTACT_SEEN_HOUR
-            and await today(conn, venture_id) < PER_BUSINESS_DAY)
+            and await today(conn, venture_id) < PER_BUSINESS_DAY
+            and (channel != "email" or await today(conn, venture_id, "email") < PER_BUSINESS_DAY_EMAIL))

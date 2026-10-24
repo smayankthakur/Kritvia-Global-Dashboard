@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
   poweredByHeader: false,
   reactStrictMode: true,
+  // The app uses no next/image, so the image optimiser (/_next/image) is switched off: one less
+  // public endpoint, and the one Next.js security advisories keep landing in.
+  images: { unoptimized: true },
   async headers() {
     return [
       { source: "/:path*", headers: baseHeaders },

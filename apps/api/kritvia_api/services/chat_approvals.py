@@ -118,7 +118,9 @@ def describe(action: str | None, payload: dict[str, Any]) -> str:
         return (f"Set up a routine: {_val(payload.get('name'))}\nWhen: {_val(payload.get('when'))}\n"
                 f"Steps: {_val(payload.get('instructions'), 300)}")
     if action == "web.browse_approved":
-        return f"Look up on the web\nWhere: {payload.get('url') or 'a web search'}\nWhat: {_val(payload.get('task'), 300)}"
+        # the whole task: what is approved is exactly what the browser is told (round 3, C8)
+        return (f"Look up on one website (it can't open any other)\nWhere: {payload.get('url') or 'no address given: it will not run'}"
+                f"\nWhat: {_val(payload.get('task'), 1500)}")
     if action == "voice.call":
         return f"Phone call to {_val(payload.get('phone'))}\nAbout: {_val(payload.get('purpose'), 200)}"
     return "\n".join(f"{k}: {_val(v)}" for k, v in list(payload.items())[:8])

@@ -437,10 +437,14 @@ def build_tools() -> ToolRegistry:
               "has read outside text, so the look-up can't carry the business's data out unseen)")
     async def web_browse_approved(ctx: RunContext, p: dict[str, Any], ok: ApprovedAction | None) -> dict[str, Any]:
         assert ok is not None
+        from kritvia_api.services.browser_agent import _host
         from kritvia_api.services.run_trust import clean_url
-        return await _web_browse(ctx, {**p, "url": clean_url(p.get("url"))})
+        url = clean_url(p.get("url"))
+        if not url or not _host(url):
+            return {"ok": False, "why": "an approved look-up needs the website's address"}
+        return await _web_browse(ctx, {**p, "url": url}, stay_on=_host(url))
 
-    async def _web_browse(ctx: RunContext, p: dict[str, Any]) -> dict[str, Any]:
+    async def _web_browse(ctx: RunContext, p: dict[str, Any], stay_on: str | None = None) -> dict[str, Any]:
         from kritvia_api.services import browser_agent as ba
         from kritvia_api.services.quota import PlanRestricted, require_agent
         task = str(p.get("task") or "").strip()[:1500]
@@ -459,7 +463,7 @@ def build_tools() -> ToolRegistry:
             return {"ok": False, "why": "the browser agent is switched off for this business"}
         try:
             out = await ba.browse(ctx, ctx.services.browser, task, (str(p.get("url") or "").strip() or None),
-                                  max_actions=8, may_submit=False)
+                                  max_actions=8, may_submit=False, stay_on=stay_on)
         except ba.BrowserError as exc:
             return {"ok": False, "why": str(exc)}
         return {"ok": True, "answer": out.answer, "pages": out.sources}

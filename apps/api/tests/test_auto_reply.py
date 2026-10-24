@@ -126,7 +126,9 @@ async def test_on_replies_by_itself_in_a_warm_honest_voice(studio, client, fake_
     assert run["status"] == "completed" and run["outcome"] == "replied", run
     assert [(a["step"], a["status"]) for a in aps] == [("draft", "auto_approved")]
     assert aps[0]["title"].startswith("Replied by itself:")
-    assert sent_to(meta, "919822200002") == ["Main Sharma Studio ki AI assistant hoon 🙂 Website design ₹45,000 se shuru hota hai."]
+    # the first reply a person gets by itself in a day carries a code-written line saying an AI wrote it
+    assert sent_to(meta, "919822200002") == ["Main Sharma Studio ki AI assistant hoon 🙂 Website design ₹45,000 se shuru hota hai."
+                                             "\n\n— Sharma Studio ka AI assistant"]
     prompt = fake_llm.chat_calls("You answer the business's")[-1]["prompt"]
     assert "HONESTY: never say or suggest you are a human" in prompt and "Sharma Studio's AI assistant" in prompt
     assert "Mirror the customer's language" in prompt and "Website design: ₹45,000 per project" in prompt
@@ -140,7 +142,8 @@ async def test_a_price_not_on_record_gets_a_holding_line_and_waits(studio, clien
                              body="Haan ji, ₹40,000 mein kar denge!")
     assert run["status"] == "waiting"
     assert [(a["step"], a["status"]) for a in aps] == [("hold", "auto_approved"), ("owner_draft", "pending")]
-    assert aps[1]["title"].startswith("Needs you (a price that isn't in your records)")
+    # "kam karo" in the customer's message is a discount request too (code word list, round 3)
+    assert aps[1]["title"].startswith("Needs you (a price that isn't in your records, a discount or offer)")
     assert sent_to(meta, "919822200003") == [HOLD_CHECK]          # never the ₹40,000
 
 
@@ -248,7 +251,7 @@ async def test_thanks_gets_a_reply_but_not_a_loop(studio, client, fake_llm, meta
     assert "one short, friendly line" in fake_llm.chat_calls("You answer the business's")[-1]["prompt"]
     run, aps = await wa_turn(studio, client, fake_llm, meta, phone, "ok thanks", needs_reply=False, body="Welcome!")
     assert run["outcome"] == "filed" and aps == []
-    assert sent_to(meta, phone) == ["Hello! 😊"]
+    assert sent_to(meta, phone) == ["Hello! 😊\n\n— Sharma Studio ka AI assistant"]
 
 
 async def test_per_person_and_per_business_limits(studio, client, fake_llm, meta, monkeypatch):

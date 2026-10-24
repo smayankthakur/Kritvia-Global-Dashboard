@@ -72,7 +72,6 @@ class GmailMessage:
     automated: bool = False       # a machine sent it (no-reply, newsletter, auto-reply): never answered by itself
 
 
-_AUTH_PART = re.compile(r"\b(dmarc|dkim)=(\w+)([^;]*)", re.I)
 
 
 def _authserv(header: str) -> str:
@@ -102,18 +101,44 @@ def sender_authenticated(auth_results: list[str], from_email: str = "", authserv
     header = next((v for v in auth_results if _authserv(v) == authserv), None)
     if header is None or not from_domain:
         return False
-    for kind, result, rest in _AUTH_PART.findall(header):
-        if result.lower() != "pass":
+    for kind, result, props in auth_clauses(header):
+        if result != "pass":
             continue
-        if kind.lower() == "dmarc":
-            m = re.search(r"header\.from=([^\s;]+)", rest, re.I)
-            if m and _aligned(m.group(1), from_domain):
+        if kind == "dmarc":
+            if _aligned(props.get("header.from", ""), from_domain):
                 return True
-        else:
-            m = re.search(r"header\.(?:d|i)=@?([^\s;]+)", rest, re.I)
-            if m and _aligned(m.group(1).rpartition("@")[2], from_domain):
+        elif kind == "dkim":
+            signer = props.get("header.d") or props.get("header.i", "").rpartition("@")[2]
+            if _aligned(signer, from_domain):
                 return True
     return False
+
+
+_COMMENT = re.compile(r"\([^()]*\)")
+_QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"')
+_RESULT = re.compile(r"^\s*([a-z][a-z0-9-]*)\s*=\s*([a-z]+)\b(.*)$", re.I | re.S)
+_PROP = re.compile(r"([a-z][a-z0-9-]*\.[a-z][a-z0-9.-]*)\s*=\s*([^\s;]+)", re.I)
+
+
+def auth_clauses(header: str) -> list[tuple[str, str, dict[str, str]]]:
+    """An Authentication-Results header (RFC 8601) as (method, result, properties) per clause. Comments
+    "( … )" and quoted strings are removed first: the sender chooses what goes in them (the envelope address
+    Gmail repeats in the SPF comment), so text such as "dkim=pass header.d=bank.in" inside them must never
+    count (round 3, C4). Only each clause's leading method=result is read."""
+    h = _QUOTED.sub(" ", header or "")
+    for _ in range(5):                       # nested comments, innermost first
+        h2 = _COMMENT.sub(" ", h)
+        if h2 == h:
+            break
+        h = h2
+    out = []
+    for clause in h.split(";")[1:]:          # the first part names the server that wrote the header
+        m = _RESULT.match(clause)
+        if not m:
+            continue
+        props = {k.lower(): v.strip().lower() for k, v in _PROP.findall(m.group(3))}
+        out.append((m.group(1).lower(), m.group(2).lower(), props))
+    return out
 
 
 class GoogleClient:

@@ -25,6 +25,7 @@ from datetime import timedelta
 from typing import Any
 
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.db.session import tenant_tx
 from kritvia_api.engine.context import RunContext, Services
@@ -397,6 +398,35 @@ async def _log_step(ctx: RunContext, step: str, status: str, started: float, *,
              "d": int((time.perf_counter() - started) * 1000)})
 
 
+AUTO_REPLY_OPTIONS = ("auto_reply", "answer_facts")
+
+
+async def _reserve_auto_slot(conn, ctx: RunContext, state: dict, req) -> bool:
+    """Under a per-business lock, check the automatic-reply limits once more and mark this run as one that
+    replies by itself, so a run checking at the same moment counts it. False: the draft waits for a yes."""
+    if req.auto_option not in AUTO_REPLY_OPTIONS:
+        return True
+    from kritvia_api.services import auto_reply as ar
+    from kritvia_api.services import customer_facts as cf
+    await conn.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": f"auto-reply:{ctx.venture_id}"})
+    summary = state.setdefault("summary", {})
+    channel = "email" if req.action == "gmail.send" else req.action.split(".", 1)[0]
+    if req.auto_option == "answer_facts":
+        key = summary.get("fact_to") or ""
+        if await cf.recent_auto_answers(conn, ctx.venture_id, key) >= cf.AUTO_PER_HOUR:
+            return False
+        mark = {"fact_auto": True}
+    else:
+        key = summary.get("auto_to") or ""
+        if not await ar.room(conn, ctx.venture_id, key, channel=channel):
+            return False
+        mark = {"auto_pending": True, "auto_channel": channel}
+    summary.update(mark)
+    await conn.execute(text("UPDATE workflow_runs SET summary = summary || CAST(:j AS jsonb) WHERE id = :r"),
+                       {"j": json.dumps(mark), "r": ctx.run_id})
+    return True
+
+
 async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrupt, *,
                            step_count: int) -> str | None:
     """Insert the approval (or reuse the one this step already made) and, unless it is auto-approved
@@ -422,6 +452,11 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
                 auto = False
                 await security_event("ai.autonomy_withheld", "warning", org_id=ctx.org_id, workflow=ctx.workflow,
                                      action=req.action, reasons=",".join(reasons) or "run flagged")
+        if auto and by_option and not trusted:
+            # Replying by itself has per-person and per-business limits. Checking them earlier in the step
+            # isn't enough when several messages arrive at once (round 3, B4): check again here, one run
+            # at a time per business, and reserve the slot on the run before the lock is released.
+            auto = await _reserve_auto_slot(conn, ctx, state, req)
         existing = None
         if not auto:
             # This step already made a card that is still waiting (it ran again after a restart): use it.
@@ -434,17 +469,33 @@ async def _create_approval(ctx: RunContext, state: dict, step: str, it: Interrup
         else:
             payload_enc = await ctx.crypto(conn).encrypt(ctx.venture_id, PAYLOAD_PURPOSE,
                                                          json.dumps(req.payload, default=str))
-            approval_id = (await conn.execute(
-                text("INSERT INTO approvals (org_id, venture_id, run_id, step, agent, action, capability, title,"
-                     " summary, payload_enc, required_roles, sensitive, status, expires_at)"
-                     " VALUES (:o, :v, :r, :s, :a, :t, :c, :ti, :su, :p, :rr, :se, :st,"
-                     " CASE WHEN CAST(:exp AS int) IS NULL THEN NULL"
-                     "      ELSE now() + make_interval(hours => CAST(:exp AS int)) END)"
-                     " RETURNING id"),
-                {"o": ctx.org_id, "v": ctx.venture_id, "r": ctx.run_id, "s": step, "a": req.agent,
-                 "t": req.action, "c": cap.value, "ti": req.title[:300], "su": req.summary[:2000],
-                 "p": payload_enc, "rr": list(req.required_roles), "se": req.sensitive,
-                 "st": "auto_approved" if auto else "pending", "exp": req.expires_in_hours})).scalar_one()
+            sql = text("INSERT INTO approvals (org_id, venture_id, run_id, step, agent, action, capability, title,"
+                       " summary, payload_enc, required_roles, sensitive, status, expires_at)"
+                       " VALUES (:o, :v, :r, :s, :a, :t, :c, :ti, :su, :p, :rr, :se, :st,"
+                       " CASE WHEN CAST(:exp AS int) IS NULL THEN NULL"
+                       "      ELSE now() + make_interval(hours => CAST(:exp AS int)) END)"
+                       " RETURNING id")
+            params = {"o": ctx.org_id, "v": ctx.venture_id, "r": ctx.run_id, "s": step, "a": req.agent,
+                      "t": req.action, "c": cap.value, "ti": req.title[:300], "su": req.summary[:2000],
+                      "p": payload_enc, "rr": list(req.required_roles), "se": req.sensitive,
+                      "st": "auto_approved" if auto else "pending", "exp": req.expires_in_hours}
+            approval_id = None
+            if auto:
+                # The database has the last word on what may skip a person (private.guard_approval_insert).
+                # When it refuses (the option was switched off mid-run, a malformed setting), the draft
+                # becomes an ordinary card that waits for a yes instead of failing the run (round 3, B10).
+                try:
+                    async with conn.begin_nested():
+                        approval_id = (await conn.execute(sql, params)).scalar_one()
+                except DBAPIError as exc:
+                    if getattr(getattr(exc, "orig", None), "sqlstate", None) != "42501" and "42501" not in str(exc):
+                        raise
+                    auto = False
+                    params["st"] = "pending"
+                    await security_event("ai.autonomy_withheld", "warning", org_id=ctx.org_id, workflow=ctx.workflow,
+                                         action=req.action, reasons="refused by the database guard")
+            if approval_id is None:
+                approval_id = (await conn.execute(sql, params)).scalar_one()
         if auto:
             state[req.key] = {"status": "auto_approved", "approval_id": str(approval_id), "payload": req.payload,
                               "comment": None}

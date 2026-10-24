@@ -332,7 +332,7 @@ async def facts(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
         auto = recent < cf.AUTO_PER_HOUR
     elif by_reply:
         async with ctx.tx() as conn:
-            auto = await ar.room(conn, ctx.venture_id, key)
+            auto = await ar.room(conn, ctx.venture_id, key, channel=ar.channel_of(channel))
     else:
         auto = False
     who = inp.get("from_name") or found.name or to
@@ -478,7 +478,8 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
         key = _key(ctx, inp)
         from kritvia_api.services import customer_facts as cf
         async with ctx.tx() as conn:
-            under = await ar.room(conn, ctx.venture_id, key)
+            under = await ar.room(conn, ctx.venture_id, key, channel=ar.channel_of(channel))
+            first_today = await ar.recent(conn, ctx.venture_id, key, 24 * 60) == 0
             mine = await cf.lookup(conn, ctx.venture_id, channel=channel, phone=inp.get("from_phone"),
                                    email=inp.get("from_email"), chat_id=inp.get("chat_id"),
                                    sender_verified=_sender_verified(inp))
@@ -495,7 +496,10 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
                    + (["refund_or_payment_dispute"] if intent == "refund" else [])
                    + (["order_booking_payment"] if intent in ("order", "payment") or booking else [])
                    + (["internal_source"] if used else [])
-                   + (["claims_human"] if ar.claims_human(r.body) else []))
+                   + (["claims_human"] if ar.claims_human(r.body, biz.name) else [])
+                   # words in the customer's message or the draft (refund, discount, complaint, court,
+                   # "free delivery", "five hundred rupees"...): code, so a message can't argue past it
+                   + ar.handoff_reasons(inp.get("body"), r.body))
         for why in ([r.owner_reason or "unsure"] if r.needs_owner else []) + (["unsure"] if r.unsure else []) \
                 + (["complaint"] if c.get("wants_person") else []) + (["price_not_on_record"] if unknown else []) \
                 + by_code + (["unsure"] if always else []):
@@ -517,6 +521,13 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
             req["auto_option"] = "auto_reply"
             req["title"] = f"Replied by itself: {title}"[:300]
             note += "; sends by itself"
+            if first_today:
+                # the first reply a person gets by itself in a day says, in code's words, that an AI wrote it
+                sig = ar.signature(biz.name, cf.language(c.get("language")))
+                if channel in CHATS:
+                    payload["body"] = f"{payload['body']}\n\n{sig}"
+                else:
+                    payload["body"] = biz.with_notice(f"{r.body.strip()}\n\n{sig}")
     return Interrupt(_request(req), resume="send", on_reject="rejected", update=update, note=note)
 
 
@@ -535,11 +546,12 @@ def _key(ctx: RunContext, inp: dict[str, Any]) -> str:
 
 
 def _auto(cfg: dict[str, Any], inp: dict[str, Any]) -> bool:
-    """Replies to this message may go out by themselves (auto_reply on for its channel; not a machine's mail)."""
+    """Replies to this message may go out by themselves: auto_reply on for its channel, not a machine's mail,
+    and for email only a sender Gmail verified (a forged From would otherwise get the reply: round 3, C5)."""
     channel = inp.get("channel") or "email"
     if not ar.enabled(cfg, channel) or inp.get("automated") is True:
         return False
-    return channel in CHATS or not ar.automated_sender(inp.get("from_email"))
+    return channel in CHATS or (not ar.automated_sender(inp.get("from_email")) and _sender_verified(inp))
 
 
 @wf.step("hold", agent="inbox")
@@ -550,7 +562,7 @@ async def hold(ctx: RunContext, state: dict) -> Interrupt | Goto | Finish:
     channel = inp.get("channel") or "email"
     async with ctx.tx() as conn:
         flagged = bool((await conn.execute(text("SELECT run_flagged(:r)"), {"r": ctx.run_id})).scalar())
-        under = await ar.room(conn, ctx.venture_id, _key(ctx, inp))
+        under = await ar.room(conn, ctx.venture_id, _key(ctx, inp), channel=ar.channel_of(channel))
     if flagged or state.get("input_sensitive") or not under:
         return _after_hold(state, sent=False)
     from kritvia_api.services import customer_facts as cf

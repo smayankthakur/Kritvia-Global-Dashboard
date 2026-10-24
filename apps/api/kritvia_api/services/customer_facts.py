@@ -10,8 +10,10 @@ every query is limited to the sender's verified identity:
   Telegram   the chat id Telegram delivered it from (bookings only: invoices carry no chat id)
   email      the From address, only when Gmail authenticated the sender's domain (sender_verified)
 
-Matching a phone: the same digits, or the same last 10 digits when both sides have at least 10 (a number
-saved as 98111 22233 on an invoice and delivered by WhatsApp as 919811122233).
+Matching a phone: both sides are turned into the full international number (country code and number, the
+E.164 digits) and must be equal. A number saved without a country code (98111 22233, or 098111 22233) is
+an Indian one, so it matches 919811122233 from WhatsApp; a foreign number that only shares the last 10
+digits (+44 98111 22233) never does.
 """
 from __future__ import annotations
 
@@ -66,6 +68,7 @@ class Facts:
     invoices: list[Invoice] = field(default_factory=list)
     bookings: list[Booking] = field(default_factory=list)
     shipments: list[Shipment] = field(default_factory=list)
+    tz: ZoneInfo = IST          # the business's timezone: booking times are told in it
 
 
 def digits(s: str | None) -> str:
@@ -77,11 +80,28 @@ def sender_key(venture_id: uuid.UUID, channel: str, address: str) -> str:
     return hashlib.sha256(f"{venture_id}|{channel}|{address.strip().lower()}".encode()).hexdigest()[:24]
 
 
+DEFAULT_COUNTRY = "91"
+
+
+def e164(s: str | None, country: str = DEFAULT_COUNTRY) -> str:
+    """The full international number as digits: 10 digits (or 0 + 10) get the default country code,
+    a leading 00 is an international prefix, anything else is taken as already international."""
+    d = digits(s)
+    if len(d) == 10:
+        return country + d
+    if len(d) == 11 and d.startswith("0"):
+        return country + d[1:]
+    if d.startswith("00"):
+        return d[2:]
+    return d
+
+
 def _phone_sql(col: str) -> str:
-    """SQL matching column `col` (any formatting) against :p (digits): equal, or equal last 10 digits."""
+    """SQL: column `col` (any formatting) as E.164 digits, the same rules as e164(), equal to :p."""
     d = f"regexp_replace(coalesce({col}, ''), '[^0-9]', '', 'g')"
-    return (f"({d} = :p OR (char_length({d}) >= 10 AND char_length(:p) >= 10"
-            f" AND right({d}, 10) = right(:p, 10)))")
+    return (f"(CASE WHEN char_length({d}) = 10 THEN '{DEFAULT_COUNTRY}' || {d}"
+            f" WHEN char_length({d}) = 11 AND left({d}, 1) = '0' THEN '{DEFAULT_COUNTRY}' || substr({d}, 2)"
+            f" WHEN left({d}, 2) = '00' THEN substr({d}, 3) ELSE {d} END) = :p")
 
 
 async def lookup(conn, venture_id: uuid.UUID, *, channel: str, phone: str | None = None,
@@ -90,7 +110,7 @@ async def lookup(conn, venture_id: uuid.UUID, *, channel: str, phone: str | None
     from kritvia_api.routers.invoices import pay_url
 
     facts = Facts()
-    p = digits(phone) if channel == "whatsapp" else ""
+    p = e164(phone) if channel == "whatsapp" else ""
     e = (email or "").strip().lower() if channel == "email" and sender_verified and "@" in (email or "") else ""
     c = (chat_id or "").strip() if channel == "telegram" else ""
     if len(p) < 8:
@@ -98,6 +118,11 @@ async def lookup(conn, venture_id: uuid.UUID, *, channel: str, phone: str | None
     if not (p or e or c):
         return facts
     params: dict[str, Any] = {"v": venture_id, "p": p, "e": e, "c": c}
+    tz = (await conn.execute(text("SELECT timezone FROM venture_settings WHERE venture_id = :v"), {"v": venture_id})).scalar()
+    try:
+        facts.tz = ZoneInfo(tz) if tz else IST
+    except (KeyError, ValueError):
+        facts.tz = IST
 
     # invoices: phone or email only (a Telegram chat id is never on an invoice)
     if p or e:
@@ -161,8 +186,8 @@ def _day(d: date) -> str:
     return f"{d.day} {d.strftime('%b %Y')}"
 
 
-def _when(t: datetime) -> str:
-    t = t.astimezone(IST)
+def _when(t: datetime, tz: ZoneInfo = IST) -> str:
+    t = t.astimezone(tz)
     return f"{t.day} {t.strftime('%b')}, {t.strftime('%I:%M %p').lstrip('0')}"
 
 
@@ -248,7 +273,7 @@ def compose(question: str, facts: Facts, lang: str | None, business: str, *, tod
     """The answer, or None when the records have nothing for this question (the normal draft runs instead)."""
     L = language(lang)
     t = T[L]
-    today = today or datetime.now(IST).date()
+    today = today or datetime.now(facts.tz).date()
     first = (facts.name or "").split()[0] if (facts.name or "").strip() else ""
     head = t["hello"].format(name=f" {first}" if first else "", biz=business)
     lines: list[str] = []
@@ -276,7 +301,7 @@ def compose(question: str, facts: Facts, lang: str | None, business: str, *, tod
         if not facts.bookings:
             return None
         lines.append(t["book"] if len(facts.bookings) == 1 else t["book_n"])
-        lines += [t["book_line"].format(svc=b.service, when=_when(b.starts_at)) for b in facts.bookings]
+        lines += [t["book_line"].format(svc=b.service, when=_when(b.starts_at, facts.tz)) for b in facts.bookings]
     elif question == "shipment":
         if not facts.shipments:
             return None

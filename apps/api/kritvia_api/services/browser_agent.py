@@ -235,16 +235,32 @@ def proposal_from(step: BrowserStep, page: dict, task: str) -> dict[str, Any]:
                                 "hidden": list(pin.get("hidden") or [])[:60]}}}
 
 
+def _host(u: str | None) -> str:
+    from urllib.parse import urlsplit
+    h = (urlsplit((u or "").strip()).hostname or "").lower()
+    return h[4:] if h.startswith("www.") else h
+
+
+def same_site(u: str | None, site: str) -> bool:
+    """The address is on `site` (or one of its subdomains)."""
+    h = _host(u)
+    return bool(h and site) and (h == site or h.endswith("." + site))
+
+
 async def browse(ctx, client: BrowserClient, task: str, url: str | None, *, max_actions: int,
-                 may_submit: bool) -> Outcome:
+                 may_submit: bool, stay_on: str | None = None) -> Outcome:
+    """stay_on: the only site the browser may open (a look-up a person approved in a run that read outside
+    text: the task text can't then be carried to any other site or turned into a web search; round 3, C8)."""
     business = (await ctx.brief())[:1200]
     out = Outcome(answer=None)
+    if stay_on and not same_site(url, stay_on):
+        raise BrowserError("this look-up may only open the site that was approved")
     sid = await client.open()
     try:
         try:
             page = await client.goto(sid, start_url(task, url))
         except BrowserError as exc:
-            if not url:
+            if not url or stay_on:
                 raise
             out.log.append(f"couldn't open {url}: {exc}")
             page = await client.goto(sid, start_url(task, None))
@@ -268,6 +284,9 @@ async def browse(ctx, client: BrowserClient, task: str, url: str | None, *, max_
                 break
             try:
                 if step.action == "goto":
+                    if stay_on and not same_site(step.url, stay_on):
+                        out.log.append(f"{i + 1}. didn't leave {stay_on}: only the approved site may be opened")
+                        continue
                     page = await client.goto(sid, step.url or "")
                 else:
                     page = await client.act(sid, action=step.action, ref=step.ref, text=step.text, key=step.key)
