@@ -50,6 +50,8 @@ def _local(slug: str) -> str:
     """A new address: the business's name and 128 random bits, so it can't be guessed from a forwarded mail's
     headers or found by trying (addresses made before this keep working)."""
     base = re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-")[:30] or "biz"
+    if base == "ask" or base.startswith("ask-"):   # "ask-" starts a person's ask address (round 3, B5)
+        base = f"biz-{base}"[:30]
     return f"{base}-{secrets.token_hex(16)}"
 
 
@@ -120,9 +122,10 @@ async def email_inbound(request: Request, svc: Svc) -> EmailInOut:
         # that person is dropped without a bounce, so trying addresses tells nobody anything.
         out = await ask_anywhere.email_ask(svc, local, f"{local}@{s.inbound_email_domain.lower()}",
                                            email_in.parse(raw))
-        if out == "unknown":
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "unknown address")
-        return EmailInOut(accepted=True)
+        if out != "unknown":
+            return EmailInOut(accepted=True)
+        # not an ask address after all: a business forwarding address made before "ask-" was kept out of
+        # them (a business called "Ask Ginni") is looked up below like any other (round 3, B5)
     async with tenant_tx(None, "system") as conn:
         p = (await conn.execute(text("SELECT * FROM private.email_in_principal(:l)"), {"l": local})).first()
     if p is None:

@@ -5117,6 +5117,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/leads/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Delete Leads
+         * @description Delete up to 500 leads of this business at once, with their proposals (each delete is audited).
+         */
+        post: operations["bulk_delete_leads_ventures__venture_id__leads_bulk_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/leads/inquiry": {
         parameters: {
             query?: never;
@@ -5392,7 +5412,12 @@ export interface paths {
         get: operations["get_proposal_ventures__venture_id__proposals__proposal_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Proposal
+         * @description Delete a proposal (a draft, a test). One already sent to the client stays unless force=true, because
+         *     it is the record of what was offered.
+         */
+        delete: operations["delete_proposal_ventures__venture_id__proposals__proposal_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6684,7 +6709,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Patch Config */
+        patch: operations["patch_config_ventures__venture_id__workflow_configs__workflow__patch"];
         trace?: never;
     };
     "/voice/options": {
@@ -7333,6 +7359,13 @@ export interface components {
             step: string;
             /** Summary */
             summary: string;
+            /**
+             * They Wrote
+             * @description the customer's own message this draft answers (on a single card, for people who can decide it)
+             */
+            they_wrote?: string | null;
+            /** They Wrote From */
+            they_wrote_from?: string | null;
             /** Title */
             title: string;
             /**
@@ -8301,6 +8334,11 @@ export interface components {
             note: string | null;
             /** Plan Includes */
             plan_includes: boolean;
+        };
+        /** BulkDeleteOut */
+        BulkDeleteOut: {
+            /** Deleted */
+            deleted: number;
         };
         /** BusinessEventOut */
         BusinessEventOut: {
@@ -11313,6 +11351,11 @@ export interface components {
             /** Whisper */
             whisper: boolean;
         };
+        /** LeadBulkDeleteIn */
+        LeadBulkDeleteIn: {
+            /** Ids */
+            ids: string[];
+        };
         /** LeadIn */
         LeadIn: {
             /** Company */
@@ -11323,6 +11366,8 @@ export interface components {
             name: string;
             /** Notes */
             notes?: string | null;
+            /** Phone */
+            phone?: string | null;
             /**
              * Source
              * @default manual
@@ -16618,6 +16663,21 @@ export interface components {
             updated_at?: string | null;
             /** Workflow */
             workflow: string;
+        };
+        /**
+         * WorkflowConfigPatch
+         * @description Change only what is given: settings are merged into the saved ones (other keys and the instructions
+         *     stay), so two switches flipped at once can't undo each other (round 3, B11).
+         */
+        WorkflowConfigPatch: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Instructions */
+            instructions?: string | null;
+            /** Settings */
+            settings?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** WorkflowOut */
         WorkflowOut: {
@@ -27972,6 +28032,41 @@ export interface operations {
             };
         };
     };
+    bulk_delete_leads_ventures__venture_id__leads_bulk_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadBulkDeleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkDeleteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     inquiry_ventures__venture_id__leads_inquiry_post: {
         parameters: {
             query?: never;
@@ -28633,6 +28728,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProposalOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_proposal_ventures__venture_id__proposals__proposal_id__delete: {
+        parameters: {
+            query?: {
+                /** @description also delete a proposal already sent */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                venture_id: string;
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -31678,6 +31806,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["WorkflowConfigIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowConfigOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_config_ventures__venture_id__workflow_configs__workflow__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+                workflow: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowConfigPatch"];
             };
         };
         responses: {

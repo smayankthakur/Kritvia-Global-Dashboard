@@ -162,16 +162,28 @@ def build(today: date, *, open_invoices: list[tuple[str, int, date]], paid_histo
 
 async def forecast(conn, venture_id: uuid.UUID, today: date | None = None) -> Forecast:
     today = today or datetime.now(IST).date()
+    # Money the bank statement already shows arriving for an invoice (a match not yet recorded) is in the
+    # opening balance: counting the invoice as still to come would count it twice (round 3, A9). Same for
+    # bills already paid out.
     inv = (await conn.execute(text(
-        "SELECT customer_name, amount_paise - paid_paise AS bal, due_on FROM invoices"
-        " WHERE venture_id = :v AND status = 'open' AND amount_paise > paid_paise"), {"v": venture_id})).all()
+        "SELECT i.customer_name, greatest(i.amount_paise - i.paid_paise - coalesce(m.seen, 0), 0) AS bal, i.due_on"
+        " FROM invoices i LEFT JOIN (SELECT match_id, sum(amount_paise) AS seen FROM bank_lines"
+        "   WHERE venture_id = :v AND match_kind = 'invoice' AND state = 'suggested' AND amount_paise > 0"
+        "   GROUP BY match_id) m ON m.match_id = i.id"
+        " WHERE i.venture_id = :v AND i.status = 'open' AND i.amount_paise > i.paid_paise"), {"v": venture_id})).all()
+    inv = [r for r in inv if r.bal > 0]
     paid = (await conn.execute(text(
         "SELECT customer_name, (paid_on - due_on) AS late FROM invoices WHERE venture_id = :v AND status = 'paid'"
         " AND paid_on IS NOT NULL AND paid_on > CAST(:t AS date) - 365 ORDER BY paid_on DESC LIMIT 500"),
         {"v": venture_id, "t": today})).all()
     bills = (await conn.execute(text(
-        "SELECT amount_paise - paid_paise AS bal, due_on FROM bills WHERE venture_id = :v AND status = 'open'"
-        " AND amount_paise > paid_paise AND due_on IS NOT NULL"), {"v": venture_id})).all()
+        "SELECT greatest(b.amount_paise - b.paid_paise - coalesce(m.seen, 0), 0) AS bal, b.due_on FROM bills b"
+        " LEFT JOIN (SELECT match_id, sum(-amount_paise) AS seen FROM bank_lines"
+        "   WHERE venture_id = :v AND match_kind = 'bill' AND state = 'suggested' AND amount_paise < 0"
+        "   GROUP BY match_id) m ON m.match_id = b.id"
+        " WHERE b.venture_id = :v AND b.status = 'open' AND b.amount_paise > b.paid_paise AND b.due_on IS NOT NULL"),
+        {"v": venture_id})).all()
+    bills = [r for r in bills if r.bal > 0]
     salaries = (await conn.execute(text(
         "SELECT coalesce(sum(CASE WHEN pay_kind = 'monthly' THEN pay_paise ELSE pay_paise * 26 END), 0)"
         " FROM staff WHERE venture_id = :v AND active"), {"v": venture_id})).scalar() or 0

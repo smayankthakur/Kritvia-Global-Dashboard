@@ -75,6 +75,48 @@ class WorkflowConfigIn(BaseModel):
                               description="plain-language standing instructions the agent follows")
 
 
+class WorkflowConfigPatch(BaseModel):
+    """Change only what is given: settings are merged into the saved ones (other keys and the instructions
+    stay), so two switches flipped at once can't undo each other (round 3, B11)."""
+    enabled: bool | None = None
+    settings: dict[str, Any] | None = None
+    instructions: str | None = Field(default=None, max_length=4000)
+
+
+def clean_settings(wf, settings: dict[str, Any]) -> dict[str, Any]:
+    """Each known option checked against its type (round 3, B10): null means "the default" and is dropped;
+    a wrong type is refused instead of being stored and read differently by Python and the database."""
+    opts = {o.key: o for o in wf.options}
+    out: dict[str, Any] = {}
+    for k, v in settings.items():
+        o = opts.get(k)
+        if o is None:
+            out[k] = v
+            continue
+        if v is None:
+            continue
+        bad = HTTPException(422, f"{o.label}: not a valid value")
+        if o.type == "boolean":
+            if not isinstance(v, bool):
+                raise bad
+        elif o.type == "number":
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                raise bad
+            if (o.min is not None and v < o.min) or (o.max is not None and v > o.max):
+                raise HTTPException(422, f"{o.label}: between {o.min:g} and {o.max:g}")
+        elif o.type == "text":
+            if not isinstance(v, str):
+                raise bad
+        elif o.type == "choice":
+            if o.choices and v not in {c for c, _ in o.choices}:
+                raise bad
+        elif o.type == "multi":
+            if not isinstance(v, list) or (o.choices and not set(v) <= {c for c, _ in o.choices}):
+                raise bad
+        out[k] = v
+    return out
+
+
 class WorkflowConfigOut(WorkflowConfigIn):
     workflow: str
     updated_at: datetime | None = None
@@ -101,6 +143,7 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
     if len(json.dumps(body.settings)) > 20000:
         raise HTTPException(422, "settings too large")
     wf = registry.get(workflow)
+    body.settings = clean_settings(wf, body.settings)
     if body.schedule and wf.starts != "clock":
         # An agent that starts on messages, uploads or requests has nothing to work on at a set time: a daily run
         # would start empty and fail.
@@ -146,6 +189,20 @@ async def put_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigI
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
     return WorkflowConfigOut(**row._mapping)
+
+
+@router.patch("/ventures/{venture_id}/workflow-configs/{workflow}", response_model=WorkflowConfigOut)
+async def patch_config(venture_id: uuid.UUID, workflow: str, body: WorkflowConfigPatch, user_id: UserId,
+                       db: TenantDB) -> WorkflowConfigOut:
+    cur = (await db.execute(text(
+        "SELECT enabled, schedule, settings, instructions FROM workflow_configs WHERE venture_id = :v AND workflow = :w"
+        " FOR UPDATE"), {"v": venture_id, "w": workflow})).first()
+    merged = WorkflowConfigIn(
+        enabled=body.enabled if body.enabled is not None else (cur.enabled if cur else True),
+        schedule=cur.schedule if cur else None,
+        settings={**(dict(cur.settings) if cur and cur.settings else {}), **(body.settings or {})},
+        instructions=body.instructions if body.instructions is not None else (cur.instructions if cur else "") or "")
+    return await put_config(venture_id, workflow, merged, user_id, db)
 
 
 class RunIn(BaseModel):

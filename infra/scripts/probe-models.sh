@@ -4,7 +4,7 @@
 #   cd /opt/kritvia/infra && sudo infra/scripts/probe-models.sh
 # Run from cron too if you like; it prints nothing secret.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 . scripts/load-env.sh; load_env ../.env
 models=$(grep -E '^\s+- model_name:' litellm/config.yaml | awk '{print $3}' | grep -vE 'whisper|bge')
 rc=0

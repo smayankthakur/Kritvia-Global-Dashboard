@@ -58,6 +58,9 @@ async def route(ctx: RunContext, state: dict) -> Goto | Finish:
     async with ctx.tx() as conn:
         where = await social.channels(ctx.services, conn, ctx.venture_id)
     if not where:
+        if (state.get("input") or {}).get("now"):
+            # Asked for a post with nowhere connected: write it anyway, for the owner to copy (round 3, A14).
+            return Goto("draft", update={"channels": []}, note="nowhere to post yet: drafting one to copy")
         return Finish("not_set_up", note="connect the Facebook Page, or Google with Business Profile, on the "
                                          "Marketing page")
     return Goto("draft", update={"channels": sorted(where)})
@@ -100,6 +103,9 @@ async def draft(ctx: RunContext, state: dict) -> Interrupt | Finish:
             " VALUES (:o, :v, :r, :t, :b, :c) RETURNING id"),
             {"o": ctx.org_id, "v": ctx.venture_id, "r": ctx.run_id, "t": d.topic.strip()[:200] or None,
              "b": body or "-", "c": state["channels"]})).scalar_one()
+    if not state["channels"]:
+        return Finish("drafted_to_copy", update={"post_id": str(pid), "summary": {"post_id": str(pid)}},
+                      note="post written: copy it from Marketing → Social posts (connect a page to post it from here)")
     where = " and ".join("your Google profile" if c == "google" else "your Facebook Page" for c in state["channels"])
     return Interrupt(
         ApprovalRequest(agent="social", action="social.post", key="post_decision",

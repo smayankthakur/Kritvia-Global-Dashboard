@@ -383,11 +383,19 @@ async def daily_jobs(ctx: dict, now: datetime | None = None) -> list[str]:
                                        {"n": name, "d": now.date()})).scalar()
         if not mine:
             continue
+        ok = False
         try:
             await globals()[fn_name](ctx)
             ran.append(name)
+            ok = True
         except Exception:  # noqa: BLE001 - one job's failure never stops the others
             log.exception("daily job %s failed", name)
+        # Done only when it finished: a failure is tried again on a later tick today (up to 3 tries).
+        try:
+            async with tenant_tx(None, "system") as conn:
+                await conn.execute(text("SELECT private.daily_job_done(:n, :ok)"), {"n": name, "ok": ok})
+        except Exception:  # noqa: BLE001
+            log.exception("couldn't record daily job %s", name)
     return ran
 
 

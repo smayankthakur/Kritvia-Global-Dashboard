@@ -20,8 +20,10 @@ jobs:
           SSH_HOST: ${{ secrets.DEPLOY_HOST }}
           SSH_USER: ${{ secrets.DEPLOY_USER }}
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
           echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" '/opt/kritvia/infra/scripts/deploy.sh'
+          # exactly the commit CI tested (a push landing meanwhile waits for its own CI run)
+          ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" "/opt/kritvia/infra/scripts/deploy.sh $SHA"

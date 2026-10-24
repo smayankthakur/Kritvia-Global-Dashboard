@@ -127,12 +127,21 @@ class GrantIn(BaseModel):
 class LeadIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=30)
     company: str | None = Field(default=None, max_length=200)
     source: str = Field(default="manual", max_length=50)
     notes: str | None = Field(default=None, max_length=20_000)
 
 
 LeadStatus = Literal["new", "contacted", "replied", "qualified", "proposal", "won", "lost", "archived"]
+
+
+class LeadBulkDeleteIn(BaseModel):
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+
+
+class BulkDeleteOut(BaseModel):
+    deleted: int
 
 
 class LeadPatch(BaseModel):

@@ -1568,6 +1568,29 @@
             "title": "Summary",
             "type": "string"
           },
+          "they_wrote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the customer's own message this draft answers (on a single card, for people who can decide it)",
+            "title": "They Wrote"
+          },
+          "they_wrote_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "They Wrote From"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -4248,6 +4271,19 @@
           "note"
         ],
         "title": "BrowserStatus",
+        "type": "object"
+      },
+      "BulkDeleteOut": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "BulkDeleteOut",
         "type": "object"
       },
       "BusinessEventOut": {
@@ -12527,6 +12563,25 @@
         "title": "LanguageOut",
         "type": "object"
       },
+      "LeadBulkDeleteIn": {
+        "properties": {
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "LeadBulkDeleteIn",
+        "type": "object"
+      },
       "LeadIn": {
         "properties": {
           "company": {
@@ -12570,6 +12625,18 @@
               }
             ],
             "title": "Notes"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
           },
           "source": {
             "default": "manual",
@@ -27290,6 +27357,48 @@
           "workflow"
         ],
         "title": "WorkflowConfigOut",
+        "type": "object"
+      },
+      "WorkflowConfigPatch": {
+        "description": "Change only what is given: settings are merged into the saved ones (other keys and the instructions\nstay), so two switches flipped at once can't undo each other (round 3, B11).",
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings"
+          }
+        },
+        "title": "WorkflowConfigPatch",
         "type": "object"
       },
       "WorkflowOut": {
@@ -46477,6 +46586,65 @@
         ]
       }
     },
+    "/ventures/{venture_id}/leads/bulk-delete": {
+      "post": {
+        "description": "Delete up to 500 leads of this business at once, with their proposals (each delete is audited).",
+        "operationId": "bulk_delete_leads_ventures__venture_id__leads_bulk_delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadBulkDeleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bulk Delete Leads",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
     "/ventures/{venture_id}/leads/inquiry": {
       "post": {
         "description": "Paste an inquiry (from WhatsApp, a call, a referral) and let the triage workflow take it.",
@@ -47656,6 +47824,68 @@
       }
     },
     "/ventures/{venture_id}/proposals/{proposal_id}": {
+      "delete": {
+        "description": "Delete a proposal (a draft, a test). One already sent to the client stays unless force=true, because\nit is the record of what was offered.",
+        "operationId": "delete_proposal_ventures__venture_id__proposals__proposal_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "also delete a proposal already sent",
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "also delete a proposal already sent",
+              "title": "Force",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Proposal",
+        "tags": [
+          "sitelytc"
+        ]
+      },
       "get": {
         "operationId": "get_proposal_ventures__venture_id__proposals__proposal_id__get",
         "parameters": [
@@ -53158,6 +53388,71 @@
       }
     },
     "/ventures/{venture_id}/workflow-configs/{workflow}": {
+      "patch": {
+        "operationId": "patch_config_ventures__venture_id__workflow_configs__workflow__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "title": "Workflow",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowConfigPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Patch Config",
+        "tags": [
+          "workflows"
+        ]
+      },
       "put": {
         "operationId": "put_config_ventures__venture_id__workflow_configs__workflow__put",
         "parameters": [

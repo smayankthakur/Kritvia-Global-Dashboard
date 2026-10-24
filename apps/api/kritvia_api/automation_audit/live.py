@@ -46,7 +46,7 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
                                p)).scalar() or "general"
     plan = await plan_for_venture(conn, venture_id)
     configs = {r.workflow: r for r in (await conn.execute(text(
-        "SELECT workflow, enabled, schedule FROM workflow_configs WHERE venture_id = :v"), p)).all()}
+        "SELECT workflow, enabled, schedule, updated_at FROM workflow_configs WHERE venture_id = :v"), p)).all()}
     sources = {r.provider for r in (await conn.execute(text(
         "SELECT DISTINCT provider FROM connectors WHERE venture_id = :v AND status = 'active'"), p)).all()}
     runs = {r.workflow: r for r in (await conn.execute(text(
@@ -140,7 +140,10 @@ async def health(conn, venture_id: uuid.UUID, *, days: int = 30, now: datetime |
             "outcomes": dict(sorted(outcomes.get(wf.name, {}).items(), key=lambda kv: -kv[1])[:6]),
         }
         agents.append(row)
-        if state == "ready" and wf.starts == "clock" and row["runs"] == 0 and days >= 2:
+        # idle only once it has had a day to run since it was switched on or changed (round 3, A18)
+        settled = cfg is not None and (cfg.updated_at is None
+                                       or cfg.updated_at < datetime.now(UTC) - timedelta(hours=26))
+        if state == "ready" and wf.starts == "clock" and row["runs"] == 0 and days >= 2 and settled:
             add(wf.name, "check", "idle", f"{wf.title} is ready but hasn't run in {days} days.")
         for oc, fix in NOT_SET_UP.items():
             if row["outcomes"].get(oc) and state == "ready":

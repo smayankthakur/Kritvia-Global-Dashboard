@@ -62,6 +62,9 @@ class ApprovalOut(BaseModel):
     decided_at: datetime | None
     executed_at: datetime | None
     execution_result: dict[str, Any] | None
+    they_wrote: str | None = Field(default=None, description="the customer's own message this draft answers "
+                                                             "(on a single card, for people who can decide it)")
+    they_wrote_from: str | None = None
     expires_at: datetime | None
     created_at: datetime
 
@@ -146,7 +149,26 @@ async def get_approval(venture_id: uuid.UUID, approval_id: uuid.UUID, db: Tenant
                           {"v": venture_id, "id": approval_id})).first()
     if r is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "approval not found")
-    return await _out(EnvelopeCrypto(db, svc.keys), r)
+    crypto = EnvelopeCrypto(db, svc.keys)
+    out = await _out(crypto, r)
+    if r.can_decide and r.workflow in ("inbox_assistant", "lead_triage"):
+        # What the customer actually wrote, next to the draft, so the owner doesn't decide from the AI's
+        # summary alone (round 3, A5).
+        try:
+            from kritvia_api.engine.runner import STATE_PURPOSE
+            enc = (await db.execute(text("SELECT state_enc FROM workflow_runs WHERE id = :r"), {"r": r.run_id})).scalar()
+            if enc is not None:
+                inp = (json.loads(await crypto.decrypt(r.venture_id, STATE_PURPOSE, enc)).get("input") or {})
+                from kritvia_api.services import pii
+                body = pii.mask(str(inp.get("body") or "").strip()).text   # ID and card numbers stay masked
+                if body:
+                    out.they_wrote = body[:4000]
+                    out.they_wrote_from = str(inp.get("from_name") or inp.get("from_email") or inp.get("from_phone")
+                                              or "")[:200] or None
+        except Exception as exc:  # noqa: BLE001 - the card still shows without it
+            import logging
+            logging.getLogger("kritvia.approvals").warning("they_wrote unavailable: %s", exc)
+    return out
 
 
 class DecisionIn(BaseModel):

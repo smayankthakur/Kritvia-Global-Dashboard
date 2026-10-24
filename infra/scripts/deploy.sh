@@ -3,6 +3,8 @@
 #
 #   sudo /opt/kritvia/infra/scripts/deploy.sh          # in the foreground, short summary at the end
 #   sudo /opt/kritvia/infra/scripts/deploy.sh --bg     # in the background; follow /var/log/kritvia-deploy.log
+#   deploy.sh <commit>                                # exactly that commit of main (the CD workflow passes the
+#                                                     # one CI tested, never "whatever is newest")
 #
 # What makes it quiet:
 #   - Images are built while the old containers keep serving; only services whose image or
@@ -15,7 +17,8 @@
 set -euo pipefail
 LOG=/var/log/kritvia-deploy.log
 if [ "${1:-}" = "--bg" ]; then
-  nohup "$0" >"$LOG" 2>&1 &
+  shift
+  nohup "$0" "$@" >"$LOG" 2>&1 &
   echo "deploying in the background (pid $!); follow it with: tail -f $LOG"
   exit 0
 fi
@@ -41,7 +44,18 @@ step() { printf '%s  %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 started=$(date +%s)
 
 before=$(git rev-parse --short HEAD)
-git fetch --quiet origin main && git reset --quiet --hard origin/main
+target="${1:-}"
+git fetch --quiet origin main
+if [ -n "$target" ]; then
+  # Only a commit that is on main (so CI ran on it), never an arbitrary one.
+  if ! [[ "$target" =~ ^[0-9a-f]{7,40}$ ]] || ! git merge-base --is-ancestor "$target" origin/main 2>/dev/null; then
+    step "REFUSED: $target is not a commit on origin/main"
+    exit 1
+  fi
+  git reset --quiet --hard "$target"
+else
+  git reset --quiet --hard origin/main
+fi
 after=$(git rev-parse --short HEAD)
 step "code: $before -> $after  $(git --no-pager log -1 --format=%s)"
 
@@ -63,6 +77,17 @@ if [ -n "${BROWSER_TOKEN:-}" ]; then
     BROWSER_OFF="BROWSER_RUNTIME isn't runsc (or gVisor isn't installed), so the browser agent stays off"
   fi
 fi
+
+# Put the code and every image back to the commit we started from, and start it (used when the new
+# version doesn't start, or starts but never becomes ready: round 3, B2).
+rollback() {
+  if [ "$before" = "$after" ]; then return 0; fi
+  step "rolling the code back to $before and rebuilding its images"
+  cd "$ROOT" && git reset --quiet --hard "$before" && cd infra
+  "${COMPOSE[@]}" build --quiet migrate sandbox-jobs api worker worker-priority web sandbox "${EXTRA[@]}" >>"$BUILD_LOG" 2>&1 \
+    || step "rebuilding the previous images failed too; see $BUILD_LOG"
+  "${COMPOSE[@]}" "${PROFILES[@]}" up -d --quiet-pull >>"$BUILD_LOG" 2>&1 || true
+}
 
 step "building images (old containers keep serving)"
 if ! "${COMPOSE[@]}" build --pull --quiet migrate sandbox-jobs api worker worker-priority web sandbox "${EXTRA[@]}" >"$BUILD_LOG" 2>&1; then
@@ -87,13 +112,7 @@ if ! "${COMPOSE[@]}" "${PROFILES[@]}" up -d --remove-orphans --quiet-pull >>"$BU
   "${COMPOSE[@]}" logs --tail=40 --no-color migrate 2>/dev/null || true
   step "other output (last lines of $BUILD_LOG):"
   tail -15 "$BUILD_LOG"
-  if [ "$before" != "$after" ]; then
-    step "rolling the code back to $before and rebuilding its images"
-    cd "$ROOT" && git reset --quiet --hard "$before" && cd infra
-    "${COMPOSE[@]}" build --quiet migrate api worker worker-priority web "${EXTRA[@]}" >>"$BUILD_LOG" 2>&1 \
-      || step "rebuilding the previous images failed too; see $BUILD_LOG"
-    "${COMPOSE[@]}" "${PROFILES[@]}" up -d --quiet-pull >>"$BUILD_LOG" 2>&1 || true
-  fi
+  rollback
   exit 1
 fi
 
@@ -105,6 +124,7 @@ done
 if [ "$ready" != yes ]; then
   step "API DID NOT BECOME READY. Last API log lines:"
   "${COMPOSE[@]}" logs --tail=60 --no-color api
+  rollback
   exit 1
 fi
 
@@ -113,8 +133,13 @@ docker image prune -f >/dev/null 2>&1 || true   # old image layers, so disk does
 docker builder prune -f --keep-storage 3GB >/dev/null 2>&1 || docker builder prune -f >/dev/null 2>&1 || true   # build cache grew to 46 GB once; keep it small
 
 rm -f "$MARK"
+# The health check stands down while a deploy holds the lock, so let go of it first: otherwise this check
+# would always "pass" without checking anything (round 3, B1).
+flock -u 9; exec 9>&-
 step "health check"
-if bash "$ROOT/infra/scripts/healthcheck.sh" >/dev/null 2>&1; then health="all checks pass"; else health="CHECKS FAILING (see: journalctl -t kritvia-health -n 20)"; fi
+ok=0
+if bash "$ROOT/infra/scripts/healthcheck.sh" >/dev/null 2>&1; then health="all checks pass"; else health="CHECKS FAILING (see: journalctl -t kritvia-health -n 20)"; ok=1; fi
 migrations=$(curl -fsS -m 5 http://127.0.0.1:8000/readyz | python3 -c 'import json,sys; print(json.load(sys.stdin).get("migrations","?"))' 2>/dev/null || echo "?")
 step "done in $(( $(date +%s) - started ))s: $after, $migrations migrations, $health"
 echo DEPLOY-DONE
+exit $ok

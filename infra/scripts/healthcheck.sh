@@ -14,7 +14,7 @@
 # set: on the first failure, every 6 hours while it lasts, and once on recovery. Everything is also written
 # to syslog (tag: kritvia-health).
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 . scripts/load-env.sh; load_env ../.env || true
 STATE_DIR=/var/lib/kritvia; mkdir -p "$STATE_DIR"
 STATE="$STATE_DIR/health.state"; LAST_ALERT="$STATE_DIR/health.alerted"

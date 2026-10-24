@@ -79,8 +79,7 @@ async def draft_now(venture_id: uuid.UUID, user_id: UserId, db: TenantDB, svc: S
     from kritvia_api.engine.runner import start_run
     from kritvia_api.services.quota import PlanRestricted
     await venture_org(db, venture_id)
-    if not await social.channels(svc, db, venture_id):
-        raise HTTPException(status.HTTP_409_CONFLICT, "connect the Facebook Page, or Google with Business Profile, first")
+    # With nowhere connected the post is still written, for the owner to copy (round 3, A14).
     try:
         rid = await start_run(svc, actor_user_id=user_id, actor_type="user", venture_id=venture_id, workflow="social",
                               input={"now": True}, trigger_kind="manual", title="Social post")

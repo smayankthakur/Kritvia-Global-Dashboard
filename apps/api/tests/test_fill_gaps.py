@@ -419,7 +419,8 @@ async def test_social_posts_go_to_google_and_facebook_after_a_yes(shop, services
         fb_posts.append(dict(__import__("urllib.parse").parse.parse_qsl(request.content.decode())))
         return httpx.Response(200, json={"id": "123456789_99"})
     monkeypatch.setattr(facebook, "_transport", httpx.MockTransport(fb))
-    assert (await o.post(f"/ventures/{v}/social/draft-now")).status_code == 409      # nowhere to post yet
+    # nowhere to post yet: a post is still written, to copy by hand (round 3, A14)
+    assert (await o.post(f"/ventures/{v}/social/draft-now")).status_code == 200
     r = await o.put(f"/ventures/{v}/connectors/facebook", json={"page_id": "123456789", "page_token": "EAAG" + "x" * 30})
     assert r.status_code == 200, r.text
     assert r.json()["page_name"] == "Gaps Studio"

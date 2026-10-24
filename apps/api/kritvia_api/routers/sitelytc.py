@@ -169,3 +169,20 @@ async def proposal_outcome(venture_id: uuid.UUID, proposal_id: uuid.UUID, body: 
             raise HTTPException(status.HTTP_404_NOT_FOUND, "no sent proposal with that id")
     async with tenant_tx(user_id) as conn:
         return await get_proposal(venture_id, proposal_id, conn, svc)
+
+
+@router.delete("/ventures/{venture_id}/proposals/{proposal_id}", status_code=204)
+async def delete_proposal(venture_id: uuid.UUID, proposal_id: uuid.UUID, db: TenantDB,
+                          force: bool = Query(default=False, description="also delete a proposal already sent")) -> None:
+    """Delete a proposal (a draft, a test). One already sent to the client stays unless force=true, because
+    it is the record of what was offered."""
+    try:
+        row = (await db.execute(text("SELECT status FROM proposals WHERE id = :id AND venture_id = :v"),
+                                {"id": proposal_id, "v": venture_id})).first()
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "proposal not found")
+        if row.status in ("sent", "accepted") and not force:
+            raise HTTPException(status.HTTP_409_CONFLICT, "this proposal was sent to the client; delete it anyway with force")
+        await db.execute(text("DELETE FROM proposals WHERE id = :id AND venture_id = :v"), {"id": proposal_id, "v": venture_id})
+    except DBAPIError as exc:
+        raise_for_db(exc, "proposal not found")

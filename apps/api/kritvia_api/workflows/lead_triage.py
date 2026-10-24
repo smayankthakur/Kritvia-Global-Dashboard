@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from kritvia_api.engine.context import RunContext
+from kritvia_api.services.model_router import AgentBudgetExceeded
 from kritvia_api.engine.core import ApprovalRequest, Finish, Goto, Interrupt, Option, Workflow, registry
 from kritvia_api.services import pii
 from kritvia_api.services.memory import canonical
@@ -100,14 +101,17 @@ async def extract(ctx: RunContext, state: dict) -> Goto | Finish:
     codes = "\n".join(f"- {r['code']}: {r['name']} (per {r['unit']}) — {r['description']}" for r in card)
     # An enquiry carrying an ID, card or account number never leaves the server.
     held = pii.mask(f"{inp.get('subject') or ''}\n{inp.get('body') or ''}").sensitive
-    ex = await ctx.llm_json(
-        tier="private" if held else "extract", schema=LeadExtract, sensitive=held,
-        system=(f"{await ctx.brief()}\nYou triage inbound inquiries for this business. "
-                "Map what they ask for onto the allowed rate card codes; never invent codes. "
-                "Mark marketing spam, SEO cold pitches and vendor solicitations as spam.\n"
-                f"Allowed rate card codes:\n{codes or '- (none configured)'}"),
-        prompt=(f"From: {inp.get('from_name') or ''} <{inp.get('from_email') or ''}>\n"
-                f"Subject: {inp.get('subject') or ''}\n\n{(inp.get('body') or '')[:12000]}"))
+    try:
+        ex = await _extract(ctx, inp, held, codes)
+    except AgentBudgetExceeded:
+        raise
+    except Exception as exc:  # noqa: BLE001 - the AI couldn't read it: keep the enquiry as a lead anyway
+        # Losing a customer's enquiry because the model failed is worse than an unscored lead (round 3, A7).
+        ex = LeadExtract(contact_name=inp.get("from_name") or None, phone=inp.get("from_phone") or None,
+                         summary=(inp.get("subject") or (inp.get("body") or "")[:200] or "An enquiry").strip())
+        return Goto("upsert_lead", update={"extract": ex.model_dump(), "budget_inr": None, "input_sensitive": held,
+                                           "unscored": True},
+                    note=f"the AI couldn't read this enquiry ({type(exc).__name__}); saving it as a lead to look at")
     valid = {r["code"] for r in card}
     ex.scope = [s for s in ex.scope if s.code in valid]
     if ex.is_spam:
@@ -117,6 +121,17 @@ async def extract(ctx: RunContext, state: dict) -> Goto | Finish:
     return Goto("upsert_lead", update={"extract": ex.model_dump(), "budget_inr": str(budget) if budget else None,
                                        "input_sensitive": held},
                 note=f"{len(ex.requirements)} requirements, {len(ex.scope)} scope items")
+
+
+async def _extract(ctx: RunContext, inp: dict, held: bool, codes: str) -> LeadExtract:
+    return await ctx.llm_json(
+        tier="private" if held else "extract", schema=LeadExtract, sensitive=held,
+        system=(f"{await ctx.brief()}\nYou triage inbound inquiries for this business. "
+                "Map what they ask for onto the allowed rate card codes; never invent codes. "
+                "Mark marketing spam, SEO cold pitches and vendor solicitations as spam.\n"
+                f"Allowed rate card codes:\n{codes or '- (none configured)'}"),
+        prompt=(f"From: {inp.get('from_name') or ''} <{inp.get('from_email') or ''}>\n"
+                f"Subject: {inp.get('subject') or ''}\n\n{(inp.get('body') or '')[:12000]}"))
 
 
 @wf.step("upsert_lead", agent="crm")
@@ -162,6 +177,9 @@ async def upsert_lead(ctx: RunContext, state: dict) -> Goto:
                  "r": ctx.run_id, "as": inp.get("ad_source") if inp.get("ad_source") in ("meta", "google") else None,
                  "ac": (str(inp.get("ad_campaign") or "")[:120] or None) if inp.get("ad_source") else None})).scalar_one()
             dup = False
+    if state.get("unscored"):
+        return Finish("saved_unscored", update={"summary": {"lead_id": str(lead_id), "duplicate": dup, "unscored": True}},
+                      note="lead saved without a score: open it in Leads, or retry this run")
     return Goto("retrieve", update={"lead_id": str(lead_id), "duplicate": dup,
                                     "summary": {"lead_id": str(lead_id), "duplicate": dup}},
                 note="updated existing lead (duplicate inquiry)" if dup else "new lead created")

@@ -7,7 +7,7 @@ from sqlalchemy.exc import DBAPIError
 
 from kritvia_api.deps import TenantDB, UserId
 from kritvia_api.errors import raise_for_db
-from kritvia_api.schemas import LeadIn, LeadOut, LeadOutreachIn, LeadPatch, PlaceOut
+from kritvia_api.schemas import BulkDeleteOut, LeadBulkDeleteIn, LeadIn, LeadOut, LeadOutreachIn, LeadPatch, PlaceOut
 from kritvia_api.services.crypto import EnvelopeCrypto
 
 router = APIRouter(prefix="/ventures/{venture_id}/leads", tags=["leads"])
@@ -76,12 +76,12 @@ async def create_lead(venture_id: uuid.UUID, body: LeadIn, user_id: UserId, db: 
             notes = await crypto.encrypt(venture_id, NOTES, body.notes) if body.notes else None
             row = (await db.execute(
                 text(
-                    "INSERT INTO leads (org_id, venture_id, name, email, company, source, notes_enc, created_by)"
-                    " SELECT org_id, id, :n, :e, :c, :s, :notes, :u FROM ventures WHERE id = :v"
+                    "INSERT INTO leads (org_id, venture_id, name, email, phone, company, source, notes_enc, created_by)"
+                    " SELECT org_id, id, :n, :e, :ph, :c, :s, :notes, :u FROM ventures WHERE id = :v"
                     f" RETURNING {COLS}"
                 ),
-                {"v": venture_id, "n": body.name, "e": body.email, "c": body.company,
-                 "s": body.source, "notes": notes, "u": user_id},
+                {"v": venture_id, "n": body.name, "e": body.email, "ph": (body.phone or "").strip() or None,
+                 "c": body.company, "s": body.source, "notes": notes, "u": user_id},
             )).first()
     except DBAPIError as exc:
         raise_for_db(exc, "venture not found")
@@ -148,6 +148,17 @@ async def update_lead(venture_id: uuid.UUID, lead_id: uuid.UUID, body: LeadPatch
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
     return await _out(crypto, row)
+
+
+@router.post("/bulk-delete", response_model=BulkDeleteOut)
+async def bulk_delete_leads(venture_id: uuid.UUID, body: LeadBulkDeleteIn, db: TenantDB) -> BulkDeleteOut:
+    """Delete up to 500 leads of this business at once, with their proposals (each delete is audited)."""
+    try:
+        res = await db.execute(text("DELETE FROM leads WHERE venture_id = :v AND id = ANY(:ids)"),
+                               {"v": venture_id, "ids": list(dict.fromkeys(body.ids))})
+    except DBAPIError as exc:
+        raise_for_db(exc, "lead not found")
+    return BulkDeleteOut(deleted=res.rowcount or 0)
 
 
 @router.delete("/{lead_id}", status_code=204)

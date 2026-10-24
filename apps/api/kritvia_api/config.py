@@ -209,6 +209,15 @@ class Settings(BaseSettings):
         return out
 
 
+    @model_validator(mode="after")
+    def _no_silent_sends_in_production(self) -> "Settings":
+        """In production a reply that can't be sent must say so: "log" (record it, send nothing) made
+        "Approve & send" look like it worked when no mailbox was connected (round 3, A1)."""
+        if self.environment == "production" and self.messaging_fallback == "log":
+            self.messaging_fallback = "none"
+        return self
+
+
 # Kritvia's founder: on Kritvia's team (Pilot health, Partners) unless STAFF_EMAILS says otherwise.
 FOUNDER_EMAIL = "smayankthakur25@gmail.com"
 
