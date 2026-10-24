@@ -28,10 +28,61 @@ interface FormState {
   notes: string;
 }
 
-/** A wa.me link that opens WhatsApp with the payment page ready to send (the person sends it). */
-export function whatsappShare(i: Invoice): string {
-  const text = `Hi ${i.customer_name}, here is ${i.number ? `invoice ${i.number}` : "your invoice"} for ${rupees(i.balance_paise)}. You can pay by UPI here: ${i.pay_url}`;
+/** How customers can pay this business: by UPI, online through its own Razorpay, or not yet (A8). */
+export type PayWay = "upi" | "online" | null;
+
+export function payWay(s: Pick<Schemas["PaymentSettingsOut"], "upi_id" | "razorpay"> | null | undefined): PayWay {
+  if (s?.upi_id) return "upi";
+  if (s?.razorpay) return "online";
+  return null;
+}
+
+/** A wa.me link that opens WhatsApp with the payment page ready to send (the person sends it). Only offered once
+ * the business has a way to be paid: the page says "pay by UPI" only when there is a UPI ID. */
+export function whatsappShare(i: Invoice, way: Exclude<PayWay, null> = "upi"): string {
+  const how = way === "upi" ? "You can pay by UPI here" : "You can pay online here";
+  const text = `Hi ${i.customer_name}, here is ${i.number ? `invoice ${i.number}` : "your invoice"} for ${rupees(i.balance_paise)}. ${how}: ${i.pay_url}`;
   return `https://wa.me/${i.customer_phone}?text=${encodeURIComponent(text)}`;
+}
+
+const UPI_ID = /^[A-Za-z0-9._-]{2,255}@[A-Za-z][A-Za-z0-9.-]{1,63}$/;
+
+/** The inline "Add your UPI ID" box shown instead of the payment link until the business can be paid. */
+function AddUpi({ ventureId }: { ventureId: string }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [upi, setUpi] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const save = useMutation({
+    mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/payment-settings", { params: { path: { venture_id: ventureId } }, body: { upi_id: upi.trim() } })),
+    onSuccess: (d) => {
+      qc.setQueryData(["payment-settings", ventureId], d);
+      setError(null);
+      toast.success("UPI ID saved", "Invoice payment pages now show your UPI QR.");
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  return (
+    <Notice tone="warning" title="Add your UPI ID to share this invoice">
+      <p>The payment page has no way to pay yet. Add the UPI ID customers should pay, or connect Razorpay in Settings → Connectors.</p>
+      <form
+        className="mt-2 flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!UPI_ID.test(upi.trim())) return setError("A UPI ID looks like name@bank, e.g. glowsalon@okicici.");
+          save.mutate();
+        }}
+      >
+        <Field label="Your UPI ID" className="w-60">
+          <Input value={upi} onChange={(e) => setUpi(e.target.value)} placeholder="glowsalon@okicici" maxLength={300} />
+        </Field>
+        <Button type="submit" size="sm" variant="primary" loading={save.isPending} disabled={!upi.trim()}>
+          Save UPI ID
+        </Button>
+      </form>
+      <FormError message={error} />
+    </Notice>
+  );
 }
 
 function istToday(offsetDays = 0): string {
@@ -200,6 +251,13 @@ export function InvoiceDialog({
     },
     onError: (e) => toast.error("Could not delete", errorMessage(e)),
   });
+  const paySettings = useQuery({
+    queryKey: ["payment-settings", ventureId],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/payment-settings", { params: { path: { venture_id: ventureId } } })),
+    enabled: open && invoice?.status === "open",
+  });
+  // Settings that can't be read don't hide the link: the payment page itself still says how to pay.
+  const way: PayWay = paySettings.isError ? "upi" : payWay(paySettings.data);
   const tally = useQuery({
     queryKey: ["tally", ventureId],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/tally", { params: { path: { venture_id: ventureId } } })),
@@ -386,11 +444,22 @@ export function InvoiceDialog({
                 ) : null}
               </Notice>
             ) : null}
-            <CopyField label="Payment page (UPI QR, and card or netbanking if you connected Razorpay)" value={invoice.pay_url} />
+            {paySettings.data && !way ? (
+              paySettings.data.can_edit ? (
+                <AddUpi ventureId={ventureId} />
+              ) : (
+                <Notice tone="warning" title="This invoice can't be paid online yet">
+                  Ask the business&apos;s owner to add a UPI ID in Settings → Connectors. Then you can share the payment link.
+                </Notice>
+              )
+            ) : null}
+            {way ? <CopyField label="Payment page (UPI QR, and card or netbanking if you connected Razorpay)" value={invoice.pay_url} /> : null}
             <div className="flex flex-wrap gap-2">
-              <a className="text-sm font-medium text-accent underline underline-offset-2" href={invoice.pay_url} target="_blank" rel="noreferrer">
-                Open the page
-              </a>
+              {way ? (
+                <a className="text-sm font-medium text-accent underline underline-offset-2" href={invoice.pay_url} target="_blank" rel="noreferrer">
+                  Open the page
+                </a>
+              ) : null}
               <a
                 className="text-sm font-medium text-accent underline underline-offset-2"
                 href={`/print/invoice/${ventureId}/${invoice.id}`}
@@ -399,10 +468,10 @@ export function InvoiceDialog({
               >
                 {invoice.kind === "gst" ? "Print or save the tax invoice" : "Print or save as PDF"}
               </a>
-              {invoice.customer_phone ? (
+              {invoice.customer_phone && way ? (
                 <a
                   className="text-sm font-medium text-accent underline underline-offset-2"
-                  href={whatsappShare(invoice)}
+                  href={whatsappShare(invoice, way)}
                   target="_blank"
                   rel="noreferrer"
                 >

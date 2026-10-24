@@ -164,7 +164,7 @@ export const FEATURES: Feature[] = [
 
 /** What every agent shares, for the end of the page. */
 export const UNDERNEATH: string[] = [
-  "Nothing is sent, paid or changed without your say-so: everything waits for your approval unless you switch on automatic replies. An agent may act alone on one kind of action only after a long run of approvals without edits, and you can take that back.",
+  "Nothing is sent, paid or changed without your say-so: everything waits for your approval until you switch on autopilot or automatic replies. With autopilot on, agents do the routine work by themselves (replies on every plan; reminders, follow-ups, review replies and posts from Starter) and you get a summary at 8 pm; refunds, discounts, prices that aren't on your rate card, complaints, orders, payments, invoices and proposals still wait for you. Reply PAUSE from your phone to stop it.",
   "A memory of your business: upload documents (or connect Google Drive, from Starter), and every answer says which page or message it came from.",
   "A mind map of the people, companies and deals Kritvia has learned about.",
   "Each business's data is sealed off from every other and encrypted with its own key; sensitive records stay on Kritvia's own server in Mumbai.",

@@ -310,7 +310,7 @@ export function ConnectorSettings({ ventureId, canAdmin }: { ventureId: string; 
           </div>
         </div>
       </Card>
-      <ForwardingCard ventureId={ventureId} canAdmin={canAdmin} />
+      <ForwardingCard ventureId={ventureId} canAdmin={canAdmin} canSend={google?.status === "active"} />
       <Card>
         <CardHeader
           title={
@@ -858,7 +858,7 @@ function IndiaMartCard({ ventureId, canAdmin, conn, onRemove, onChanged }: {
 }
 
 /** Incoming mail by forwarding to the business's own Kritvia address (no Gmail read access needed). */
-function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {
+function ForwardingCard({ ventureId, canAdmin, canSend }: { ventureId: string; canAdmin: boolean; canSend: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
   const key = ["email-forwarding", ventureId];
@@ -888,7 +888,12 @@ function ForwardingCard({ ventureId, canAdmin }: { ventureId: string; canAdmin: 
             <Forward className="h-4 w-4 text-subtle" aria-hidden /> Email forwarding
           </span>
         }
-        description="Forward your business mail to Kritvia so the Inbox assistant can answer it. Kritvia never gets access to your mailbox; replies still go out from your own Gmail after you approve them."
+        description={
+          // Forwarding only brings mail in; replies go out only through a connected Google account (round 3, A1).
+          canSend
+            ? "Forward your business mail to Kritvia so the Inbox assistant can answer it. Kritvia never gets access to your mailbox; replies still go out from your own Gmail after you approve them."
+            : "Forward your business mail to Kritvia so the Inbox assistant can draft answers. Forwarding only brings mail in: to send replies from Kritvia, connect Google above. Until then, copy each reply into your own mailbox."
+        }
         actions={f ? <Badge tone="success">on</Badge> : <Badge>off</Badge>}
       />
       <div className="space-y-3 p-4">

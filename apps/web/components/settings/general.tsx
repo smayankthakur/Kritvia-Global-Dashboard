@@ -11,7 +11,8 @@ import { Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { api, enumValues, errorMessage, unwrap, type Schemas } from "@/lib/api";
-import { accessKey } from "@/lib/access";
+import { AutopilotSettings } from "@/components/autopilot/autopilot";
+import { accessKey, useAccess } from "@/lib/access";
 import { KIND_LABEL } from "@/lib/nav";
 
 type Kind = NonNullable<Schemas["VentureSettingsIn"]["kind"]>;
@@ -20,6 +21,7 @@ const KINDS = enumValues<Kind>()("software", "finance", "kitchen", "trade", "gen
 export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const { me } = useAccess();
   const q = useQuery({ queryKey: ["settings", ventureId], queryFn: () => unwrap(api.GET("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } } })) });
   const [kind, setKind] = useState<Kind>("general");
   const [threshold, setThreshold] = useState("30");
@@ -38,13 +40,15 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
         about: q.data.about ?? "",
         sign_off: q.data.sign_off ?? "",
       });
+      // No privacy contact yet: start from the owner's own name and email (A25); nothing is saved until Save.
+      const blank = !q.data.privacy_contact_name && !q.data.privacy_contact_email;
       setNotice({
-        privacy_contact_name: q.data.privacy_contact_name ?? "",
-        privacy_contact_email: q.data.privacy_contact_email ?? "",
+        privacy_contact_name: q.data.privacy_contact_name || (blank && canAdmin ? (me?.full_name ?? "") : ""),
+        privacy_contact_email: q.data.privacy_contact_email || (blank && canAdmin ? (me?.email ?? "") : ""),
         notice_in_replies: Boolean(q.data.notice_in_replies),
       });
     }
-  }, [q.data]);
+  }, [q.data, me?.full_name, me?.email, canAdmin]);
   const save = useMutation({
     mutationFn: () => unwrap(api.PUT("/ventures/{venture_id}/settings", { params: { path: { venture_id: ventureId } }, body: { kind, trust_threshold: Number(threshold), speech_people_hints: peopleHints, ...profile, ...notice } })),
     onSuccess: (d) => {
@@ -60,8 +64,11 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
   const t = Number(threshold);
   const badEmail = notice.privacy_contact_email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notice.privacy_contact_email);
   const invalid = !Number.isInteger(t) || t < 5 || t > 1000 || badEmail;
+  const prefilled = !q.data.privacy_contact_email && Boolean(notice.privacy_contact_email);
   return (
-    <Card>
+    <div className="space-y-4">
+      <AutopilotSettings ventureId={ventureId} canAdmin={canAdmin} />
+      <Card>
       <CardHeader title="Venture" description="The kind decides which agents and screens this venture gets." />
       <div className="max-w-xl space-y-4 p-4">
         {!canAdmin ? <Notice tone="info">Only a venture admin or owner can change these settings.</Notice> : null}
@@ -121,6 +128,7 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
           <Field label="Privacy contact name" hint="The person who answers privacy questions, e.g. the owner.">
             <Input value={notice.privacy_contact_name} maxLength={120} disabled={!canAdmin} onChange={(e) => setNotice((n) => ({ ...n, privacy_contact_name: e.target.value }))} />
           </Field>
+          {prefilled ? <p className="text-xs text-info-fg">Filled in from your account. Press Save to publish the notice.</p> : null}
           <Field label="Privacy contact email" hint="Shown on the notice. Leave empty to take the notice down." error={badEmail ? "That email looks wrong" : null}>
             <Input type="email" value={notice.privacy_contact_email} maxLength={200} disabled={!canAdmin} onChange={(e) => setNotice((n) => ({ ...n, privacy_contact_email: e.target.value.trim() }))} />
           </Field>
@@ -153,6 +161,7 @@ export function GeneralSettings({ ventureId, canAdmin }: { ventureId: string; ca
           Save
         </Button>
       </div>
-    </Card>
+      </Card>
+    </div>
   );
 }

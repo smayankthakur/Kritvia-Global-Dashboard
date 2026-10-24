@@ -4,8 +4,8 @@ How a new business gets from the home page to its first approved reply, then con
 It takes about 10 minutes. The screenshots follow a made-up sweet shop, **Sharma Sweets**, owned by
 **Rahul Sharma**; every name, email and code in them is an example.
 
-Nothing is sent to a customer at any point in this guide without the owner's yes. Replying by itself
-(step 12) is off until the owner switches it on.
+Unless the owner picks **Autopilot** in step 5, nothing is sent to a customer without the owner's yes.
+Replying by itself (step 12) is also off until the owner switches it on.
 
 ---
 
@@ -40,8 +40,15 @@ kept completely separate.
 
 ## 5. Roles and agents
 
-Kritvia ticks the agents that suit your kind of business. Keep them, or tick and untick as you like
-(each line says what the agent does and when it runs), then click **Finish setup**.
+Kritvia ticks the agents that suit your kind of business (agents made for other kinds sit under "More
+agents"). Keep them, or tick and untick as you like (each line says what the agent does and when it runs).
+
+Then choose how your agents work, **Autopilot** (recommended) or **I'll approve everything**. Nothing is
+picked for you. With autopilot, agents reply, remind and follow up by themselves; money, complaints and orders
+still come to you, and you get a summary at 8 pm (see [agents/autopilot.md](agents/autopilot.md)). You can
+change it any time in Settings, or reply PAUSE from your linked Telegram or WhatsApp. Click **Finish setup**.
+
+![Autopilot or approve everything](screenshots/onboarding/05b-autopilot-choice.png)
 
 ![Roles and agents](screenshots/onboarding/05-roles-and-agents.png)
 
@@ -101,7 +108,8 @@ Proposals and replies quote prices only from here; the AI never makes a price up
 
 ## 12. Optional: let it answer customers by itself
 
-**Agents → Inbox assistant.** Two options, both off until you tick them and click **Save**:
+With autopilot on (step 5) this is already done. Without it: **Agents → Inbox assistant**, two options,
+both off until you tick them and click **Save**:
 
 - **Answer customers' questions about their own records by themselves**: a customer's own
   invoices, payment links, bookings and shipments, with numbers taken from your records.

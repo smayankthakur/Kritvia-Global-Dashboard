@@ -88,8 +88,21 @@ export function OrDivider({ text = "or" }: { text?: string }) {
 }
 
 /** Two steps: email (and name, when signing up) → 6-digit code. Proving the address is the sign-up. */
-export function EmailCodeForm({ askName, onSignedIn }: { askName?: boolean; onSignedIn: () => void }) {
-  const [step, setStep] = useState<"email" | "code">("email");
+export function EmailCodeForm({
+  askName,
+  onSignedIn,
+  onStep,
+}: {
+  askName?: boolean;
+  onSignedIn: () => void;
+  /** Tells the page which step shows, e.g. so it can hide "Sign up with Google" while the code is asked for. */
+  onStep?: (step: "email" | "code") => void;
+}) {
+  const [step, setStepState] = useState<"email" | "code">("email");
+  const setStep = (s: "email" | "code") => {
+    setStepState(s);
+    onStep?.(s);
+  };
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");

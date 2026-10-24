@@ -1,9 +1,10 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Clock, SearchX, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Clock, SearchX, TriangleAlert, WifiOff, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { ApiError, errorMessage } from "@/lib/api";
+import { isUnreachable } from "@/lib/reconnect";
 import { Button } from "./button";
 import { cn } from "./cn";
 
@@ -50,17 +51,21 @@ export function EmptyState({
 
 export function ErrorState({ error, onRetry, className }: { error: unknown; onRetry?: () => void; className?: string }) {
   const status = error instanceof ApiError ? error.status : null;
-  const Icon = status === 404 ? SearchX : status === 429 ? Clock : TriangleAlert;
-  const title =
-    status === 404
+  // The API out of reach is a passing problem: the shell retries by itself (components/shell/reconnect.tsx).
+  const away = isUnreachable(error);
+  const Icon = status === 404 ? SearchX : status === 429 ? Clock : away ? WifiOff : TriangleAlert;
+  const title = away
+    ? "Reconnecting…"
+    : status === 404
       ? "Not found, or you don't have access"
       : status === 429
         ? "Slow down a little"
         : status === 403
           ? "Request refused"
           : "Something went wrong";
-  const description =
-    status === 404
+  const description = away
+    ? "Kritvia can't reach its server just now. This loads again by itself when it's back."
+    : status === 404
       ? "It may have been removed, or your role doesn't include it. Access is enforced per venture."
       : errorMessage(error);
   return (
@@ -68,7 +73,7 @@ export function ErrorState({ error, onRetry, className }: { error: unknown; onRe
       <div
         className={cn(
           "mb-3 flex h-10 w-10 items-center justify-center rounded-full",
-          status === 404 || status === 429 ? "bg-surface-2 text-subtle" : "bg-danger-soft text-danger",
+          status === 404 || status === 429 ? "bg-surface-2 text-subtle" : away ? "bg-warning-soft text-warning" : "bg-danger-soft text-danger",
         )}
       >
         <Icon className="h-5 w-5" aria-hidden />
@@ -77,7 +82,7 @@ export function ErrorState({ error, onRetry, className }: { error: unknown; onRe
       <p className="mt-1 max-w-md text-sm text-subtle">{description}</p>
       {onRetry && status !== 404 ? (
         <Button size="sm" className="mt-4" onClick={onRetry}>
-          Try again
+          {away ? "Try now" : "Try again"}
         </Button>
       ) : null}
     </div>

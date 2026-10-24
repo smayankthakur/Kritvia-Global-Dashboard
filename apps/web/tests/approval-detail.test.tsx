@@ -46,7 +46,9 @@ describe("ApprovalDetail", () => {
     expect(screen.getByText("Proposal: Next.js website + WhatsApp ordering")).toBeInTheDocument();
     const table = screen.getByRole("table");
     expect(within(table).getByRole("cell", { name: "₹2,00,000" })).toBeInTheDocument();
-    expect(screen.getByText("approver or venture_admin")).toBeInTheDocument();
+    // Plain words, not the API's names (round 3, A17).
+    expect(screen.getByText("Approver or Owner/admin")).toBeInTheDocument();
+    expect(screen.queryByText("gmail.send")).not.toBeInTheDocument();
   });
 
   it("approves as drafted without an edited payload", async () => {
@@ -164,7 +166,7 @@ describe("ApprovalDetail", () => {
   it("explains a missing role and disables actions", () => {
     render(<ApprovalDetail approval={{ ...emailApproval, can_decide: false, sensitive: true, required_roles: ["loan_officer"] }} onDecide={vi.fn()} />);
     expect(screen.getByText("You can view this draft but not decide it")).toBeInTheDocument();
-    expect(screen.getByText(/Deciding needs the loan officer role/)).toBeInTheDocument();
+    expect(screen.getByText(/Deciding needs the Loan officer role/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Approve & send" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Edit" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
@@ -273,5 +275,54 @@ describe("Phone call approvals", () => {
     expect(screen.getByText("Hello Priya! This is Sharma Sweets's AI assistant.")).toBeInTheDocument();
     expect(screen.getByText(/tomorrow's 4 pm appointment/)).toBeInTheDocument();
     expect(editableFields("voice.call", call.payload as Record<string, unknown>)).toEqual(["name", "purpose", "opening"]);
+  });
+});
+
+describe("Round 3: email with no mailbox, and what the customer wrote", () => {
+  it("an email draft with no Gmail connected can't be approved, only copied (A1)", async () => {
+    const onDecide = vi.fn();
+    render(<ApprovalDetail approval={emailApproval} onDecide={onDecide} canSendEmail={false} />);
+    expect(screen.getByText("Gmail isn't connected, so this email can't be sent from Kritvia. Connect Google, or copy the reply.", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Connect Google" })).toHaveAttribute("href", `/v/${emailApproval.venture_id}/settings?tab=connectors`);
+    expect(screen.getByRole("button", { name: "Copy reply" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve & send" })).toBeDisabled();
+    expect(onDecide).not.toHaveBeenCalled();
+  });
+
+  it("with Gmail connected (or not known) nothing is blocked", () => {
+    render(<ApprovalDetail approval={emailApproval} onDecide={vi.fn()} canSendEmail={true} />);
+    expect(screen.queryByText("Gmail isn't connected")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve & send" })).toBeEnabled();
+  });
+
+  it("only email drafts are blocked by a missing mailbox", () => {
+    render(<ApprovalDetail approval={inviteApproval} onDecide={vi.fn()} canSendEmail={false} />);
+    expect(screen.getByRole("button", { name: "Approve & send" })).toBeEnabled();
+  });
+
+  it("shows the customer's own message above the draft, untranslated (A5)", () => {
+    const a = { ...emailApproval, they_wrote: "Hi, do you make websites for bakeries?", they_wrote_from: "Asha Rao" };
+    render(<ApprovalDetail approval={a} onDecide={vi.fn()} />);
+    const block = screen.getByRole("region", { name: "They wrote" });
+    expect(within(block).getByText("Hi, do you make websites for bakeries?")).toHaveAttribute("translate", "no");
+    expect(within(block).getByText(/Asha Rao/)).toBeInTheDocument();
+    expect(within(block).queryByRole("button", { name: "Show all" })).not.toBeInTheDocument();
+  });
+
+  it("folds a long message, and opens it on request", async () => {
+    const long = "Line of the enquiry. ".repeat(60);
+    render(<ApprovalDetail approval={{ ...emailApproval, they_wrote: long }} onDecide={vi.fn()} />);
+    const toggle = screen.getByRole("button", { name: "Show all" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Show less" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("the draft editor uses the normal font and wraps long words (A23)", async () => {
+    render(<ApprovalDetail approval={emailApproval} onDecide={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const body = screen.getByLabelText("Body");
+    expect(body.className).not.toContain("font-mono");
+    expect(body.className).toContain("[overflow-wrap:anywhere]");
   });
 });

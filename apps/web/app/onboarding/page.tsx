@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Hand, Plane, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { TermsGate } from "@/components/legal/terms-gate";
 import { FullPageLoader } from "@/components/shell/gate";
@@ -17,7 +17,19 @@ import { ErrorState } from "@/components/ui/states";
 import { TimeField } from "@/components/ui/time-field";
 import { ApiError, api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { accessKey, meKey, useAccessQuery, type VentureKind } from "@/lib/access";
+import { autopilotProblem, choiceProblem, type AutopilotChoice } from "@/lib/autopilot";
 import { agentAllowed } from "@/lib/pricing";
+import {
+  byCreation,
+  createdOrder,
+  DEFAULT_ROLES,
+  offeredAgents,
+  rememberCreated,
+  rolesFor,
+  templateFor,
+  TEMPLATES,
+  type Template,
+} from "@/lib/onboarding";
 import { takeCoupon } from "@/lib/coupon";
 import { takeReferral } from "@/lib/referral";
 import { SLUG_RE, slugify } from "@/lib/slug";
@@ -30,120 +42,11 @@ interface CreatedVenture {
   template: Template;
 }
 
-/** Business templates: the kind decides which screens a business gets; the template decides
- * which agents start switched on and what standing instructions they begin with. */
-export interface Template {
-  id: string;
-  kind: VentureKind;
-  title: string;
-  example: string;
-  gets: string;
-  /** Agents switched on at setup (others stay available on the Agents page). */
-  workflows: string[];
-  /** Starting instructions per agent; the owner edits them later. */
-  instructions?: Record<string, string>;
-}
-
-export const TEMPLATES: Template[] = [
-  {
-    id: "agency",
-    kind: "software",
-    title: "Agency or services",
-    example: "Digital agency, consultancy, IT services",
-    gets: "Inbox assistant, lead triage with priced proposals, meeting digests",
-    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
-  },
-  {
-    id: "loans",
-    kind: "finance",
-    title: "Loans & real estate",
-    example: "Loan DSA, mortgage broker, property dealer",
-    gets: "Loan document checks and client follow-ups, inbox assistant, meeting digests",
-    workflows: ["inbox_assistant", "loan_verification", "meeting_digest"],
-  },
-  {
-    id: "kitchen",
-    kind: "kitchen",
-    title: "Restaurant or cloud kitchen",
-    example: "Cloud kitchen, restaurant, caterer",
-    gets: "Nightly stock and purchase plan, inbox assistant for orders and queries",
-    workflows: ["inbox_assistant", "kitchen_daily", "meeting_digest"],
-    instructions: { inbox_assistant: "Customers ask about orders, menu and delivery. For order problems, ask for the order number and apologise once." },
-  },
-  {
-    id: "trade",
-    kind: "trade",
-    title: "Exporter, importer or C&F agent",
-    example: "Exporter, importer, customs broker (CHA), freight forwarder",
-    gets: "Shipment files with document checklists, export invoices and packing lists, a morning list of cut-offs, LC and payment dates, updates to buyers and clients",
-    workflows: ["inbox_assistant", "trade_watch", "lead_triage", "meeting_digest"],
-    instructions: { inbox_assistant: "Messages are from buyers, suppliers, clients, shipping lines and forwarders. Quote prices only from the rate card, with the Incoterm. For a shipment query, ask for the file number, BL or container number. Never promise a sailing or clearance date the team hasn't confirmed." },
-  },
-  {
-    id: "retail",
-    kind: "general",
-    title: "Shop or e-commerce",
-    example: "Retail store, D2C brand, wholesaler",
-    gets: "Inbox assistant for product, order and payment queries; lead triage for bulk enquiries",
-    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
-    instructions: { inbox_assistant: "Answer product, stock, delivery and return questions from what you know. For an order query, ask for the order number. Never promise a refund; say the team will confirm." },
-  },
-  {
-    id: "clinic",
-    kind: "general",
-    title: "Clinic, salon or local services",
-    example: "Clinic, salon, repair service, tutor",
-    gets: "Inbox assistant for appointments and questions, meeting digests",
-    workflows: ["inbox_assistant", "meeting_digest"],
-    instructions: { inbox_assistant: "Most messages are appointment requests. Offer the next two available slots from the calendar when you know them, otherwise ask for a preferred day and time. Never give medical or legal advice." },
-  },
-  {
-    id: "coaching",
-    kind: "general",
-    title: "Coaching or education",
-    example: "Coaching institute, online course, training company",
-    gets: "Lead triage for course enquiries with fees from your rate card, inbox assistant",
-    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
-    instructions: { lead_triage: "Enquiries are usually from students or parents. Mention batch timings and the free demo class." },
-  },
-  {
-    id: "freelancer",
-    kind: "general",
-    title: "Freelancer or consultant",
-    example: "Designer, developer, CA, architect",
-    gets: "Lead triage with proposals from your rate card, inbox assistant, meeting digests",
-    workflows: ["inbox_assistant", "lead_triage", "meeting_digest"],
-  },
-  {
-    id: "other",
-    kind: "general",
-    title: "Something else",
-    example: "Any business with an inbox",
-    gets: "Inbox assistant, memory, voice notes, approvals; switch on more agents later",
-    workflows: ["inbox_assistant", "meeting_digest"],
-  },
-];
-
 interface BusinessDraft {
   key: number;
   name: string;
   template: Template | null;
 }
-
-const ROLE_OPTIONS: { role: string; label: string; hint: string }[] = [
-  { role: "approver", label: "Approver", hint: "Approve agent drafts (emails, invites)" },
-  { role: "loan_officer", label: "Loan officer", hint: "See loan files; approve client follow-ups" },
-  { role: "kitchen_manager", label: "Kitchen manager", hint: "Approve purchase orders" },
-  { role: "operator", label: "Operator", hint: "Run workflows and edit data" },
-];
-
-const DEFAULT_ROLES: Record<VentureKind, string[]> = {
-  software: ["approver"],
-  finance: ["loan_officer"],
-  kitchen: ["kitchen_manager"],
-  trade: ["approver"],
-  general: ["approver"],
-};
 
 const DEFAULT_SCHEDULES: Record<string, string> = { kitchen_daily: "23:30", trade_watch: "09:00" };
 
@@ -174,15 +77,6 @@ function Steps({ step }: { step: number }) {
   );
 }
 
-/** The template a business was set up with: its saved industry, else the first one of its kind. */
-function templateFor(industry: string | null | undefined, kind: string | null | undefined): Template {
-  return (
-    TEMPLATES.find((t) => t.id === industry) ??
-    TEMPLATES.find((t) => t.kind === kind) ??
-    (TEMPLATES.find((t) => t.id === "other") as Template)
-  );
-}
-
 /**
  * Businesses whose setup never finished. "Finish setup" saves a config for every agent a business can use,
  * so a business with no agent configs at all was created and then left (a reload, a closed tab, another
@@ -190,7 +84,8 @@ function templateFor(industry: string | null | undefined, kind: string | null | 
  */
 async function unfinishedVentures(ventures: { venture_id: string; venture_name: string; kind?: string | null }[]): Promise<CreatedVenture[]> {
   const out: CreatedVenture[] = [];
-  for (const v of ventures.slice(0, 10)) {
+  // Oldest first, so a reload keeps the order and the sample run lands in the first business (A22).
+  for (const v of byCreation(ventures, createdOrder()).slice(0, 10)) {
     const configs = await unwrap(api.GET("/ventures/{venture_id}/workflow-configs", { params: { path: { venture_id: v.venture_id } } }));
     if (configs.length) continue;
     const settings = await unwrap(api.GET("/ventures/{venture_id}/settings", { params: { path: { venture_id: v.venture_id } } })).catch(() => null);
@@ -372,6 +267,7 @@ function BusinessStep({
       }
       // Came with a coupon (e.g. /register?coupon=FIRST50): apply it once the businesses exist, so a coupon for
       // one industry can check it (best effort; Plan & billing can add it later).
+      rememberCreated([...createdOrder().filter((x) => !out.some((o) => o.id === x)), ...out.map((o) => o.id)]);
       const coupon = takeCoupon();
       if (coupon) await api.POST("/orgs/{org_id}/coupon", { params: { path: { org_id: org } }, body: { code: coupon } }).catch(() => undefined);
       onDone(out);
@@ -493,21 +389,22 @@ function SetupStep({
   const catalogue = useQuery({ queryKey: ["workflows"], queryFn: () => unwrap(api.GET("/workflows")) });
   const planQ = useQuery({
     queryKey: ["plan", orgId],
-    queryFn: async () => (await unwrap(api.GET("/orgs/{org_id}/plan", { params: { path: { org_id: orgId } } }))) as unknown as { plan: { name: string; agents: string } },
+    queryFn: async () => (await unwrap(api.GET("/orgs/{org_id}/plan", { params: { path: { org_id: orgId } } }))) as unknown as { plan: { code?: string; name: string; agents: string } },
   });
   const allowed = (wf: string, kind: string) => agentAllowed(planQ.data?.plan.agents, wf, kind);
   const [roles, setRoles] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(ventures.map((v) => [v.id, DEFAULT_ROLES[v.kind]])),
   );
   const [flows, setFlows] = useState<Record<string, Record<string, { on: boolean; schedule: string }>>>({});
+  const [autopilot, setAutopilot] = useState<AutopilotChoice>(null);
+  const [choiceError, setChoiceError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [problems, setProblems] = useState<string[]>([]);
 
-  const available = useMemo(() => {
-    const out: Record<string, { name: string; title: string; description: string }[]> = {};
-    for (const v of ventures) {
-      out[v.id] = (catalogue.data ?? []).filter((w) => w.venture_kinds.includes(v.kind));
-    }
+  // Each business is offered the agents that fit its template: a salon never sees kitchen, loan or shipment agents (A3).
+  const offered = useMemo(() => {
+    const out: Record<string, { main: Workflow[]; more: Workflow[] }> = {};
+    for (const v of ventures) out[v.id] = offeredAgents(v.template, catalogue.data ?? []);
     return out;
   }, [catalogue.data, ventures]);
 
@@ -521,6 +418,12 @@ function SetupStep({
     setFlows((f) => ({ ...f, [vid]: { ...(f[vid] ?? {}), [wf]: { ...flowState(vid, wf), ...patch } } }));
 
   const finish = async () => {
+    const pick = choiceProblem(autopilot);
+    setChoiceError(pick);
+    if (pick) {
+      document.getElementById("autopilot-choice")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setBusy(true);
     const errs: string[] = [];
     for (const v of ventures) {
@@ -531,7 +434,8 @@ function SetupStep({
           if (!(e instanceof ApiError && e.status === 409)) errs.push(`${v.name}: role ${role} — ${errorMessage(e)}`);
         }
       }
-      for (const w of available[v.id] ?? []) {
+      const o = offered[v.id];
+      for (const w of [...(o?.main ?? []), ...(o?.more ?? [])]) {
         const st = flowState(v.id, w.name);
         if (st.schedule && !/^([01]\d|2[0-3]):[0-5]\d$/.test(st.schedule)) {
           errs.push(`${v.name}: ${w.title} schedule must be HH:MM`);
@@ -548,18 +452,47 @@ function SetupStep({
           errs.push(`${v.name}: ${w.title} — ${errorMessage(e)}`);
         }
       }
+      try {
+        await unwrap(api.PUT("/ventures/{venture_id}/autopilot", { params: { path: { venture_id: v.id } }, body: { on: autopilot === "auto" } }));
+      } catch (e) {
+        errs.push(`${v.name}: autopilot — ${autopilotProblem(e)}`);
+      }
     }
     setProblems(errs);
     setBusy(false);
+    // The sample run starts in the first business made in this setup (A22).
     if (!errs.length) await onDone(ventures[0]?.id);
   };
+
+  const agentRow = (v: CreatedVenture, w: Workflow) => {
+    const st = flowState(v.id, w.name);
+    const ok = allowed(w.name, v.kind);
+    return (
+      <div key={w.name} className="flex flex-wrap items-start justify-between gap-3">
+        <Checkbox
+          label={w.title}
+          hint={ok ? w.description : `Not on the ${planQ.data?.plan.name ?? "current"} plan — included from ${v.kind === "finance" || v.kind === "kitchen" || v.kind === "trade" ? "Starter" : "Growth"}. Upgrade any time in Plan & billing.`}
+          checked={st.on}
+          disabled={!ok}
+          onChange={(e) => setFlow(v.id, w.name, { on: e.target.checked })}
+          className="min-w-0 flex-1"
+        />
+        {w.name in DEFAULT_SCHEDULES ? (
+          <Field label="Daily at (IST)" className="w-44">
+            <TimeField value={st.schedule} onChange={(t) => setFlow(v.id, w.name, { schedule: t })} />
+          </Field>
+        ) : null}
+      </div>
+    );
+  };
+
+  const trial = planQ.data?.plan.code === "free" || planQ.data?.plan.agents === "core";
 
   return (
     <Card className="p-6">
       <h1 className="text-lg font-semibold tracking-tight">Your roles and agents</h1>
       <p className="mt-1 text-sm text-muted">
-        As owner you can see everything, but some approvals need a specific role — for example loan follow-ups are
-        sensitive and only a loan officer may approve them.
+        As owner you can see everything. Kritvia has switched on the agents that fit your kind of business; change them now or later on the Agents page.
       </p>
       <div className="mt-6 space-y-4">
         {problems.length ? (
@@ -578,7 +511,7 @@ function SetupStep({
             </legend>
             <p className="mb-2 text-xs font-medium text-subtle">Add me as</p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {ROLE_OPTIONS.map((r) => (
+              {rolesFor(v.kind).map((r) => (
                 <Checkbox
                   key={r.role}
                   label={r.label}
@@ -595,31 +528,52 @@ function SetupStep({
             </div>
             <p className="mt-4 mb-2 text-xs font-medium text-subtle">Agents to switch on</p>
             {catalogue.isPending ? <p className="text-sm text-subtle">Loading agents…</p> : null}
-            <div className="space-y-2">
-              {(available[v.id] ?? []).map((w) => {
-                const st = flowState(v.id, w.name);
-                const ok = allowed(w.name, v.kind);
-                return (
-                  <div key={w.name} className="flex flex-wrap items-start justify-between gap-3">
-                    <Checkbox
-                      label={w.title}
-                      hint={ok ? w.description : `Not on the ${planQ.data?.plan.name ?? "current"} plan — included from ${v.kind === "finance" || v.kind === "kitchen" || v.kind === "trade" ? "Starter" : "Growth"}. Upgrade any time in Plan & billing.`}
-                      checked={st.on}
-                      disabled={!ok}
-                      onChange={(e) => setFlow(v.id, w.name, { on: e.target.checked })}
-                      className="min-w-0 flex-1"
-                    />
-                    {w.name in DEFAULT_SCHEDULES ? (
-                      <Field label="Daily at (IST)" className="w-44">
-                        <TimeField value={st.schedule} onChange={(t) => setFlow(v.id, w.name, { schedule: t })} />
-                      </Field>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
+            <div className="space-y-2">{(offered[v.id]?.main ?? []).map((w) => agentRow(v, w))}</div>
+            {offered[v.id]?.more.length ? (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs font-medium text-accent">More agents you can switch on</summary>
+                <div className="mt-2 space-y-2">{offered[v.id]!.more.map((w) => agentRow(v, w))}</div>
+              </details>
+            ) : null}
           </fieldset>
         ))}
+        <fieldset id="autopilot-choice" className="space-y-2">
+          <legend className="text-sm font-semibold">How should your agents work?</legend>
+          <p className="text-xs text-subtle">Pick one. You can change it any time in Settings, or reply PAUSE from your linked Telegram or WhatsApp.</p>
+          <ChoiceCards
+            label="How should your agents work?"
+            options={AUTOPILOT_OPTIONS}
+            value={autopilot}
+            onChange={(o) => {
+              setAutopilot(o.id);
+              setChoiceError(null);
+            }}
+            className="grid gap-2 sm:grid-cols-2"
+            cardClassName={(checked) =>
+              cn(
+                "rounded-lg border p-3 text-left transition-[border-color,background-color,box-shadow] duration-150",
+                checked ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-border hover:border-border-strong hover:bg-surface-2 hover:shadow-card",
+              )
+            }
+            render={(o, checked) => (
+              <>
+                <span className="flex items-center justify-between gap-2 text-sm font-medium">
+                  <span className="flex items-center gap-2">
+                    {o.id === "auto" ? <Plane className="h-4 w-4 text-accent" aria-hidden /> : <Hand className="h-4 w-4 text-subtle" aria-hidden />}
+                    {o.title}
+                  </span>
+                  {checked ? <Check className="h-4 w-4 text-accent" aria-hidden /> : null}
+                </span>
+                {o.badge ? <Badge tone="accent" className="mt-1">{o.badge}</Badge> : null}
+                <span className="mt-2 block text-xs text-muted">{o.text}</span>
+              </>
+            )}
+          />
+          {autopilot === "auto" && trial ? (
+            <p className="text-xs text-subtle">On the free trial only inbox replies go out by themselves. Reminders, reviews and follow-ups join on Starter and up.</p>
+          ) : null}
+          {choiceError ? <p className="text-xs text-danger" role="alert">{choiceError}</p> : null}
+        </fieldset>
         {!email && emailState.error ? (
           <Notice tone="danger" title="We couldn't load your account">
             <p>{errorMessage(emailState.error)} Your choices above are kept.</p>
@@ -642,3 +596,19 @@ function SetupStep({
     </Card>
   );
 }
+
+type Workflow = Schemas["WorkflowOut"];
+
+const AUTOPILOT_OPTIONS: { id: "auto" | "approve"; title: string; badge?: string; text: string }[] = [
+  {
+    id: "auto",
+    title: "Autopilot",
+    badge: "Recommended",
+    text: "Agents reply, remind and follow up by themselves. Money, complaints and orders still come to you.",
+  },
+  {
+    id: "approve",
+    title: "I'll approve everything",
+    text: "Every reply and reminder waits for your yes before it goes out.",
+  },
+];

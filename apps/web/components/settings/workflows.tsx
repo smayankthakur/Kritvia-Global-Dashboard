@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,8 +12,11 @@ import { Notice } from "@/components/ui/page";
 import { ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { TimeField } from "@/components/ui/time-field";
+import { UnsavedBar } from "@/components/ui/unsaved-bar";
+import { agentFromHash, splitAgents } from "@/lib/agents";
 import { api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
+import { useUnsavedChanges } from "@/lib/unsaved";
 
 /** Agents that run on a daily clock: the time they run, and how the field is labelled. */
 const SCHEDULED: Record<string, { at: string; label: string }> = {
@@ -147,115 +150,255 @@ function OptionField({ o, value, error, disabled, onChange }: { o: Option; value
   );
 }
 
-function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOut"]; config?: Schemas["WorkflowConfigOut"]; ventureId: string; canAdmin: boolean }) {
+type Config = Schemas["WorkflowConfigOut"];
+type Workflow = Schemas["WorkflowOut"];
+
+/** What an agent's form holds: the time it runs, its instructions, the option fields and the extra JSON. */
+export interface AgentDraft {
+  schedule: string;
+  instructions: string;
+  form: Record<string, unknown>;
+  text: string;
+}
+
+export function draftFromConfig(wf: Pick<Workflow, "name" | "options">, config?: Pick<Config, "schedule" | "instructions" | "settings">): AgentDraft {
+  const s = splitSettings((config?.settings as Record<string, unknown>) ?? {}, wf.options);
+  return {
+    schedule: config?.schedule ?? SCHEDULED[wf.name]?.at ?? "",
+    instructions: config?.instructions ?? "",
+    form: s.form,
+    text: JSON.stringify(s.rest, null, 2),
+  };
+}
+
+/** JSON with sorted keys, so two settings objects compare equal whatever order their keys came in. */
+function stable(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
+  if (v && typeof v === "object")
+    return `{${Object.keys(v as Record<string, unknown>)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`)
+      .join(",")}}`;
+  return JSON.stringify(v) ?? "null";
+}
+
+/** What Save would send, as text: two drafts that would save the same thing have no unsaved difference. */
+export function draftKey(wf: Pick<Workflow, "name" | "options">, d: AgentDraft): string {
+  const parsed = parseSettingsJson(d.text);
+  const opts = optionValues(d.form, wf.options);
+  return stable({
+    schedule: SCHEDULED[wf.name] ? d.schedule || null : null,
+    instructions: d.instructions,
+    settings: parsed.value ? { ...parsed.value, ...opts.settings } : { invalidJson: d.text },
+    errors: opts.errors,
+  });
+}
+
+function draftErrors(wf: Workflow, d: AgentDraft) {
+  const parsed = parseSettingsJson(d.text);
+  const opts = optionValues(d.form, wf.options);
+  const schedErr = d.schedule && !/^([01]\d|2[0-3]):[0-5]\d$/.test(d.schedule) ? "HH:MM (24-hour, IST)" : null;
+  const invalid = Boolean(parsed.error) || Boolean(schedErr) || Object.keys(opts.errors).length > 0 || d.instructions.length > 4000;
+  return { parsed, opts, schedErr, invalid };
+}
+
+/** The Prospector needs at least one Google Maps search before it can find anyone (round 3, A20). */
+export function hasSearches(config?: Pick<Config, "settings">): boolean {
+  const s = (config?.settings as Record<string, unknown> | undefined)?.searches;
+  return typeof s === "string" && s.split(";").some((x) => x.trim());
+}
+
+function putConfigs(list: Config[] | undefined, next: Config): Config[] {
+  const rest = (list ?? []).filter((c) => c.workflow !== next.workflow);
+  return [...rest, next];
+}
+
+function AgentRow({
+  wf,
+  config,
+  ventureId,
+  canAdmin,
+  defaultOpen,
+  onDirty,
+}: {
+  wf: Workflow;
+  config?: Config;
+  ventureId: string;
+  canAdmin: boolean;
+  defaultOpen: boolean;
+  onDirty: (name: string, dirty: boolean) => void;
+}) {
   const qc = useQueryClient();
   const toast = useToast();
-  const initial = splitSettings((config?.settings as Record<string, unknown>) ?? {}, wf.options);
-  const [enabled, setEnabled] = useState(config?.enabled ?? false);
-  const [schedule, setSchedule] = useState(config?.schedule ?? SCHEDULED[wf.name]?.at ?? "");
-  const [instructions, setInstructions] = useState(config?.instructions ?? "");
-  const [form, setForm] = useState<Record<string, unknown>>(initial.form);
-  const [advanced, setAdvanced] = useState(false);
-  const [text, setText] = useState(JSON.stringify(initial.rest, null, 2));
+  const base = useMemo(() => draftFromConfig(wf, config), [wf, config]);
+  const [draft, setDraft] = useState<AgentDraft>(base);
+  const [seen, setSeen] = useState(base);
+  // The saved config changed (saved here, switched on or off, changed on the Chats page): take it, unless the
+  // form holds edits not saved yet — those stay until Save or Discard.
+  if (seen !== base) {
+    if (draftKey(wf, draft) === draftKey(wf, seen)) setDraft(base);
+    setSeen(base);
+  }
+  const dirty = draftKey(wf, draft) !== draftKey(wf, base);
+  useEffect(() => onDirty(wf.name, dirty), [dirty, onDirty, wf.name]);
+  useEffect(() => () => onDirty(wf.name, false), [onDirty, wf.name]);
+
+  const { parsed, opts, schedErr, invalid } = draftErrors(wf, draft);
+  const [open, setOpen] = useState(() => defaultOpen || draftErrors(wf, base).invalid);
   useEffect(() => {
-    const s = splitSettings((config?.settings as Record<string, unknown>) ?? {}, wf.options);
-    setEnabled(config?.enabled ?? false);
-    setSchedule(config?.schedule ?? SCHEDULED[wf.name]?.at ?? "");
-    setInstructions(config?.instructions ?? "");
-    setForm(s.form);
-    setText(JSON.stringify(s.rest, null, 2));
-  }, [config, wf.name, wf.options]);
-  const parsed = parseSettingsJson(text);
-  const opts = optionValues(form, wf.options);
-  const schedErr = schedule && !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule) ? "HH:MM (24-hour, IST)" : null;
-  const invalid = Boolean(parsed.error) || Boolean(schedErr) || Object.keys(opts.errors).length > 0 || instructions.length > 4000;
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+  const [advanced, setAdvanced] = useState(false);
+  const set = (patch: Partial<AgentDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  const configKey = ["workflow-configs", ventureId];
+
   const save = useMutation({
     mutationFn: () =>
       unwrap(
         api.PUT("/ventures/{venture_id}/workflow-configs/{workflow}", {
           params: { path: { venture_id: ventureId, workflow: wf.name } },
-          // Only agents that run on a clock have a time; the others start when there is something to do.
-          body: { enabled, schedule: SCHEDULED[wf.name] ? schedule || null : null, settings: { ...(parsed.value ?? {}), ...opts.settings }, instructions },
+          // The switch saves on its own; Save keeps whatever it is now. Only agents that run on a clock have a
+          // time; the others start when there is something to do.
+          body: {
+            enabled: config?.enabled ?? false,
+            schedule: SCHEDULED[wf.name] ? draft.schedule || null : null,
+            settings: { ...(parsed.value ?? {}), ...opts.settings },
+            instructions: draft.instructions,
+          },
         }),
       ),
-    onSuccess: () => {
+    onSuccess: (out) => {
       toast.success(`${wf.title} saved`);
-      void qc.invalidateQueries({ queryKey: ["workflow-configs", ventureId] });
+      qc.setQueryData<Config[]>(configKey, (list) => putConfigs(list, out));
+      void qc.invalidateQueries({ queryKey: configKey });
     },
     onError: (e) => toast.error("Could not save", errorMessage(e)),
   });
+  // The on/off switch saves at once and changes nothing else (round 3, A2).
+  const toggle = useMutation({
+    mutationFn: (enabled: boolean) =>
+      unwrap(
+        api.PATCH("/ventures/{venture_id}/workflow-configs/{workflow}", {
+          params: { path: { venture_id: ventureId, workflow: wf.name } },
+          body: { enabled },
+        }),
+      ),
+    onSuccess: (out) => {
+      toast.success(out.enabled ? `${wf.title} is on` : `${wf.title} is off`);
+      qc.setQueryData<Config[]>(configKey, (list) => putConfigs(list, out));
+      void qc.invalidateQueries({ queryKey: configKey });
+    },
+    onError: (e) => toast.error("Couldn't switch it", errorMessage(e)),
+  });
+  const enabled = toggle.isPending ? Boolean(toggle.variables) : (config?.enabled ?? false);
+  const panelId = `agent-${wf.name}-settings`;
+  const saveNow = () => {
+    if (!invalid) save.mutate();
+    else setOpen(true);
+  };
+
   return (
-    <li id={`agent-${wf.name}`} className="scroll-mt-20 space-y-4 p-4">
+    <li id={`agent-${wf.name}`} className="scroll-mt-20 space-y-3 px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="text-sm font-semibold">{wf.title}</h3>
-            {config ? (
-              <Badge tone={config.enabled ? "success" : "neutral"}>{config.enabled ? "On" : "Off"}</Badge>
-            ) : (
-              <Badge tone="warning">Not set up</Badge>
-            )}
-            {config ? <span className="text-xs text-subtle">updated {formatRelative(config.updated_at)}</span> : null}
+            {config ? null : <Badge tone="warning">Not set up</Badge>}
+            {config?.updated_at ? <span className="text-xs text-subtle">updated {formatRelative(config.updated_at)}</span> : null}
           </div>
-          <p className="mt-1 text-sm text-muted">{wf.description}</p>
-          <p className="mt-1 text-xs text-subtle">
+          <p className="mt-0.5 line-clamp-2 text-sm text-muted">{wf.description}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={() => setOpen((o) => !o)}
+            icon={<ChevronDown className={open ? "h-3.5 w-3.5 rotate-180 transition-transform" : "h-3.5 w-3.5 transition-transform"} aria-hidden />}
+          >
+            Configure
+          </Button>
+          <Switch checked={enabled} onChange={(next) => toggle.mutate(next)} label={`${wf.title} on or off`} disabled={!canAdmin || toggle.isPending} />
+        </div>
+      </div>
+      {dirty && !open ? <UnsavedBar onSave={saveNow} onDiscard={() => setDraft(base)} saving={save.isPending} saveDisabled={!canAdmin} /> : null}
+      {open ? (
+        <div id={panelId} className="space-y-4 rounded-lg border border-border p-3 sm:p-4">
+          <p className="text-xs text-subtle">
             <span className="inline-flex items-center gap-1">
               <Play className="h-3 w-3" aria-hidden /> Runs: {wf.trigger}
             </span>
           </p>
-        </div>
-        <Switch checked={enabled} onChange={setEnabled} label={`Enable ${wf.title}`} disabled={!canAdmin} />
-      </div>
-      <Field
-        label="Instructions for this agent"
-        hint={`${INSTRUCTION_HINTS[wf.name] ?? "Plain language; the agent follows these on every run."} (${instructions.length}/4000)`}
-        error={instructions.length > 4000 ? "Too long" : undefined}
-      >
-        <Textarea rows={3} value={instructions} disabled={!canAdmin} maxLength={4000} onChange={(e) => setInstructions(e.target.value)} placeholder="Anything the agent should always know or do" />
-      </Field>
-      {wf.options.length ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {wf.options.map((o) => (
-            <OptionField key={o.key} o={o} value={form[o.key]} error={opts.errors[o.key]} disabled={!canAdmin} onChange={(v) => setForm((f) => ({ ...f, [o.key]: v }))} />
-          ))}
-        </div>
-      ) : null}
-      {SCHEDULED[wf.name] ? (
-        <Field label={SCHEDULED[wf.name]!.label} error={schedErr} className="max-w-xs">
-          <TimeField value={schedule} disabled={!canAdmin} onChange={setSchedule} />
-        </Field>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" className="inline-flex items-center gap-1 text-xs text-subtle hover:text-fg" onClick={() => setAdvanced((a) => !a)} aria-expanded={advanced}>
-          <ChevronDown className={advanced ? "h-3.5 w-3.5 rotate-180 transition-transform" : "h-3.5 w-3.5 transition-transform"} aria-hidden />
-          Advanced
-        </button>
-        <div className="flex flex-wrap items-center gap-2">
-          {wf.name === "prospector" && config?.enabled ? <RunNow ventureId={ventureId} disabled={!canAdmin} /> : null}
-          <Button variant="primary" size="sm" disabled={!canAdmin || invalid} loading={save.isPending} onClick={() => save.mutate()} aria-label={`Save ${wf.title}`}>
-            Save
-          </Button>
-        </div>
-      </div>
-      {wf.name === "whatsapp_followup" ? (
-        <p className="text-xs text-subtle">
-          Only chats where the customer wrote to you first, or where your team confirmed they agreed to messages, get a follow-up.
-          Each follow-up waits for your yes unless you let this agent send on its own on the Trust page; a reply from the customer stops them, and STOP opts them out.
-        </p>
-      ) : null}
-      {wf.name === "prospector" ? (
-        <p className="text-xs text-subtle">
-          Emails go from your connected Gmail. WhatsApp only lets a business message someone first from its own phone, so first
-          WhatsApp messages wait in Leads for you to send with one tap. Every message offers a way to opt out, and a reply stops
-          the follow-ups. Calls are yours for now: the lead shows the number and you log the call.
-        </p>
-      ) : null}
-      {advanced ? (
-        <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
-          <Field label="Extra settings (JSON)" error={parsed.error} hint="For settings without a field above, e.g. gmail_query, source_weights.">
-            <Textarea rows={Math.min(8, Math.max(2, text.split("\n").length))} value={text} disabled={!canAdmin} onChange={(e) => setText(e.target.value)} className="font-mono text-xs" spellCheck={false} />
+          <Field
+            label="Instructions for this agent"
+            hint={`${INSTRUCTION_HINTS[wf.name] ?? "Plain language; the agent follows these on every run."} (${draft.instructions.length}/4000)`}
+            error={draft.instructions.length > 4000 ? "Too long" : undefined}
+          >
+            <Textarea
+              rows={3}
+              value={draft.instructions}
+              disabled={!canAdmin}
+              maxLength={4000}
+              onChange={(e) => set({ instructions: e.target.value })}
+              placeholder="Anything the agent should always know or do"
+            />
           </Field>
-          <p className="text-xs text-subtle">Steps: {wf.steps.map((s) => s.name).join(" → ")}</p>
+          {wf.options.length ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {wf.options.map((o) => (
+                <OptionField
+                  key={o.key}
+                  o={o}
+                  value={draft.form[o.key]}
+                  error={opts.errors[o.key]}
+                  disabled={!canAdmin}
+                  onChange={(v) => setDraft((d) => ({ ...d, form: { ...d.form, [o.key]: v } }))}
+                />
+              ))}
+            </div>
+          ) : null}
+          {SCHEDULED[wf.name] ? (
+            <Field label={SCHEDULED[wf.name]!.label} error={schedErr} className="max-w-xs">
+              <TimeField value={draft.schedule} disabled={!canAdmin} onChange={(t) => set({ schedule: t })} />
+            </Field>
+          ) : null}
+          {wf.name === "whatsapp_followup" ? (
+            <p className="text-xs text-subtle">
+              Only chats where the customer wrote to you first, or where your team confirmed they agreed to messages, get a follow-up.
+              Each follow-up waits for your yes unless you let this agent send on its own on the Trust page; a reply from the customer stops them, and STOP opts them out.
+            </p>
+          ) : null}
+          {wf.name === "prospector" ? (
+            <p className="text-xs text-subtle">
+              Emails go from your connected Gmail. WhatsApp only lets a business message someone first from its own phone, so first
+              WhatsApp messages wait in Leads for you to send with one tap. Every message offers a way to opt out, and a reply stops
+              the follow-ups. Calls are yours for now: the lead shows the number and you log the call.
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button type="button" className="inline-flex items-center gap-1 text-xs text-subtle hover:text-fg" onClick={() => setAdvanced((a) => !a)} aria-expanded={advanced}>
+              <ChevronDown className={advanced ? "h-3.5 w-3.5 rotate-180 transition-transform" : "h-3.5 w-3.5 transition-transform"} aria-hidden />
+              Advanced
+            </button>
+            {wf.name === "prospector" && config?.enabled ? <RunNow ventureId={ventureId} disabled={!canAdmin} ready={hasSearches(config)} /> : null}
+          </div>
+          {advanced ? (
+            <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
+              <Field label="Extra settings (JSON)" error={parsed.error} hint="For settings without a field above, e.g. gmail_query, source_weights.">
+                <Textarea
+                  rows={Math.min(8, Math.max(2, draft.text.split("\n").length))}
+                  value={draft.text}
+                  disabled={!canAdmin}
+                  onChange={(e) => set({ text: e.target.value })}
+                  className="font-mono text-xs"
+                  spellCheck={false}
+                />
+              </Field>
+              <p className="text-xs text-subtle">Steps: {wf.steps.map((s) => s.name).join(" → ")}</p>
+            </div>
+          ) : null}
+          {dirty ? <UnsavedBar onSave={saveNow} onDiscard={() => setDraft(base)} saving={save.isPending} saveDisabled={!canAdmin || invalid} sticky /> : null}
         </div>
       ) : null}
     </li>
@@ -263,7 +406,7 @@ function AgentRow({ wf, config, ventureId, canAdmin }: { wf: Schemas["WorkflowOu
 }
 
 /** Runs the Prospector now instead of waiting for its daily time, then shows the run working. */
-function RunNow({ ventureId, disabled }: { ventureId: string; disabled: boolean }) {
+function RunNow({ ventureId, disabled, ready }: { ventureId: string; disabled: boolean; ready: boolean }) {
   const toast = useToast();
   const router = useRouter();
   const run = useMutation({
@@ -275,10 +418,24 @@ function RunNow({ ventureId, disabled }: { ventureId: string; disabled: boolean 
     onError: (e) => toast.error("Could not start", errorMessage(e)),
   });
   return (
-    <Button size="sm" loading={run.isPending} disabled={disabled} onClick={() => run.mutate()}>
-      Find leads now
-    </Button>
+    <span className="flex items-center gap-2">
+      {!ready ? <span className="text-xs text-subtle">Add a search first</span> : null}
+      <Button size="sm" loading={run.isPending} disabled={disabled || !ready} onClick={() => run.mutate()}>
+        Find leads now
+      </Button>
+    </span>
   );
+}
+
+function useHashAgent(): string | null {
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => setName(agentFromHash(window.location.hash));
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
+  return name;
 }
 
 export function WorkflowSettings({ ventureId, kind, canAdmin }: { ventureId: string; kind: string; canAdmin: boolean }) {
@@ -287,25 +444,88 @@ export function WorkflowSettings({ ventureId, kind, canAdmin }: { ventureId: str
     queryKey: ["workflow-configs", ventureId],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/workflow-configs", { params: { path: { venture_id: ventureId } } })),
   });
+  const hashAgent = useHashAgent();
+  const [dirtyAgents, setDirtyAgents] = useState<ReadonlySet<string>>(new Set());
+  const onDirty = useCallback((name: string, dirty: boolean) => {
+    setDirtyAgents((s) => {
+      if (s.has(name) === dirty) return s;
+      const n = new Set(s);
+      if (dirty) n.add(name);
+      else n.delete(name);
+      return n;
+    });
+  }, []);
+  useUnsavedChanges(dirtyAgents.size > 0);
+  const [showMore, setShowMore] = useState(false);
+  const parts = useMemo(() => {
+    if (!catalogue.data || !configs.data) return null;
+    const ORDER = ["inbox_assistant", "lead_triage", "prospector", "loan_verification", "kitchen_daily", "trade_watch", "meeting_digest"];
+    const configured = new Set(configs.data.map((c) => c.workflow));
+    const on = new Set(configs.data.filter((c) => c.enabled).map((c) => c.workflow));
+    const list = catalogue.data
+      .filter((w) => w.venture_kinds.includes(kind) || configured.has(w.name))
+      .sort((a, b) => (ORDER.indexOf(a.name) + 1 || 99) - (ORDER.indexOf(b.name) + 1 || 99));
+    return splitAgents(list, kind, on);
+  }, [catalogue.data, configs.data, kind]);
+  const hashInMore = Boolean(hashAgent && parts?.more.some((w) => w.name === hashAgent));
+  useEffect(() => {
+    if (hashInMore) setShowMore(true);
+  }, [hashInMore]);
+  // A link to one agent (from Automations or the morning check) opens it; scroll once it is on the page.
+  useEffect(() => {
+    if (!hashAgent || !parts) return;
+    const t = setTimeout(() => document.getElementById(`agent-${hashAgent}`)?.scrollIntoView({ block: "start" }), 50);
+    return () => clearTimeout(t);
+  }, [hashAgent, parts, showMore]);
+
   if (catalogue.isPending || configs.isPending) return <SkeletonRows />;
   if (catalogue.isError) return <ErrorState error={catalogue.error} />;
   if (configs.isError) return <ErrorState error={configs.error} />;
-  const ORDER = ["inbox_assistant", "lead_triage", "prospector", "loan_verification", "kitchen_daily", "trade_watch", "meeting_digest"];
-  const list = catalogue.data
-    .filter((w) => w.venture_kinds.includes(kind) || configs.data.some((c) => c.workflow === w.name))
-    .sort((a, b) => (ORDER.indexOf(a.name) + 1 || 99) - (ORDER.indexOf(b.name) + 1 || 99));
+  if (!parts) return null;
+  const row = (w: Workflow) => (
+    <AgentRow
+      key={w.name}
+      wf={w}
+      config={configs.data.find((c) => c.workflow === w.name)}
+      ventureId={ventureId}
+      canAdmin={canAdmin}
+      defaultOpen={hashAgent === w.name}
+      onDirty={onDirty}
+    />
+  );
   return (
-    <Card>
-      {!canAdmin ? (
-        <Notice tone="info" className="m-3">
-          Only a venture admin or owner can change agents.
-        </Notice>
+    <div className="space-y-4">
+      <Card>
+        {!canAdmin ? (
+          <Notice tone="info" className="m-3">
+            Only a venture admin or owner can change agents.
+          </Notice>
+        ) : null}
+        <ul className="divide-y divide-border" aria-label="Agents for this business">
+          {parts.main.map(row)}
+        </ul>
+      </Card>
+      {parts.more.length ? (
+        <Card>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+            aria-expanded={showMore}
+            aria-controls="more-agents"
+            onClick={() => setShowMore((s) => !s)}
+          >
+            <span>
+              <span className="block text-sm font-semibold">More agents</span>
+              <span className="block text-xs text-subtle">Made for other kinds of business. Switch one on if it fits how you work.</span>
+            </span>
+            <ChevronDown className={showMore ? "h-4 w-4 shrink-0 rotate-180 transition-transform" : "h-4 w-4 shrink-0 transition-transform"} aria-hidden />
+          </button>
+          {/* Kept on the page while folded away, so edits in one of these agents aren't lost by folding. */}
+          <ul id="more-agents" hidden={!showMore} className="divide-y divide-border border-t border-border" aria-label="More agents">
+            {parts.more.map(row)}
+          </ul>
+        </Card>
       ) : null}
-      <ul className="divide-y divide-border">
-        {list.map((w) => (
-          <AgentRow key={w.name} wf={w} config={configs.data.find((c) => c.workflow === w.name)} ventureId={ventureId} canAdmin={canAdmin} />
-        ))}
-      </ul>
-    </Card>
+    </div>
   );
 }

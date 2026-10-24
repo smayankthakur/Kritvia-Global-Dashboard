@@ -1,27 +1,38 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { DeleteProposalButton } from "@/components/leads/delete-proposal";
 import { StatusBadge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page";
-import { EmptyState, QueryState } from "@/components/ui/states";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/states";
 import { TBody, THead, Table, Td, Th, Tr } from "@/components/ui/table";
-import { api, unwrap } from "@/lib/api";
+import { api } from "@/lib/api";
 import { formatDate, formatINR } from "@/lib/format";
+import { PAGE_SIZE, flatPages, unwrapPage } from "@/lib/paging";
 import { useVenture } from "@/lib/venture";
 
 function ProposalsView() {
   const v = useVenture();
   const lead = useSearchParams().get("lead");
-  const q = useQuery({
+  // 200 at a time; "Load more" follows the API's cursor (round 3, B13).
+  const q = useInfiniteQuery({
     queryKey: ["proposals", v.id, lead],
-    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/proposals", { params: { path: { venture_id: v.id }, query: { lead_id: lead ?? undefined } } })),
+    queryFn: ({ pageParam }) =>
+      unwrapPage(
+        api.GET("/ventures/{venture_id}/proposals", {
+          params: { path: { venture_id: v.id }, query: { lead_id: lead ?? undefined, limit: PAGE_SIZE, cursor: pageParam ?? undefined } },
+        }),
+      ),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next,
   });
+  const data = flatPages(q.data?.pages);
   return (
     <>
       <PageHeader
@@ -31,8 +42,14 @@ function ProposalsView() {
         actions={lead ? <ButtonLink href={`/v/${v.id}/proposals`}>Show all</ButtonLink> : undefined}
       />
       <Card>
-        <QueryState query={q} empty={<EmptyState icon={FileText} title="No proposals yet" description="Proposals appear when lead triage drafts one." />}>
-          {(data) => (
+        {q.isPending ? (
+          <SkeletonRows rows={5} />
+        ) : q.isError ? (
+          <ErrorState error={q.error} onRetry={() => void q.refetch()} />
+        ) : data.length === 0 ? (
+          <EmptyState icon={FileText} title="No proposals yet" description="Proposals appear when lead triage drafts one, or when you start one from a lead." />
+        ) : (
+          <>
             <Table label="Proposals">
               <THead>
                 <tr>
@@ -41,6 +58,9 @@ function ProposalsView() {
                   <Th>Status</Th>
                   <Th className="text-right">Total (incl. GST)</Th>
                   <Th className="hidden md:table-cell">Created</Th>
+                  <Th>
+                    <span className="sr-only">Delete</span>
+                  </Th>
                 </tr>
               </THead>
               <TBody>
@@ -58,12 +78,22 @@ function ProposalsView() {
                     </Td>
                     <Td className="text-right font-medium whitespace-nowrap tabular-nums">{formatINR(p.total_inr)}</Td>
                     <Td className="hidden whitespace-nowrap text-muted md:table-cell">{formatDate(p.created_at)}</Td>
+                    <Td className="text-right">
+                      <DeleteProposalButton ventureId={v.id} proposal={p} iconOnly />
+                    </Td>
                   </Tr>
                 ))}
               </TBody>
             </Table>
-          )}
-        </QueryState>
+            {q.hasNextPage ? (
+              <div className="flex justify-center border-t border-border p-3">
+                <Button loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+                  Load more
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
       </Card>
     </>
   );

@@ -20,13 +20,13 @@ from kritvia_api.services import customer_facts as cf
 from kritvia_api.services.browser_agent import same_site
 from kritvia_api.services.google import auth_clauses, sender_authenticated
 
-PNID = "5550003333"     # this module's own WhatsApp number (another module's business holds the shared one)
+PNID = "5550005551"     # this module's own WhatsApp number (another module's business holds the shared one)
 NEHA = "919811100001"
 
 
 def wa_msg(mid: str, body: str, sender: str, name: str = "Kavya") -> dict:
     return {"object": "whatsapp_business_account", "entry": [{"id": "1", "changes": [{"field": "messages", "value": {
-        "messaging_product": "whatsapp", "metadata": {"display_phone_number": "919876533333", "phone_number_id": PNID},
+        "messaging_product": "whatsapp", "metadata": {"display_phone_number": "919876555551", "phone_number_id": PNID},
         "contacts": [{"profile": {"name": name}, "wa_id": sender}],
         "messages": [{"from": sender, "id": mid, "timestamp": "1700000000", "type": "text", "text": {"body": body}}]}}]}]}
 

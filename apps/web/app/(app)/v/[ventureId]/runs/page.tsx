@@ -14,6 +14,7 @@ import { TBody, THead, Table, Td, Th, Tr } from "@/components/ui/table";
 import { api, unwrap, type Paths } from "@/lib/api";
 import { formatRelative, formatDateTime } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
+import { outcomeLabel, plainError } from "@/lib/wording";
 
 type RunStatus = NonNullable<NonNullable<Paths["/ventures/{venture_id}/runs"]["get"]["parameters"]["query"]>["status"]>;
 const STATUSES: RunStatus[] = ["queued", "running", "waiting", "completed", "failed", "cancelled"];
@@ -97,7 +98,7 @@ export default function RunsPage() {
                       </Link>
                       <span className="block truncate text-xs text-subtle">
                         {workflowLabel(r.workflow)}
-                        {r.error ? ` · ${r.error}` : ""}
+                        {r.error ? ` · ${plainError(r.error)}` : r.outcome === "saved_unscored" ? ` · ${outcomeLabel(r.outcome)}` : ""}
                       </span>
                     </Td>
                     <Td>

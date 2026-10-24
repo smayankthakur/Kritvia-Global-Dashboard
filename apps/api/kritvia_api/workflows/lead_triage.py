@@ -106,6 +106,9 @@ async def extract(ctx: RunContext, state: dict) -> Goto | Finish:
     except AgentBudgetExceeded:
         raise
     except Exception as exc:  # noqa: BLE001 - the AI couldn't read it: keep the enquiry as a lead anyway
+        from kritvia_api.engine.runner import passing
+        if passing(exc):
+            raise           # a passing problem (no provider answering): the run tries again by itself
         # Losing a customer's enquiry because the model failed is worse than an unscored lead (round 3, A7).
         ex = LeadExtract(contact_name=inp.get("from_name") or None, phone=inp.get("from_phone") or None,
                          summary=(inp.get("subject") or (inp.get("body") or "")[:200] or "An enquiry").strip())

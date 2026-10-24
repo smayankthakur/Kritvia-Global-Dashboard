@@ -30,6 +30,11 @@ function Amount({ paise }: { paise: number }) {
   );
 }
 
+/** "3 payments recorded by autopilot (undo on each line)". */
+export function byAutopilotTitle(n: number): string {
+  return `${n} payment${n === 1 ? "" : "s"} recorded by autopilot (undo on each line)`;
+}
+
 /** Upload a bank statement; Kritvia matches credits to invoices and debits to bills, and a person confirms. */
 export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; canWrite: boolean; canAdmin: boolean }) {
   const qc = useQueryClient();
@@ -37,6 +42,7 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
   const fileRef = useRef<HTMLInputElement>(null);
   const [label, setLabel] = useState("");
   const [state, setState] = useState<State>("suggested");
+  const [byAutopilot, setByAutopilot] = useState(0);
   const lines = useQuery({
     queryKey: ["bank-lines", ventureId, state],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/bank/lines", { params: { path: { venture_id: ventureId }, query: { state } } })),
@@ -67,7 +73,9 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
         `${u.new_lines} new line${u.new_lines === 1 ? "" : "s"} read`,
         `${u.sure} sure match${u.sure === 1 ? "" : "es"}, ${u.likely} likely${u.already_seen ? `; ${u.already_seen} were already here` : ""}`,
       );
-      setState("suggested");
+      // Autopilot records sure invoice matches by itself; show them where each line has its Undo.
+      setByAutopilot(u.recorded_by_autopilot ?? 0);
+      setState(u.recorded_by_autopilot ? "confirmed" : "suggested");
       refresh();
     },
     onError: (e) => toast.error("Couldn't read the statement", errorMessage(e)),
@@ -139,6 +147,12 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
         </Card>
       ) : null}
       {canWrite ? <StatementsByEmail ventureId={ventureId} canAdmin={canAdmin} /> : null}
+      {byAutopilot > 0 ? (
+        <Notice tone="success" title={byAutopilotTitle(byAutopilot)}>
+          They were sure matches: the exact amount owed, and the narration names the customer, invoice number or UPI reference. If one is wrong,
+          press Undo on its line below and the invoice is owed again.
+        </Notice>
+      ) : null}
       {lines.data && lines.data.sure > 0 && canWrite ? (
         <Notice tone="success" title={`${lines.data.sure} sure match${lines.data.sure === 1 ? "" : "es"}`}>
           The amount is exactly what is owed and the narration names the customer, supplier, invoice number or UPI reference.
@@ -214,7 +228,7 @@ export function BankTab({ ventureId, canWrite, canAdmin }: { ventureId: string; 
                         ) : null}
                         {l.state === "confirmed" ? (
                           <Button size="sm" variant="ghost" onClick={() => setTakeBack(l)}>
-                            Take back
+                            Undo
                           </Button>
                         ) : null}
                         {l.state === "ignored" ? (

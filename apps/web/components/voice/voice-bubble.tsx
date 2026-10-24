@@ -25,8 +25,9 @@ function loadPos(): Pos {
   } catch {
     /* default position */
   }
-  // bottom centre (Scribe's default) keeps clear of toasts, which stack bottom-right
-  return { right: Math.round((window.innerWidth - SIZE) / 2), bottom: 20 };
+  // Bottom right, above where sticky action bars ("Save changes") sit; the page keeps that much space free
+  // at its end (pb-36 in the app shell), so the bubble never covers the last buttons on a page (round 3, A11).
+  return { right: 20, bottom: 76 };
 }
 
 function clamp(p: Pos): Pos {
@@ -64,10 +65,27 @@ function Waveform({ level }: { level: number }) {
   );
 }
 
+/** Phones (under 640px wide): the mic lives in the top bar, so nothing floats over buttons and text (round 3, A11). */
+const PHONE = "(max-width: 639px)";
+
+function usePhone(): boolean {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia(PHONE);
+    setPhone(mq.matches);
+    const on = (e: MediaQueryListEvent) => setPhone(e.matches);
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, []);
+  return phone;
+}
+
 /** Floating dictation widget: hold the hotkey anywhere in Kritvia (or click) to dictate. */
 export function VoiceBubble() {
   const v = useVoice();
   const { venture } = useAccess();
+  const phone = usePhone();
   const [pos, setPos] = useState<Pos>({ right: 24, bottom: 24 });
   const [hover, setHover] = useState(false);
   const drag = useRef<{ x: number; y: number; start: Pos; moved: boolean } | null>(null);
@@ -115,6 +133,7 @@ export function VoiceBubble() {
   }, [v]);
 
   if (!v.available || !v.settings.widget_enabled) return null;
+  if (phone) return <DockedStatus />;
 
   if (v.snoozed) {
     return (
@@ -317,6 +336,48 @@ export function VoiceBubble() {
           ) : null}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** On a phone the top bar's mic does the dictating; what it heard shows just under the top bar, never over the page's buttons. */
+function DockedStatus() {
+  const v = useVoice();
+  const label =
+    v.phase === "recording"
+      ? `Listening… just pause when you're done (${v.elapsed}s)`
+      : v.phase === "transcribing"
+        ? "Transcribing…"
+        : v.message
+          ? v.phase === "error"
+            ? v.message
+            : tail(v.message)
+          : null;
+  if (!label && !v.learn) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-3 top-[4.75rem] z-40 flex justify-center" data-voice-ignore>
+      {v.learn ? (
+        <div role="dialog" aria-label="Remember this correction?" className="glass-strong pointer-events-auto w-full max-w-sm rounded-xl border p-3 text-sm">
+          <div className="text-xs font-medium text-subtle">Remember this?</div>
+          <div className="mt-1 truncate">
+            <span className="text-muted line-through decoration-danger/60">{v.learn.heard}</span>
+            <span className="mx-1.5 text-subtle">→</span>
+            <span className="font-semibold">{v.learn.correct}</span>
+          </div>
+          <div className="mt-2.5 flex gap-2">
+            <button type="button" onClick={() => v.saveLearn("personal")} className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-hover">
+              Save for me
+            </button>
+            <button type="button" onClick={v.dismissLearn} className="rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-surface-2">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="glass-strong pointer-events-auto max-w-full rounded-xl border px-3 py-1.5 text-[13px]" role="status" aria-live="polite">
+          {label}
+        </div>
+      )}
     </div>
   );
 }

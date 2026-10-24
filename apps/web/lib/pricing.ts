@@ -144,7 +144,11 @@ export function priceFor(p: Pick<PlanCard, "price_inr" | "price_annual_inr">, pe
   return { big: rupees(p.price_inr), note: "Billed monthly" };
 }
 
-const CORE_AGENTS = new Set(["inbox_assistant", "lead_triage", "meeting_digest", "trade_update"]);
+// Same list as CORE_AGENTS in the API's plans.py (tests/pricing.test.ts checks they match).
+export const CORE_AGENTS = new Set([
+  "assistant", "inbox_assistant", "lead_triage", "meeting_digest", "whatsapp_followup", "collections", "booking_reminders", "reviews",
+  "automation", "custom", "trade_update", "social", "campaign", "hiring", "campaign_ideas", "google_listing",
+]);
 const KIND_AGENT: Record<string, string> = { finance: "loan_verification", kitchen: "kitchen_daily", trade: "trade_watch" };
 
 /** Mirrors Plan.allows_agent in the API: which agents a plan lets a business of this kind switch on. */

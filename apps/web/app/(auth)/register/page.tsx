@@ -13,6 +13,7 @@ import { markTermsIntent } from "@/lib/terms";
 
 export default function RegisterPage() {
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [codeStep, setCodeStep] = useState(false);
   const [terms, setTerms] = useState(false);
   const [adult, setAdult] = useState(false);
   const agreed = terms && adult;
@@ -89,12 +90,17 @@ export default function RegisterPage() {
         hint="Nothing is sent on your behalf without your approval, unless you switch on automatic replies."
       />
       <fieldset disabled={!agreed} aria-describedby={agreed ? undefined : "terms-first"} className="min-w-0 disabled:opacity-60">
-        <FormError message={googleError} />
-        <div className={googleError ? "mt-4" : undefined}>
-          <GoogleButton label="Sign up with Google" onError={setGoogleError} />
-        </div>
-        <OrDivider />
-        <EmailCodeForm askName onSignedIn={done} />
+        {/* Once the email code is sent, the page is about that code only (round 3, A25). */}
+        {codeStep ? null : (
+          <>
+            <FormError message={googleError} />
+            <div className={googleError ? "mt-4" : undefined}>
+              <GoogleButton label="Sign up with Google" onError={setGoogleError} />
+            </div>
+            <OrDivider />
+          </>
+        )}
+        <EmailCodeForm askName onSignedIn={done} onStep={(st) => setCodeStep(st === "code")} />
       </fieldset>
       {agreed ? null : (
         <p id="terms-first" className="mt-3 text-center text-xs text-subtle">

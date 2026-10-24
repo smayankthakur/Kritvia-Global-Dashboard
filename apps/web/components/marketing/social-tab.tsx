@@ -8,6 +8,7 @@ import { BusinessProfileCard } from "@/components/marketing/business-profile";
 import { Badge, type Tone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy";
 import { Field, FormError, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/page";
 import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
@@ -98,8 +99,14 @@ export function SocialTab({ ventureId, canAdmin }: { ventureId: string; canAdmin
   const now = useMutation({
     mutationFn: () => unwrap(api.POST("/ventures/{venture_id}/social/draft-now", { params: { path: { venture_id: ventureId } } })),
     onSuccess: () => {
-      toast.success("Post drafted", "It waits for your yes with your other drafts.");
-      void qc.invalidateQueries({ queryKey: ["social", ventureId] });
+      toast.success(
+        "Writing a post",
+        q.data && !Object.keys(q.data.channels).length
+          ? "It shows below in a few seconds, ready to copy and post yourself."
+          : "It waits for your yes with your other drafts.",
+      );
+      // The agent writes it in the background: look again shortly.
+      for (const ms of [4000, 10_000, 20_000]) setTimeout(() => void qc.invalidateQueries({ queryKey: ["social", ventureId] }), ms);
     },
     onError: (e) => toast.error("Couldn't write a post", errorMessage(e)),
   });
@@ -125,7 +132,6 @@ export function SocialTab({ ventureId, canAdmin }: { ventureId: string; canAdmin
             <Button
               icon={<Megaphone className="h-4 w-4" />}
               loading={now.isPending}
-              disabled={!Object.keys(d.channels).length}
               onClick={() => now.mutate()}
             >
               Write a post now
@@ -137,11 +143,20 @@ export function SocialTab({ ventureId, canAdmin }: { ventureId: string; canAdmin
                 {d.posts.map((p) => (
                   <li key={p.id} className="space-y-1 px-4 py-3">
                     <p className="flex flex-wrap items-center gap-2 text-xs text-subtle">
-                      <Badge tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>
-                      <span>{p.channels.map((c) => (c === "google" ? "Google" : "Facebook")).join(" + ")}</span>
+                      {p.channels.length ? (
+                        <>
+                          <Badge tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>
+                          <span>{p.channels.map((c) => (c === "google" ? "Google" : "Facebook")).join(" + ")}</span>
+                        </>
+                      ) : (
+                        <Badge tone="info">ready to copy</Badge>
+                      )}
                       <span>· {formatDateTime(p.posted_at ?? p.created_at)}</span>
+                      {!p.channels.length ? <CopyButton value={p.body} className="ml-auto" /> : null}
                     </p>
-                    <p className="text-sm whitespace-pre-line">{p.body}</p>
+                    <p className="text-sm whitespace-pre-line" translate="no">
+                      {p.body}
+                    </p>
                     {Object.entries(p.results)
                       .filter(([, r]) => r && typeof r === "object" && "error" in (r as object))
                       .map(([ch, r]) => (
@@ -153,7 +168,10 @@ export function SocialTab({ ventureId, canAdmin }: { ventureId: string; canAdmin
                 ))}
               </ul>
             ) : (
-              <EmptyState title="No posts yet" description="Connect where to post, switch the agent on, or press Write a post now." />
+              <EmptyState
+                title="No posts yet"
+                description="Press Write a post now for a post you can copy and share yourself. Connect your Google listing or Facebook Page above to post from here after your yes."
+              />
             )}
           </Card>
         </div>

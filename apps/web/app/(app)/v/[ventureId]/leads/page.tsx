@@ -1,17 +1,17 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Plus, Users } from "lucide-react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, FilePlus2, Pencil, Plus, Trash2, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, Sheet } from "@/components/ui/dialog";
+import { ConfirmDialog, Dialog, Sheet } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select, Textarea } from "@/components/ui/field";
 import { KeyValue, Notice, PageHeader } from "@/components/ui/page";
-import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/states";
 import { TBody, THead, Table, Td, Th, Tr } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import { ApiError, api, enumValues, errorMessage, unwrap, type Schemas } from "@/lib/api";
@@ -20,6 +20,9 @@ import { displayValue } from "@/lib/diff";
 import { formatDateTime, formatINR, formatRelative, titleCase } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
 import { ProspectPanel, leadName, outreachState } from "@/components/leads/prospect-panel";
+import { LeadFormDialog, NewProposalDialog, phoneProblem } from "@/components/leads/lead-forms";
+import { PAGE_SIZE, flatPages, unwrapPage } from "@/lib/paging";
+import { chunk, stillListed, toggled } from "@/lib/selection";
 
 type Lead = Schemas["LeadOut"];
 type LeadStatus = NonNullable<Schemas["LeadPatch"]["status"]>;
@@ -43,27 +46,34 @@ function ScoreBar({ score }: { score: number | null }) {
 function NewInquiryDialog({ open, onClose, ventureId }: { open: boolean; onClose: () => void; ventureId: string }) {
   const toast = useToast();
   const qc = useQueryClient();
-  const empty = { from_name: "", from_email: "", company: "", subject: "", body: "", source: "manual" as Source };
+  const empty = { from_name: "", from_email: "", from_phone: "", company: "", subject: "", body: "", source: "manual" as Source };
   const [f, setF] = useState(empty);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [started, setStarted] = useState<string | null>(null);
   const m = useMutation({
+    // Started as a lead-triage run so the phone number travels with it: the lead keeps it even when the AI
+    // can't read the enquiry (round 3, A7).
     mutationFn: () =>
       unwrap(
-        api.POST("/ventures/{venture_id}/leads/inquiry", {
+        api.POST("/ventures/{venture_id}/runs", {
           params: { path: { venture_id: ventureId } },
           body: {
-            from_name: f.from_name.trim() || null,
-            from_email: f.from_email.trim() || null,
-            company: f.company.trim() || null,
-            subject: f.subject.trim() || null,
-            body: f.body.trim(),
-            source: f.source,
+            workflow: "lead_triage",
+            title: `Inquiry: ${f.company.trim() || f.from_name.trim() || f.from_email.trim() || f.from_phone.trim() || "unknown"}`.slice(0, 200),
+            input: {
+              from_name: f.from_name.trim() || null,
+              from_email: f.from_email.trim() || null,
+              from_phone: f.from_phone.trim() || null,
+              company: f.company.trim() || null,
+              subject: f.subject.trim() || null,
+              body: f.body.trim(),
+              source: f.source,
+            },
           },
         }),
       ),
     onSuccess: (out) => {
-      setStarted(out.run_id);
+      setStarted(out.id);
       toast.success("Inquiry received", "Lead triage is running.");
       void qc.invalidateQueries({ queryKey: ["runs", ventureId] });
       void qc.invalidateQueries({ queryKey: ["leads", ventureId] });
@@ -84,6 +94,8 @@ function NewInquiryDialog({ open, onClose, ventureId }: { open: boolean; onClose
     const errs: Record<string, string> = {};
     if (f.body.trim().length < 3) errs.body = "Paste the inquiry text (at least 3 characters)";
     if (f.from_email.trim() && !EMAIL_RE.test(f.from_email.trim())) errs.from_email = "Enter a valid email";
+    const phone = phoneProblem(f.from_phone);
+    if (phone) errs.from_phone = phone;
     setErrors(errs);
     if (!Object.keys(errs).length) m.mutate();
   };
@@ -132,6 +144,9 @@ function NewInquiryDialog({ open, onClose, ventureId }: { open: boolean; onClose
             <Field label="Email" error={errors.from_email}>
               <Input type="email" value={f.from_email} onChange={set("from_email")} />
             </Field>
+            <Field label="Phone" error={errors.from_phone}>
+              <Input type="tel" inputMode="tel" value={f.from_phone} onChange={set("from_phone")} maxLength={30} placeholder="+91 98100 12345" />
+            </Field>
             <Field label="Company" error={errors.company}>
               <Input value={f.company} onChange={set("company")} maxLength={200} />
             </Field>
@@ -163,10 +178,24 @@ function NewInquiryDialog({ open, onClose, ventureId }: { open: boolean; onClose
   );
 }
 
-function LeadDrawer({ lead, ventureId, onClose }: { lead: Lead | null; ventureId: string; onClose: () => void }) {
+function LeadDrawer({ lead, ventureId, onClose, onDeleted }: { lead: Lead | null; ventureId: string; onClose: () => void; onDeleted: (id: string) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [status, setStatus] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [proposing, setProposing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const del = useMutation({
+    mutationFn: (id: string) => unwrap(api.DELETE("/ventures/{venture_id}/leads/{lead_id}", { params: { path: { venture_id: ventureId, lead_id: id } } })),
+    onSuccess: (_, id) => {
+      toast.success("Lead deleted");
+      setDeleting(false);
+      onDeleted(id);
+      void qc.invalidateQueries({ queryKey: ["leads", ventureId] });
+      void qc.invalidateQueries({ queryKey: ["proposals", ventureId] });
+    },
+    onError: (e) => toast.error("Could not delete the lead", errorMessage(e)),
+  });
   const patch = useMutation({
     mutationFn: (s: LeadStatus) =>
       unwrap(api.PATCH("/ventures/{venture_id}/leads/{lead_id}", { params: { path: { venture_id: ventureId, lead_id: lead!.id } }, body: { status: s } })),
@@ -183,6 +212,17 @@ function LeadDrawer({ lead, ventureId, onClose }: { lead: Lead | null; ventureId
       {lead ? (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+            <Button size="sm" icon={<FilePlus2 className="h-3.5 w-3.5" />} onClick={() => setProposing(true)}>
+              New proposal
+            </Button>
+            <Button size="sm" variant="ghost" className="text-danger hover:text-danger" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setDeleting(true)}>
+              Delete
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={lead.status} />
             {lead.priority ? <StatusBadge status={lead.priority} /> : null}
             <Badge>{lead.source}</Badge>
@@ -191,6 +231,7 @@ function LeadDrawer({ lead, ventureId, onClose }: { lead: Lead | null; ventureId
           {lead.source === "prospector" ? <ProspectPanel lead={lead} ventureId={ventureId} /> : null}
           <KeyValue
             items={[
+              ["Company", lead.company ?? "—"],
               ["Email", lead.email ?? "—"],
               ["Phone", lead.phone ?? "—"],
               ["Budget", formatINR(lead.budget_inr)],
@@ -274,6 +315,21 @@ function LeadDrawer({ lead, ventureId, onClose }: { lead: Lead | null; ventureId
           </section>
         </div>
       ) : null}
+      {lead ? (
+        <>
+          <LeadFormDialog open={editing} onClose={() => setEditing(false)} ventureId={ventureId} lead={lead} />
+          <NewProposalDialog open={proposing} onClose={() => setProposing(false)} ventureId={ventureId} lead={lead} />
+          <ConfirmDialog
+            open={deleting}
+            onClose={() => setDeleting(false)}
+            onConfirm={() => del.mutate(lead.id)}
+            loading={del.isPending}
+            title="Delete this lead?"
+            description={`${leadName(lead)} and their proposals are deleted. This can't be undone.`}
+            confirmLabel="Delete lead"
+          />
+        </>
+      ) : null}
     </Sheet>
   );
 }
@@ -282,17 +338,23 @@ function LeadsView() {
   const v = useVenture();
   const router = useRouter();
   const params = useSearchParams();
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const leads = useQuery({
-    queryKey: ["leads", v.id],
+  const [adding, setAdding] = useState(false);
+  const leads = useInfiniteQuery({
+    queryKey: ["leads", v.id, "list"],
     // Prospects are named from Google Maps only when opened: each lookup is billed by Google.
-    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/leads", { params: { path: { venture_id: v.id }, query: { limit: 200 } } })),
+    queryFn: ({ pageParam }) =>
+      unwrapPage(api.GET("/ventures/{venture_id}/leads", { params: { path: { venture_id: v.id }, query: { limit: PAGE_SIZE, cursor: pageParam ?? undefined } } })),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
+  const all = flatPages(leads.data?.pages);
   const selectedId = params.get("lead");
-  const inList = leads.data?.find((l) => l.id === selectedId) ?? null;
-  // A link to a lead older than the newest 200 (or from a notification) opens it on its own.
+  const inList = all.find((l) => l.id === selectedId) ?? null;
+  // A link to a lead not loaded yet (or from a notification) opens it on its own.
   const single = useQuery({
     queryKey: ["leads", v.id, "one", selectedId],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/leads/{lead_id}", { params: { path: { venture_id: v.id, lead_id: selectedId! } } })),
@@ -309,8 +371,41 @@ function LeadsView() {
     router.replace(`/v/${v.id}/leads`, { scroll: false });
   }, [selectedId, single.isError, toast, router, v.id]);
   const [readyOnly, setReadyOnly] = useState(false);
-  const ready = (leads.data ?? []).filter((l) => l.outreach_draft && !l.opted_out_at);
-  const select = (id: string | null) => router.replace(id ? `/v/${v.id}/leads?lead=${id}` : `/v/${v.id}/leads`, { scroll: false });
+  const ready = all.filter((l) => l.outreach_draft && !l.opted_out_at);
+  // Opening a lead adds a history entry, so Back returns to the list (round 3, A16); closing it goes back.
+  const opened = useRef(false);
+  const select = (id: string | null) => {
+    if (id) {
+      opened.current = true;
+      router.push(`/v/${v.id}/leads?lead=${id}`, { scroll: false });
+    } else if (opened.current) {
+      opened.current = false;
+      router.back();
+    } else router.replace(`/v/${v.id}/leads`, { scroll: false });
+  };
+
+  const rows = readyOnly && ready.length ? ready : all;
+  const [checked, setChecked] = useState<ReadonlySet<string>>(new Set());
+  const picked = stillListed(checked, all);
+  const allChecked = rows.length > 0 && rows.every((l) => checked.has(l.id));
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const bulkDelete = useMutation({
+    mutationFn: async (ids: string[]) => {
+      let deleted = 0;
+      for (const part of chunk(ids, 500))
+        deleted += (await unwrap(api.POST("/ventures/{venture_id}/leads/bulk-delete", { params: { path: { venture_id: v.id } }, body: { ids: part } }))).deleted;
+      return deleted;
+    },
+    onSuccess: (deleted, ids) => {
+      toast.success(`${deleted} lead${deleted === 1 ? "" : "s"} deleted`, "Their proposals were deleted too.");
+      setChecked(new Set());
+      setConfirmDelete(false);
+      if (selectedId && ids.includes(selectedId)) router.replace(`/v/${v.id}/leads`, { scroll: false });
+      void qc.invalidateQueries({ queryKey: ["leads", v.id] });
+      void qc.invalidateQueries({ queryKey: ["proposals", v.id] });
+    },
+    onError: (e) => toast.error("Could not delete", errorMessage(e)),
+  });
 
   return (
     <>
@@ -319,9 +414,14 @@ function LeadsView() {
         title="Leads"
         description="Inbound inquiries scored by the triage agent, and businesses the Prospector found for you."
         actions={
-          <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)}>
-            New inquiry
-          </Button>
+          <>
+            <Button icon={<UserPlus className="h-4 w-4" />} onClick={() => setAdding(true)}>
+              Add a lead
+            </Button>
+            <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)}>
+              New inquiry
+            </Button>
+          </>
         }
       />
       {ready.length ? (
@@ -336,23 +436,45 @@ function LeadsView() {
           </span>
         </Notice>
       ) : null}
+      {picked.length ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-2/60 px-3 py-2">
+          <span className="text-sm text-muted">{picked.length} selected</span>
+          <span className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setChecked(new Set())}>
+              Clear
+            </Button>
+            <Button size="sm" variant="danger" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setConfirmDelete(true)}>
+              Delete selected
+            </Button>
+          </span>
+        </div>
+      ) : null}
       <Card>
-        <QueryState
-          query={leads}
-          loading={<SkeletonRows rows={6} />}
-          empty={
-            <EmptyState
-              icon={Users}
-              title="No leads yet"
-              description="Paste your first inquiry, connect Gmail or add the lead-form webhook in Settings."
-              action={<Button onClick={() => setOpen(true)}>New inquiry</Button>}
-            />
-          }
-        >
-          {(data) => (
+        {leads.isPending ? (
+          <SkeletonRows rows={6} />
+        ) : leads.isError ? (
+          <ErrorState error={leads.error} onRetry={() => void leads.refetch()} />
+        ) : all.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No leads yet"
+            description="Paste your first inquiry, connect Gmail or add the lead-form webhook in Settings."
+            action={<Button onClick={() => setOpen(true)}>New inquiry</Button>}
+          />
+        ) : (
+          <>
             <Table label="Leads">
               <THead>
                 <tr>
+                  <Th className="w-8">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-border-strong accent-[var(--accent)]"
+                      aria-label="Select all leads shown"
+                      checked={allChecked}
+                      onChange={(e) => setChecked(e.target.checked ? new Set(rows.map((l) => l.id)) : new Set())}
+                    />
+                  </Th>
                   <Th>Name</Th>
                   <Th className="hidden md:table-cell">Contact</Th>
                   <Th>Score</Th>
@@ -364,8 +486,18 @@ function LeadsView() {
                 </tr>
               </THead>
               <TBody>
-                {(readyOnly && ready.length ? data.filter((l) => l.outreach_draft && !l.opted_out_at) : data).map((l) => (
+                {rows.map((l) => (
                   <Tr key={l.id} interactive onClick={() => select(l.id)}>
+                    {/* The checkbox cell only selects; it doesn't open the lead. */}
+                    <Td className="w-8" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border-strong accent-[var(--accent)]"
+                        aria-label={`Select ${leadName(l)}`}
+                        checked={checked.has(l.id)}
+                        onChange={(e) => setChecked((s) => toggled(s, l.id, e.target.checked))}
+                      />
+                    </Td>
                     <Td className="max-w-[14rem]">
                       <button
                         type="button"
@@ -396,11 +528,37 @@ function LeadsView() {
                 ))}
               </TBody>
             </Table>
-          )}
-        </QueryState>
+            {leads.hasNextPage ? (
+              <div className="flex justify-center border-t border-border p-3">
+                <Button loading={leads.isFetchingNextPage} onClick={() => void leads.fetchNextPage()}>
+                  Load more
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
       </Card>
-      <LeadDrawer lead={selected} ventureId={v.id} onClose={() => select(null)} />
+      <LeadDrawer
+        lead={selected}
+        ventureId={v.id}
+        onClose={() => select(null)}
+        onDeleted={(id) => {
+          setChecked((s) => toggled(s, id, false));
+          opened.current = false;
+          router.replace(`/v/${v.id}/leads`, { scroll: false });
+        }}
+      />
       <NewInquiryDialog open={open} onClose={() => setOpen(false)} ventureId={v.id} />
+      <LeadFormDialog open={adding} onClose={() => setAdding(false)} ventureId={v.id} />
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => bulkDelete.mutate(picked)}
+        loading={bulkDelete.isPending}
+        title={`Delete ${picked.length} lead${picked.length === 1 ? "" : "s"}?`}
+        description="Their proposals are deleted too. This can't be undone."
+        confirmLabel="Delete leads"
+      />
     </>
   );
 }

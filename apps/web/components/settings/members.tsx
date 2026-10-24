@@ -16,7 +16,8 @@ import { useToast } from "@/components/ui/toast";
 import { ApiError, api, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { accessKey, useAccess } from "@/lib/access";
 import { EMAIL_RE } from "@/lib/auth-client";
-import { formatDate, titleCase } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { roleLabel } from "@/lib/wording";
 
 const VENTURE_ROLES = [
   "venture_admin",
@@ -26,6 +27,11 @@ const VENTURE_ROLES = [
   "kitchen_manager",
   "loan_officer",
 ] as const;
+
+/** People (not agent accounts) who own the whole organisation. The last one can't be removed. */
+export function ownerCount(members: readonly { role: string; is_service?: boolean; user_id?: string; email?: string }[]): number {
+  return new Set(members.filter((m) => m.role === "org_owner" && !m.is_service).map((m) => m.user_id ?? m.email)).size;
+}
 
 function AddMember({
   orgId,
@@ -95,7 +101,7 @@ function AddMember({
         >
           {VENTURE_ROLES.map((r) => (
             <option key={r} value={r}>
-              {titleCase(r)}
+              {roleLabel(r)}
             </option>
           ))}
           <option value="org_owner">Org owner</option>
@@ -248,7 +254,7 @@ function Invitations({
           >
             {VENTURE_ROLES.map((r) => (
               <option key={r} value={r}>
-                {titleCase(r)}
+                {roleLabel(r)}
               </option>
             ))}
           </Select>
@@ -309,7 +315,7 @@ function Invitations({
               {data.map((i) => (
                 <Tr key={i.id}>
                   <Td className="max-w-[14rem] truncate">{i.email}</Td>
-                  <Td>{titleCase(i.role)}</Td>
+                  <Td>{roleLabel(i.role)}</Td>
                   <Td className="hidden text-muted sm:table-cell">
                     {ventures.find((v) => v.id === i.venture_id)?.name ?? "—"}
                   </Td>
@@ -616,7 +622,8 @@ export function MemberSettings({ ventureId }: { ventureId: string }) {
                 </tr>
               </THead>
               <TBody>
-                {data.map((m) => (
+                {/* Kritvia's own agent accounts aren't people to manage (round 3, A19). */}
+                {data.filter((m) => !m.is_service).map((m) => (
                   <Tr key={m.id}>
                     <Td className="max-w-[16rem]">
                       <span className="block truncate font-medium">
@@ -636,19 +643,14 @@ export function MemberSettings({ ventureId }: { ventureId: string }) {
                               : "info"
                         }
                       >
-                        {titleCase(m.role)}
+                        {roleLabel(m.role)}
                       </Badge>
-                      {m.is_service ? (
-                        <span className="ml-1.5 text-xs text-subtle">
-                          agent runtime
-                        </span>
-                      ) : null}
                     </Td>
                     <Td className="hidden text-muted sm:table-cell">
                       {vName(m.venture_id)}
                     </Td>
                     <Td className="text-right">
-                      {isOwner && !m.is_service ? (
+                      {isOwner && !m.is_service && !(m.role === "org_owner" && ownerCount(data) <= 1) ? (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -678,7 +680,7 @@ export function MemberSettings({ ventureId }: { ventureId: string }) {
         title="Remove this role?"
         description={
           removing
-            ? `${removing.email} loses the ${titleCase(removing.role)} role in ${vName(removing.venture_id)}.`
+            ? `${removing.email} loses the ${roleLabel(removing.role)} role in ${vName(removing.venture_id)}.`
             : undefined
         }
         confirmLabel="Remove role"

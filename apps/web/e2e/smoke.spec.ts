@@ -86,6 +86,8 @@ test.describe.serial("Kritvia command center", () => {
     await expect(page.getByRole("heading", { name: "Your roles and agents" })).toBeVisible();
     await expect(page.getByText("Demand forecast & purchase orders")).toBeVisible();
     await shot(page, "02-onboarding-roles");
+    // Autopilot is a choice the person makes (nothing pre-ticked); these tests approve by hand.
+    await page.getByRole("radio", { name: /I'll approve everything/ }).click();
     await page.getByRole("button", { name: "Finish setup" }).click();
 
     // Finishing opens the guided first run of the new business's main agent; the dashboard is one click away.
@@ -379,6 +381,9 @@ test.describe.serial("Kritvia command center", () => {
     const nav = page.getByRole("dialog", { name: "Navigation" });
     await expect(nav.getByRole("link", { name: /^Inbox/ })).toBeVisible();
     await page.screenshot({ path: path.join(SHOTS, "26-mobile-nav-mobile.png") });
+    // Pages a business uses less often sit under "More" (round 3, A25).
+    const more = nav.getByRole("button", { name: "More" });
+    if (await more.isVisible()) await more.click();
     await nav.getByRole("link", { name: "Runs" }).click();
     await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
     await page.setViewportSize({ width: 1440, height: 900 });

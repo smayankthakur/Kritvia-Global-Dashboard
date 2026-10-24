@@ -15,6 +15,7 @@ import { api, unwrap, type Schemas } from "@/lib/api";
 import { displayValue } from "@/lib/diff";
 import { formatDateTime, formatDuration, formatRelative, titleCase } from "@/lib/format";
 import { useVenture } from "@/lib/venture";
+import { actionLabel, isTechnicalError, outcomeLabel, plainError, sentLabel } from "@/lib/wording";
 
 const ACTIVE = new Set(["queued", "running"]);
 
@@ -28,7 +29,29 @@ function StepIcon({ status }: { status: string }) {
   return <Circle className={cn(cls, "text-subtle")} aria-hidden />;
 }
 
+/** The technical text behind a plain message, folded away for support. */
+function TechDetails({ text }: { text: string }) {
+  return (
+    <details className="mt-1 text-xs">
+      <summary className="cursor-pointer text-subtle">Details for support</summary>
+      <span className="mt-1 block font-mono break-words">{text}</span>
+    </details>
+  );
+}
+
+/** A run's error as an owner reads it, with the raw text folded away when it was technical (round 3, A17). */
+function RunError({ text }: { text: string }) {
+  const plain = plainError(text);
+  return (
+    <>
+      <span className="break-words">{plain}</span>
+      {isTechnicalError(text) ? <TechDetails text={text} /> : null}
+    </>
+  );
+}
+
 function SummaryValue({ k, v, ventureId }: { k: string; v: unknown; ventureId: string }) {
+  if (k === "sent" && (typeof v === "string" || typeof v === "boolean")) return <span>{sentLabel(v)}</span>;
   const s = displayValue(v);
   if (k === "lead_id" && typeof v === "string") return <Link className="text-accent hover:underline" href={`/v/${ventureId}/leads?lead=${v}`}>Open lead</Link>;
   if (k === "transcript_document_id" && typeof v === "string")
@@ -58,9 +81,9 @@ function Timeline({ steps }: { steps: Schemas["StepOut"][] }) {
             </div>
             {s.note ? <p className="mt-0.5 text-sm text-muted">{s.note}</p> : null}
             {s.error ? (
-              <pre className="mt-1.5 overflow-x-auto rounded-md border border-danger/25 bg-danger-soft px-2.5 py-1.5 font-mono text-xs whitespace-pre-wrap text-danger-fg">
-                {s.error}
-              </pre>
+              <div className="mt-1.5 rounded-md border border-danger/25 bg-danger-soft px-2.5 py-1.5 text-xs text-danger-fg">
+                <RunError text={s.error} />
+              </div>
             ) : null}
           </div>
         </li>
@@ -129,12 +152,19 @@ function RunDetailView() {
         // A passing problem (an AI provider or Google down for a moment): the run is already booked to try
         // again by itself, so it isn't shown as a failure the owner has to deal with.
         <Notice tone="warning" title="Hit a passing problem; trying again by itself" className="mb-4">
-          Kritvia tries again in a few minutes (up to 3 times). Nothing to do unless you want to cancel it.{" "}
-          <span className="font-mono text-xs break-words">{r.error}</span>
+          Kritvia tries again in a few minutes (up to 3 times). Nothing to do unless you want to cancel it.
+          <TechDetails text={r.error} />
         </Notice>
       ) : r.error ? (
         <Notice tone="danger" title="This run failed" className="mb-4">
-          <span className="font-mono text-xs break-words">{r.error}</span>
+          <RunError text={r.error} />
+        </Notice>
+      ) : null}
+      {r.outcome === "saved_unscored" ? (
+        // The AI couldn't read the enquiry, but the lead was kept (round 3, A7).
+        <Notice tone="warning" title="Saved without a score" className="mb-4">
+          The AI couldn&apos;t read this enquiry, so the lead was saved as it came in, without a score or a proposal. Open it in Leads, or try
+          this run again later.
         </Notice>
       ) : null}
       <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
@@ -160,7 +190,7 @@ function RunDetailView() {
                       <StatusBadge status={a.status} />
                     </div>
                     <p className="text-xs text-subtle">
-                      {a.agent} · {a.action} · {a.decided_at ? `decided ${formatRelative(a.decided_at)}` : `drafted ${formatRelative(a.created_at)}`}
+                      {a.agent} · {actionLabel(a.action)} · {a.decided_at ? `decided ${formatRelative(a.decided_at)}` : `drafted ${formatRelative(a.created_at)}`}
                     </p>
                   </li>
                 ))}
@@ -177,7 +207,7 @@ function RunDetailView() {
               ) : (
                 <p className="text-sm text-subtle">Nothing summarised yet.</p>
               )}
-              {r.outcome ? <p className="mt-3 text-xs text-subtle">Outcome: {r.outcome}</p> : null}
+              {r.outcome ? <p className="mt-3 text-xs text-subtle">Outcome: {outcomeLabel(r.outcome)}</p> : null}
               {r.finished_at ? <p className="mt-1 text-xs text-subtle">Finished {formatDateTime(r.finished_at)}</p> : null}
             </div>
           </Card>

@@ -1,15 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useId, useState } from "react";
 import { cn } from "@/components/ui/cn";
 import { api, unwrap } from "@/lib/api";
 import { kindOf, useAccess } from "@/lib/access";
 import { OpenOnPhone } from "@/components/devices/open-on-phone";
 import { LanguageSwitch } from "@/components/i18n/language";
-import { accountNav, ownerNav, staffNav, topNav, ventureNav, type NavItem } from "@/lib/nav";
+import { accountNav, ownerNav, splitCommon, staffNav, topNav, ventureNav, type NavItem } from "@/lib/nav";
 import { Logo } from "./logo";
 
 export const inboxKey = ["approvals", "inbox"] as const;
@@ -21,6 +23,8 @@ export function useInbox() {
     refetchInterval: 30_000,
   });
 }
+
+const MORE_KEY = "kv-nav-more";
 
 const COMMON = new Set(["assistant", "apps", "whatsapp", "invoices", "runs", "knowledge", "meetings", "voice", "tasks", "trust", "compliance", "settings"]);
 
@@ -105,6 +109,27 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   const nav = venture ? ventureNav(venture.venture_id, kindOf(venture)) : null;
+  const split = nav && venture ? splitCommon(nav.common, kindOf(venture)) : null;
+  const moreId = useId();
+  // "More" opens by itself when the page you're on lives there; otherwise it remembers your last choice.
+  const [moreChoice, setMoreChoice] = useState<boolean | null>(null);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(MORE_KEY) === "1") setMoreChoice(true);
+    } catch {
+      /* closed by default */
+    }
+  }, []);
+  const toggleMore = (open: boolean) => {
+    setMoreChoice(open);
+    try {
+      window.localStorage.setItem(MORE_KEY, open ? "1" : "0");
+    } catch {
+      /* not remembered */
+    }
+  };
+  const activeInMore = Boolean(split?.more.some((i) => isActive(pathname, i)));
+  const showMore = activeInMore || Boolean(moreChoice);
 
   return (
     <div className="flex h-full flex-col">
@@ -187,9 +212,32 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               ))}
             </div>
             <div className="mt-3 space-y-0.5 border-t border-border pt-3">
-              {nav.common.map((item) => (
+              {split!.main.map((item) => (
                 <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
               ))}
+              {split!.more.length ? (
+                <>
+                  {activeInMore ? null : (
+                  <button
+                    type="button"
+                    onClick={() => toggleMore(!showMore)}
+                    aria-expanded={showMore}
+                    aria-controls={moreId}
+                    className="flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-[13.5px] text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
+                  >
+                    <ChevronDown className={cn("h-4 w-4 shrink-0 text-subtle transition-transform duration-150", showMore && "rotate-180")} aria-hidden />
+                    <span>{showMore ? "Less" : "More"}</span>
+                  </button>
+                  )}
+                  {showMore ? (
+                    <div id={moreId} className="space-y-0.5">
+                      {split!.more.map((item) => (
+                        <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+                      ))}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           </>
         ) : null}

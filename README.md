@@ -4,8 +4,8 @@ AI agents for Indian small businesses. They read the business's messages, draft 
 Hinglish or English, and wait for the owner's yes before anything is sent, paid or changed. Built by
 Sitelytc Digital Media; live at **[app.sitelytc.com](https://app.sitelytc.com)** (API at `api.sitelytc.com`).
 
-**Status: live, in pilot.** 649 API tests (incl. exploit regressions and a sweep of every route with
-foreign ids), 297 web unit tests, 38 end-to-end tests and the desktop app's tests. 77 forward-only migrations.
+**Status: live, in pilot.** 707 API tests (incl. exploit regressions and a sweep of every route with
+foreign ids), 341 web unit tests, 38 end-to-end tests and the desktop app's tests. 80 forward-only migrations.
 
 **New here? → [Onboard a business, step by step (with screenshots)](docs/onboarding.md)**
 
@@ -18,6 +18,10 @@ foreign ids), 297 web unit tests, 38 end-to-end tests and the desktop app's test
 The full list, plan by plan, is the [/features](https://app.sitelytc.com/features) page
 (`apps/web/lib/features.ts`). In short:
 
+* **Autopilot.** One switch per business: agents reply, remind, follow up, answer good reviews and post by
+  themselves, and send an 8 pm summary; refunds, discounts, off-card prices, complaints, orders, payments,
+  invoices and proposals still wait for a yes, enforced in code and by the database. PAUSE from your phone
+  stops it. → [docs/agents/autopilot.md](docs/agents/autopilot.md)
 * **One inbox for every channel.** Email (Gmail or forwarding), WhatsApp Business, Telegram, Slack, the
   website's form and IndiaMART. Each message is sorted and gets a draft reply in the business's voice.
 * **The answering machine.** Customers asking about their *own* invoices, payment links, bookings and
@@ -48,7 +52,7 @@ apps/api            FastAPI: tenancy/RLS, auth, crypto, model router, workflow e
                           voice_call · hiring · loan_verification · kitchen · trade · prospector · custom · …
   kritvia_api/services    memory and cited Q&A, messaging, customer_facts, auto_reply, ask_anywhere,
                           run_trust, netguard, google, pollers, OCR, …
-apps/api/migrations forward-only, checksummed SQL (0001 foundation … 0077 auto-reply)
+apps/api/migrations forward-only, checksummed SQL (0001 foundation … 0080 autopilot)
 apps/worker         arq worker: runs, schedules, sweeper, pollers, retention, morning check
 apps/web            Next.js 15: public site, BFF auth, approval inbox, venture views, settings, voice widget
 apps/desktop        Kritvia Voice: Electron tray app for dictation into any app
@@ -64,11 +68,11 @@ docs                onboarding, architecture, decisions (ADRs), runbook, agents/
 * **Approvals are interrupts.** A step returns `Interrupt(ApprovalRequest)`; the run is checkpointed
   (encrypted) and parked until a person with the right role decides. Tools execute the *approved*
   payload, at most once.
-* **What may skip approval is enforced twice.** Replying by itself is decided in code
-  (`services/auto_reply.py`: hand-off topics, money and percentages not on record, claims to be human,
-  automated senders, per-contact and per-business caps) **and** by a database trigger
-  (`private.guard_approval_insert`) that refuses an auto-approved row unless it is the inbox agent, on a
-  switched-on channel, not sensitive. Earned autonomy (a long run of unedited approvals) is audited and
+* **What may skip approval is enforced twice.** Replying by itself and autopilot are decided in code
+  (`services/auto_reply.py`, `services/autopilot.py`: hand-off words, money and percentages not on record,
+  claims to be human, unverified senders, plan rules, per-contact and per-business caps under a lock)
+  **and** by a database trigger (`private.guard_approval_insert` with `private.autopilot_allows`) that
+  refuses an auto-approved row for any agent, step or action outside the list, or a sensitive one. Earned autonomy (a long run of unedited approvals) is audited and
   can be taken back.
 * **LLMs reason, code calculates.** Prices, forecasts, totals, bank matching and checklist rules are code.
   Facts carry a mandatory source; answers cite them.

@@ -8,6 +8,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/dialog";
 import { useAccess } from "@/lib/access";
+import { forgetAccess } from "@/lib/reconnect";
+import { ReconnectBanner } from "./reconnect";
 import { TrialBanner } from "./trial-banner";
 import { AskDialog } from "./ask-dialog";
 import { LogoMark } from "./logo";
@@ -74,6 +76,7 @@ function Shell({ children }: { children: ReactNode }) {
       await fetch("/api/auth/logout", { method: "POST", headers: csrfHeaders() });
     } finally {
       qc.clear();
+      forgetAccess();
       window.location.assign("/login");
     }
   };
@@ -128,7 +131,8 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-[1400px] px-4 pt-6 pb-28 sm:px-6 lg:px-8">
+      <main id="main" className="mx-auto w-full max-w-[1400px] px-4 pt-6 pb-28 sm:px-6 sm:pb-36 lg:px-8">
+        <ReconnectBanner />
         <TrialBanner />
         {children}
       </main>

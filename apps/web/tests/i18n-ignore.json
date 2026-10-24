@@ -9,5 +9,5 @@
     "X-Kritvia-Signature: sha256=HMAC(secret, \"&lt;ts&gt;.&lt;body&gt;\")", ". Requests older than 5 minutes are refused.",
     "@BotFather", "123456789:AA…", "Slack", "Incoming Webhooks", "IndiaMART", "Lead Manager → Pull API"
   ],
-  "outsideScopeMissing": 1000
+  "outsideScopeMissing": 892
 }

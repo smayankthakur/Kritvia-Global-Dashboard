@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Badge, type Tone } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { api, unwrap } from "@/lib/api";
+import { plainError } from "@/lib/wording";
 
 type Finding = { agent: string; level: "fix" | "check" | "idea"; kind: string; text: string; path: string };
 type Health = {
@@ -53,7 +54,7 @@ export function AutomationHealth({ ventureId }: { ventureId: string }) {
             {findings.map((f) => (
               <li key={`${f.agent}-${f.kind}`} className="flex flex-wrap items-start gap-2 text-sm">
                 <Badge tone={LEVEL[f.level].tone}>{LEVEL[f.level].label}</Badge>
-                <span className="min-w-0 flex-1 text-fg">{f.text}</span>
+                <span className="min-w-0 flex-1 text-fg">{plainError(f.text)}</span>
                 <Link href={f.path} className="text-xs text-accent hover:underline">
                   Open
                 </Link>

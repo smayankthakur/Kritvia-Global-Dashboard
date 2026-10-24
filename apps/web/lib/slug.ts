@@ -17,3 +17,16 @@ export function toCode(s: string, max = 40): string {
     .replace(/^_+|_+$/g, "")
     .slice(0, max);
 }
+
+/** A rate-card code made from the item's name, unique among `taken`: "Hair cut" → "hair_cut", then "hair_cut_2". */
+export function codeFromName(name: string, taken: Iterable<string>, max = 40): string {
+  const used = new Set(taken);
+  let base = toCode(name, max);
+  if (base.length < 2) base = base ? `${base}_item` : "";
+  if (!base || !used.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const tail = `_${n}`;
+    const c = `${base.slice(0, max - tail.length)}${tail}`;
+    if (!used.has(c)) return c;
+  }
+}

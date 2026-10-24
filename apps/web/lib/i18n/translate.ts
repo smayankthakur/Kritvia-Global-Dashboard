@@ -62,6 +62,14 @@ const PATTERNS: [RegExp, string][] = [
   [/^Every day at (.+)$/, "हर दिन $1 बजे"],
   [/^Every (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(.*) at (.+)$/, "हर $1$2 को $3 बजे"],
   [/^Step (\d+) of (\d+)$/, "क़दम $1 / $2"],
+  // Round 3: dashboard greeting, autopilot, booking hours and ratings.
+  [/^Good to see you, (.+)$/, "आपका स्वागत है, $1"],
+  [/^(\d+) payments? recorded by autopilot \(undo on each line\)$/, "ऑटोपायलट ने $1 भुगतान दर्ज किए (हर लाइन पर वापस लेने का विकल्प)"],
+  [/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday): write both times as HH:MM, e\.g\. 10:00 and 19:00\.$/, "$1: दोनों समय HH:MM में लिखें, जैसे 10:00 और 19:00।"],
+  [/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday): the closing time must be after the opening time\.$/, "$1: बंद होने का समय खुलने के समय के बाद होना चाहिए।"],
+  [/^(\d+) review repl(?:y|ies) waiting$/, "$1 रिव्यू जवाब इंतज़ार में"],
+  [/^(\d+(?:\.\d)?) of 5$/, "5 में से $1"],
+  [/^([\d,]+) reviews$/, "$1 रिव्यू"],
 ];
 const DAYS: Record<string, string> = {
   Monday: "सोमवार", Tuesday: "मंगलवार", Wednesday: "बुधवार", Thursday: "गुरुवार", Friday: "शुक्रवार",

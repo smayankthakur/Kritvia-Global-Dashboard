@@ -2946,6 +2946,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ventures/{venture_id}/autopilot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Autopilot */
+        get: operations["get_autopilot_ventures__venture_id__autopilot_get"];
+        /** Put Autopilot */
+        put: operations["put_autopilot_ventures__venture_id__autopilot_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ventures/{venture_id}/bank/confirm-sure": {
         parameters: {
             query?: never;
@@ -7717,6 +7735,44 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** AutopilotIn */
+        AutopilotIn: {
+            /** On */
+            on: boolean;
+        };
+        /** AutopilotJob */
+        AutopilotJob: {
+            /** Agent */
+            agent: string;
+            /**
+             * On Plan
+             * @description this plan lets autopilot do it (else it keeps asking)
+             */
+            on_plan: boolean;
+            /** What */
+            what: string;
+        };
+        /** AutopilotOut */
+        AutopilotOut: {
+            /** Changed At */
+            changed_at?: string | null;
+            /** Held Today */
+            held_today: number;
+            /** Jobs */
+            jobs: components["schemas"]["AutopilotJob"][];
+            /** On */
+            on: boolean;
+            /** Plan */
+            plan: string;
+            /** Still Asks */
+            still_asks: string[];
+            /** Today By Itself */
+            today_by_itself: {
+                [key: string]: number;
+            };
+            /** Waiting */
+            waiting: number;
+        };
         /** BillDraft */
         BillDraft: {
             /** Amount Paise */
@@ -11775,6 +11831,12 @@ export interface components {
         };
         /** MeAccessOut */
         MeAccessOut: {
+            /**
+             * Email Recorded Only
+             * @description this server records emails a business without a mailbox approves instead of failing them (local development only; never in production)
+             * @default false
+             */
+            email_recorded_only: boolean;
             /**
              * Is Staff
              * @description Kritvia's own team (sees Pilot health)
@@ -15990,6 +16052,12 @@ export interface components {
             likely: number;
             /** New Lines */
             new_lines: number;
+            /**
+             * Recorded By Autopilot
+             * @description sure invoice matches autopilot recorded (undo on each)
+             * @default 0
+             */
+            recorded_by_autopilot: number;
             statement: components["schemas"]["StatementOut"];
             /**
              * Sure
@@ -22824,6 +22892,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["kritvia_api__routers__automations__RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_autopilot_ventures__venture_id__autopilot_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutopilotOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_autopilot_ventures__venture_id__autopilot_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venture_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutopilotIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutopilotOut"];
                 };
             };
             /** @description Validation Error */

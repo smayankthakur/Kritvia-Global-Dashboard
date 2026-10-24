@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { ApprovalDetail } from "@/components/approvals/approval-detail";
+import { useCanSendEmail } from "@/components/approvals/use-send-channels";
 import { workflowLabel } from "@/components/runs/run-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -167,11 +168,13 @@ function ReviewDialog({ ventureId, ticket, onClose }: { ventureId: string; ticke
     queryFn: () =>
       unwrap(api.GET("/ventures/{venture_id}/approvals/{approval_id}", { params: { path: { venture_id: ventureId, approval_id: approvalId } } })),
   });
+  const canSendEmail = useCanSendEmail(ventureId, q.data?.action === "gmail.send");
   return (
     <Dialog open onClose={onClose} title={ticket.title} description="What the agent wants to send. Approve, edit or reject." size="xl" variant="sheet-right">
       {q.data ? (
         <ApprovalDetail
           approval={q.data}
+          canSendEmail={canSendEmail}
           onDecide={async (body) => {
             const out = await unwrap(
               api.POST("/ventures/{venture_id}/approvals/{approval_id}/decision", {

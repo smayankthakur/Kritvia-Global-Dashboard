@@ -2453,6 +2453,107 @@
         "title": "AutonomyIn",
         "type": "object"
       },
+      "AutopilotIn": {
+        "properties": {
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "AutopilotIn",
+        "type": "object"
+      },
+      "AutopilotJob": {
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "on_plan": {
+            "description": "this plan lets autopilot do it (else it keeps asking)",
+            "title": "On Plan",
+            "type": "boolean"
+          },
+          "what": {
+            "title": "What",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent",
+          "what",
+          "on_plan"
+        ],
+        "title": "AutopilotJob",
+        "type": "object"
+      },
+      "AutopilotOut": {
+        "properties": {
+          "changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed At"
+          },
+          "held_today": {
+            "title": "Held Today",
+            "type": "integer"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/AutopilotJob"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "still_asks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Still Asks",
+            "type": "array"
+          },
+          "today_by_itself": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Today By Itself",
+            "type": "object"
+          },
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "on",
+          "plan",
+          "jobs",
+          "today_by_itself",
+          "waiting",
+          "held_today",
+          "still_asks"
+        ],
+        "title": "AutopilotOut",
+        "type": "object"
+      },
       "BillDraft": {
         "properties": {
           "amount_paise": {
@@ -13816,6 +13917,12 @@
       },
       "MeAccessOut": {
         "properties": {
+          "email_recorded_only": {
+            "default": false,
+            "description": "this server records emails a business without a mailbox approves instead of failing them (local development only; never in production)",
+            "title": "Email Recorded Only",
+            "type": "boolean"
+          },
           "is_staff": {
             "default": false,
             "description": "Kritvia's own team (sees Pilot health)",
@@ -25709,6 +25816,12 @@
             "title": "New Lines",
             "type": "integer"
           },
+          "recorded_by_autopilot": {
+            "default": 0,
+            "description": "sure invoice matches autopilot recorded (undo on each)",
+            "title": "Recorded By Autopilot",
+            "type": "integer"
+          },
           "statement": {
             "$ref": "#/components/schemas/StatementOut"
           },
@@ -37243,6 +37356,110 @@
         "summary": "Run Now",
         "tags": [
           "automations"
+        ]
+      }
+    },
+    "/ventures/{venture_id}/autopilot": {
+      "get": {
+        "operationId": "get_autopilot_ventures__venture_id__autopilot_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutopilotOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Autopilot",
+        "tags": [
+          "autopilot"
+        ]
+      },
+      "put": {
+        "operationId": "put_autopilot_ventures__venture_id__autopilot_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "venture_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Venture Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutopilotOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Autopilot",
+        "tags": [
+          "autopilot"
         ]
       }
     },

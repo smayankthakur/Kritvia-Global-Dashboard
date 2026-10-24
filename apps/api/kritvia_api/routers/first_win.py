@@ -88,7 +88,7 @@ async def first_win(venture_id: uuid.UUID, db: TenantDB) -> FirstWinOut:
         Step(id="profile", title="Tell Kritvia about your business", done=r.has_profile, href=f"{v}/settings",
              detail="Your business's name and city, so every draft sounds like you."),
         Step(id="agent", title="Switch on the Inbox assistant", done=r.agents_on > 0, href=f"{v}/agents",
-             detail="It reads customer messages and drafts replies. Nothing goes out without your yes."),
+             detail="It reads customer messages and drafts replies. Until you switch on autopilot, nothing goes out without your yes."),
         Step(id="draft", title="See your first draft", done=r.first_draft_at is not None, href=f"{v}/board",
              detail="Send a practice customer email and watch the reply appear in seconds."),
         Step(id="yes", title="Say yes to it", done=r.first_yes_at is not None, href="/inbox",

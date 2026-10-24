@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/components/ui/cn";
 import { Field, FormError, Input, Select, Switch } from "@/components/ui/field";
-import { Notice, PageHeader } from "@/components/ui/page";
+import { PageHeader } from "@/components/ui/page";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
+import { UnsavedBar } from "@/components/ui/unsaved-bar";
 import { ApiError, api, enumValues, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatINR } from "@/lib/format";
-import { toCode } from "@/lib/slug";
+import { codeFromName } from "@/lib/slug";
+import { useUnsavedChanges } from "@/lib/unsaved";
 import { useVenture } from "@/lib/venture";
 
 type Unit = Schemas["RateItem-Input"]["unit"];
@@ -29,6 +31,8 @@ interface Row {
   min_units: string;
   active: boolean;
   isNew?: boolean;
+  /** The owner typed their own code: stop making it from the name. */
+  codeTouched?: boolean;
 }
 
 const CODE_RE = /^[a-z0-9_]{2,40}$/;
@@ -70,6 +74,8 @@ export default function RateCardPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
+  // Leaving with unsaved rows (Back, a sidebar link, closing the tab) asks first (round 3, A2).
+  useUnsavedChanges(dirty);
 
   useEffect(() => {
     if (q.data && !dirty) setRows(toRows(q.data));
@@ -147,9 +153,17 @@ export default function RateCardPage() {
         <FormError message={errorMessage(save.error)} />
       ) : null}
       {dirty ? (
-        <Notice tone="info" className="mb-4">
-          You have unsaved changes.
-        </Notice>
+        <UnsavedBar
+          className="mb-4"
+          onSave={submit}
+          saving={save.isPending}
+          onDiscard={() => {
+            setErrors({});
+            save.reset();
+            setDirty(false);
+            if (q.data) setRows(toRows(q.data));
+          }}
+        />
       ) : null}
       <Card>
         {q.isPending ? (
@@ -186,10 +200,10 @@ export default function RateCardPage() {
                   <Field label="Code" srLabel error={errors[`${i}.code`]} className="col-span-2 lg:col-span-1">
                     <Input
                       value={r.code}
-                      placeholder="nextjs_page"
+                      placeholder="Made from the name"
                       disabled={!r.isNew}
                       className="font-mono text-[13px]"
-                      onChange={(e) => update(r.key, { code: e.target.value.toLowerCase() })}
+                      onChange={(e) => update(r.key, { code: e.target.value.toLowerCase(), codeTouched: true })}
                     />
                   </Field>
                   <div className="col-span-2 space-y-2 lg:col-span-1">
@@ -197,8 +211,13 @@ export default function RateCardPage() {
                       <Input
                         value={r.name}
                         placeholder="Next.js page"
-                        onChange={(e) => update(r.key, { name: e.target.value })}
-                        onBlur={() => r.isNew && !r.code && r.name && update(r.key, { code: toCode(r.name) })}
+                        onChange={(e) =>
+                          update(r.key, {
+                            name: e.target.value,
+                            // A new item's code follows its name (A25) until the owner edits the code.
+                            ...(r.isNew && !r.codeTouched ? { code: codeFromName(e.target.value, rows.filter((x) => x.key !== r.key).map((x) => x.code)) } : {}),
+                          })
+                        }
                       />
                     </Field>
                     <Field label="Description" srLabel>

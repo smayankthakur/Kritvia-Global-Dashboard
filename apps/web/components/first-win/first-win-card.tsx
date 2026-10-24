@@ -67,7 +67,7 @@ export function FirstWinCard({ ventureId, ventureName, canWrite }: { ventureId: 
         description={
           d.won_at
             ? "Kritvia drafted and you approved. A few more steps and it runs on its own."
-            : "Six short steps to your first approved reply. Nothing goes out without your yes."
+            : "Six short steps to your first approved reply. Until you switch on autopilot, nothing goes out without your yes."
         }
         actions={
           <Button variant="ghost" size="sm" aria-label="Hide this checklist" icon={<X className="h-4 w-4" />} onClick={dismiss}>

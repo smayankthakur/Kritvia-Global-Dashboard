@@ -3,7 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, FileText, X } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { DeleteProposalButton } from "@/components/leads/delete-proposal";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -31,6 +32,7 @@ export default function ProposalDetailPage() {
   const { proposalId } = useParams<{ proposalId: string }>();
   const qc = useQueryClient();
   const toast = useToast();
+  const router = useRouter();
   const q = useQuery({
     queryKey: ["proposals", v.id, "detail", proposalId],
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/proposals/{proposal_id}", { params: { path: { venture_id: v.id, proposal_id: proposalId } } })),
@@ -70,16 +72,26 @@ export default function ProposalDetailPage() {
           </span>
         }
         actions={
-          p.status === "sent" ? (
-            <>
-              <Button variant="primary" icon={<Check className="h-4 w-4" />} loading={outcome.isPending && outcome.variables === "accepted"} onClick={() => outcome.mutate("accepted")}>
-                Mark accepted
-              </Button>
-              <Button icon={<X className="h-4 w-4" />} loading={outcome.isPending && outcome.variables === "rejected"} onClick={() => outcome.mutate("rejected")}>
-                Mark rejected
-              </Button>
-            </>
-          ) : undefined
+          <>
+            {p.status === "sent" ? (
+              <>
+                <Button variant="primary" icon={<Check className="h-4 w-4" />} loading={outcome.isPending && outcome.variables === "accepted"} onClick={() => outcome.mutate("accepted")}>
+                  Mark accepted
+                </Button>
+                <Button icon={<X className="h-4 w-4" />} loading={outcome.isPending && outcome.variables === "rejected"} onClick={() => outcome.mutate("rejected")}>
+                  Mark rejected
+                </Button>
+              </>
+            ) : null}
+            <DeleteProposalButton
+              ventureId={v.id}
+              proposal={p}
+              onDeleted={() => {
+                qc.removeQueries({ queryKey: ["proposals", v.id, "detail", proposalId] });
+                router.push(`/v/${v.id}/proposals`);
+              }}
+            />
+          </>
         }
       />
       <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">

@@ -126,6 +126,22 @@ export function ventureNav(ventureId: string, kind: VentureKind): { domain: NavI
   return { domain, common };
 }
 
+/** The everyday screens for each kind of business; every other screen stays one tap away under "More" (round 3, A25). */
+const EVERYDAY: Record<VentureKind, string[]> = {
+  general: ["assistant", "whatsapp", "invoices", "money", "bookings", "reviews", "marketing", "agents", "settings"],
+  software: ["assistant", "whatsapp", "invoices", "money", "marketing", "agents", "settings"],
+  finance: ["assistant", "whatsapp", "invoices", "money", "agents", "settings"],
+  kitchen: ["assistant", "whatsapp", "invoices", "money", "reviews", "marketing", "agents", "settings"],
+  trade: ["assistant", "whatsapp", "invoices", "money", "agents", "settings"],
+};
+
+/** Splits a business's common screens into the ones its kind uses every day and the rest ("More"), keeping their order. */
+export function splitCommon(common: NavItem[], kind: VentureKind): { main: NavItem[]; more: NavItem[] } {
+  const keep = new Set(EVERYDAY[kind] ?? EVERYDAY.general);
+  const section = (i: NavItem) => i.href.split("/")[3] ?? "";
+  return { main: common.filter((i) => keep.has(section(i))), more: common.filter((i) => !keep.has(section(i))) };
+}
+
 export const topNav: NavItem[] = [
   { label: "Dashboard", href: "/", icon: Gauge },
   { label: "Inbox", href: "/inbox", icon: Inbox },

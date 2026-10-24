@@ -1,12 +1,13 @@
 "use client";
 
-import { CalendarClock, Check, Lock, Mail, Pencil, ShieldAlert, X } from "lucide-react";
+import { CalendarClock, Check, ChevronDown, Lock, Mail, Pencil, ShieldAlert, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { workflowLabel } from "@/components/runs/run-actions";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CodeDiff, ValueDiff } from "@/components/ui/code-diff";
+import { CopyButton } from "@/components/ui/copy";
 import { Dialog } from "@/components/ui/dialog";
 import { Checkbox, Field, Input, Textarea } from "@/components/ui/field";
 import { RichText } from "@/components/ui/markdown";
@@ -14,6 +15,7 @@ import { KeyValue, Notice } from "@/components/ui/page";
 import { ApiError, errorMessage, type Schemas } from "@/lib/api";
 import { buildEditedPayload, diffPayload, displayValue, parseUnified, type Payload, type PayloadFieldDiff } from "@/lib/diff";
 import { formatDateTime, formatRelative, fromISTInput, titleCase, toISTInput } from "@/lib/format";
+import { actionLabel, rolesLabel } from "@/lib/wording";
 
 export type Approval = Schemas["ApprovalOut"];
 export type Decision = Schemas["DecisionIn"];
@@ -209,7 +211,7 @@ function PayloadBody({ action, payload }: { action: string; payload: Payload }) 
             <span className="min-w-0 font-medium">{displayValue(payload.subject) || "—"}</span>
           </div>
         </div>
-        <div className="max-h-[28rem] overflow-y-auto px-4 py-4">
+        <div className="max-h-[28rem] overflow-y-auto px-4 py-4 [overflow-wrap:anywhere]">
           <RichText text={displayValue(payload.body)} />
         </div>
       </div>
@@ -278,14 +280,42 @@ function ServerDiff({ diff }: { diff: Schemas["FieldDiff"][] }) {
   );
 }
 
+/** Long messages start folded so the draft stays in view. */
+const LONG_MESSAGE = 600;
+
+/** The customer's own message the draft answers, so the owner doesn't rely on the AI's summary (round 3, A5). */
+function TheyWrote({ text, from }: { text: string; from?: string | null }) {
+  const long = text.length > LONG_MESSAGE || text.split("\n").length > 10;
+  const [open, setOpen] = useState(!long);
+  return (
+    <section aria-label="They wrote" className="rounded-lg border border-border bg-surface-2/60 p-3">
+      <h3 className="text-xs font-semibold tracking-wide text-subtle uppercase">
+        They wrote{from ? <span className="font-normal normal-case"> · {from}</span> : null}
+      </h3>
+      <p translate="no" className={`mt-1.5 text-sm whitespace-pre-wrap [overflow-wrap:anywhere] ${open ? "" : "line-clamp-4"}`}>
+        {text}
+      </p>
+      {long ? (
+        <button type="button" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <ChevronDown className={open ? "h-3.5 w-3.5 rotate-180" : "h-3.5 w-3.5"} aria-hidden />
+          {open ? "Show less" : "Show all"}
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 export function ApprovalDetail({
   approval,
   onDecide,
   onConflict,
+  canSendEmail,
 }: {
   approval: Approval;
   onDecide: (body: Decision) => Promise<Approval>;
   onConflict?: () => void;
+  /** false: this business has no Gmail connected, so an email draft can't be sent (round 3, A1). Unknown: undefined. */
+  canSendEmail?: boolean;
 }) {
   const original = useMemo<Payload>(() => (approval.payload ?? {}) as Payload, [approval.payload]);
   // The API hides a draft's contents from people who can't decide it (a viewer, or a role the card doesn't ask for).
@@ -304,6 +334,8 @@ export function ApprovalDetail({
   const edited = useMemo(() => formToPayload(original, form, dirty), [original, form, dirty]);
   const preview = useMemo(() => diffPayload(original, edited), [original, edited]);
   const disabled = !approval.can_decide || Boolean(result);
+  // An email with no mailbox to send it from: approving would send nothing, so it can only be copied.
+  const noMailbox = approval.action === "gmail.send" && canSendEmail === false && !result;
 
   const startEdit = () => {
     const f: Record<string, string | boolean> = {};
@@ -352,7 +384,7 @@ export function ApprovalDetail({
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="accent">
-            <Icon className="h-3 w-3" aria-hidden /> {approval.action}
+            <Icon className="h-3 w-3" aria-hidden /> {actionLabel(approval.action)}
           </Badge>
           {approval.sensitive ? (
             <Badge tone="danger" title="Sensitive: decided only by the required role; processed by local models">
@@ -396,20 +428,34 @@ export function ApprovalDetail({
           ) : null}
           <div>
             <dt className="inline">Needs role </dt>
-            <dd className="inline font-medium text-muted">{approval.required_roles.join(" or ")}</dd>
+            <dd className="inline font-medium text-muted">{rolesLabel(approval.required_roles)}</dd>
           </div>
         </dl>
       </header>
 
       {!approval.can_decide && !result ? (
         <Notice tone="warning" title="You can view this draft but not decide it">
-          Deciding needs the {approval.required_roles.map((r) => r.replace(/_/g, " ")).join(" or ")} role in {approval.venture_name}
+          Deciding needs the {rolesLabel(approval.required_roles)} role in {approval.venture_name}
           {approval.sensitive ? ". Sensitive drafts can't be decided by owners without that role" : ""}. Ask an owner to add the role under
           Settings → Members.
         </Notice>
       ) : null}
 
       {error ? <Notice tone="danger">{error}</Notice> : null}
+
+      {noMailbox && !redacted ? (
+        <Notice tone="warning" title="Gmail isn't connected">
+          Gmail isn&apos;t connected, so this email can&apos;t be sent from Kritvia. Connect Google, or copy the reply.
+          <span className="mt-2 flex flex-wrap items-center gap-2">
+            <Link href={`/v/${approval.venture_id}/settings?tab=connectors`} className="text-sm font-medium text-accent underline underline-offset-2">
+              Connect Google
+            </Link>
+            <CopyButton value={displayValue(original.body)} label="Copy reply" />
+          </span>
+        </Notice>
+      ) : null}
+
+      {approval.they_wrote && !redacted && !result ? <TheyWrote text={approval.they_wrote} from={approval.they_wrote_from} /> : null}
 
       {result ? (
         <section className="space-y-3" aria-live="polite">
@@ -462,7 +508,7 @@ export function ApprovalDetail({
                 hint={kind === "datetime" ? "India Standard Time (IST)" : kind === "list" ? "Separate with commas" : undefined}
               >
                 {kind === "textarea" ? (
-                  <Textarea rows={k === "body" ? 14 : 4} value={String(v ?? "")} onChange={(e) => setField(k, e.target.value)} className="font-mono text-[13px]" />
+                  <Textarea rows={k === "body" ? 14 : 4} value={String(v ?? "")} onChange={(e) => setField(k, e.target.value)} className="[overflow-wrap:anywhere]" />
                 ) : (
                   <Input
                     type={kind === "datetime" ? "datetime-local" : kind === "number" ? "number" : k === "to" ? "email" : "text"}
@@ -496,6 +542,7 @@ export function ApprovalDetail({
             <Button
               variant="primary"
               loading={busy === "approve"}
+              disabled={noMailbox}
               icon={<Check className="h-4 w-4" />}
               onClick={() =>
                 decide({ decision: "approve", edited_payload: preview.length ? edited : null, comment: comment.trim() || null })
@@ -512,7 +559,7 @@ export function ApprovalDetail({
           <Button
             variant="primary"
             icon={<Check className="h-4 w-4" />}
-            disabled={disabled}
+            disabled={disabled || noMailbox}
             loading={busy === "approve"}
             onClick={() => decide({ decision: "approve" })}
           >

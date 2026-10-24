@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Building2 } from "lucide-react";
 import Link from "next/link";
+import { AutopilotPanel } from "@/components/autopilot/autopilot";
 import { FirstWinCard } from "@/components/first-win/first-win-card";
 import { RetryRunButton, workflowLabel } from "@/components/runs/run-actions";
 import { Badge } from "@/components/ui/badge";
@@ -54,18 +55,58 @@ function statusCounts(obj: unknown): [string, number][] {
   return Object.entries(obj as Record<string, number>).filter(([, v]) => typeof v === "number");
 }
 
+/** Bookings coming up and the Google rating: what a salon, clinic or shop owner looks at first (round 3, A3). */
+function BookingsAndReviews({ ventureId }: { ventureId: string }) {
+  const bookings = useQuery({
+    queryKey: ["dashboard-bookings", ventureId],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/bookings", { params: { path: { venture_id: ventureId }, query: { days: 7, show: "upcoming" } } })),
+    staleTime: 5 * 60_000,
+  });
+  const reviews = useQuery({
+    queryKey: ["dashboard-reviews", ventureId],
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/reviews", { params: { path: { venture_id: ventureId } } })),
+    // Reading reviews asks Google, so the dashboard doesn't do it often.
+    staleTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const live = (bookings.data ?? []).filter((b) => b.status === "confirmed");
+  const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
+  const todayCount = live.filter((b) => new Date(new Date(b.starts_at).getTime() + 330 * 60_000).toISOString().slice(0, 10) === today).length;
+  const place = reviews.data?.place;
+  const waitingReplies = (reviews.data?.reviews ?? []).filter((r) => r.reply && r.reply.status === "drafted").length;
+  return (
+    <StatGrid className="sm:grid-cols-3">
+      <Stat label="Bookings today" value={bookings.data ? formatNumber(todayCount) : "—"} hint={bookings.data ? <Link href={`/v/${ventureId}/bookings`} className="hover:text-accent">Open bookings</Link> : undefined} />
+      <Stat label="Bookings (next 7 days)" value={bookings.data ? formatNumber(live.length) : "—"} />
+      <Stat
+        label="Google rating"
+        value={place?.rating ? `${place.rating.toFixed(1)} of 5` : "—"}
+        hint={
+          place ? (
+            waitingReplies ? `${waitingReplies} review repl${waitingReplies === 1 ? "y" : "ies"} waiting` : place.count ? `${formatNumber(place.count)} reviews` : undefined
+          ) : reviews.data ? (
+            <Link href={`/v/${ventureId}/reviews`} className="hover:text-accent">Link your Google listing</Link>
+          ) : undefined
+        }
+      />
+    </StatGrid>
+  );
+}
+
 function KindMetrics({ card }: { card: VCard }) {
   const m = card.metrics as Record<string, unknown>;
   const kind = kindOf(card);
   const blocks: React.ReactNode[] = [];
-  if ((kind === "software" || kind === "general") && "hot_leads" in m) {
+  // Salons, clinics, shops and coaching (the "general" kinds) see bookings and reviews, never loans or purchase orders.
+  if (kind === "general") blocks.push(<BookingsAndReviews key="book" ventureId={card.venture_id} />);
+  const leads = statusCounts(m.leads);
+  if ((kind === "software" || (kind === "general" && (leads.length || Number(m.hot_leads) > 0))) && "hot_leads" in m) {
     blocks.push(
       <StatGrid key="sw" className="sm:grid-cols-2">
         <Stat label="Hot leads (open)" value={formatNumber(m.hot_leads as number)} />
         <Stat label="Median inquiry → approved proposal" value={formatHours(m.median_hours_inquiry_to_approved_proposal as number | null)} />
       </StatGrid>,
     );
-    const leads = statusCounts(m.leads);
     if (leads.length)
       blocks.push(
         <div key="leads" className="flex flex-wrap gap-1.5">
@@ -77,7 +118,7 @@ function KindMetrics({ card }: { card: VCard }) {
         </div>,
       );
   }
-  if ((kind === "finance" || kind === "general") && "loan_applications" in m) {
+  if (kind === "finance" && "loan_applications" in m) {
     const apps = statusCounts(m.loan_applications);
     blocks.push(
       <div key="fin">
@@ -96,7 +137,7 @@ function KindMetrics({ card }: { card: VCard }) {
       </div>,
     );
   }
-  if ((kind === "kitchen" || kind === "general") && "mape_14d" in m) {
+  if (kind === "kitchen" && "mape_14d" in m) {
     const lf = m.latest_forecast as { target_date: string; portions: number } | null;
     blocks.push(
       <StatGrid key="kit" className="sm:grid-cols-3">
@@ -109,7 +150,7 @@ function KindMetrics({ card }: { card: VCard }) {
   return <div className="space-y-4">{blocks}</div>;
 }
 
-function VentureCardView({ card }: { card: VCard }) {
+function VentureCardView({ card, canAdmin }: { card: VCard; canAdmin: boolean }) {
   const mc = card.model_calls_7d as Record<string, number>;
   const tokens = (mc.prompt_tokens ?? 0) + (mc.completion_tokens ?? 0);
   const firstPage = ventureNav(card.venture_id, kindOf(card)).domain[0]?.href ?? `/v/${card.venture_id}/runs`;
@@ -138,6 +179,7 @@ function VentureCardView({ card }: { card: VCard }) {
         }
       />
       <div className="flex-1 space-y-5 p-4">
+        <AutopilotPanel ventureId={card.venture_id} canAdmin={canAdmin} />
         <StatGrid>
           <Stat
             label="Pending approvals"
@@ -187,7 +229,8 @@ function VentureCardView({ card }: { card: VCard }) {
 }
 
 export default function DashboardPage() {
-  const { org, me, venture } = useAccess();
+  const { org, me, venture, ventures, isOwner } = useAccess();
+  const adminOf = (id: string) => isOwner || Boolean(ventures.find((v) => v.venture_id === id && (v.can_admin || v.is_owner)));
   const q = useQuery({
     queryKey: ["dashboard", org?.id],
     queryFn: () => unwrap(api.GET("/orgs/{org_id}/dashboard", { params: { path: { org_id: org!.id } } })),
@@ -248,7 +291,7 @@ export default function DashboardPage() {
           </Card>
           <div className="kv-stagger grid gap-4 xl:grid-cols-2">
             {q.data.ventures.map((c) => (
-              <VentureCardView key={c.venture_id} card={c} />
+              <VentureCardView key={c.venture_id} card={c} canAdmin={adminOf(c.venture_id)} />
             ))}
           </div>
         </div>

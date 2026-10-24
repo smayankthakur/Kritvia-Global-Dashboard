@@ -1,17 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Download } from "lucide-react";
-import { useState } from "react";
+import { Download, ReceiptIndianRupee } from "lucide-react";
+import { useEffect, useState } from "react";
 import { rupees } from "@/components/invoices/money";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
+import { GstCard, gstKey } from "@/components/settings/gst";
 import { Notice } from "@/components/ui/page";
 import { Stat, StatGrid } from "@/components/ui/stat";
-import { QueryState, SkeletonRows } from "@/components/ui/states";
+import { EmptyState, QueryState, SkeletonRows } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
-import { api, downloadFile, errorMessage, unwrap, type Schemas } from "@/lib/api";
+import { ApiError, api, downloadFile, errorMessage, unwrap, type Schemas } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 
 function lastMonth(): string {
@@ -30,6 +31,19 @@ export function GstTab({ ventureId, initialMonth }: { ventureId: string; initial
     queryFn: () => unwrap(api.GET("/ventures/{venture_id}/gst/gstr1", { params: { path: { venture_id: ventureId }, query: { month } } })),
     retry: false,
   });
+  // A 409 is a setup step, not an error: the business has no GST details yet (round 3, A12).
+  const needsSetup = q.error instanceof ApiError && q.error.status === 409;
+  const [settingUp, setSettingUp] = useState(false);
+  const profile = useQuery({
+    queryKey: gstKey(ventureId),
+    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/gst-profile", { params: { path: { venture_id: ventureId } } })),
+    enabled: needsSetup,
+  });
+  const hasProfile = Boolean(profile.data?.profile);
+  const { refetch } = q;
+  useEffect(() => {
+    if (needsSetup && hasProfile) void refetch();
+  }, [needsSetup, hasProfile, refetch]);
   const get = (format: "xlsx" | "json") =>
     downloadFile(`/ventures/${ventureId}/gst/gstr1/file?month=${month}&format=${format}`, `GSTR1_${month}.${format}`).catch((e) =>
       toast.error("Couldn't download it", errorMessage(e)),
@@ -47,6 +61,24 @@ export function GstTab({ ventureId, initialMonth }: { ventureId: string; initial
           GSTR-1 JSON
         </Button>
       </Card>
+      {needsSetup ? (
+        settingUp ? (
+          <GstCard ventureId={ventureId} />
+        ) : (
+          <Card>
+            <EmptyState
+              icon={ReceiptIndianRupee}
+              title="Set up your GST profile first"
+              description="Add your GSTIN, state and invoice numbering once. Then Kritvia makes tax invoices and builds this GSTR-1 sheet from them every month."
+              action={
+                <Button variant="primary" onClick={() => setSettingUp(true)}>
+                  Set up GST
+                </Button>
+              }
+            />
+          </Card>
+        )
+      ) : (
       <QueryState query={q} loading={<SkeletonRows rows={2} className="p-3" />}>
         {(d: Schemas["Gstr1Out"]) => (
           <>
@@ -73,6 +105,7 @@ export function GstTab({ ventureId, initialMonth }: { ventureId: string; initial
           </>
         )}
       </QueryState>
+      )}
     </div>
   );
 }

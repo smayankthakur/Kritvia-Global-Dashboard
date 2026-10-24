@@ -163,6 +163,18 @@ export default function AutomationsPage() {
     setError(null);
     setTimeout(() => panel.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
+  // One request at a time: a double click (before the button shows it is busy) must not start a second one
+  // (round 3, A21).
+  const inFlight = useRef(false);
+  const once = (fn: () => Promise<unknown>) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    void fn()
+      .catch(() => undefined)
+      .finally(() => {
+        inFlight.current = false;
+      });
+  };
   const recipients = also.split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
   const badEmail = recipients.find((x) => !EMAIL.test(x));
 
@@ -223,12 +235,12 @@ export default function AutomationsPage() {
             className="space-y-3 p-4"
             onSubmit={(e) => {
               e.preventDefault();
-              if (said.trim().length >= 3) understand.mutate();
+              if (said.trim().length >= 3 && !understand.isPending) once(() => understand.mutateAsync());
             }}
           >
             <div className="flex gap-2">
               <Input value={said} onChange={(e) => setSaid(e.target.value)} maxLength={500} placeholder={EXAMPLES[0]} aria-label="What should Kritvia do regularly?" />
-              <Button type="submit" variant="primary" loading={understand.isPending}>
+              <Button type="submit" variant="primary" loading={understand.isPending} disabled={save.isPending}>
                 Set it up
               </Button>
             </div>
@@ -276,7 +288,7 @@ export default function AutomationsPage() {
                 <Input value={also} onChange={(e) => setAlso(e.target.value)} placeholder="ca@example.com" maxLength={600} />
               </Field>
               <div className="flex gap-2">
-                <Button variant="primary" loading={save.isPending} disabled={Boolean(badEmail) || recipients.length > 10} onClick={() => save.mutate(draft)}>
+                <Button variant="primary" loading={save.isPending} disabled={Boolean(badEmail) || recipients.length > 10} onClick={() => once(() => save.mutateAsync(draft))}>
                   Save automation
                 </Button>
                 <Button variant="ghost" onClick={() => setDraft(null)}>

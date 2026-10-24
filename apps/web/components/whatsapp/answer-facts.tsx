@@ -1,41 +1,31 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { api, errorMessage, unwrap } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
+import { useAssistantSettings } from "./assistant-settings";
 
 /** The answering machine's customer side: the inbox assistant's `answer_facts` option, where owners
  * look (the Chats page). Off by default; the same option is under Agents → Inbox assistant. */
 export function AnswerFactsSwitch({ ventureId, canAdmin }: { ventureId: string; canAdmin: boolean }) {
-  const qc = useQueryClient();
   const toast = useToast();
-  const configs = useQuery({
-    queryKey: ["workflow-configs", ventureId],
-    queryFn: () => unwrap(api.GET("/ventures/{venture_id}/workflow-configs", { params: { path: { venture_id: ventureId } } })),
-  });
-  const cfg = configs.data?.find((c) => c.workflow === "inbox_assistant");
-  const settings = (cfg?.settings ?? {}) as Record<string, unknown>;
+  const { cfg, settings, saving, save } = useAssistantSettings(ventureId);
   const on = settings.answer_facts === true;
-  const save = useMutation({
-    mutationFn: (next: boolean) =>
-      unwrap(
-        api.PUT("/ventures/{venture_id}/workflow-configs/{workflow}", {
-          params: { path: { venture_id: ventureId, workflow: "inbox_assistant" } },
-          body: { enabled: cfg?.enabled ?? true, schedule: cfg?.schedule ?? null, settings: { ...settings, answer_facts: next }, instructions: cfg?.instructions ?? "" },
-        }),
-      ),
-    onSuccess: (_, next) => {
-      void qc.invalidateQueries({ queryKey: ["workflow-configs", ventureId] });
-      toast.success(
-        next ? "Answering by itself" : "Answers wait for your yes",
-        next ? "Customers' questions about their own records now get an answer straight away." : "Every answer waits for your yes again.",
-      );
-    },
-    onError: (e) => toast.error("Couldn't change it", errorMessage(e)),
-  });
+  // Only this setting is sent; the API keeps the rest (round 3, B11).
+  const change = (next: boolean) =>
+    save.mutate(
+      { answer_facts: next },
+      {
+        onSuccess: () =>
+          toast.success(
+            next ? "Answering by itself" : "Answers wait for your yes",
+            next ? "Customers' questions about their own records now get an answer straight away." : "Every answer waits for your yes again.",
+          ),
+        onError: (e) => toast.error("Couldn't change it", errorMessage(e)),
+      },
+    );
   if (!cfg?.enabled) return null;
   return (
     <Card className="flex items-start gap-3 p-4">
@@ -53,9 +43,9 @@ export function AnswerFactsSwitch({ ventureId, canAdmin }: { ventureId: string; 
       </div>
       <Switch
         checked={on}
-        disabled={!canAdmin || save.isPending}
+        disabled={!canAdmin || saving}
         label="Answer customers' questions about their own records by themselves"
-        onChange={(next) => save.mutate(next)}
+        onChange={change}
       />
     </Card>
   );
